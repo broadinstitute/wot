@@ -11,7 +11,8 @@ by using the mathematical approach of Optimal Transport (OT)
 Example Usage
 ============
 
-:
+.. code-block:: python
+
     import numpy as np
     import scipy.stats
     import sklearn.metrics
