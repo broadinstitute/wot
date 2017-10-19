@@ -38,7 +38,7 @@ Example Usage
     growth_ratio = 2.5
     scaling_iter = 250
 
-    for i in xrange(len(timepoints) - 1):
+    for i in range(len(timepoints) - 1):
         m1 = group_by_day.get_group(i)
         m2 = group_by_day.get_group(i+1)
         delta_t = timepoints[i + 1] - timepoints[i]
