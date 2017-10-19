@@ -68,7 +68,7 @@ class TestWOT(unittest.TestCase):
             last = sum
 
     def test_known_output(self):
-        diffusion_matrix = pandas.read_csv("data/diffusion_map.csv.gz",
+        gene_expression = pandas.read_csv("data/diffusion_map.csv.gz",
                                            index_col=0)  # cells on rows, diffusion components on columns
         growth_scores = pandas.read_csv("data/growth_scores.csv.gz",
                                         index_col=0)
@@ -78,9 +78,12 @@ class TestWOT(unittest.TestCase):
             precomputed_transport_map = pandas.read_csv(
                 "data/day0_to_day2.txt.gz",
                 delimiter='\t')
-        diffusion_matrix = diffusion_matrix.join(growth_scores).join(days)
-        group_by_day = diffusion_matrix.groupby('day')
+        gene_expression = gene_expression.join(growth_scores).join(days)
+        growth_score_field_name = growth_scores.columns[0]
+        day_field_name = days.columns[0]
+        group_by_day = gene_expression.groupby(day_field_name)
         timepoints = group_by_day.groups.keys()
+
         timepoints.sort()
         self.assertTrue(timepoints == [0, 2])
         max_transport_fraction = 0.4
@@ -99,8 +102,8 @@ class TestWOT(unittest.TestCase):
         m2 = group_by_day.get_group(2)
         delta_t = timepoints[1] - timepoints[0]
         cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
-            m1.drop(["day", "growth_score"], axis=1),
-            Y=m2.drop(["day", "growth_score"], axis=1),
+            m1.drop([day_field_name, growth_score_field_name], axis=1),
+            Y=m2.drop([day_field_name, growth_score_field_name], axis=1),
             metric='sqeuclidean')
         cost_matrix = cost_matrix / np.median(cost_matrix)
         growth_rate = m1.growth_score.values

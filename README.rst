@@ -19,16 +19,22 @@ Example Usage
     import pandas
     import wot
 
+
     gene_expression_file = "tests/data/diffusion_map.csv.gz"
     growth_scores_file = "tests/data/growth_scores.csv.gz"
     days_file = "tests/data/days.csv.gz"
 
     # gene_expression has cells on rows, features (e.g. diffusion components) on columns
     gene_expression = pandas.read_csv(gene_expression_file, index_col=0)
+    # growth scores file has 2 columns: cell ids and scores
     growth_scores = pandas.read_csv(growth_scores_file, index_col=0)
+    growth_score_field_name = growth_scores.columns[0]
+    # days file has 2 columns: cell ids and days
     days = pandas.read_csv(days_file, index_col=0)
+    day_field_name = days.columns[0]
+
     gene_expression = gene_expression.join(growth_scores).join(days)
-    group_by_day = gene_expression.groupby('day')
+    group_by_day = gene_expression.groupby(day_field_name)
     timepoints = group_by_day.groups.keys()
     timepoints.sort()
     max_transport_fraction = 0.4
@@ -46,8 +52,8 @@ Example Usage
         m2 = group_by_day.get_group(i+1)
         delta_t = timepoints[i + 1] - timepoints[i]
         cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
-            m1.drop(["day", "growth_score"], axis=1),
-            Y=m2.drop(["day", "growth_score"], axis=1),
+            m1.drop([day_field_name, growth_score_field_name], axis=1),
+            Y=m2.drop([day_field_name, growth_score_field_name], axis=1),
             metric='sqeuclidean')
         cost_matrix = cost_matrix / np.median(cost_matrix)
         growth_rate = m1.growth_score.values
