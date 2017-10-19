@@ -19,13 +19,16 @@ Example Usage
     import pandas
     import wot
 
-    diffusion_matrix = pandas.read_csv("tests/data/diffusion_map.csv.gz",
-                                               index_col=0)  # cells on rows, diffusion components on columns
-    growth_scores = pandas.read_csv("tests/data/growth_scores.csv.gz",
-                                    index_col=0)
-    days = pandas.read_csv("tests/data/days.csv.gz", index_col=0)
-    diffusion_matrix = diffusion_matrix.join(growth_scores).join(days)
-    group_by_day = diffusion_matrix.groupby('day')
+    gene_expression_file = "tests/data/diffusion_map.csv.gz"
+    growth_scores_file = "tests/data/growth_scores.csv.gz"
+    days_file = "tests/data/days.csv.gz"
+
+    # gene_expression has cells on rows, features (e.g. diffusion components) on columns
+    gene_expression = pandas.read_csv(gene_expression_file, index_col=0)
+    growth_scores = pandas.read_csv(growth_scores_file, index_col=0)
+    days = pandas.read_csv(days_file, index_col=0)
+    gene_expression = gene_expression.join(growth_scores).join(days)
+    group_by_day = gene_expression.groupby('day')
     timepoints = group_by_day.groups.keys()
     timepoints.sort()
     max_transport_fraction = 0.4
