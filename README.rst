@@ -54,7 +54,7 @@ Example Usage
         cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
             m1.drop([day_field_name, growth_score_field_name], axis=1),
             Y=m2.drop([day_field_name, growth_score_field_name], axis=1),
-            metric='sqeuclidean')
+            metric="sqeuclidean")
         cost_matrix = cost_matrix / np.median(cost_matrix)
         growth_rate = m1.growth_score.values
         result = wot.optimal_transport(cost_matrix, growth_rate,

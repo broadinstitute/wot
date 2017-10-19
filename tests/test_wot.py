@@ -28,7 +28,7 @@ class TestWOT(unittest.TestCase):
         result = wot.transport_stable(np.ones(m1.shape[0]),
                                       np.ones(m2.shape[0]),
                                       sklearn.metrics.pairwise.pairwise_distances(
-                                          m1, Y=m2, metric='sqeuclidean'), 1, 1,
+                                          m1, Y=m2, metric="sqeuclidean"), 1, 1,
                                       0.1, 250, np.ones(m1.shape[0]))
         self.assertEqual(result[0, 0], result[1, 1])
         self.assertEqual(result[0, 1], result[1, 0])
@@ -39,7 +39,7 @@ class TestWOT(unittest.TestCase):
         m2 = np.random.rand(4, 3)
         g = [1, 2, 3]
         cost_matrix = sklearn.metrics.pairwise.pairwise_distances(m1, Y=m2,
-                                                                  metric='sqeuclidean')
+                                                                  metric="sqeuclidean")
         last = -1
         for i in xrange(len(g)):
             result = wot.transport_stable(np.ones(m1.shape[0]),
@@ -56,7 +56,7 @@ class TestWOT(unittest.TestCase):
         m2 = np.random.rand(4, 3)
         e = [0.01, 0.1, 1]
         cost_matrix = sklearn.metrics.pairwise.pairwise_distances(m1, Y=m2,
-                                                                  metric='sqeuclidean')
+                                                                  metric="sqeuclidean")
         last = -1
         for i in xrange(len(e)):
             result = wot.transport_stable(np.ones(m1.shape[0]),
@@ -77,7 +77,7 @@ class TestWOT(unittest.TestCase):
         if os.path.isfile("data/day0_to_day2.txt.gz"):
             precomputed_transport_map = pandas.read_csv(
                 "data/day0_to_day2.txt.gz",
-                delimiter='\t')
+                delimiter="\t")
         gene_expression = gene_expression.join(growth_scores).join(days)
         growth_score_field_name = growth_scores.columns[0]
         day_field_name = days.columns[0]
@@ -104,7 +104,7 @@ class TestWOT(unittest.TestCase):
         cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
             m1.drop([day_field_name, growth_score_field_name], axis=1),
             Y=m2.drop([day_field_name, growth_score_field_name], axis=1),
-            metric='sqeuclidean')
+            metric="sqeuclidean")
         cost_matrix = cost_matrix / np.median(cost_matrix)
         growth_rate = m1.growth_score.values
         result = wot.optimal_transport(cost_matrix, growth_rate,
@@ -133,5 +133,5 @@ class TestWOT(unittest.TestCase):
                                        atol=0.0002)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
