@@ -10,9 +10,10 @@ by using the mathematical approach of Optimal Transport (OT)
 Command Line Usage
 ============
 
-Compute transport maps:
+Compute transport maps
 
 .. code-block:: bash
+
     python bin/ot
        --expression_file paper/serum_free_dmap_20.txt
        --growth_file paper/growth_scores.txt
@@ -28,7 +29,7 @@ Compute transport maps:
        --growth_ratio 2.5
        --scaling_iter 250
 
-Compute trajectories:
+Compute trajectories
 
 .. code-block:: bash
     python bin/trajectory
