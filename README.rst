@@ -6,9 +6,9 @@ WOT
 Uses time-course data to infer how the probability distribution of cells in gene-expression space evolves over time,
 by using the mathematical approach of Optimal Transport (OT)
 
-============
+========================
 Command Line Usage
-============
+========================
 
 Compute transport maps
 
@@ -32,6 +32,7 @@ Compute transport maps
 Compute trajectories
 
 .. code-block:: bash
+
     python bin/trajectory
        --dir paper/transport_maps/2i/
        --id day-9-c1-2i_6 --id day-9-c1-2i_11
