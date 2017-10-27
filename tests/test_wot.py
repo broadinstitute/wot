@@ -8,7 +8,8 @@ import numpy as np
 import scipy.stats
 import sklearn.metrics
 import pandas
-import os.path
+import subprocess
+import os
 import wot
 
 
@@ -41,7 +42,7 @@ class TestWOT(unittest.TestCase):
         cost_matrix = sklearn.metrics.pairwise.pairwise_distances(m1, Y=m2,
                                                                   metric="sqeuclidean")
         last = -1
-        for i in xrange(len(g)):
+        for i in range(len(g)):
             result = wot.transport_stable(np.ones(m1.shape[0]),
                                           np.ones(m2.shape[0]), cost_matrix, 1,
                                           1, 0.1, 250,
@@ -58,7 +59,7 @@ class TestWOT(unittest.TestCase):
         cost_matrix = sklearn.metrics.pairwise.pairwise_distances(m1, Y=m2,
                                                                   metric="sqeuclidean")
         last = -1
-        for i in xrange(len(e)):
+        for i in range(len(e)):
             result = wot.transport_stable(np.ones(m1.shape[0]),
                                           np.ones(m2.shape[0]), cost_matrix, 1,
                                           1, e[i], 250,
@@ -67,25 +68,140 @@ class TestWOT(unittest.TestCase):
             self.assertTrue(sum > last)
             last = sum
 
-    def test_known_output(self):
-        gene_expression = pandas.read_csv("data/diffusion_map.csv.gz",
-                                           index_col=0)  # cells on rows, diffusion components on columns
-        growth_scores = pandas.read_csv("data/growth_scores.csv.gz",
-                                        index_col=0)
-        days = pandas.read_csv("data/days.csv.gz", index_col=0)
-        precomputed_transport_map = None
-        if os.path.isfile("data/day0_to_day2.txt.gz"):
-            precomputed_transport_map = pandas.read_csv(
-                "data/day0_to_day2.txt.gz",
-                delimiter="\t")
+    def test_trajectory_commmand_line(self):
+        subprocess.call(args=["python",
+                              os.path.abspath("../bin/trajectory.py"),
+                              "--dir", os.path.abspath(
+                "../paper/transport_maps/2i"),
+                              "--id", "day-9-c1-2i_6",
+                              "--time", "9",
+                              "--prefix", "2i"], cwd=os.getcwd(),
+                        stderr=subprocess.STDOUT)
+
+    def test_ot_commmand_line(self):
+        subprocess.call(args=["python", os.path.abspath("../bin/ot.py"),
+                              "--expression_file",
+                              os.path.abspath(
+                                  "../paper/2i_dmap_20.txt"),
+                              "--growth_file", os.path.abspath(
+                "../paper/growth_scores.txt"),
+                              "--days_file", os.path.abspath(
+                "../paper/days.txt"),
+                              "--prefix", os.path.abspath("serum_free"),
+                              "--min_transport_fraction", "0.05",
+                              "--max_transport_fraction", "0.4",
+                              "--min_growth_fit", "0.9",
+                              "--l0_max", "100",
+                              "--lambda1", "1",
+                              "--lambda2", "1",
+                              "--epsilon", "0.1",
+                              "--growth_ratio", "2.5",
+                              "--scaling_iter", "250"], cwd=os.getcwd(),
+                        stderr=subprocess.STDOUT)
+
+        timepoints = [0, 2, 4, 6, 8, 9, 10, 11, 12, 16]
+        for i in range(0, len(timepoints) - 1):
+            transport = pandas.read_table(
+                "serum_free_" + str(
+                    timepoints[i]) + "_" + str(
+                    timepoints[i + 1]) +
+                ".txt", index_col=0)
+            precomputed_transport_map = precomputed_transport_map = \
+                pandas.read_table(
+                    "../paper/transport_maps/2i/lineage_" + str(
+                        timepoints[i]) + "_" + str(timepoints[i + 1]) +
+                    ".txt", index_col=0)
+            pandas.testing.assert_index_equal(left=transport.index,
+                                              right=precomputed_transport_map.index,
+                                              check_names=False)
+            pandas.testing.assert_index_equal(left=transport.columns,
+                                              right=precomputed_transport_map.columns,
+                                              check_names=False)
+
+            np.testing.assert_allclose(transport.values,
+                                       precomputed_transport_map.values,
+                                       atol=0.0004)
+
+    def test_trajectory(self):
+        transport_maps = list()
+        ncells = [4, 2, 5, 6, 3]
+        for i in range(0, len(ncells) - 1):
+            transport_map = pandas.read_csv('transport_maps/t' + str(i) +
+                                            "_t" + str(i + 1) + ".csv",
+                                            index_col=0)
+
+            self.assertTrue(transport_map.shape[0] == ncells[i])
+            self.assertTrue(transport_map.shape[1] == ncells[i + 1])
+            transport_maps.append({"transport_map": transport_map,
+                                   "t_minus_1": i, "t": i + 1})
+        trajectory_id = ["c4-t3"]
+        result = wot.trajectory(trajectory_id, transport_maps, 3)
+        ancestors = result["ancestors"]
+        descendants = result["descendants"]
+
+        # not messing up already computed ancestors
+        ids = ["c1-t2", "c2-t2",
+               "c3-t2", "c4-t2",
+               "c5-t2"]
+        pandas.testing.assert_frame_equal(
+            ancestors[ancestors.index.isin(ids)],
+            pandas.DataFrame(
+                {trajectory_id[0]: [5, 4, 3, 2, 1]},
+                index=ids), check_names=False)
+
+        # t1
+        ids = ["c1-t1"]
+        pandas.testing.assert_frame_equal(
+            ancestors[ancestors.index.isin(ids)],
+            pandas.DataFrame(
+                {trajectory_id[0]: [50]},
+                index=ids), check_names=False)
+
+        # t0
+        ids = ["c3-t0"]
+        pandas.testing.assert_frame_equal(
+            ancestors[ancestors.index.isin(ids)],
+            pandas.DataFrame(
+                {trajectory_id[0]: [1175]},
+                index=ids), check_names=False)
+
+        trajectory_id = ["c1-t1"]
+        result = wot.trajectory(trajectory_id, transport_maps, 1)
+        descendants = result["descendants"]
+        # t3
+        ids = ["c1-t3", "c2-t3", "c3-t3", "c4-t3", "c5-t3", "c6-t3"]
+        pandas.testing.assert_frame_equal(
+            descendants[descendants.index.isin(ids)],
+            pandas.DataFrame(
+                {trajectory_id[0]: [90, 190, 290, 50, 390, 490]},
+                index=ids), check_names=False)
+
+        # t4
+        ids = ["c3-t4"]
+        pandas.testing.assert_frame_equal(
+            descendants[descendants.index.isin(ids)],
+            pandas.DataFrame(
+                {trajectory_id[0]: [25450]},
+                index=ids), check_names=False)
+
+    def test_ot_known_output(self):
+        gene_expression = pandas.read_table("../paper/2i_dmap_20.txt",
+                                            index_col=0)  # cells on rows,
+        # diffusion components on columns
+        growth_scores = pandas.read_table("../paper/growth_scores.txt",
+                                          index_col=0, header=None,
+                                          names=["id", "growth_score"])
+        days = pandas.read_table(
+            "../paper/days.txt", header=None,
+            index_col=0, names=["id", "days"])
+
         gene_expression = gene_expression.join(growth_scores).join(days)
         growth_score_field_name = growth_scores.columns[0]
         day_field_name = days.columns[0]
         group_by_day = gene_expression.groupby(day_field_name)
-        timepoints = group_by_day.groups.keys()
-
+        timepoints = list(group_by_day.groups.keys())
         timepoints.sort()
-        self.assertTrue(timepoints == [0, 2])
+        self.assertTrue(timepoints[0] == 0)
         max_transport_fraction = 0.4
         min_transport_fraction = 0.05
         min_growth_fit = 0.9
@@ -95,42 +211,48 @@ class TestWOT(unittest.TestCase):
         epsilon = 0.1
         growth_ratio = 2.5
         scaling_iter = 250
-        expected_lambda = 1.5
-        expected_epsilon = 0.01015255979947704383092865754179001669399440288543701171875
+        expected_lambda_t0_t2 = 1.5
+        expected_epsilon_t0_t2 = \
+            0.01015255979947704383092865754179001669399440288543701171875
+        for i in range(0, len(timepoints) - 1):
+            m1 = group_by_day.get_group(timepoints[i])
+            m2 = group_by_day.get_group(timepoints[i + 1])
+            delta_t = timepoints[i + 1] - timepoints[i]
+            cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
+                m1.drop([day_field_name, growth_score_field_name], axis=1),
+                Y=m2.drop([day_field_name, growth_score_field_name], axis=1),
+                metric="sqeuclidean")
+            cost_matrix = cost_matrix / np.median(cost_matrix)
+            growth_rate = m1.growth_score.values
+            result = wot.optimal_transport(cost_matrix, growth_rate,
+                                           delta_days=delta_t,
+                                           max_transport_fraction=max_transport_fraction,
+                                           min_transport_fraction=min_transport_fraction,
+                                           min_growth_fit=min_growth_fit,
+                                           l0_max=l0_max, lambda1=lambda1,
+                                           lambda2=lambda2, epsilon=epsilon,
+                                           growth_ratio=growth_ratio,
+                                           scaling_iter=scaling_iter)
+            if i == 0:
+                self.assertTrue(result["epsilon"] == expected_epsilon_t0_t2)
+                self.assertTrue(result["lambda1"] == expected_lambda_t0_t2)
+                self.assertTrue(result["lambda2"] == expected_lambda_t0_t2)
+            transport = pandas.DataFrame(result["transport"], index=m1.index,
+                                         columns=m2.index)
 
-        m1 = group_by_day.get_group(0)
-        m2 = group_by_day.get_group(2)
-        delta_t = timepoints[1] - timepoints[0]
-        cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
-            m1.drop([day_field_name, growth_score_field_name], axis=1),
-            Y=m2.drop([day_field_name, growth_score_field_name], axis=1),
-            metric="sqeuclidean")
-        cost_matrix = cost_matrix / np.median(cost_matrix)
-        growth_rate = m1.growth_score.values
-        result = wot.optimal_transport(cost_matrix, growth_rate,
-                                       delta_days=delta_t,
-                                       max_transport_fraction=max_transport_fraction,
-                                       min_transport_fraction=min_transport_fraction,
-                                       min_growth_fit=min_growth_fit,
-                                       l0_max=l0_max, lambda1=lambda1,
-                                       lambda2=lambda2, epsilon=epsilon,
-                                       growth_ratio=growth_ratio,
-                                       scaling_iter=scaling_iter)
-        self.assertTrue(result["epsilon"] == expected_epsilon)
-        self.assertTrue(result["lambda1"] == expected_lambda)
-        transport = pandas.DataFrame(result["transport"], index=m1.index,
-                                     columns=m2.index)
-
-        if precomputed_transport_map is not None:
+            precomputed_transport_map = pandas.read_table(
+                "../paper/transport_maps/2i/lineage_" + str(timepoints[i])
+                + "_" + str(timepoints[i + 1]) + ".txt", index_col=0)
             pandas.testing.assert_index_equal(left=transport.index,
                                               right=precomputed_transport_map.index,
                                               check_names=False)
             pandas.testing.assert_index_equal(left=transport.columns,
                                               right=precomputed_transport_map.columns,
                                               check_names=False)
+
             np.testing.assert_allclose(transport.values,
                                        precomputed_transport_map.values,
-                                       atol=0.0002)
+                                       atol=0.0004)
 
 
 if __name__ == "__main__":
