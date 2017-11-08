@@ -18,7 +18,7 @@ Compute transport maps
        --expression_file paper/serum_free_dmap_20.txt
        --growth_file paper/growth_scores.txt
        --days_file paper/days.txt
-       --prefix serum_free
+       --prefix my_output_file_name_prefix
        --min_transport_fraction 0.05
        --max_transport_fraction 0.4
        --min_growth_fit 0.9
@@ -37,7 +37,7 @@ Compute trajectories
        --dir paper/transport_maps/2i/
        --id day-9-c1-2i_6 --id day-9-c1-2i_11
        --time 9
-       --prefix 2i
+       --prefix my_trajectory
 
 ============
 API Usage
