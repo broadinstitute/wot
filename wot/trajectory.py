@@ -9,7 +9,7 @@ def trajectory(ids, transport_maps, time):
 
         Args:
             transport_maps (list): A sorted list of dictionaries
-            containing "transport_map" (DataFrame), "t_minus_1", and "t". The
+            containing 'transport_map' (DataFrame), 't_minus_1', and 't'. The
             ids (list): A list of ids to compute the trajectory for.
             time (string): The time at which the ids were measured.
 
@@ -19,21 +19,21 @@ def trajectory(ids, transport_maps, time):
 
     t_start_time_index = None
     for i in range(len(transport_maps)):
-        if transport_maps[i]["t_minus_1"] == time:
+        if transport_maps[i]['t_minus_1'] == time:
             t_start_time_index = i
             break
     if t_start_time_index is None:
         raise RuntimeError(
-            "Transport transport_map for time " + str(time) + " not found.")
+            'Transport transport_map for time ' + str(time) + ' not found.')
     for i in range(len(transport_maps) - 1):
-        if transport_maps[i]["t"] != transport_maps[i + 1]["t_minus_1"]:
-            raise RuntimeError("Matching transport transport_map not found")
+        if transport_maps[i]['t'] != transport_maps[i + 1]['t_minus_1']:
+            raise RuntimeError('Matching transport transport_map not found')
 
     # data frames have t_minus_1 on rows, t on columns
     transport_maps_by_start_time = [None] * len(transport_maps)
     # if t=9, t_start_time_index=t9_t10
     transport_maps_by_start_time[t_start_time_index] = transport_maps[
-        t_start_time_index]["transport_map"]
+        t_start_time_index]['transport_map']
 
     # subset rows
     transport_maps_by_start_time[t_start_time_index] = \
@@ -52,9 +52,9 @@ def trajectory(ids, transport_maps, time):
         # subset columns to specified cell ids only
         transport_maps_by_start_time[
             t_start_time_index - 1] = transport_maps[t_start_time_index - 1][
-            "transport_map"][ids]
+            'transport_map'][ids]
         for i in range(t_start_time_index - 2, -1, -1):
-            transport_maps_by_start_time[i] = transport_maps[i]["transport_map"]
+            transport_maps_by_start_time[i] = transport_maps[i]['transport_map']
 
             transport_maps_by_start_time[i] = \
                 transport_maps_by_start_time[
@@ -68,7 +68,7 @@ def trajectory(ids, transport_maps, time):
 
     for i in range(t_start_time_index + 1,
                    len(transport_maps)):
-        transport_maps_by_start_time[i] = transport_maps[i]["transport_map"]
+        transport_maps_by_start_time[i] = transport_maps[i]['transport_map']
         transport_maps_by_start_time[i] = transport_maps_by_start_time[
             i - 1].dot(
             transport_maps_by_start_time[i])
@@ -79,4 +79,4 @@ def trajectory(ids, transport_maps, time):
 
     descendants = pandas.concat(
         transport_maps_by_start_time[t_start_time_index:])
-    return {"ancestors": ancestors, "descendants": descendants}
+    return {'ancestors': ancestors, 'descendants': descendants}
