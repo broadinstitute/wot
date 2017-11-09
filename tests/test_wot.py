@@ -68,6 +68,75 @@ class TestWOT(unittest.TestCase):
             self.assertTrue(sum > last)
             last = sum
 
+    def test_transport_maps_by_time(self):
+        clusters = pandas.DataFrame([1, 1, 2, 3, 1, 1, 2, 1],
+                                    index=['a', 'b', 'c', 'd', 'e', 'f', 'g',
+                                           'h'])
+        map1 = pandas.DataFrame([[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+                                index=[1, 2, 3], columns=[1, 2, 3])
+        map2 = pandas.DataFrame([[10, 11, 12], [13, 14, 15], [16, 17, 18]],
+                                index=[1, 2, 3], columns=[1, 2, 3])
+        # weighted average across time
+        cluster_weights_by_time = [[0.4, 0.5, 0], [0.6, 0.5, 1]]
+        result = wot.transport_maps_by_time([map1, map2],
+                                            cluster_weights_by_time)
+        pandas.testing.assert_frame_equal(
+            result,
+            pandas.DataFrame(
+                [[6.4, 6.5, 12.0],
+                 [9.4, 9.5, 15.0],
+                 [12.4, 12.5, 18.0],
+                 ],
+                index=[1, 2, 3], columns=[1, 2, 3]))
+
+    def test_get_weights(self):
+        clusters = pandas.DataFrame([1, 1, 2, 3, 1, 1, 2, 1],
+                                    index=['a', 'b', 'c', 'd', 'e', 'f', 'g',
+                                           'h'], columns=['cluster'])
+        map1 = pandas.DataFrame(index=['x', 'y', 'z'], columns=['a', 'b', 'c'])
+        map2 = pandas.DataFrame(index=['a', 'b', 'c'], columns=['d', 'e',
+                                                                'f', 'g', 'h'])
+        # weighted average across time
+        cluster_weights_by_time = [[0.4, 0.5, 0], [0.6, 0.5, 1]]
+        cluster_size = [5, 2, 1]
+        grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
+        cluster_ids = list(grouped_by_cluster.groups.keys())
+        result = wot.get_weights([map1, map2],
+                                 grouped_by_cluster, cluster_ids)
+
+        self.assertTrue(
+            np.array_equal(result['cluster_weights_by_time'],
+                           cluster_weights_by_time))
+        self.assertTrue(
+            np.array_equal(result['cluster_size'],
+                           cluster_size))
+
+    def test_transport_map_by_cluster(self):
+        row_ids = ['a', 'b', 'c']
+        column_ids = ['d', 'e', 'f', 'g', 'h'];
+        clusters = pandas.DataFrame([3, 1, 2, 3, 1, 1, 2, 3],
+                                    index=['a', 'b', 'c', 'd', 'e', 'f', 'g',
+                                           'h'])
+        grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
+        cluster_ids = [1, 2, 3]
+        transport_map = pandas.DataFrame(
+            [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13, 14, 15]],
+            index=row_ids,
+            columns=column_ids)
+
+        # sum mass by cluster
+        result = wot.transport_map_by_cluster(transport_map, grouped_by_cluster,
+                                              cluster_ids)
+
+        pandas.testing.assert_frame_equal(
+            result,
+            pandas.DataFrame(
+                [[15, 9, 16],
+                 [25, 14, 26],
+                 [5, 4, 6]
+                 ],
+                index=cluster_ids, columns=cluster_ids))
+
     def test_trajectory_commmand_line(self):
         subprocess.call(args=["python",
                               os.path.abspath("../bin/trajectory.py"),
