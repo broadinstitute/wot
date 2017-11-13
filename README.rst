@@ -24,7 +24,7 @@ Compute transport maps
        --max_transport_fraction 0.4 \
        --min_growth_fit 0.9 \
        --l0_max 100 \
-       --lambd1 1 \
+       --lambda1 1 \
        --lambda2 1 \
        --epsilon 0.1 \
        --scaling_iter 250
