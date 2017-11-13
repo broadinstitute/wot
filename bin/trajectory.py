@@ -26,7 +26,7 @@ parser.add_argument('--prefix',
                          'prefix_ancestors.csv and prefix_descendants.csv',
                     required=True)
 parser.add_argument('--compress', action='store_true',
-                    help='Compress output files')
+                    help='gzip output files')
 
 args = parser.parse_args()
 input_dir = args.dir

@@ -72,7 +72,7 @@ parser.add_argument('--scaling_iter', default=250,
 parser.add_argument('--min_growth_fit', type=float, default=0.9)
 parser.add_argument('--l0_max', type=float, default=100)
 parser.add_argument('--compress', action='store_true',
-                    help='Compress output files')
+                    help='gzip output files')
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
 args = parser.parse_args()

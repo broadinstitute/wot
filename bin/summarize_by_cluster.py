@@ -25,7 +25,7 @@ parser.add_argument('--save', action='store_true',
                     help='Save cluster by cluster transport maps for each '
                          'input transport map')
 parser.add_argument('--compress', action='store_true',
-                    help='Compress output files')
+                    help='gzip output files')
 
 args = parser.parse_args()
 input_dir = args.dir
@@ -40,10 +40,7 @@ for f in os.listdir(input_dir):
         file_info = wot.get_file_basename_and_extension(f)
         if file_info['ext'] == '.txt':
             basename = file_info['basename']
-            tokens = basename.split('_')
             path = os.path.join(input_dir, f)
-            t = tokens[len(tokens) - 1]
-            t_minus_1 = tokens[len(tokens) - 2]
             transport_map = pandas.read_table(path, index_col=0)
             cluster_transport_map = wot.transport_map_by_cluster(
                 transport_map, grouped_by_cluster, cluster_ids)
