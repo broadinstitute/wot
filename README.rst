@@ -14,29 +14,29 @@ Compute transport maps
 
 .. code-block:: bash
 
-    python bin/ot
-       --expression_file paper/serum_free_dmap_20.txt
-       --growth_file paper/growth_scores.txt
-       --days_file paper/days.txt
-       --prefix my_output_file_name_prefix
-       --min_transport_fraction 0.05
-       --max_transport_fraction 0.4
-       --min_growth_fit 0.9
-       --l0_max 100
-       --lambd1 1
-       --lambda2 1
-       --epsilon 0.1
-       --growth_ratio 2.5
+    python bin/ot \
+       --expression_file paper/serum_free_dmap_20.txt \
+       --growth_file paper/growth_scores.txt \
+       --days_file paper/days.txt \
+       --growth_ratio_file paper/growth_ratios.txt \
+       --prefix my_output_file_name_prefix \
+       --min_transport_fraction 0.05 \
+       --max_transport_fraction 0.4 \
+       --min_growth_fit 0.9 \
+       --l0_max 100 \
+       --lambd1 1 \
+       --lambda2 1 \
+       --epsilon 0.1 \
        --scaling_iter 250
 
 Compute trajectories
 
 .. code-block:: bash
 
-    python bin/trajectory
-       --dir paper/transport_maps/2i/
-       --id day-9-c1-2i_6 --id day-9-c1-2i_11
-       --time 9
+    python bin/trajectory \
+       --dir paper/transport_maps/2i/ \
+       --id day-9-c1-2i_6 --id day-9-c1-2i_11 \
+       --time 9 \
        --prefix my_trajectory
 
 ============
