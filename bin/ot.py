@@ -105,7 +105,7 @@ group_by_day = gene_expression.groupby(days_frame.columns[0])
 if args.verbose:
     print('Computing ' + str(growth_ratios.shape[0]) + ' transport maps...')
 
-for i in range(growth_ratios.shape[0] - 1):
+for i in range(growth_ratios.shape[0]):
     # consecutive days only
     t1 = growth_ratios.iloc[i, 0]
     t2 = growth_ratios.iloc[i, 1]
