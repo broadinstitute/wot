@@ -14,7 +14,7 @@ Compute transport maps
 
 .. code-block:: bash
 
-    python bin/ot \
+    python bin/ot.py \
        --expression_file paper/serum_free_dmap_20.txt \
        --growth_file paper/growth_scores.txt \
        --days_file paper/days.txt \
@@ -29,11 +29,20 @@ Compute transport maps
        --epsilon 0.1 \
        --scaling_iter 250
 
+Summarize by cluster
+
+.. code-block:: bash
+
+    python bin/summarize_by_cluster.py \
+       --dir my_transport_maps/ \
+       --clusters clusters.txt \
+       --prefix my_summary
+
 Compute trajectories
 
 .. code-block:: bash
 
-    python bin/trajectory \
+    python bin/trajectory.py \
        --dir paper/transport_maps/2i/ \
        --id day-9-c1-2i_6 --id day-9-c1-2i_11 \
        --time 9 \
