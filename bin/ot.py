@@ -118,11 +118,15 @@ for i in range(growth_ratios.shape[0] - 1):
                 t1) + ' to ' + str(
                 t2) + ' with growth ratio ' + str(growth_ratio))
     delta_t = t2 - t1
+    if args.verbose:
+        print('delta_t' + str(delta_t))
     cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
         m1.drop(fields_to_drop_for_distance, axis=1),
         Y=m2.drop(fields_to_drop_for_distance, axis=1),
         metric='sqeuclidean')
     cost_matrix = cost_matrix / np.median(cost_matrix)
+    if args.verbose:
+        print('Computed cost matrix.')
     growth_rate = m1.growth_score.values
     result = wot.optimal_transport(cost_matrix, growth_rate,
                                    delta_days=delta_t,
@@ -136,7 +140,8 @@ for i in range(growth_ratios.shape[0] - 1):
                                    scaling_iter=args.scaling_iter)
     transport = pandas.DataFrame(result['transport'], index=m1.index,
                                  columns=m2.index)
-
+    if args.verbose:
+        print('Computed transport map.')
     if args.verbose:
         print('Saving transport map')
     transport.to_csv(args.prefix + '_' + str(t1) + '_' + str(
