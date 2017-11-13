@@ -25,6 +25,8 @@ parser.add_argument('--prefix',
                     help='Prefix for ouput file names. Command produces '
                          'prefix_ancestors.csv and prefix_descendants.csv',
                     required=True)
+parser.add_argument('--compress', action='store_true',
+                    help='Compress output files')
 
 args = parser.parse_args()
 input_dir = args.dir
@@ -61,7 +63,12 @@ transport_maps_inputs.sort(
     key=lambda x: x['t_minus_1_f'])  # sort by t_minus_1 (start time)
 
 result = wot.trajectory(ids, transport_maps_inputs, time)
-result['ancestors'].to_csv(prefix + '_ancestors.txt', index_label='id',
-                           sep='\t')
-result['descendants'].to_csv(prefix + '_descendants.txt', index_label='id',
-                             sep='\t')
+result['ancestors'].to_csv(prefix + '_ancestors.txt' + ('.gz' if
+                                                        args.compress else ''),
+                           index_label='id', sep='\t',
+                           compression='gzip' if args.compress else None)
+result['descendants'].to_csv(prefix + '_descendants.txt' + ('.gz' if
+                                                            args.compress
+                                                            else ''),
+                             index_label='id', sep='\t',
+                             compression='gzip' if args.compress else None)
