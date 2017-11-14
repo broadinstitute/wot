@@ -8,23 +8,27 @@ import numpy as np
 import sklearn.metrics.pairwise
 
 parser = argparse.ArgumentParser(
-    description='Compute transport maps between successive time points')
+    description='Compute transport maps between time points')
 
 parser.add_argument('--expression_file',
-                    help='Gene expression file with cells on rows and '
+                    help='Gene expression tab delimited file with cells on '
+                         'rows and '
                          'features on columns',
                     required=True)
 parser.add_argument('--growth_file',
-                    help='Two column file without header with cell ids and '
+                    help='Two column tab delimited file without header with '
+                         'cell ids and '
                          'relative growth scores. If not specified, uniform '
                          'growth is assumed.',
                     required=False)
 parser.add_argument('--days_file',
-                    help='Two column file without header with cell ids and '
+                    help='Two column tab delimited file without header with '
+                         'cell ids and '
                          'days',
                     required=True)
 parser.add_argument('--growth_ratio_file',
-                    help='Three column file without header with timepoint 1, '
+                    help='Three column tab delimited file without header with '
+                         'timepoint 1, '
                          'timepoint 2, '
                          'and growth ratio. Over 1 day, a cell '
                          'in the more proliferative '
