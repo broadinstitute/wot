@@ -119,12 +119,13 @@ def get_weights(transport_maps, grouped_by_cluster, cluster_ids):
               weights for each cluster
     """
     cluster_weights_by_time = []  # each time, then each cluster
+    total_cluster_size = np.zeros(len(cluster_ids))
     all_cell_ids = set()
     for time_index in range(len(transport_maps)):
         transport_map = transport_maps[time_index]
         all_cell_ids.update(transport_map.columns)
         all_cell_ids.update(transport_map.index)
-    total_cluster_size = np.zeros(len(cluster_ids))
+
     for cluster_index in range(len(cluster_ids)):
         cluster_group = grouped_by_cluster.get_group(
             cluster_ids[cluster_index])
