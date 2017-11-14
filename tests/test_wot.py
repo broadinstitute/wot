@@ -89,6 +89,27 @@ class TestWOT(unittest.TestCase):
                  ],
                 index=[1, 2, 3], columns=[1, 2, 3]))
 
+    def test_get_weights_intersection(self):
+        clusters = pandas.DataFrame([1, 1, 2, 3, 1, 1, 2, 1],
+                                    index=['a', 'b', 'c', 'd', 'e', 'f', 'g',
+                                           'h'], columns=['cluster'])
+        map1 = pandas.DataFrame(index=['x', 'y', 'z'], columns=['a', 'b', 'c'])
+        # note f, g, h are not present in map2
+        map2 = pandas.DataFrame(index=['a', 'b', 'c'], columns=['d', 'e'])
+        # weighted average across time
+
+        grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
+        cluster_ids = list(grouped_by_cluster.groups.keys())
+        result = wot.get_weights([map1, map2],
+                                 grouped_by_cluster, cluster_ids)
+
+        self.assertTrue(
+            np.array_equal(result['cluster_weights_by_time'],
+                           [[2 / 3, 1 / 1, 0 / 1], [1 / 3, 0 / 1, 1 / 1]]))
+        self.assertTrue(
+            np.array_equal(result['cluster_size'],
+                           [3, 1, 1]))
+
     def test_get_weights(self):
         clusters = pandas.DataFrame([1, 1, 2, 3, 1, 1, 2, 1],
                                     index=['a', 'b', 'c', 'd', 'e', 'f', 'g',
@@ -97,8 +118,6 @@ class TestWOT(unittest.TestCase):
         map2 = pandas.DataFrame(index=['a', 'b', 'c'], columns=['d', 'e',
                                                                 'f', 'g', 'h'])
         # weighted average across time
-        cluster_weights_by_time = [[0.4, 0.5, 0], [0.6, 0.5, 1]]
-        cluster_size = [5, 2, 1]
         grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
         cluster_ids = list(grouped_by_cluster.groups.keys())
         result = wot.get_weights([map1, map2],
@@ -106,10 +125,10 @@ class TestWOT(unittest.TestCase):
 
         self.assertTrue(
             np.array_equal(result['cluster_weights_by_time'],
-                           cluster_weights_by_time))
+                           [[2 / 5, 1 / 2, 0 / 1], [3 / 5, 1 / 2, 1 / 1]]))
         self.assertTrue(
             np.array_equal(result['cluster_size'],
-                           cluster_size))
+                           [5, 2, 1]))
 
     def test_transport_map_by_cluster(self):
         row_ids = ['a', 'b', 'c']
@@ -179,7 +198,7 @@ class TestWOT(unittest.TestCase):
                 '.txt', index_col=0)
             precomputed_transport_map = precomputed_transport_map = \
                 pandas.read_table(
-                    '../paper/transport_maps/2i/lineage_' + str(
+                    '../paper/transport_maps/lineage_' + str(
                         timepoints[i]) + '_' + str(timepoints[i + 1]) +
                     '.txt', index_col=0)
             pandas.testing.assert_index_equal(left=transport.index,
@@ -312,7 +331,7 @@ class TestWOT(unittest.TestCase):
                                          columns=m2.index)
 
             precomputed_transport_map = pandas.read_table(
-                '../paper/transport_maps/2i/lineage_' + str(timepoints[i])
+                '../paper/transport_maps/lineage_' + str(timepoints[i])
                 + '_' + str(timepoints[i + 1]) + '.txt', index_col=0)
             pandas.testing.assert_index_equal(left=transport.index,
                                               right=precomputed_transport_map.index,

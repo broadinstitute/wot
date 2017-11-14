@@ -21,7 +21,7 @@ parser.add_argument('--clusters',
 parser.add_argument('--prefix',
                     help='Prefix for ouput file names',
                     required=True)
-parser.add_argument('--save', action='store_true',
+parser.add_argument('--details', action='store_true',
                     help='Save cluster by cluster transport maps for each '
                          'input transport map')
 parser.add_argument('--compress', action='store_true',
@@ -44,7 +44,7 @@ for f in os.listdir(input_dir):
             transport_map = pandas.read_table(path, index_col=0)
             cluster_transport_map = wot.transport_map_by_cluster(
                 transport_map, grouped_by_cluster, cluster_ids)
-            if args.save:
+            if args.details:
                 cluster_transport_map.to_csv(args.prefix + basename + '.txt' + (
                     '.gz' if
                     args.compress

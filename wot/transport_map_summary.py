@@ -16,6 +16,7 @@ def transport_map_distance(transport_map_1, transport_map_2, column_weights):
     """
     column_distances = np.zeros(len(transport_map_1.shape[1]))
     for j in range(transport_map_1.shape[1]):
+        # Kullback-Leibler divergence
         column_distances[j] = scipy.stats.entropy(
             transport_map_1.iloc[:, j],
             qk=transport_map_2.iloc[:, j])
@@ -82,22 +83,23 @@ def transport_map_by_cluster(transport_map, grouped_by_cluster, cluster_ids):
             cluster_ids[cluster_index_1])
         # subset rows
 
-        rows = transport_map.loc[
+        row_subset = transport_map.loc[
             transport_map.index.intersection(
                 cluster_group_1.index)]
-
+        if row_subset.shape[0] == 0:
+            continue
         for cluster_index_2 in range(len(cluster_ids)):
             cluster_group_2 = cluster_group_1 if \
                 cluster_index_1 == cluster_index_2 else \
                 grouped_by_cluster.get_group(
                     cluster_ids[cluster_index_2])
-            try:
-                # subset columns
-                full = rows[rows.columns.intersection(cluster_group_2.index)]
-                result.iloc[cluster_index_1, cluster_index_2] = \
-                    full.values.sum()
-            except KeyError:
-                pass
+
+            # subset columns
+            row_and_column_subset = row_subset[
+                row_subset.columns.intersection(
+                    cluster_group_2.index)]
+            result.iloc[cluster_index_1, cluster_index_2] = \
+                row_and_column_subset.values.sum()
 
     return result
 
@@ -107,22 +109,27 @@ def get_weights(transport_maps, grouped_by_cluster, cluster_ids):
           Compute the distance between transport maps.
 
           Args:
-              transport_maps (list): A sorted list of transport maps.
+              transport_maps (list): A list of uncollapsed transport maps.
               grouped_by_cluster (GroupBy): A GroupBy object
               returned from pandas.DataFrame.groupby(). The object maps
-              cluster ids to cell ids.
+              cell ids to cluster ids.
               cluster_ids (list): A list of unique cluster ids
           Returns:
               list: A list for each timepoint, containing an array of
               weights for each cluster
     """
     cluster_weights_by_time = []  # each time, then each cluster
-
+    all_cell_ids = set()
+    for time_index in range(len(transport_maps)):
+        transport_map = transport_maps[time_index]
+        all_cell_ids.update(transport_map.columns)
+        all_cell_ids.update(transport_map.index)
     total_cluster_size = np.zeros(len(cluster_ids))
     for cluster_index in range(len(cluster_ids)):
         cluster_group = grouped_by_cluster.get_group(
             cluster_ids[cluster_index])
-        total_cluster_size[cluster_index] = cluster_group.shape[0]
+        total_cluster_size[cluster_index] = cluster_group.loc[
+            cluster_group.index.intersection(all_cell_ids)].shape[0]
 
     for time_index in range(len(transport_maps)):
         weights = np.zeros(len(cluster_ids))
@@ -154,7 +161,7 @@ def cluster_distance(transport_maps_1, transport_maps_2, grouped_by_cluster,
            transport_maps_2 (list): A list of transport maps
            grouped_by_cluster (GroupBy): A GroupBy object
               returned from pandas.DataFrame.groupby(). The object maps
-              cluster ids to cell ids.
+             cell ids to cluster ids .
            cluster_ids (list): A list of unique cluster ids
        Returns:
            float: Distance between the transport maps
