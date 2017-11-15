@@ -30,7 +30,7 @@ args = parser.parse_args()
 input_dir = args.dir
 time = args.time
 prefix = args.prefix
-ids = pandas.read_table(args.id)[:, 0]
+ids = pandas.read_table(args.id).iloc[:, 0]
 
 # transport map file names end with start_end.csv
 # csv has prior time on rows, later time on columns
