@@ -8,35 +8,23 @@ import numpy as np
 import sklearn.metrics.pairwise
 
 parser = argparse.ArgumentParser(
-    description='Compute transport maps between time points')
+    description='Compute transport maps between pairs of time points')
 
-parser.add_argument('--expression_file',
+parser.add_argument('--matrix',
                     help='Gene expression tab delimited file with cells on '
-                         'rows and '
-                         'features on columns',
-                    required=True)
-parser.add_argument('--growth_file',
+                         'rows and features on columns', required=True)
+parser.add_argument('--cell_growth_rates',
                     help='Two column tab delimited file without header with '
-                         'cell ids and '
-                         'relative growth scores. If not specified, uniform '
-                         'growth is assumed.',
-                    required=False)
-parser.add_argument('--days_file',
-                    help='Two column tab delimited file without header with '
-                         'cell ids and '
-                         'days',
+                         'cell ids and growth rates per day.',
                     required=True)
-parser.add_argument('--growth_ratio_file',
-                    help='Three column tab delimited file without header with '
-                         'timepoint 1, '
-                         'timepoint 2, '
-                         'and growth ratio. Over 1 day, a cell '
-                         'in the more proliferative '
-                         'group '
-                         'is expected to produce growth_ratio times as '
-                         'many '
-                         'offspring as a cell in the non-proliferative '
-                         'group', required=True)
+parser.add_argument('--cell_days',
+                    help='Two column tab delimited file without header with '
+                         'cell ids and days', required=True)
+parser.add_argument('--day_pairs',
+                    help='Two column tab delimited file without header with '
+                         'pairs of days to compute transport maps for',
+                    required=True)
+
 parser.add_argument('--epsilon', type=float,
                     help='Controls the entropy of the transport map. An '
                          'extremely large entropy parameter will give a '
@@ -47,8 +35,7 @@ parser.add_argument('--epsilon', type=float,
                          'lead to '
                          'numerical instability in the algorithm')
 parser.add_argument('--prefix',
-                    help='Prefix for ouput file names',
-                    required=True)
+                    help='Prefix for ouput file names', required=True)
 
 parser.add_argument('--max_transport_fraction',
                     default=0.4,
@@ -70,7 +57,6 @@ parser.add_argument('--lambda2', default=1,
                          'fidelity '
                          'of the constraints on q',
                     type=float)
-
 parser.add_argument('--scaling_iter', default=250,
                     help='Number of scaling iterations', type=int)
 parser.add_argument('--min_growth_fit', type=float, default=0.9)
@@ -82,48 +68,38 @@ parser.add_argument('--verbose', action='store_true',
 args = parser.parse_args()
 
 # cells on rows, features on columns
-gene_expression = pandas.read_table(args.expression_file, index_col=0)
+gene_expression = pandas.read_table(args.matrix, index_col=0)
 
-days_frame = pandas.read_table(args.days_file, index_col=0, header=None,
-                               names=['day'])
+day_pairs = pandas.read_table(args.day_pairs, header=None, names=['t1', 't2'],
+                              index_col=False)
+days_data_frame = pandas.read_table(args.cell_days, index_col=0, header=None,
+                                    names=['day'])
 
-growth_ratios = pandas.read_table(args.growth_ratio_file,
-                                  header=None,
-                                  names=['t1', 't2', 'growth_ratio'])
-if args.growth_file is not None:
-    growth_scores = pandas.read_table(args.growth_file, index_col=0,
-                                      header=None,
-                                      names=['growth_score'])
-else:
-    growth_scores = pandas.DataFrame(index=days_frame.index,
-                                     columns=['growth_score'],
-                                     data=1)
+cell_growth_rates = pandas.read_table(args.cell_growth_rates, index_col=0,
+                                      header=None, names=['cell_growth_rate'])
 
-gene_expression = gene_expression.join(growth_scores).join(days_frame)
+gene_expression = gene_expression.join(cell_growth_rates).join(days_data_frame)
 
-growth_score_field_name = growth_scores.columns[0]
-fields_to_drop_for_distance = [days_frame.columns[0], growth_score_field_name]
+fields_to_drop_for_distance = [days_data_frame.columns[0],
+                               cell_growth_rates.columns[0]]
 
-group_by_day = gene_expression.groupby(days_frame.columns[0])
+group_by_day = gene_expression.groupby(days_data_frame.columns[0])
 
 if args.verbose:
-    print('Computing ' + str(growth_ratios.shape[0]) + ' transport maps...')
+    print('Computing ' + str(day_pairs.shape[0]) + ' transport maps...')
 
-for i in range(growth_ratios.shape[0]):
+for i in range(day_pairs.shape[0]):
     # consecutive days only
-    t1 = growth_ratios.iloc[i, 0]
-    t2 = growth_ratios.iloc[i, 1]
-    growth_ratio = growth_ratios.iloc[i, 2]
+    t1 = day_pairs.iloc[i, 0]
+    t2 = day_pairs.iloc[i, 1]
     m1 = group_by_day.get_group(t1)
     m2 = group_by_day.get_group(t2)
     if args.verbose:
         print(
             'Computing transport map from ' + str(
                 t1) + ' to ' + str(
-                t2) + ' with growth ratio ' + str(growth_ratio))
+                t2))
     delta_t = t2 - t1
-    if args.verbose:
-        print('delta_t' + str(delta_t))
     cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
         m1.drop(fields_to_drop_for_distance, axis=1),
         Y=m2.drop(fields_to_drop_for_distance, axis=1),
@@ -131,8 +107,9 @@ for i in range(growth_ratios.shape[0]):
     cost_matrix = cost_matrix / np.median(cost_matrix)
     if args.verbose:
         print('Computed cost matrix.')
-    growth_rate = m1.growth_score.values
-    result = wot.optimal_transport(cost_matrix, growth_rate,
+    growth_rate = m1.cell_growth_rate.values
+    result = wot.optimal_transport(cost_matrix=cost_matrix,
+                                   growth_rate=growth_rate,
                                    delta_days=delta_t,
                                    max_transport_fraction=args.max_transport_fraction,
                                    min_transport_fraction=args.min_transport_fraction,
@@ -140,7 +117,6 @@ for i in range(growth_ratios.shape[0]):
                                    l0_max=args.l0_max, lambda1=args.lambda1,
                                    lambda2=args.lambda2,
                                    epsilon=args.epsilon,
-                                   growth_ratio=growth_ratio,
                                    scaling_iter=args.scaling_iter)
     transport = pandas.DataFrame(result['transport'], index=m1.index,
                                  columns=m2.index)

@@ -7,6 +7,15 @@ Uses time-course data to infer how the probability distribution of cells in gene
 by using the mathematical approach of Optimal Transport (OT)
 
 ========================
+Getting Started
+========================
+
+git clone https://github.com/broadinstitute/wot.git
+cd wot
+pip install -e .
+export PYTHONPATH=$PYTHONPATH:.
+
+========================
 Command Line Usage
 ========================
 
@@ -15,27 +24,20 @@ Compute transport maps
 .. code-block:: bash
 
     python bin/ot.py \
-       --expression_file paper/serum_free_dmap_20.txt \
-       --growth_file paper/growth_scores.txt \
-       --days_file paper/days.txt \
-       --growth_ratio_file paper/growth_ratios.txt \
+       --matrix my_expression_matrix.txt \
+       --cell_growth_rates growth_rates.txt \
+       --cell_days cell_days.txt \
+       --day_pairs pairs.txt \
        --prefix my_output_file_name_prefix \
-       --min_transport_fraction 0.05 \
-       --max_transport_fraction 0.4 \
-       --min_growth_fit 0.9 \
-       --l0_max 100 \
-       --lambda1 1 \
-       --lambda2 1 \
-       --epsilon 0.1 \
-       --scaling_iter 250
+       --compress
 
 Summarize by cluster
 
 .. code-block:: bash
 
     python bin/summarize_by_cluster.py \
-       --dir my_transport_maps/ \
-       --clusters clusters.txt \
+       --dir my_transport_maps \
+       --cluster clusters.txt \
        --prefix my_summary
 
 Compute trajectories
@@ -43,10 +45,10 @@ Compute trajectories
 .. code-block:: bash
 
     python bin/trajectory.py \
-       --dir paper/transport_maps/2i/ \
-       --id day-9-c1-2i_6 --id day-9-c1-2i_11 \
+       --dir my_transport_maps_dir \
        --time 9 \
-       --prefix my_trajectory
+       --prefix my_trajectory \
+       --id my_cell_ids.txt
 
 ============
 API Usage

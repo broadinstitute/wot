@@ -100,7 +100,13 @@ class TestWOT(unittest.TestCase):
 
         grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
         cluster_ids = list(grouped_by_cluster.groups.keys())
-        result = wot.get_weights([map1, map2],
+        all_cell_ids = set()
+        column_cell_ids_by_time = []
+        for transport_map in [map1, map2]:
+            all_cell_ids.update(transport_map.columns)
+            column_cell_ids_by_time.append(transport_map.columns)
+            all_cell_ids.update(transport_map.index)
+        result = wot.get_weights(all_cell_ids, column_cell_ids_by_time,
                                  grouped_by_cluster, cluster_ids)
 
         self.assertTrue(
@@ -120,7 +126,13 @@ class TestWOT(unittest.TestCase):
         # weighted average across time
         grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
         cluster_ids = list(grouped_by_cluster.groups.keys())
-        result = wot.get_weights([map1, map2],
+        all_cell_ids = set()
+        column_cell_ids_by_time = []
+        for transport_map in [map1, map2]:
+            all_cell_ids.update(transport_map.columns)
+            column_cell_ids_by_time.append(transport_map.columns)
+            all_cell_ids.update(transport_map.index)
+        result = wot.get_weights(all_cell_ids, column_cell_ids_by_time,
                                  grouped_by_cluster, cluster_ids)
 
         self.assertTrue(
@@ -156,26 +168,53 @@ class TestWOT(unittest.TestCase):
                  ],
                 index=cluster_ids, columns=cluster_ids))
 
+    def test_summarize_by_cluster_command_line(self):
+        subprocess.call(args=['python',
+                              os.path.abspath('../bin/summarize_by_cluster.py'),
+                              '--dir',
+                              os.path.abspath('../paper/transport_maps/'),
+                              '--cluster',
+                              os.path.abspath('../paper/clusters.txt'),
+                              '--prefix', 'cluster_summary'], cwd=os.getcwd(),
+                        stderr=subprocess.STDOUT)
+
+    def test_cluster_distance_command_line(self):
+        subprocess.call(args=['python',
+                              os.path.abspath('../bin/cluster_distance.py'),
+                              '--dir',
+                              os.path.abspath('../paper/transport_maps/'),
+                              '--cluster',
+                              os.path.abspath('../paper/clusters.txt'),
+                              '--ref',
+                              os.path.abspath(
+                                  '../paper/transport_maps/summarized/summary.txt'),
+                              '--prefix', 'distance', os.path.abspath(
+                '../paper/transport_maps/summarized/summary.txt'), ],
+                        cwd=os.getcwd(),
+                        stderr=subprocess.STDOUT)
+
     def test_trajectory_commmand_line(self):
         subprocess.call(args=['python',
                               os.path.abspath('../bin/trajectory.py'),
                               '--dir', os.path.abspath(
                 '../paper/transport_maps/2i'),
-                              '--id', 'day-9-c1-2i_6',
                               '--time', '9',
-                              '--prefix', '2i'], cwd=os.getcwd(),
+                              '--prefix', '2i', '--id', FIXME],
+                        cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
 
     def test_ot_commmand_line(self):
         subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
-                              '--expression_file',
+                              '--matrix',
                               os.path.abspath(
                                   '../paper/2i_dmap_20.txt'),
-                              '--growth_file', os.path.abspath(
+                              '--cell_growth_rates', os.path.abspath(
                 '../paper/growth_scores.txt'),
-                              '--days_file', os.path.abspath(
+                              '--cell_days', os.path.abspath(
                 '../paper/days.txt'),
-                              '--prefix', os.path.abspath('serum_free'),
+                              '--day_pairs', os.path.abspath(
+                'day_pairs.txt'),
+                              '--prefix', 'mytest',
                               '--min_transport_fraction', '0.05',
                               '--max_transport_fraction', '0.4',
                               '--min_growth_fit', '0.9',
@@ -183,12 +222,10 @@ class TestWOT(unittest.TestCase):
                               '--lambda1', '1',
                               '--lambda2', '1',
                               '--epsilon', '0.1',
-                              '--growth_ratio', os.path.abspath(
-                '../paper/growth_ratios.txt'),
                               '--scaling_iter', '250', '--verbose'],
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
-
+        return
         timepoints = [0, 2, 4, 6, 8, 9, 10, 11, 12, 16]
         for i in range(0, len(timepoints) - 1):
             transport = pandas.read_table(

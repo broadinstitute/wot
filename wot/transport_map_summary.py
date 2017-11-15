@@ -104,12 +104,26 @@ def transport_map_by_cluster(transport_map, grouped_by_cluster, cluster_ids):
     return result
 
 
-def get_weights(transport_maps, grouped_by_cluster, cluster_ids):
+def get_column_weights(all_cell_ids, grouped_by_cluster, cluster_ids):
+    total_cluster_size = np.zeros(len(cluster_ids))
+    for cluster_index in range(len(cluster_ids)):
+        cluster_group = grouped_by_cluster.get_group(
+            cluster_ids[cluster_index])
+        total_cluster_size[cluster_index] = cluster_group.loc[
+            cluster_group.index.intersection(all_cell_ids)].shape[0]
+    return total_cluster_size
+
+
+def get_weights(all_cell_ids, column_cell_ids_by_time, grouped_by_cluster,
+                cluster_ids):
     """
           Compute the distance between transport maps.
 
           Args:
-              transport_maps (list): A list of uncollapsed transport maps.
+              all_cell_ids (set) : Set of all cell ids contained in
+              uncollapsed transport maps.
+              column_cell_ids_by_time (list): A list of uncollapsed
+              cell ids in transport maps.
               grouped_by_cluster (GroupBy): A GroupBy object
               returned from pandas.DataFrame.groupby(). The object maps
               cell ids to cluster ids.
@@ -119,29 +133,18 @@ def get_weights(transport_maps, grouped_by_cluster, cluster_ids):
               weights for each cluster
     """
     cluster_weights_by_time = []  # each time, then each cluster
-    total_cluster_size = np.zeros(len(cluster_ids))
-    all_cell_ids = set()
-    for time_index in range(len(transport_maps)):
-        transport_map = transport_maps[time_index]
-        all_cell_ids.update(transport_map.columns)
-        all_cell_ids.update(transport_map.index)
+    total_cluster_size = get_column_weights(all_cell_ids,
+                                            grouped_by_cluster, cluster_ids)
 
-    for cluster_index in range(len(cluster_ids)):
-        cluster_group = grouped_by_cluster.get_group(
-            cluster_ids[cluster_index])
-        total_cluster_size[cluster_index] = cluster_group.loc[
-            cluster_group.index.intersection(all_cell_ids)].shape[0]
-
-    for time_index in range(len(transport_maps)):
+    for time_index in range(len(column_cell_ids_by_time)):
         weights = np.zeros(len(cluster_ids))
         cluster_weights_by_time.append(weights)
-        transport_map = transport_maps[time_index]
         for cluster_index in range(len(cluster_ids)):
             cluster_group = grouped_by_cluster.get_group(
                 cluster_ids[cluster_index])
             timepoint_cluster_size = cluster_group.loc[
                 cluster_group.index.intersection(
-                    transport_map.columns)].shape[0]
+                    column_cell_ids_by_time[time_index])].shape[0]
 
             # join ids in transport map to ids in cluster
             fraction = timepoint_cluster_size / total_cluster_size[

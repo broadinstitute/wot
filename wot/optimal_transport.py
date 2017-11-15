@@ -55,7 +55,7 @@ def transport_stable(p, q, C, lambda1, lambda2, epsilon, scaling_iter, g):
 
 
 def optimal_transport(cost_matrix, growth_rate, p=None, q=None,
-                      growth_ratio=2.5, delta_days=1, epsilon=0.1, lambda1=1.,
+                      delta_days=1, epsilon=0.1, lambda1=1.,
                       lambda2=1., min_transport_fraction=0.05,
                       max_transport_fraction=0.4, min_growth_fit=0.9,
                       l0_max=100, scaling_iter=250):
@@ -69,11 +69,8 @@ def optimal_transport(cost_matrix, growth_rate, p=None, q=None,
                                sklearn.metrics.pairwise.pairwise_distances
                                for example.
         growth_rate (ndarray): A 1D matrix that indicates the growth rate of
-        cells.
-        growth_ratio (float): Over 1 day, a cell in the more proliferative
-        group is expected to produce growth_ratio
-                              times as many offspring as a cell in the
-                              non-proliferative group
+        cells. A growth rate of 2 means that a cell will have 2 descendants
+        after 1 day.
         delta_days (float): Elapsed time in days between time points
         epsilon (float): Controls the entropy of the transport map. An
         extremely large entropy parameter will give a
@@ -106,13 +103,8 @@ def optimal_transport(cost_matrix, growth_rate, p=None, q=None,
         p = np.ones(cost_matrix.shape[0]) / cost_matrix.shape[0]
     if q is None:
         q = np.ones(cost_matrix.shape[1]) / cost_matrix.shape[1]
-    lb = 0.5
-    ub = lb * growth_ratio
-    inflection = 0.22
-    scale = 10
 
-    g = (ub - lb) / (1 + np.exp(-scale * (growth_rate - inflection))) + lb
-    g = g ** delta_days
+    g = growth_rate ** delta_days
     l0 = 1.
     e0 = 1.
     while True:
