@@ -9,11 +9,12 @@ by using the mathematical approach of Optimal Transport (OT)
 ========================
 Getting Started
 ========================
+.. code-block:: bash
 
-git clone https://github.com/broadinstitute/wot.git
-cd wot
-pip install -e .
-export PYTHONPATH=$PYTHONPATH:.
+    git clone https://github.com/broadinstitute/wot.git
+    cd wot
+    pip install -e .
+    export PYTHONPATH=$PYTHONPATH:.
 
 ========================
 Command Line Usage
