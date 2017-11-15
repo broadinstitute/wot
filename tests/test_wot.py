@@ -225,7 +225,6 @@ class TestWOT(unittest.TestCase):
                               '--scaling_iter', '250', '--verbose'],
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
-        return
         timepoints = [0, 2, 4, 6, 8, 9, 10, 11, 12, 16]
         for i in range(0, len(timepoints) - 1):
             transport = pandas.read_table(
