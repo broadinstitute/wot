@@ -200,7 +200,7 @@ class TestWOT(unittest.TestCase):
                 '../paper/transport_maps/2i'),
                               '--time', '2',
                               '--prefix', 'mytraj', '--id', os.path.abspath(
-                '../paper/day_2_cluster_4.txt')],
+                '../paper/day_2_cluster_4.txt'), '--normalize'],
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
 

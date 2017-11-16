@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import pandas
+import numpy as np
 
 
-def trajectory(ids, transport_maps, time):
+def trajectory(ids, transport_maps, time, normalize):
     """
         Compute the trajectory of the given ids.
 
@@ -12,6 +13,8 @@ def trajectory(ids, transport_maps, time):
             containing 'transport_map' (DataFrame), 't_minus_1', and 't'. The
             ids (list): A list of ids to compute the trajectory for.
             time (string): The time at which the ids were measured.
+            normalize (bool) Whether to normalize total mass to one at each
+            timepoint.
 
         Returns:
             dict: A dictionary containing ancestors and descendants.
@@ -77,11 +80,12 @@ def trajectory(ids, transport_maps, time):
                    len(transport_maps)):
         # sum across columns
         summary = transport_maps_by_start_time[
-            i].transpose().sum(axis=1).to_frame(name='sum')
+            i].transpose().sum(axis=1)
+        if normalize:
+            total = np.sum(summary.values)
+            summary = summary / total
+        summary = summary.to_frame(name='sum')
         descendants.append(
             {'summary': summary, 't': transport_maps[i]['t']})
 
-
-        # descendants = pandas.concat(
-        #     transport_maps_by_start_time[t_start_time_index:])
     return {'descendants': descendants}

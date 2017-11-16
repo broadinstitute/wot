@@ -8,7 +8,7 @@ import wot
 import csv
 
 parser = argparse.ArgumentParser(
-    description='Compute ancestors and descendants given cell ids, a time t, '
+    description='Compute the descendants given cell ids, a time t, '
                 'and transport maps')
 parser.add_argument('--dir',
                     help='Directory of transport maps as produced by ot',
@@ -17,13 +17,16 @@ parser.add_argument('--time',
                     help='The time t',
                     required=True)
 parser.add_argument('--prefix',
-                    help='Prefix for ouput file names. Command produces '
-                         'prefix_ancestors.txt and prefix_descendants.txt',
+                    help='Prefix for ouput file names.',
                     required=True)
 parser.add_argument('--id',
-                    help='A list of cell ids at time t to compute the '
+                    help='A file with one cell id per line to '
+                         'compute '
+                         'the '
                          'trajectory for.',
                     required=True)
+parser.add_argument('--normalize', action='store_true',
+                    help='Normalize the total mass at each timepoint to one.')
 parser.add_argument('--compress', action='store_true',
                     help='gzip output files')
 
@@ -58,7 +61,7 @@ for f in os.listdir(input_dir):
 transport_maps_inputs.sort(
     key=lambda x: x['t_minus_1_f'])  # sort by t_minus_1 (start time)
 
-result = wot.trajectory(ids, transport_maps_inputs, time)
+result = wot.trajectory(ids, transport_maps_inputs, time, args.normalize)
 # ancestors = result['descendants']
 # for p in ancestors:
 #     summary = p['summary']
@@ -72,12 +75,23 @@ result = wot.trajectory(ids, transport_maps_inputs, time)
 
 
 descendants = result['descendants']
+summaries = []
 for p in descendants:
-    summary = p['summary']
-    summary.to_csv(prefix + '_' + str(p['t']) + '_descendants.txt' + (
-        '.gz' if
-        args.compress
-        else ''),
-                   index_label='id', sep='\t',
-                   doublequote=False, quoting=csv.QUOTE_NONE,
-                   compression=('gzip' if args.compress else None))
+    summaries.append(p['summary'])
+summary = pandas.concat(summaries)
+summary.to_csv(prefix + '_descendants.txt' + (
+    '.gz' if
+    args.compress
+    else ''),
+               index_label='id', sep='\t',
+               doublequote=False, quoting=csv.QUOTE_NONE,
+               compression=('gzip' if args.compress else None))
+# for p in descendants:
+#     summary = p['summary']
+#     summary.to_csv(prefix + '_' + str(p['t']) + '_descendants.txt' + (
+#         '.gz' if
+#         args.compress
+#         else ''),
+#                    index_label='id', sep='\t',
+#                    doublequote=False, quoting=csv.QUOTE_NONE,
+#                    compression=('gzip' if args.compress else None))
