@@ -48,35 +48,40 @@ def trajectory(ids, transport_maps, time):
     # e.g. t=9, t7_t8, t8_t9, t9_t10 compute ancestors of t9 at t7
     ancestors = None
 
-    if t_start_time_index >= 1:
-        # subset columns to specified cell ids only
-        transport_maps_by_start_time[
-            t_start_time_index - 1] = transport_maps[t_start_time_index - 1][
-            'transport_map'][ids]
-        for i in range(t_start_time_index - 2, -1, -1):
-            transport_maps_by_start_time[i] = transport_maps[i]['transport_map']
-
-            transport_maps_by_start_time[i] = \
-                transport_maps_by_start_time[
-                    i].dot(
-                    transport_maps_by_start_time[i + 1])
-        ancestors = pandas.concat(
-            transport_maps_by_start_time[t_start_time_index - 1::-1])
+    # if t_start_time_index >= 1:
+    #     # subset columns to specified cell ids only
+    #     transport_maps_by_start_time[
+    #         t_start_time_index - 1] = transport_maps[t_start_time_index - 1][
+    #         'transport_map'][ids]
+    #     for i in range(t_start_time_index - 2, -1, -1):
+    #         transport_maps_by_start_time[i] = transport_maps[i][
+    # 'transport_map']
+    #         transport_maps_by_start_time[i] = \
+    #             transport_maps_by_start_time[
+    #                 i].dot(
+    #                 transport_maps_by_start_time[i + 1])
+    #     ancestors = pandas.concat(
+    #         transport_maps_by_start_time[t_start_time_index - 1::-1])
 
     # descendants, go forwards in time
     # e.g. t=9, t_start_time_index=t9_t10, t+1=t10_t11
-
     for i in range(t_start_time_index + 1,
                    len(transport_maps)):
         transport_maps_by_start_time[i] = transport_maps[i]['transport_map']
         transport_maps_by_start_time[i] = transport_maps_by_start_time[
             i - 1].dot(
             transport_maps_by_start_time[i])
+
+    descendants = []
     for i in range(t_start_time_index,
                    len(transport_maps)):
-        transport_maps_by_start_time[i] = transport_maps_by_start_time[
-            i].transpose()
+        # sum across columns
+        summary = transport_maps_by_start_time[
+            i].transpose().sum(axis=1).to_frame(name='sum')
+        descendants.append(
+            {'summary': summary, 't': transport_maps[i]['t']})
 
-    descendants = pandas.concat(
-        transport_maps_by_start_time[t_start_time_index:])
-    return {'ancestors': ancestors, 'descendants': descendants}
+
+        # descendants = pandas.concat(
+        #     transport_maps_by_start_time[t_start_time_index:])
+    return {'descendants': descendants}

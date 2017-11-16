@@ -198,8 +198,9 @@ class TestWOT(unittest.TestCase):
                               os.path.abspath('../bin/trajectory.py'),
                               '--dir', os.path.abspath(
                 '../paper/transport_maps/2i'),
-                              '--time', '9',
-                              '--prefix', '2i', '--id', FIXME],
+                              '--time', '2',
+                              '--prefix', 'mytraj', '--id', os.path.abspath(
+                '../paper/day_2_cluster_4.txt')],
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
 
@@ -264,7 +265,6 @@ class TestWOT(unittest.TestCase):
         trajectory_id = ['c4-t3']
         result = wot.trajectory(trajectory_id, transport_maps, 3)
         ancestors = result['ancestors']
-        descendants = result['descendants']
 
         # not messing up already computed ancestors
         ids = ['c1-t2', 'c2-t2',

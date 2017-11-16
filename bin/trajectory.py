@@ -5,6 +5,7 @@ import argparse
 import pandas
 import os.path
 import wot
+import csv
 
 parser = argparse.ArgumentParser(
     description='Compute ancestors and descendants given cell ids, a time t, '
@@ -45,8 +46,10 @@ for f in os.listdir(input_dir):
         t_minus_1 = tokens[len(tokens) - 2]
         transport_map = pandas.read_table(path, index_col=0)
         if t_minus_1 == time:
+            # subset rows
             transport_map = transport_map[transport_map.index.isin(ids)]
         if t == time:
+            # subset columns
             transport_map = transport_map[ids]
         transport_maps_inputs.append(
             {'transport_map': transport_map,
@@ -56,12 +59,25 @@ transport_maps_inputs.sort(
     key=lambda x: x['t_minus_1_f'])  # sort by t_minus_1 (start time)
 
 result = wot.trajectory(ids, transport_maps_inputs, time)
-result['ancestors'].to_csv(prefix + '_ancestors.txt' + ('.gz' if
-                                                        args.compress else ''),
-                           index_label='id', sep='\t',
-                           compression='gzip' if args.compress else None)
-result['descendants'].to_csv(prefix + '_descendants.txt' + ('.gz' if
-                                                            args.compress
-                                                            else ''),
-                             index_label='id', sep='\t',
-                             compression='gzip' if args.compress else None)
+# ancestors = result['descendants']
+# for p in ancestors:
+#     summary = p['summary']
+#     summary.to_csv(prefix + '_' + str(p['t']) + '_ancestors.txt' + (
+#         '.gz' if
+#         args.compress
+#         else ''),
+#                    index_label='id', sep='\t',
+#                    doublequote=False, quoting=csv.QUOTE_NONE,
+#                    compression=('gzip' if args.compress else None))
+
+
+descendants = result['descendants']
+for p in descendants:
+    summary = p['summary']
+    summary.to_csv(prefix + '_' + str(p['t']) + '_descendants.txt' + (
+        '.gz' if
+        args.compress
+        else ''),
+                   index_label='id', sep='\t',
+                   doublequote=False, quoting=csv.QUOTE_NONE,
+                   compression=('gzip' if args.compress else None))
