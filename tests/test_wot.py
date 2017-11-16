@@ -209,7 +209,7 @@ class TestWOT(unittest.TestCase):
                               os.path.abspath(
                                   '../paper/2i_dmap_20.txt'),
                               '--cell_growth_rates', os.path.abspath(
-                '../paper/growth_scores.txt'),
+                '../paper/growth_rates.txt'),
                               '--cell_days', os.path.abspath(
                 '../paper/days.txt'),
                               '--day_pairs', os.path.abspath(
@@ -222,21 +222,22 @@ class TestWOT(unittest.TestCase):
                               '--lambda1', '1',
                               '--lambda2', '1',
                               '--epsilon', '0.1',
-                              '--scaling_iter', '250', '--verbose'],
+                              '--scaling_iter', '250', '--verbose',
+                              '--compress'],
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
-        timepoints = [0, 2, 4, 6, 8, 9, 10, 11, 12, 16]
+        timepoints = [0, 2, 4]
         for i in range(0, len(timepoints) - 1):
             transport = pandas.read_table(
-                'serum_free_' + str(
+                'mytest_' + str(
                     timepoints[i]) + '_' + str(
                     timepoints[i + 1]) +
-                '.txt', index_col=0)
+                '.txt.gz', index_col=0)
             precomputed_transport_map = precomputed_transport_map = \
                 pandas.read_table(
                     '../paper/transport_maps/lineage_' + str(
                         timepoints[i]) + '_' + str(timepoints[i + 1]) +
-                    '.txt', index_col=0)
+                    '.txt.gz', index_col=0)
             pandas.testing.assert_index_equal(left=transport.index,
                                               right=precomputed_transport_map.index,
                                               check_names=False)

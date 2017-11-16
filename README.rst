@@ -26,11 +26,10 @@ Compute transport maps
 
     python bin/ot.py \
        --matrix my_expression_matrix.txt \
-       --cell_growth_rates growth_rates.txt \
-       --cell_days cell_days.txt \
-       --day_pairs pairs.txt \
-       --prefix my_output_file_name_prefix \
-       --compress
+       --cell_growth_rates my_growth_rates.txt \
+       --cell_days my_cell_days.txt \
+       --day_pairs my_day_pairs.txt \
+       --prefix my_transport_maps \
 
 Summarize by cluster
 
@@ -38,7 +37,7 @@ Summarize by cluster
 
     python bin/summarize_by_cluster.py \
        --dir my_transport_maps \
-       --cluster clusters.txt \
+       --clusters my_clusters.txt \
        --prefix my_summary
 
 Compute trajectories

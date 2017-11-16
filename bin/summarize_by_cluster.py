@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--dir',
                     help='Directory of transport maps as produced by ot',
                     required=True)
-parser.add_argument('--cluster',
+parser.add_argument('--clusters',
                     help='Two column tab delimited file without header with '
                          'cell id and '
                          'cluster id',
@@ -31,7 +31,7 @@ parser.add_argument('--compress', action='store_true',
 args = parser.parse_args()
 input_dir = args.dir
 cluster_transport_maps = []
-clusters = pandas.read_table(args.cluster, index_col=0, header=None,
+clusters = pandas.read_table(args.clusters, index_col=0, header=None,
                              names=['cluster'])
 grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
 cluster_ids = list(grouped_by_cluster.groups.keys())
