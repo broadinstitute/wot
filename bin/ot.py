@@ -26,7 +26,7 @@ parser.add_argument('--day_pairs',
                          'pairs of days to compute transport maps for',
                     required=True)
 
-parser.add_argument('--epsilon', type=float,
+parser.add_argument('--epsilon', type=float, default=0.1,
                     help='Controls the entropy of the transport map. An '
                          'extremely large entropy parameter will give a '
                          'maximally entropic transport map, and an '
@@ -66,6 +66,7 @@ parser.add_argument('--compress', action='store_true',
                     help='gzip output files')
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
+
 args = parser.parse_args()
 
 # cells on rows, features on columns
@@ -87,7 +88,7 @@ fields_to_drop_for_distance = [days_data_frame.columns[0],
 group_by_day = gene_expression.groupby(days_data_frame.columns[0])
 
 if args.verbose:
-    print('Computing ' + str(day_pairs.shape[0]) + ' transport maps...')
+    print('Computing ' + str(day_pairs.shape[0]) + ' transport maps')
 
 for i in range(day_pairs.shape[0]):
     # consecutive days only
@@ -117,6 +118,7 @@ for i in range(day_pairs.shape[0]):
                                    lambda2=args.lambda2,
                                    epsilon=args.epsilon,
                                    scaling_iter=args.scaling_iter)
+
     transport = pandas.DataFrame(result['transport'], index=m1.index,
                                  columns=m2.index)
     if args.verbose:
