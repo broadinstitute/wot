@@ -6,6 +6,7 @@ import wot
 import pandas
 import numpy as np
 import sklearn.metrics.pairwise
+import csv
 
 parser = argparse.ArgumentParser(
     description='Compute transport maps between pairs of time points')
@@ -105,8 +106,6 @@ for i in range(day_pairs.shape[0]):
         Y=m2.drop(fields_to_drop_for_distance, axis=1),
         metric='sqeuclidean')
     cost_matrix = cost_matrix / np.median(cost_matrix)
-    if args.verbose:
-        print('Computed cost matrix.')
     growth_rate = m1.cell_growth_rate.values
     result = wot.optimal_transport(cost_matrix=cost_matrix,
                                    growth_rate=growth_rate,
@@ -121,12 +120,13 @@ for i in range(day_pairs.shape[0]):
     transport = pandas.DataFrame(result['transport'], index=m1.index,
                                  columns=m2.index)
     if args.verbose:
-        print('Computed transport map.')
-    if args.verbose:
+        print('Done computing transport map')
         print('Saving transport map')
+
     transport.to_csv(args.prefix + '_' + str(t1) + '_' + str(
         t2) + '.txt' + ('.gz' if
                         args.compress else ''), index_label='id',
                      sep='\t',
                      compression='gzip' if
-                     args.compress else None)
+                     args.compress else None, doublequote=False,
+                     quoting=csv.QUOTE_NONE)
