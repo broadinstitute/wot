@@ -205,28 +205,21 @@ class TestWOT(unittest.TestCase):
                         stderr=subprocess.STDOUT)
 
     def test_ot_commmand_line(self):
-        # subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
-        #               '--matrix',
-        #               os.path.abspath(
-        #                   '../paper/2i_dmap_20.txt'),
-        #               '--cell_growth_rates', os.path.abspath(
-        # '../paper/growth_rates.txt'),
-        #               '--cell_days', os.path.abspath(
-        # '../paper/days.txt'),
-        #               '--day_pairs', os.path.abspath(
-        # '../paper/pairs_2i.txt'),
-        #               '--prefix', 'mytest',
-        #               '--min_transport_fraction', '0.05',
-        #               '--max_transport_fraction', '0.4',
-        #               '--min_growth_fit', '0.9',
-        #               '--l0_max', '100',
-        #               '--lambda1', '1',
-        #               '--lambda2', '1',
-        #               '--epsilon', '0.1',
-        #               '--scaling_iter', '250', '--verbose',
-        #               '--compress'],
-        #         cwd=os.getcwd(),
-        #         stderr=subprocess.STDOUT)
+        subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
+                              '--matrix',
+                              os.path.abspath(
+                                  '../paper/2i_dmap_20.txt'),
+                              '--cell_growth_rates', os.path.abspath(
+                '../paper/growth_rates.txt'),
+                              '--cell_days', os.path.abspath(
+                '../paper/days.txt'),
+                              '--day_pairs', os.path.abspath(
+                '../paper/pairs_2i.txt'),
+                              '--prefix', 'mytest',
+                              '--verbose',
+                              '--compress'],
+                        cwd=os.getcwd(),
+                        stderr=subprocess.STDOUT)
         timepoints = [0, 2, 4, 6, 8, 9, 10, 11, 12, 16]
         for timepoint in range(0, len(timepoints) - 1):
             my_transport = pandas.read_table(
