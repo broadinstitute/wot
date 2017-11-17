@@ -14,7 +14,7 @@ def transport_map_distance(transport_map_1, transport_map_2, column_weights):
         Returns:
           float: The distance between the two transport maps.
     """
-    column_distances = np.zeros(len(transport_map_1.shape[1]))
+    column_distances = np.zeros(transport_map_1.shape[1])
     for j in range(transport_map_1.shape[1]):
         # Kullback-Leibler divergence
         column_distances[j] = scipy.stats.entropy(
