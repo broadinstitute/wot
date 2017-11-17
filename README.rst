@@ -12,6 +12,7 @@ Getting Started
 .. code-block:: bash
 
     git clone https://github.com/broadinstitute/wot.git
+    git checkout develop
     cd wot
     pip install -e .
     export PYTHONPATH=$PYTHONPATH:.
