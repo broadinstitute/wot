@@ -5,6 +5,7 @@ import argparse
 import wot
 import pandas
 import os
+import csv
 
 parser = argparse.ArgumentParser(
     description='Convert a series of cell transport maps to a single '
@@ -32,7 +33,7 @@ args = parser.parse_args()
 input_dir = args.dir
 cluster_transport_maps = []
 clusters = pandas.read_table(args.clusters, index_col=0, header=None,
-                             names=['cluster'])
+                             names=['cluster'], quoting=csv.QUOTE_NONE)
 grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
 cluster_ids = list(grouped_by_cluster.groups.keys())
 column_cell_ids_by_time = []
@@ -43,7 +44,8 @@ for f in os.listdir(input_dir):
         file_info = wot.get_file_basename_and_extension(f)
         basename = file_info['basename']
         path = os.path.join(input_dir, f)
-        transport_map = pandas.read_table(path, index_col=0)
+        transport_map = pandas.read_table(path, index_col=0,
+                                          quoting=csv.QUOTE_NONE)
         all_cell_ids.update(transport_map.columns)
         all_cell_ids.update(transport_map.index)
         column_cell_ids_by_time.append(transport_map.columns)

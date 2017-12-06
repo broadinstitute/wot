@@ -34,7 +34,7 @@ args = parser.parse_args()
 input_dir = args.dir
 time = args.time
 prefix = args.prefix
-ids = pandas.read_table(args.id).iloc[:, 0]
+ids = pandas.read_table(args.id, quoting=csv.QUOTE_NONE).iloc[:, 0]
 
 # transport map file names end with start_end.csv
 # csv has prior time on rows, later time on columns
@@ -47,7 +47,8 @@ for f in os.listdir(input_dir):
         path = os.path.join(input_dir, f)
         t = tokens[len(tokens) - 1]
         t_minus_1 = tokens[len(tokens) - 2]
-        transport_map = pandas.read_table(path, index_col=0)
+        transport_map = pandas.read_table(path, index_col=0,
+                                          quoting=csv.QUOTE_NONE)
         if t_minus_1 == time:
             # subset rows
             transport_map = transport_map[transport_map.index.isin(ids)]
