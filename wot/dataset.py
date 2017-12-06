@@ -28,15 +28,3 @@ class Dataset:
         self.row_meta = self.col_meta
         self.col_meta = tmp
 
-    def write(self, path, output_format='txt'):
-        if output_format == 'txt' or output_format == 'txt.gz':
-            f = pandas.DataFrame(data=self.x, index=self.row_meta.index,
-                                 columns=self.col_meta.index)
-            f.to_csv(path + '.txt' + ('.gz' if output_format == 'txt.gz' else
-            ''),
-                     index_label="id",
-                     sep='\t',
-                     compression='gzip' if output_format == 'txt.gz'
-                     else None)
-        else:
-            raise Exception('Unknown file output_format')

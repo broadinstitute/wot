@@ -20,10 +20,10 @@ parser.add_argument('--transpose', action='store_true',
                     help='Transpose the matrix')
 args = parser.parse_args()
 
-ds = wot.read_sparse(args.matrix)
+ds = wot.read_dataset(args.matrix)
 
 gs = wot.read_gmx(args.gene_sets)
 if args.transpose:
     ds.transpose()
 result = wot.score_gene_sets(ds=ds, gs=gs, z_score=True)
-result.write(path=args.prefix, output_format='txt')
+wot.write_dataset(ds=result, path=args.prefix, output_format='txt')
