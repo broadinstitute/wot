@@ -22,7 +22,7 @@ class TestWOT(unittest.TestCase):
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
-    def test_same_distrubution(self):
+    def test_same_distribution(self):
         # test same distributions, diagonals along transport map should be equal
         m1 = np.random.rand(2, 3)
         m2 = m1
@@ -182,7 +182,7 @@ class TestWOT(unittest.TestCase):
         subprocess.call(args=['python',
                               os.path.abspath('../bin/cluster_distance.py'),
                               '--dir',
-                              os.path.abspath('../paper/transport_maps/'),
+                              os.path.abspath('../paper/transport_maps/2i'),
                               '--cluster',
                               os.path.abspath('../paper/clusters.txt'),
                               '--ref',
@@ -204,11 +204,54 @@ class TestWOT(unittest.TestCase):
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
 
+    def test_ot_commmand_line_clusters(self):
+        subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
+                              '--matrix',
+                              os.path.abspath(
+                                  '../finalInput/dmap_2i_normalized.txt'),
+                              '--cell_growth_rates', os.path.abspath(
+                '../paper/growth_rates.txt'),
+                              '--cell_days', os.path.abspath(
+                '../paper/days.txt'),
+                              '--day_pairs', os.path.abspath(
+                '../paper/pairs_2i.txt'),
+                              '--prefix', 'myclustertest',
+                              '--no_save',
+                              '--clusters',
+                              os.path.abspath('../paper/clusters.txt'),
+                              '--verbose',
+                              '--compress'],
+                        cwd=os.getcwd(),
+                        stderr=subprocess.STDOUT)
+
+    def test_score_gene_set(self):
+        ds = wot.Dataset(x=scipy.sparse.csr_matrix(np.array([[1, 2, 3, 0],
+                                                             [4, 5, 6, 0]])),
+                         row_meta=pandas.DataFrame(
+                             index=['c1', 'c2']),
+                         col_meta=pandas.DataFrame(
+                             index=['g1', 'g2',
+                                    'g3', 'g4']))
+        gs = wot.Dataset(x=scipy.sparse.csr_matrix(np.array([[1, 0, 1],
+                                                             [0, 1, 0],
+                                                             [0, 0, 1],
+                                                             [1, 0, 0]
+                                                             ],
+                                                            dtype=np.uint8)),
+                         row_meta=pandas.DataFrame(
+                             index=['g1', 'g4', 'g2', 'g5']),
+                         col_meta=pandas.DataFrame(
+                             index=['s1', 's2', 's3']))
+        result = wot.score_gene_sets(ds=ds, gs=gs, z_score=False)
+        np.testing.assert_array_equal(result.x,
+                                      np.array([[1, np.NaN, 1.5], [4, np.NaN,
+                                                                   4.5]]))
+
     def test_ot_commmand_line(self):
         subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
                               '--matrix',
                               os.path.abspath(
-                                  '../paper/2i_dmap_20.txt'),
+                                  '../finalInput/dmap_2i_normalized.txt'),
                               '--cell_growth_rates', os.path.abspath(
                 '../paper/growth_rates.txt'),
                               '--cell_days', os.path.abspath(
@@ -228,28 +271,26 @@ class TestWOT(unittest.TestCase):
                     timepoints[timepoint + 1]) +
                 '.txt.gz', index_col=0)
 
-            precomputed_transport_map = np.load(
-                '../paper/transport_maps/2i/lineage.day-' + str(
-                    timepoints[timepoint + 1]) + '.npy')
-            # precomputed_transport_map = precomputed_transport_map = \
-            #     pandas.read_table(
-            #         '../paper/transport_maps/2i/lineage.day-' + str(
-            #             timepoints[timepoint + 1]) +
-            #         '.txt', index_col=0)
-            # pandas.testing.assert_index_equal(left=my_transport.index,
-            #
-            # right=precomputed_transport_map.index,
-            #                                   check_names=False)
-            # pandas.testing.assert_index_equal(left=my_transport.columns,
-            #
-            # right=precomputed_transport_map.columns,
-            #                                   check_names=False)
+            # precomputed_transport_map = np.load(
+            #     '../paper/transport_maps/2i/npy/lineage.day-' + str(
+            #         timepoints[timepoint + 1]) + '.npy')
+            precomputed_transport_map = precomputed_transport_map = \
+                pandas.read_table(
+                    '../paper/transport_maps/2i/lineage.day-' + str(
+                        timepoints[timepoint + 1]) +
+                    '.txt', index_col=0)
+            pandas.testing.assert_index_equal(left=my_transport.index,
+                                              right=precomputed_transport_map.index,
+                                              check_names=False)
+            pandas.testing.assert_index_equal(left=my_transport.columns,
+                                              right=precomputed_transport_map.columns,
+                                              check_names=False)
             total = 0
             count = 0
             for i in range(my_transport.shape[0]):
                 for j in range(my_transport.shape[1]):
-                    diff = abs(precomputed_transport_map[i,
-                                                         j] -
+                    diff = abs(precomputed_transport_map.values[i,
+                                                                j] -
                                my_transport.values[
                                    i, j])
                     total += diff
@@ -258,10 +299,11 @@ class TestWOT(unittest.TestCase):
             print('lineage_' + str(
                 timepoints[timepoint]) + '_' + str(
                 timepoints[timepoint + 1]))
-            print('total: ' + str(total))
+            print('total diff: ' + str(total))
+            print('pre total: ' + str(precomputed_transport_map.sum().sum()))
+            print('my total: ' + str(my_transport.sum().sum()))
             print('count: ' + str(count) + '/' + str(
-                my_transport.shape[0] * my_transport.shape[1]) + ' = ' + str(
-                (count / my_transport.shape[0] * my_transport.shape[1])))
+                my_transport.shape[0] * my_transport.shape[1]))
 
     def test_trajectory(self):
         transport_maps = list()
