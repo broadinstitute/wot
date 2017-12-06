@@ -1,11 +1,13 @@
 import pandas
 import numpy as np
 import scipy.sparse
+import wot
 
 
 def read_gmx(path):
     with open(path) as fp:
         ids = fp.readline().split('\t')
+
         descriptions = fp.readline().split('\t')
         data = []
         rows = []
@@ -14,6 +16,8 @@ def read_gmx(path):
 
         ncols = len(ids)
         nrows = 0
+        ids[len(ids) - 1] = ids[len(ids) - 1].rstrip()
+        descriptions[len(ids) - 1] = descriptions[len(ids) - 1].rstrip()
         for line in fp:
             tokens = line.split('\t')
             for j in range(ncols):
@@ -34,10 +38,10 @@ def read_gmx(path):
         for rid in row_id_to_index:
             row_ids[row_id_to_index[rid]] = rid
 
-        return Dataset(x=a, row_meta=pandas.DataFrame(index=row_ids),
-                       col_meta=pandas.DataFrame(data={'description':
-                                                           descriptions},
-                                                 index=ids))
+        return wot.Dataset(x=a, row_meta=pandas.DataFrame(index=row_ids),
+                           col_meta=pandas.DataFrame(data={'description':
+                                                               descriptions},
+                                                     index=ids))
 
 
 def read_sparse(path, sep=None):
@@ -56,7 +60,6 @@ def read_sparse(path, sep=None):
                     column_ids = test
                     break
 
-        print(sep)
         column_ids = column_ids[1:]
         ncols = len(column_ids)
         for line in fp:
@@ -73,8 +76,7 @@ def read_sparse(path, sep=None):
         data = np.array(data, copy=False)
         rows = np.array(rows, dtype=np.uint32, copy=False)
         cols = np.array(cols, dtype=np.uint32, copy=False)
-
         a = scipy.sparse.coo_matrix((data, (rows, cols)), shape=(i, ncols),
                                     dtype=np.float32).tocsr()
-        return Dataset(x=a, row_meta=pandas.DataFrame(index=row_ids),
-                       col_meta=pandas.DataFrame(index=column_ids))
+        return wot.Dataset(x=a, row_meta=pandas.DataFrame(index=row_ids),
+                           col_meta=pandas.DataFrame(index=column_ids))

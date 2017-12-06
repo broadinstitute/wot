@@ -24,10 +24,10 @@ def score_gene_sets(ds, gs, z_score=True):
     not_zero = np.where(sums > 0)
     gs_x = gs_x[not_zero[1], :]
     ds_x = ds_x[:, not_zero[1]]
+
     # Compute the z-score for each gene in the set. Truncate these z-scores at 5
     # or −5, and define the signature of the cell to be the mean z-score over
     # all genes in the gene set.
-
     if z_score:
         x = ds_x.todense() if scipy.sparse.issparse(ds_x) else ds_x
         mean = np.mean(x, axis=0)  # 1 by ngenes
@@ -36,10 +36,10 @@ def score_gene_sets(ds, gs, z_score=True):
         x = (x - mean) / stdev
         x[np.where(x > 5)] = 5
         x[np.where(x < -5)] = -5
-
     else:
         x = ds_x
-    scores = x.dot(gs_x)
+
+    scores = x.dot(gs_x.todense())
     ngenes_in_set = gs_x.sum(axis=0)
     scores = scores / ngenes_in_set
     return wot.Dataset(x=scores, row_meta=ds.row_meta, col_meta=gs.col_meta)
