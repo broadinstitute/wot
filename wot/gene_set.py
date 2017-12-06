@@ -39,7 +39,7 @@ def score_gene_sets(ds, gs, z_score=True):
     else:
         x = ds_x
 
-    scores = x.dot(gs_x.todense())
+    scores = x.dot(gs_x.todense() if not scipy.sparse.issparse(x) else gs_x)
     ngenes_in_set = gs_x.sum(axis=0)
     scores = scores / ngenes_in_set
     return wot.Dataset(x=scores, row_meta=ds.row_meta, col_meta=gs.col_meta)
