@@ -220,10 +220,14 @@ class TestWOT(unittest.TestCase):
                               '--clusters',
                               os.path.abspath('../paper/clusters.txt'),
                               '--verbose',
-                              '--compress', '--subsample_iter', '5',
-                              '--subsample_cells', '500',
-                              '--subsample_cells',
-                              '50'],
+                              '--compress', '--subsample_iter', '20',
+                              '--subsample_cells', '3000',
+                              '--subsample_cells', '2000',
+                              '--subsample_cells', '1500',
+                              '--subsample_cells', '1000',
+                              '--subsample_cells','500',
+                              '--subsample_cells','250',
+                              '--subsample_cells', '100'],
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
 

@@ -4,20 +4,6 @@ import numpy as np
 import scipy.stats
 
 
-def get_file_basename_and_extension(name):
-    dot_index = name.rfind('.')
-    ext = ''
-    basename = name
-    if dot_index != -1:
-        ext = name[dot_index:]
-        if ext == '.gz':
-            return get_file_basename_and_extension(name[0:dot_index])
-
-    if dot_index != -1:
-        basename = name[0:dot_index]
-    return {'basename': basename, 'ext': ext};
-
-
 def transport_stable(p, q, C, lambda1, lambda2, epsilon, scaling_iter, g):
     """
     Compute the optimal transport with stabilized numerics.

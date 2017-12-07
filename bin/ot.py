@@ -73,10 +73,10 @@ parser.add_argument('--subsample_cells', help='Number of cells to sample '
                                               'without '
                                               'replacement.', type=int,
                     action='append')
-# parser.add_argument('--subsample_genes', help='Number of genes to sample '
-#                                               'without '
-#                                               'replacement.', type=int,
-#                     action='append')
+parser.add_argument('--subsample_genes', help='Number of genes to sample '
+                                              'without '
+                                              'replacement.', type=int,
+                    action='append')
 parser.add_argument('--subsample_iter', help='Number of subsample iterations '
                                              'to perform',
                     type=int, default=0)
@@ -126,16 +126,16 @@ if args.clusters is not None:
     grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
     cluster_ids = list(grouped_by_cluster.groups.keys())
     if args.subsample_iter > 0:
-        if args.subsample_cells is None:
-            print('subsample_cells required when '
+        if args.subsample_genes is None and args.subsample_cells is None:
+            print('subsample_cells/subsample_genes required when '
                   'subsample_iter > 0')
             exit(1)
         resample = True
 
         subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
-        # if args.subsample_genes is not None:
-        #     subsample_genes = args.subsample_genes
-        #     subsample_writer.write('ngenes\t')
+        if args.subsample_genes is not None:
+            subsample_genes = args.subsample_genes
+            subsample_writer.write('ngenes\t')
         if args.subsample_cells is not None:
             subsample_cells = args.subsample_cells
             subsample_writer.write('ncells\t')
@@ -151,71 +151,68 @@ for day_index in range(day_pairs.shape[0]):
     t2 = day_pairs.iloc[day_index, 1]
     m1 = group_by_day.get_group(t1)
     m2 = group_by_day.get_group(t2)
-
     delta_t = t2 - t1
-    result = None
-    if not resample:
+    if args.verbose:
+        print(
+            'Computing transport map from ' + str(
+                t1) + ' to ' + str(
+                t2))
+    unnormalized_cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
+        m1.drop(fields_to_drop_for_distance, axis=1),
+        Y=m2.drop(fields_to_drop_for_distance, axis=1),
+        metric='sqeuclidean')
+
+    cost_matrix = unnormalized_cost_matrix / np.median(
+        unnormalized_cost_matrix)
+    growth_rate = m1.cell_growth_rate.values
+    result = wot.optimal_transport(cost_matrix=cost_matrix,
+                                   growth_rate=growth_rate,
+                                   delta_days=delta_t,
+                                   max_transport_fraction=args.max_transport_fraction,
+                                   min_transport_fraction=args.min_transport_fraction,
+                                   min_growth_fit=args.min_growth_fit,
+                                   l0_max=args.l0_max, lambda1=args.lambda1,
+                                   lambda2=args.lambda2,
+                                   epsilon=args.epsilon,
+                                   scaling_iter=args.scaling_iter)
+
+    transport_map = pandas.DataFrame(result['transport'], index=m1.index,
+                                     columns=m2.index)
+    if args.verbose:
+        print('Done computing transport map')
+
+    if args.clusters is not None:
+        cluster_transport_map = wot.transport_map_by_cluster(
+            transport_map, grouped_by_cluster, cluster_ids)
+        all_cell_ids.update(transport_map.columns)
+        all_cell_ids.update(transport_map.index)
+        column_cell_ids_by_time.append(transport_map.columns)
         if args.verbose:
-            print(
-                'Computing transport map from ' + str(
-                    t1) + ' to ' + str(
-                    t2))
-        unnormalized_cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
-            m1.drop(fields_to_drop_for_distance, axis=1),
-            Y=m2.drop(fields_to_drop_for_distance, axis=1),
-            metric='sqeuclidean')
+            print('Summarized transport map by cluster')
+        if args.cluster_details:
+            if args.verbose:
+                print('Saving cluster transport map')
+            cluster_transport_map.to_csv(
+                args.prefix + '_cluster_' + str(t1) + '_' + str(
+                    t2) + '.txt' + ('.gz' if
+                args.compress else ''),
+                index_label="id",
+                sep='\t',
+                compression='gzip' if args.compress
+                else None)
+        cluster_transport_maps.append(cluster_transport_map)
 
-        cost_matrix = unnormalized_cost_matrix / np.median(
-            unnormalized_cost_matrix)
-        growth_rate = m1.cell_growth_rate.values
-        result = wot.optimal_transport(cost_matrix=cost_matrix,
-                                       growth_rate=growth_rate,
-                                       delta_days=delta_t,
-                                       max_transport_fraction=args.max_transport_fraction,
-                                       min_transport_fraction=args.min_transport_fraction,
-                                       min_growth_fit=args.min_growth_fit,
-                                       l0_max=args.l0_max, lambda1=args.lambda1,
-                                       lambda2=args.lambda2,
-                                       epsilon=args.epsilon,
-                                       scaling_iter=args.scaling_iter)
-
-        transport_map = pandas.DataFrame(result['transport'], index=m1.index,
-                                         columns=m2.index)
+    # save the tranport map
+    if not args.no_save:
         if args.verbose:
-            print('Done computing transport map')
-
-        if args.clusters is not None:
-            cluster_transport_map = wot.transport_map_by_cluster(
-                transport_map, grouped_by_cluster, cluster_ids)
-            all_cell_ids.update(transport_map.columns)
-            all_cell_ids.update(transport_map.index)
-            column_cell_ids_by_time.append(transport_map.columns)
-            if args.verbose:
-                print('Summarized transport map by cluster')
-            if args.cluster_details:
-                if args.verbose:
-                    print('Saving cluster transport map')
-                cluster_transport_map.to_csv(
-                    args.prefix + '_cluster_' + str(t1) + '_' + str(
-                        t2) + '.txt' + ('.gz' if
-                    args.compress else ''),
-                    index_label="id",
-                    sep='\t',
-                    compression='gzip' if args.compress
-                    else None)
-            cluster_transport_maps.append(cluster_transport_map)
-
-        # save the tranport map
-        if not args.no_save:
-            if args.verbose:
-                print('Saving transport map')
-            transport_map.to_csv(args.prefix + '_' + str(t1) + '_' + str(
-                t2) + '.txt' + ('.gz' if
-            args.compress else ''), index_label='id',
-                                 sep='\t',
-                                 compression='gzip' if
-                                 args.compress else None, doublequote=False,
-                                 quoting=csv.QUOTE_NONE)
+            print('Saving transport map')
+        transport_map.to_csv(args.prefix + '_' + str(t1) + '_' + str(
+            t2) + '.txt' + ('.gz' if
+        args.compress else ''), index_label='id',
+                             sep='\t',
+                             compression='gzip' if
+                             args.compress else None, doublequote=False,
+                             quoting=csv.QUOTE_NONE)
 
     if resample:
         rnd = np.random.RandomState()
@@ -227,9 +224,12 @@ for day_index in range(day_pairs.shape[0]):
             for subsample in range(args.subsample_iter):
                 if args.verbose:
                     print('Subsample iteration ' + str(subsample + 1))
-                m1_sample = m1.sample(n=ncells, replace=False, axis=0,
+                n = min(ncells, m1.shape[0], m2.shape[0]);
+                m1_sample = m1.sample(n=n,
+                                      replace=False,
+                                      axis=0,
                                       random_state=rnd)
-                m2_sample = m2.sample(n=ncells, replace=False, axis=0,
+                m2_sample = m2.sample(n=n, replace=False, axis=0,
                                       random_state=rnd)
                 unnormalized_cost_matrix = \
                     sklearn.metrics.pairwise.pairwise_distances(
@@ -239,28 +239,24 @@ for day_index in range(day_pairs.shape[0]):
                 cost_matrix = unnormalized_cost_matrix / np.median(
                     unnormalized_cost_matrix)
                 growth_rate = m1_sample.cell_growth_rate.values
-                subsampled_result = wot.optimal_transport(
-                    cost_matrix=cost_matrix,
-                    growth_rate=growth_rate,
-                    delta_days=delta_t,
-                    max_transport_fraction=args.max_transport_fraction,
-                    min_transport_fraction=args.min_transport_fraction,
-                    min_growth_fit=args.min_growth_fit,
-                    l0_max=args.l0_max,
-                    lambda1=result['lambda1'] if result is not None else
-                    args.lambda1,
-                    lambda2=result['lambda2'] if result is not None else
-                    args.lambda2,
-                    epsilon=result['epsilon'] if result is not None else
-                    args.epsilon,
-                    scaling_iter=args.scaling_iter)
 
-                subsampled_transport_map = pandas.DataFrame(
-                    subsampled_result['transport'],
-                    index=m1_sample.index,
-                    columns=m2_sample.index)
+                p = np.ones(cost_matrix.shape[0]) / cost_matrix.shape[0]
+                q = np.ones(cost_matrix.shape[1]) / cost_matrix.shape[1]
+
+                g = growth_rate ** delta_t
+                subsampled_result = wot.transport_stable(p, q, cost_matrix,
+                                                         result['lambda1'],
+                                                         result['lambda2'],
+                                                         result['epsilon'],
+                                                         args.scaling_iter,
+                                                         g)
+
                 subsampled_maps.append(wot.transport_map_by_cluster(
-                    subsampled_transport_map, grouped_by_cluster, cluster_ids))
+                    pandas.DataFrame(
+                        subsampled_result,
+                        index=m1_sample.index,
+                        columns=m2_sample.index), grouped_by_cluster,
+                    cluster_ids))
 
             cluster_shape = subsampled_maps[0].shape
             vals = np.zeros(
@@ -278,7 +274,7 @@ for day_index in range(day_pairs.shape[0]):
                     stdevs[counter] = np.sqrt(np.var(vals[i, j]))
                     counter += 1
             mean_stdev = np.mean(stdevs)
-            subsample_writer.write(str(ncells) +
+            subsample_writer.write(str(n) +
                                    '\t' + str(t1) + '\t' + str(t2) + '\t' + str(
                 mean_stdev) + '\n')
             subsample_writer.flush()
