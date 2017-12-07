@@ -57,10 +57,11 @@ def write_dataset(ds, path, output_format='txt'):
     if output_format == 'loom':
         import h5py
         f = h5py.File(path + '.loom', 'w')
-        dset = f.create_dataset("matrix", shape=ds.shape, chunks=(100, 100),
-                                maxshape=(None, ds.shape[1]),
-                                compression="gzip", compression_opts=9,
-                                data=ds.x)
+        f.create_dataset("matrix", shape=ds.x.shape, chunks=(100, 100),
+                         maxshape=(None, ds.x.shape[1]),
+                         compression="gzip", compression_opts=9,
+                         data=ds.x.todense() if
+                         scipy.sparse.issparse(ds.x) else ds.x)
         f.create_group('/row_attrs')
         f.create_group('/col_attrs')
         for name in ds.row_meta.columns:

@@ -204,6 +204,29 @@ class TestWOT(unittest.TestCase):
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
 
+    def test_ot_commmand_line_clusters_subsample(self):
+        subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
+                              '--matrix',
+                              os.path.abspath(
+                                  '../finalInput/dmap_2i_normalized.txt'),
+                              '--cell_growth_rates', os.path.abspath(
+                '../paper/growth.txt'),
+                              '--cell_days', os.path.abspath(
+                '../paper/days.txt'),
+                              '--day_pairs', os.path.abspath(
+                '../paper/days0.txt'),
+                              '--prefix', 'myclustertest',
+                              '--no_save',
+                              '--clusters',
+                              os.path.abspath('../paper/clusters.txt'),
+                              '--verbose',
+                              '--compress', '--subsample_iter', '5',
+                              '--subsample_cells', '500',
+                              '--subsample_cells',
+                              '50'],
+                        cwd=os.getcwd(),
+                        stderr=subprocess.STDOUT)
+
     def test_ot_commmand_line_clusters(self):
         subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
                               '--matrix',
