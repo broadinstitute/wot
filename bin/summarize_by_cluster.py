@@ -3,7 +3,7 @@
 
 import argparse
 import wot
-import pandas
+import pandas as pd
 import os
 import csv
 
@@ -32,7 +32,7 @@ parser.add_argument('--compress', action='store_true',
 args = parser.parse_args()
 input_dir = args.dir
 cluster_transport_maps = []
-clusters = pandas.read_table(args.clusters, index_col=0, header=None,
+clusters = pd.read_table(args.clusters, index_col=0, header=None,
                              names=['cluster'], quoting=csv.QUOTE_NONE)
 grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
 cluster_ids = list(grouped_by_cluster.groups.keys())
@@ -44,7 +44,7 @@ for f in os.listdir(input_dir):
         file_info = wot.get_file_basename_and_extension(f)
         basename = file_info['basename']
         path = os.path.join(input_dir, f)
-        transport_map = pandas.read_table(path, index_col=0,
+        transport_map = pd.read_table(path, index_col=0,
                                           quoting=csv.QUOTE_NONE)
         all_cell_ids.update(transport_map.columns)
         all_cell_ids.update(transport_map.index)

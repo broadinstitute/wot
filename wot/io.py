@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 import numpy as np
 import scipy.sparse
 import wot
@@ -38,8 +38,8 @@ def read_gmx(path):
         for rid in row_id_to_index:
             row_ids[row_id_to_index[rid]] = rid
 
-        return wot.Dataset(x=a, row_meta=pandas.DataFrame(index=row_ids),
-                           col_meta=pandas.DataFrame(data={'description':
+        return wot.Dataset(x=a, row_meta=pd.DataFrame(index=row_ids),
+                           col_meta=pd.DataFrame(data={'description':
                                                                descriptions},
                                                      index=ids))
 
@@ -60,7 +60,7 @@ def get_file_basename_and_extension(name):
 
 def write_dataset(ds, path, output_format='txt'):
     if output_format == 'txt' or output_format == 'txt.gz':
-        f = pandas.DataFrame(data=ds.x, index=ds.row_meta.index,
+        f = pd.DataFrame(data=ds.x, index=ds.row_meta.index,
                              columns=ds.col_meta.index)
         f.to_csv(path + '.txt' + ('.gz' if output_format == 'txt.gz' else
         ''),
@@ -126,5 +126,5 @@ def read_dataset(path, sep=None):
         cols = np.array(cols, dtype=np.uint64, copy=False)
         a = scipy.sparse.coo_matrix((data, (rows, cols)), shape=(i, ncols),
                                     dtype=np.float32).tocsr()
-        return wot.Dataset(x=a, row_meta=pandas.DataFrame(index=row_ids),
-                           col_meta=pandas.DataFrame(index=column_ids))
+        return wot.Dataset(x=a, row_meta=pd.DataFrame(index=row_ids),
+                           col_meta=pd.DataFrame(index=column_ids))

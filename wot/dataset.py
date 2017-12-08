@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 
 class Dataset:
@@ -6,8 +6,8 @@ class Dataset:
        A Dataset consists of a 2-d matrix x, row metadata, and column metadata.
        Args:
            x (ndarray|scipy.spmatrix): 2-d matrix
-           row_meta (pandas.DataFrame) Row metadata
-           col_meta (pandas.DataFrame) Column metadata
+           row_meta (pd.DataFrame) Row metadata
+           col_meta (pd.DataFrame) Column metadata
        """
 
     def __init__(self, x, row_meta, col_meta):

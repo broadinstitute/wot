@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import pandas
+import pandas as pd
 import numpy as np
 
 
@@ -49,22 +49,19 @@ def trajectory(ids, transport_maps, time, normalize):
     # ancestors, go backwards in time
     # t[i−2,i] = t[i−2,i−1]t[i−1,i]
     # e.g. t=9, t7_t8, t8_t9, t9_t10 compute ancestors of t9 at t7
-    ancestors = None
 
-    # if t_start_time_index >= 1:
-    #     # subset columns to specified cell ids only
-    #     transport_maps_by_start_time[
-    #         t_start_time_index - 1] = transport_maps[t_start_time_index - 1][
-    #         'transport_map'][ids]
-    #     for i in range(t_start_time_index - 2, -1, -1):
-    #         transport_maps_by_start_time[i] = transport_maps[i][
-    # 'transport_map']
-    #         transport_maps_by_start_time[i] = \
-    #             transport_maps_by_start_time[
-    #                 i].dot(
-    #                 transport_maps_by_start_time[i + 1])
-    #     ancestors = pandas.concat(
-    #         transport_maps_by_start_time[t_start_time_index - 1::-1])
+    if t_start_time_index >= 1:
+        # subset columns to specified cell ids only
+        transport_maps_by_start_time[
+            t_start_time_index - 1] = transport_maps[t_start_time_index - 1][
+            'transport_map'][ids]
+        for i in range(t_start_time_index - 2, -1, -1):
+            transport_maps_by_start_time[i] = transport_maps[i][
+                'transport_map']
+            transport_maps_by_start_time[i] = \
+                transport_maps_by_start_time[
+                    i].dot(
+                    transport_maps_by_start_time[i + 1])
 
     # descendants, go forwards in time
     # e.g. t=9, t_start_time_index=t9_t10, t+1=t10_t11
@@ -76,16 +73,38 @@ def trajectory(ids, transport_maps, time, normalize):
             transport_maps_by_start_time[i])
 
     descendants = []
+    descendants_summary = []
     for i in range(t_start_time_index,
                    len(transport_maps)):
         # sum across columns
-        summary = transport_maps_by_start_time[
-            i].transpose().sum(axis=1)
+        m = transport_maps_by_start_time[i].transpose()
+        summary = m.sum(axis=1)
         if normalize:
             total = np.sum(summary.values)
             summary = summary / total
         summary = summary.to_frame(name='sum')
-        descendants.append(
-            {'summary': summary, 't': transport_maps[i]['t']})
+        descendants_summary.append(summary)
+        descendants.append(m)
 
-    return {'descendants': descendants}
+    descendants = pd.concat(descendants)
+    descendants_summary = pd.concat(descendants_summary)
+
+    ancestors = []
+    ancestors_summary = []
+    for m in transport_maps_by_start_time[t_start_time_index - 1::-1]:
+        # sum across columns
+        summary = m.sum(axis=1)
+        if normalize:
+            total = np.sum(summary.values)
+            summary = summary / total
+        summary = summary.to_frame(name='sum')
+        ancestors_summary.append(summary)
+        ancestors.append(m)
+
+    ancestors = pd.concat(ancestors)
+    ancestors_summary = pd.concat(ancestors_summary)
+
+    return {'descendants': descendants,
+            'descendants_summary': descendants_summary,
+            'ancestors': ancestors,
+            'ancestors_summary': ancestors_summary}

@@ -26,9 +26,10 @@ parser.add_argument('--id',
                          'trajectory for.',
                     required=True)
 parser.add_argument('--normalize', action='store_true',
-                    help='Normalize the total mass at each timepoint to one.')
+                    help='Normalize the total mass at each timepoint to one.',
+                    required=False)
 parser.add_argument('--compress', action='store_true',
-                    help='gzip output files')
+                    help='gzip output files', required=False)
 
 args = parser.parse_args()
 input_dir = args.dir
@@ -63,36 +64,18 @@ transport_maps_inputs.sort(
     key=lambda x: x['t_minus_1_f'])  # sort by t_minus_1 (start time)
 
 result = wot.trajectory(ids, transport_maps_inputs, time, args.normalize)
-# ancestors = result['descendants']
-# for p in ancestors:
-#     summary = p['summary']
-#     summary.to_csv(prefix + '_' + str(p['t']) + '_ancestors.txt' + (
-#         '.gz' if
-#         args.compress
-#         else ''),
-#                    index_label='id', sep='\t',
-#                    doublequote=False, quoting=csv.QUOTE_NONE,
-#                    compression=('gzip' if args.compress else None))
 
 
-descendants = result['descendants']
-summaries = []
-for p in descendants:
-    summaries.append(p['summary'])
-summary = pandas.concat(summaries)
-summary.to_csv(prefix + '_descendants.txt' + (
-    '.gz' if
-    args.compress
-    else ''),
-               index_label='id', sep='\t',
-               doublequote=False, quoting=csv.QUOTE_NONE,
-               compression=('gzip' if args.compress else None))
-# for p in descendants:
-#     summary = p['summary']
-#     summary.to_csv(prefix + '_' + str(p['t']) + '_descendants.txt' + (
-#         '.gz' if
-#         args.compress
-#         else ''),
-#                    index_label='id', sep='\t',
-#                    doublequote=False, quoting=csv.QUOTE_NONE,
-#                    compression=('gzip' if args.compress else None))
+def output(f, is_descendants):
+    f.to_csv(prefix + ('_descendants.txt' if is_descendants else
+    '_ancestors.txt') + (
+                 '.gz' if
+                 args.compress
+                 else ''),
+             index_label='id', sep='\t',
+             doublequote=False, quoting=csv.QUOTE_NONE,
+             compression=('gzip' if args.compress else None))
+
+
+output(result['descendants_summary'], True)
+output(result['ancestors_summary'], False)

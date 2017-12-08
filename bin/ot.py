@@ -3,7 +3,7 @@
 
 import argparse
 import wot
-import pandas
+import pandas as pd
 import numpy as np
 import sklearn.metrics.pairwise
 import csv
@@ -90,15 +90,15 @@ parser.add_argument('--verbose', action='store_true',
 args = parser.parse_args()
 
 # cells on rows, features on columns
-gene_expression = pandas.read_table(args.matrix, index_col=0,
+gene_expression = pd.read_table(args.matrix, index_col=0,
                                     quoting=csv.QUOTE_NONE)
 
-day_pairs = pandas.read_table(args.day_pairs, header=None, names=['t1', 't2'],
+day_pairs = pd.read_table(args.day_pairs, header=None, names=['t1', 't2'],
                               index_col=False, quoting=csv.QUOTE_NONE)
-days_data_frame = pandas.read_table(args.cell_days, index_col=0, header=None,
+days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
                                     names=['day'], quoting=csv.QUOTE_NONE)
 
-cell_growth_rates = pandas.read_table(args.cell_growth_rates, index_col=0,
+cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col=0,
                                       header=None, names=['cell_growth_rate'],
                                       quoting=csv.QUOTE_NONE)
 
@@ -121,7 +121,7 @@ resample = False
 subsample_cells = [0]
 subsample_genes = [0]
 if args.clusters is not None:
-    clusters = pandas.read_table(args.clusters, index_col=0, header=None,
+    clusters = pd.read_table(args.clusters, index_col=0, header=None,
                                  names=['cluster'], quoting=csv.QUOTE_NONE)
     grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
     cluster_ids = list(grouped_by_cluster.groups.keys())
@@ -138,7 +138,7 @@ if args.clusters is not None:
             subsample_writer.write('ngenes\t')
         if args.subsample_cells is not None:
             subsample_cells = args.subsample_cells
-            subsample_writer.write('ncells\t')
+            subsample_writer.write('ncells\tt1 ncells\tt2ncells\t')
 
         subsample_writer.write('t1' + '\t' + 't2' + '\t' + 'standard '
                                                            'deviation mean' +
@@ -176,7 +176,7 @@ for day_index in range(day_pairs.shape[0]):
                                    epsilon=args.epsilon,
                                    scaling_iter=args.scaling_iter)
 
-    transport_map = pandas.DataFrame(result['transport'], index=m1.index,
+    transport_map = pd.DataFrame(result['transport'], index=m1.index,
                                      columns=m2.index)
     if args.verbose:
         print('Done computing transport map')
@@ -217,14 +217,17 @@ for day_index in range(day_pairs.shape[0]):
     if resample:
         rnd = np.random.RandomState()
         for ncells in subsample_cells:
+            n = min(ncells, m1.shape[0], m2.shape[0]);
             if args.verbose:
                 print(
-                    'Resampling using ' + str(ncells) + ' cells')
+                    'Resampling using ' + str(n) + '/' + str(m1.shape[0]) + ' '
+                                                                            'and '
+                    + str(n) + '/' + str(m2.shape[0]))
             subsampled_maps = []
             for subsample in range(args.subsample_iter):
                 if args.verbose:
                     print('Subsample iteration ' + str(subsample + 1))
-                n = min(ncells, m1.shape[0], m2.shape[0]);
+
                 m1_sample = m1.sample(n=n,
                                       replace=False,
                                       axis=0,
@@ -252,7 +255,7 @@ for day_index in range(day_pairs.shape[0]):
                                                          g)
 
                 subsampled_maps.append(wot.transport_map_by_cluster(
-                    pandas.DataFrame(
+                    pd.DataFrame(
                         subsampled_result,
                         index=m1_sample.index,
                         columns=m2_sample.index), grouped_by_cluster,
@@ -274,9 +277,10 @@ for day_index in range(day_pairs.shape[0]):
                     stdevs[counter] = np.sqrt(np.var(vals[i, j]))
                     counter += 1
             mean_stdev = np.mean(stdevs)
-            subsample_writer.write(str(n) +
-                                   '\t' + str(t1) + '\t' + str(t2) + '\t' + str(
-                mean_stdev) + '\n')
+            subsample_writer.write(
+                str(m1.shape[0]) + '\t' + str(m2.shape[0]) + '\t' + str(n) +
+                '\t' + str(t1) + '\t' + str(t2) + '\t' + str(
+                    mean_stdev) + '\n')
             subsample_writer.flush()
 
 if resample:

@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 import scipy
 import numpy as np
 
@@ -45,7 +45,7 @@ def transport_maps_by_time(cluster_transport_maps,
               DataFrame: A cluster by cluster transport map
     """
     cluster_ids = cluster_transport_maps[0].index
-    combined_cluster_map = pandas.DataFrame(index=cluster_ids,
+    combined_cluster_map = pd.DataFrame(index=cluster_ids,
                                             columns=cluster_ids,
                                             data=0)
 
@@ -69,13 +69,13 @@ def transport_map_by_cluster(transport_map, grouped_by_cluster, cluster_ids):
       Args:
           transport_map (DataFrame): A transport map
           grouped_by_cluster (GroupBy): A GroupBy object
-              returned from pandas.DataFrame.groupby(). The object maps
+              returned from pd.DataFrame.groupby(). The object maps
               cluster ids to cell ids.
           cluster_ids (list): A list of unique cluster ids
       Returns:
           DataFrame: A cluster by cluster transport map
     """
-    result = pandas.DataFrame(index=cluster_ids, columns=cluster_ids,
+    result = pd.DataFrame(index=cluster_ids, columns=cluster_ids,
                               data=0)
 
     for cluster_index_1 in range(len(cluster_ids)):
@@ -125,7 +125,7 @@ def get_weights(all_cell_ids, column_cell_ids_by_time, grouped_by_cluster,
               column_cell_ids_by_time (list): A list of uncollapsed
               cell ids in transport maps.
               grouped_by_cluster (GroupBy): A GroupBy object
-              returned from pandas.DataFrame.groupby(). The object maps
+              returned from pd.DataFrame.groupby(). The object maps
               cell ids to cluster ids.
               cluster_ids (list): A list of unique cluster ids
           Returns:
@@ -164,7 +164,7 @@ def cluster_distance(transport_maps_1, transport_maps_2, grouped_by_cluster,
            transport_maps_1 (list): A list of transport maps.
            transport_maps_2 (list): A list of transport maps
            grouped_by_cluster (GroupBy): A GroupBy object
-              returned from pandas.DataFrame.groupby(). The object maps
+              returned from pd.DataFrame.groupby(). The object maps
              cell ids to cluster ids .
            cluster_ids (list): A list of unique cluster ids
        Returns:

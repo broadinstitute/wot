@@ -7,3 +7,4 @@ from .trajectory import *
 from .transport_map_summary import *
 from .io import *
 from .gene_set import *
+from .util import *
