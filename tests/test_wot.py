@@ -209,19 +209,19 @@ class TestWOT(unittest.TestCase):
         gene_set_scores = pd.read_table(
             '../paper/paper_gene_set_scores.txt',
             index_col=0)
-        precomputed = pd.read_table('../paper/paper_growth.txt',
+        precomputed = pd.read_table('../paper/growth.txt',
                                     index_col=0, header=None, names=['id',
                                                                      'score'])
         scores = wot.compute_growth_scores(gene_set_scores['Proliferation'],
                                            gene_set_scores['Apoptosis'])
-        gene_set_scores['scores'] = scores
+
         pd.testing.assert_index_equal(left=precomputed.index,
                                       right=gene_set_scores.index,
                                       check_names=False)
 
-        np.testing.assert_allclose(precomputed.values,
+        np.testing.assert_allclose(precomputed.iloc[:, 0],
                                    scores,
-                                   atol=0.0004)
+                                   atol=0.000001)
 
     def test_ot_commmand_line_clusters_subsample(self):
         subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
