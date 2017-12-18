@@ -73,10 +73,10 @@ parser.add_argument('--subsample_cells', help='Number of cells to sample '
                                               'without '
                                               'replacement.', type=int,
                     action='append')
-parser.add_argument('--subsample_genes', help='Number of genes to sample '
-                                              'without '
-                                              'replacement.', type=int,
-                    action='append')
+# parser.add_argument('--subsample_genes', help='Number of genes to sample '
+#                                               'without '
+#                                               'replacement.', type=int,
+#                     action='append')
 parser.add_argument('--subsample_iter', help='Number of subsample iterations '
                                              'to perform',
                     type=int, default=0)
@@ -87,27 +87,59 @@ parser.add_argument('--compress', action='store_true',
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
 
+parser.add_argument('--gene_set_sigma', help='Random noise to add to '
+                                             'proliferation and apoptosis '
+                                             'scores', type=float,
+                    action='append')
+parser.add_argument('--gene_set_scores', help='File containing "Proleration" '
+                                              'and '
+                                              '"Apoptosis" scores')
+parser.add_argument('--diagonal', help='Diagonal scaling matrix')
+parser.add_argument('--power', help='Diagonal scaling power', type=float)
+
 args = parser.parse_args()
+eigenvals = None
+if args.diagonal is not None:
+    eigenvals = np.loadtxt(args.diagonal, delimiter='\n')
+if eigenvals is not None and args.power is not None:
+    np.power(eigenvals, args.power)
 
 # cells on rows, features on columns
 gene_expression = pd.read_table(args.matrix, index_col=0,
-                                    quoting=csv.QUOTE_NONE)
+                                quoting=csv.QUOTE_NONE)
 
 day_pairs = pd.read_table(args.day_pairs, header=None, names=['t1', 't2'],
-                              index_col=False, quoting=csv.QUOTE_NONE)
+                          index_col=False, quoting=csv.QUOTE_NONE)
 days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
-                                    names=['day'], quoting=csv.QUOTE_NONE)
+                                names=['day'], quoting=csv.QUOTE_NONE)
 
 cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col=0,
-                                      header=None, names=['cell_growth_rate'],
-                                      quoting=csv.QUOTE_NONE)
+                                  header=None, names=['cell_growth_rate'],
+                                  quoting=csv.QUOTE_NONE)
 
+gene_set_scores = None
+gene_set_sigmas = None
+
+if eigenvals is not None:
+    gene_expression = gene_expression.dot(np.diag(eigenvals))
 gene_expression = gene_expression.join(cell_growth_rates).join(days_data_frame)
+
 # cell_growth_rates = cell_growth_rates.align(gene_expression, copy=False,
 #                                             join='right')
 # days_data_frame = days_data_frame.align(gene_expression, copy=False,
 #                                         join='right')
 
+gene_set_writer = None
+if args.gene_set_scores is not None:
+    gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0,
+                                    quoting=csv.QUOTE_NONE)
+    gene_set_scores = \
+        gene_set_scores.align(gene_expression, join='right', axis=0,
+                              copy=False)[0]
+    gene_set_sigmas = args.gene_set_sigma
+    gene_set_writer = open(args.prefix + '_growth.txt', 'w')
+    gene_set_writer.write(
+        't1' + '\t' + 't2' + '\t' + 'sigma' + '\t' + 'cluster_distance' + '\n')
 fields_to_drop_for_distance = [days_data_frame.columns[0],
                                cell_growth_rates.columns[0]]
 
@@ -120,22 +152,29 @@ cluster_transport_maps = []
 resample = False
 subsample_cells = [0]
 subsample_genes = [0]
+total_cluster_size = None
 if args.clusters is not None:
     clusters = pd.read_table(args.clusters, index_col=0, header=None,
-                                 names=['cluster'], quoting=csv.QUOTE_NONE)
+                             names=['cluster'], quoting=csv.QUOTE_NONE)
+    clusters = clusters.align(gene_expression, join='right', axis=0,
+                              copy=False)[0]
     grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
     cluster_ids = list(grouped_by_cluster.groups.keys())
+    total_cluster_size = wot.get_column_weights(clusters.index,
+                                                grouped_by_cluster,
+                                                cluster_ids)
+
     if args.subsample_iter > 0:
-        if args.subsample_genes is None and args.subsample_cells is None:
-            print('subsample_cells/subsample_genes required when '
+        if args.subsample_cells is None:
+            print('subsample_cells required when '
                   'subsample_iter > 0')
             exit(1)
         resample = True
 
         subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
-        if args.subsample_genes is not None:
-            subsample_genes = args.subsample_genes
-            subsample_writer.write('ngenes\t')
+        # if args.subsample_genes is not None:
+        #     subsample_genes = args.subsample_genes
+        #     subsample_writer.write('ngenes\t')
         if args.subsample_cells is not None:
             subsample_cells = args.subsample_cells
             subsample_writer.write('ncells\tt1 ncells\tt2ncells\t')
@@ -157,16 +196,17 @@ for day_index in range(day_pairs.shape[0]):
             'Computing transport map from ' + str(
                 t1) + ' to ' + str(
                 t2))
-    unnormalized_cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
-        m1.drop(fields_to_drop_for_distance, axis=1),
-        Y=m2.drop(fields_to_drop_for_distance, axis=1),
-        metric='sqeuclidean')
+    x = m1.drop(fields_to_drop_for_distance, axis=1)
+    y = Y = m2.drop(fields_to_drop_for_distance, axis=1)
+    unnormalized_cost_matrix = sklearn.metrics.pairwise.pairwise_distances(x, y,
+                                                                           metric='sqeuclidean')
 
     cost_matrix = unnormalized_cost_matrix / np.median(
         unnormalized_cost_matrix)
-    growth_rate = m1.cell_growth_rate.values
+
     result = wot.optimal_transport(cost_matrix=cost_matrix,
-                                   growth_rate=growth_rate,
+                                   growth_rate=m1[
+                                       cell_growth_rates.columns[0]].values,
                                    delta_days=delta_t,
                                    max_transport_fraction=args.max_transport_fraction,
                                    min_transport_fraction=args.min_transport_fraction,
@@ -177,7 +217,7 @@ for day_index in range(day_pairs.shape[0]):
                                    scaling_iter=args.scaling_iter)
 
     transport_map = pd.DataFrame(result['transport'], index=m1.index,
-                                     columns=m2.index)
+                                 columns=m2.index)
     if args.verbose:
         print('Done computing transport map')
 
@@ -214,6 +254,48 @@ for day_index in range(day_pairs.shape[0]):
                              args.compress else None, doublequote=False,
                              quoting=csv.QUOTE_NONE)
 
+    if gene_set_scores is not None:
+        _gene_set_scores = gene_set_scores.loc[m1.index]
+        for sigma in gene_set_sigmas:
+            apoptosis = _gene_set_scores['Apoptosis'] + np.random.normal(0,
+                                                                         sigma,
+                                                                         _gene_set_scores.shape[
+                                                                             0])
+            proliferation = _gene_set_scores[
+                                'Proliferation'] + np.random.normal(
+                0,
+                sigma,
+                _gene_set_scores.shape[0])
+            g = wot.compute_growth_scores(proliferation.values,
+                                          apoptosis.values)
+
+            perturbed_result = wot.optimal_transport(cost_matrix=cost_matrix,
+                                                     growth_rate=g,
+                                                     delta_days=delta_t,
+                                                     max_transport_fraction=args.max_transport_fraction,
+                                                     min_transport_fraction=args.min_transport_fraction,
+                                                     min_growth_fit=args.min_growth_fit,
+                                                     l0_max=args.l0_max,
+                                                     lambda1=args.lambda1,
+                                                     lambda2=args.lambda2,
+                                                     epsilon=args.epsilon,
+                                                     scaling_iter=args.scaling_iter)
+            perturbed_transport_map = pd.DataFrame(
+                perturbed_result['transport'],
+                index=m1.index,
+                columns=m2.index)
+            perturbed_transport_map_by_cluster = wot.transport_map_by_cluster(
+                perturbed_transport_map, grouped_by_cluster, cluster_ids)
+
+            d = wot.transport_map_distance(
+                transport_map_1=cluster_transport_map,
+                transport_map_2=perturbed_transport_map_by_cluster,
+                column_weights=total_cluster_size)
+
+            gene_set_writer.write(
+                str(t1) + '\t' + str(t2) + '\t' + str(sigma) + '\t' + str(
+                    d) + '\n')
+            gene_set_writer.flush()
     if resample:
         rnd = np.random.RandomState()
         for ncells in subsample_cells:
@@ -241,12 +323,10 @@ for day_index in range(day_pairs.shape[0]):
                         metric='sqeuclidean')
                 cost_matrix = unnormalized_cost_matrix / np.median(
                     unnormalized_cost_matrix)
-                growth_rate = m1_sample.cell_growth_rate.values
 
                 p = np.ones(cost_matrix.shape[0]) / cost_matrix.shape[0]
                 q = np.ones(cost_matrix.shape[1]) / cost_matrix.shape[1]
-
-                g = growth_rate ** delta_t
+                g = m1_sample.cell_growth_rate.values ** delta_t
                 subsampled_result = wot.transport_stable(p, q, cost_matrix,
                                                          result['lambda1'],
                                                          result['lambda2'],
@@ -285,6 +365,10 @@ for day_index in range(day_pairs.shape[0]):
 
 if resample:
     subsample_writer.close()
+
+if gene_set_writer is not None:
+    gene_set_writer.close()
+
 if not resample and args.clusters is not None:
     if args.verbose:
         print('Saving summarized transport map')

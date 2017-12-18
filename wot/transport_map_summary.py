@@ -17,9 +17,11 @@ def transport_map_distance(transport_map_1, transport_map_2, column_weights):
     column_distances = np.zeros(transport_map_1.shape[1])
     for j in range(transport_map_1.shape[1]):
         # Kullback-Leibler divergence
-        column_distances[j] = scipy.stats.entropy(
+        val = scipy.stats.entropy(
             transport_map_1.iloc[:, j],
             qk=transport_map_2.iloc[:, j])
+        if not np.isinf(val):
+            column_distances[j] = val
 
     return np.average(column_distances,
                       weights=column_weights)
@@ -46,8 +48,8 @@ def transport_maps_by_time(cluster_transport_maps,
     """
     cluster_ids = cluster_transport_maps[0].index
     combined_cluster_map = pd.DataFrame(index=cluster_ids,
-                                            columns=cluster_ids,
-                                            data=0)
+                                        columns=cluster_ids,
+                                        data=0)
 
     for cluster_index in range(combined_cluster_map.shape[0]):
         per_cluster_total_weight = 0
@@ -76,7 +78,7 @@ def transport_map_by_cluster(transport_map, grouped_by_cluster, cluster_ids):
           DataFrame: A cluster by cluster transport map
     """
     result = pd.DataFrame(index=cluster_ids, columns=cluster_ids,
-                              data=0)
+                          data=0)
 
     for cluster_index_1 in range(len(cluster_ids)):
         cluster_group_1 = grouped_by_cluster.get_group(
