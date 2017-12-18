@@ -102,7 +102,7 @@ eigenvals = None
 if args.diagonal is not None:
     eigenvals = np.loadtxt(args.diagonal, delimiter='\n')
 if eigenvals is not None and args.power is not None:
-    np.power(eigenvals, args.power)
+    eigenvals = np.power(eigenvals, args.power)
 
 # cells on rows, features on columns
 gene_expression = pd.read_table(args.matrix, index_col=0,
