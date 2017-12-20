@@ -60,3 +60,63 @@ Pass --help to any of the commands for a full description of all command line ar
 
     python bin/ot.py --help
 
+========================
+File Formats
+========================
+Expression matrix - tab delimitted text file with genes on the columns and cells on the rows.
+
+Example:
++----+--------+--------+---------+
+| id | gene_1 | gene_2 | gene_n...
++----+--------+--------+---------+
+| cell_1 | 41.2 | 12.2 | 3
++----+--------+--------+---------+
+| cell_2 | 15 | 2 | 3.0
++----+--------+--------+---------+
+| cell_n | 12.2 | 2 | 3
++----+--------+--------+---------+
+
+Cell growth rates - Two column tab delimited file without header with cell ids and growth rates per day.
+
+Example:
++----+--------+
+| cell_1 | 3.1 |
++----+--------+
+| cell_2 | 2.1 |
++----+--------+
+| cell_n | 1.2 |
++----+--------+
+
+Cell days - Two column tab delimited file without header with cell ids and days.
+
+Example:
++----+--------+
+| cell_1 | 1 |
++----+--------+
+| cell_2 | 1 |
++----+--------+
+| cell_n | 2 |
++----+--------+
+
+Clusters - Two column tab delimited file without header with cell id and cluster id. Used to summarize transport maps by cluster.
+
+Example:
++----+--------+
+| cell_1 | 1 |
++----+--------+
+| cell_2 | 1 |
++----+--------+
+| cell_n | 2 |
++----+--------+
+
+Day pairs - Two column tab delimited file without header with pairs of days to compute transport maps for.
+
+Example:
++----+--------+
+| 0 | 2 |
++----+--------+
+| 2 | 4 |
++----+--------+
+| 4 | 6 |
++----+--------+
+
