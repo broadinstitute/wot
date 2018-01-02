@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse
 import wot
+import os
 
 
 def read_gmx(path):
@@ -114,16 +115,44 @@ def write_dataset(ds, path, output_format='txt'):
 
 def read_dataset(path, sep=None, dtype=np.float32, is_sparse=True):
     path = str(path)
-    ext = get_file_basename_and_extension(path)["ext"]
+    basename_and_extension = get_file_basename_and_extension(path)
+    ext = basename_and_extension["ext"]
     if ext == 'mtx':
         x = scipy.sparse.csr_matrix(scipy.io.mmread(path).astype(dtype))
-        return wot.Dataset(x=x, row_meta=pd.DataFrame(
-            index=pd.RangeIndex(start=0, stop=x.shape[0], step=1)),
-                           col_meta=pd.DataFrame(index=pd.RangeIndex(start=0,
-                                                                     stop=
-                                                                     x.shape[1],
-
-                                                                     step=1)))
+        # look for .barcodes.txt and .genes.txt
+        sp = os.path.split(path)
+        barcodes_files = (os.path.join(sp, basename_and_extension[
+            "basename"] + ".barcodes.tsv"),
+                          os.path.join(sp, basename_and_extension[
+                              "basename"] + ".barcodes.txt"),
+                          os.path.join(sp, "barcodes.tsv"))
+        row_meta = None
+        for f in barcodes_files:
+            if os.path.isfile(f):
+                row_meta = pd.DataFrame(index=np.genfromtxt(f, dtype=str))
+                break
+        if row_meta is None:
+            row_meta = pd.DataFrame(
+                index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
+        genes_files = (os.path.join(sp, basename_and_extension[
+            "basename"] + ".genes.tsv"),
+                       os.path.join(sp, basename_and_extension[
+                           "basename"] + ".genes.txt"),
+                       os.path.join(sp, "genes.tsv"))
+        col_meta = None
+        for f in genes_files:
+            if os.path.isfile(f):
+                data = np.genfromtxt(f, dtype=str)
+                if len(data.shape) > 1:
+                    data = data[:, 0] # TODO add other columns to df
+                col_meta = pd.DataFrame(index=data)
+                break
+        if col_meta is None:
+            col_meta = pd.DataFrame(index=pd.RangeIndex(start=0,
+                                                        stop=x.shape[1],
+                                                        step=1))
+        return wot.Dataset(x=x, row_meta=row_meta,
+                           col_meta=col_meta)
 
     with open(path) as fp:
         data = []
