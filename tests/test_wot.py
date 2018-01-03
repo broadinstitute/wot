@@ -223,6 +223,40 @@ class TestWOT(unittest.TestCase):
                                    scores,
                                    atol=0.000001)
 
+    def test_ot_commmand_line_clusters_perturb_growth(self):
+        subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
+                              '--matrix',
+                              os.path.abspath(
+                                  '../finalInput/dmap_2i_normalized.txt'),
+                              '--cell_growth_rates', os.path.abspath(
+                '../paper/growth.txt'),
+                              '--cell_days', os.path.abspath(
+                '../paper/days.txt'),
+                              '--day_pairs', os.path.abspath(
+                '../paper/pairs_2i.txt'),
+                              '--prefix', 'myclustertest',
+                              '--no_save',
+                              '--clusters',
+                              os.path.abspath('../paper/clusters.txt'),
+                              '--verbose',
+                              '--compress', '--gene_set_sigma', '0.01',
+                              '--gene_set_sigma', '0.05',
+                              '--gene_set_sigma', '0.1',
+                              '--gene_set_sigma', '0.2',
+                              '--gene_set_sigma', '0.3',
+                              '--gene_set_sigma', '0.4',
+                              '--gene_set_sigma', '0.5',
+                              '--gene_set_sigma', '0.6',
+                              '--gene_set_sigma', '0.7',
+                              '--gene_set_sigma', '0.8',
+                              '--gene_set_sigma', '0.9', '--diagonal',
+                              os.path.abspath('../tests/eigen.txt'),
+                              '--gene_set_sigma',
+                              '1', '--gene_set_scores', os.path.abspath(
+                '../paper/paper_gene_set_scores.txt')],
+                        cwd=os.getcwd(),
+                        stderr=subprocess.STDOUT)
+
     def test_ot_commmand_line_clusters_subsample(self):
         subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
                               '--matrix',

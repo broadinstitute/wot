@@ -42,7 +42,7 @@ all_cell_ids = set()
 for f in os.listdir(input_dir):
     if os.path.isfile(os.path.join(input_dir, f)):
         file_info = wot.get_file_basename_and_extension(f)
-        basename = file_info['basename']
+        basename = file_info[0]
         path = os.path.join(input_dir, f)
         transport_map = pd.read_table(path, index_col=0,
                                           quoting=csv.QUOTE_NONE)

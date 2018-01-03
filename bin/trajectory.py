@@ -43,7 +43,7 @@ transport_maps_inputs = []  # file, start, end
 for f in os.listdir(input_dir):
     if os.path.isfile(os.path.join(input_dir, f)):
         file_info = wot.get_file_basename_and_extension(f)
-        basename = file_info['basename']
+        basename = file_info[0]
         tokens = basename.split('_')
         path = os.path.join(input_dir, f)
         t = tokens[len(tokens) - 1]
