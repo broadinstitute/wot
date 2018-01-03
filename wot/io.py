@@ -50,8 +50,8 @@ def get_file_basename_and_extension(name):
     ext = ''
     basename = name
     if dot_index != -1:
-        ext = name[dot_index:]
-        if ext == '.gz':
+        ext = name[dot_index + 1:]
+        if ext == 'gz':
             return get_file_basename_and_extension(name[0:dot_index])
 
     if dot_index != -1:
@@ -122,9 +122,9 @@ def read_dataset(path, sep=None, dtype=np.float32, is_sparse=True):
         # look for .barcodes.txt and .genes.txt
         sp = os.path.split(path)
         barcodes_files = (
-        os.path.join(sp, basename_and_extension[0] + ".barcodes.tsv"),
-        os.path.join(sp, basename_and_extension[0] + ".barcodes.txt"),
-        os.path.join(sp, "barcodes.tsv"))
+            os.path.join(sp, basename_and_extension[0] + ".barcodes.tsv"),
+            os.path.join(sp, basename_and_extension[0] + ".barcodes.txt"),
+            os.path.join(sp, "barcodes.tsv"))
         row_meta = None
         for f in barcodes_files:
             if os.path.isfile(f):
