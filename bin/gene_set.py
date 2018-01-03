@@ -26,4 +26,7 @@ gs = wot.read_gmx(args.gene_sets)
 if args.transpose:
     ds.transpose()
 result = wot.score_gene_sets(ds=ds, gs=gs, z_score=True)
-wot.write_dataset(ds=result, path=args.prefix, output_format='txt')
+output_format = 'txt'
+wot.write_dataset(ds=result, path=wot.io.check_file_extension(args.prefix,
+                                                              format=output_format),
+                  output_format=output_format)

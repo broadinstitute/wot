@@ -46,6 +46,19 @@ def read_gmx(path):
                                                  index=ids))
 
 
+def check_file_extension(name, format):
+    expected = None
+    if format == 'txt':
+        expected = '.txt'
+    elif format == 'txt.gz':
+        expected = '.txt.gz'
+    elif format == 'loom':
+        expected = '.loom'
+    if expected is not None:
+        if not str(name).lower().endswith(expected):
+            name += expected
+    return name
+
 def get_file_basename_and_extension(name):
     dot_index = name.rfind('.')
     ext = ''
@@ -69,13 +82,13 @@ def write_dataset(ds, path, output_format='txt'):
                  sep='\t',
                  compression='gzip' if output_format == 'txt.gz'
                  else None)
-    if output_format == 'loom':
+    elif output_format == 'loom':
         import h5py
         f = h5py.File(path, 'w')
 
         x = ds.x
         x = x.todense() if scipy.sparse.issparse(x) else x
-        f.create_dataset("matrix", shape=x, chunks=(100, 100),
+        f.create_dataset("matrix", shape=x, chunks=(500, 500),
                          maxshape=(None, x.shape[1]),
                          compression="gzip", compression_opts=9,
                          data=x)

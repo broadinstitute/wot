@@ -329,6 +329,18 @@ class TestWOT(unittest.TestCase):
                                       np.array([[1, np.NaN, 1.5], [4, np.NaN,
                                                                    4.5]]))
 
+    def test_score_gene_set_command_line(self):
+
+        subprocess.call(args=['python', os.path.abspath('../bin/gene_set.py'),
+                              '--matrix',
+                              os.path.abspath(
+                                  'test_gene_sets_input.txt'),
+                              '--gene_sets', os.path.abspath(
+                'test_gene_sets.gmx'),
+                              '--prefix', 'mytest'],
+                        cwd=os.getcwd(),
+                        stderr=subprocess.STDOUT)
+
     def test_ot_commmand_line(self):
         subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
                               '--matrix',
