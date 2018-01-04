@@ -70,7 +70,7 @@ def get_file_basename_and_extension(name):
 
     if dot_index != -1:
         basename = name[0:dot_index]
-    return (basename, ext)
+    return basename, ext
 
 
 def write_dataset(ds, path, output_format='txt'):

@@ -337,7 +337,7 @@ class TestWOT(unittest.TestCase):
                                   'test_gene_sets_input.txt'),
                               '--gene_sets', os.path.abspath(
                 'test_gene_sets.gmx'),
-                              '--prefix', 'mytest'],
+                              '--prefix', 'gene_set_test_output'],
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
 
