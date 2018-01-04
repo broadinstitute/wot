@@ -4,6 +4,7 @@ import scipy.sparse
 import scipy.io
 import wot
 import os
+import h5py
 
 
 def read_gmx(path):
@@ -59,6 +60,7 @@ def check_file_extension(name, format):
             name += expected
     return name
 
+
 def get_file_basename_and_extension(name):
     dot_index = name.rfind('.')
     ext = ''
@@ -83,7 +85,6 @@ def write_dataset(ds, path, output_format='txt'):
                  compression='gzip' if output_format == 'txt.gz'
                  else None)
     elif output_format == 'loom':
-        import h5py
         f = h5py.File(path, 'w')
 
         x = ds.x
@@ -132,38 +133,44 @@ def read_dataset(path, sep=None, dtype=np.float32, is_sparse=True):
     basename_and_extension = get_file_basename_and_extension(path)
     ext = basename_and_extension[1]
     if ext == 'mtx':
-        x = scipy.sparse.csr_matrix(scipy.io.mmread(path).astype(dtype))
         # look for .barcodes.txt and .genes.txt
         sp = os.path.split(path)
         barcodes_files = (
-            os.path.join(sp, basename_and_extension[0] + ".barcodes.tsv"),
-            os.path.join(sp, basename_and_extension[0] + ".barcodes.txt"),
-            os.path.join(sp, "barcodes.tsv"))
+            os.path.join(sp[0], basename_and_extension[0] + ".barcodes.tsv"),
+            os.path.join(sp[0], basename_and_extension[0] + ".barcodes.txt"),
+            os.path.join(sp[0], "barcodes.tsv"))
         row_meta = None
         for f in barcodes_files:
-            if os.path.isfile(f):
-                row_meta = pd.DataFrame(index=np.genfromtxt(f, dtype=str))
+            if os.path.isfile(f) or os.path.isfile(f + '.gz'):
+                row_meta = pd.DataFrame(index=np.genfromtxt(f
+                                                            if os.path.isfile(
+                    f) else f + '.gz', dtype=str))
                 break
-        if row_meta is None:
-            row_meta = pd.DataFrame(
-                index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
-        genes_files = (os.path.join(sp, basename_and_extension[0] +
+        genes_files = (os.path.join(sp[0], basename_and_extension[0] +
                                     ".genes.tsv"),
-                       os.path.join(sp, basename_and_extension[0] +
+                       os.path.join(sp[0], basename_and_extension[0] +
                                     ".genes.txt"),
-                       os.path.join(sp, "genes.tsv"))
+                       os.path.join(sp[0], "genes.tsv"))
         col_meta = None
         for f in genes_files:
-            if os.path.isfile(f):
-                data = np.genfromtxt(f, dtype=str)
+            if os.path.isfile(f) or os.path.isfile(f + '.gz'):
+                data = np.genfromtxt(f
+                                     if os.path.isfile(
+                    f) else f + '.gz', dtype=str)
                 if len(data.shape) > 1:
                     data = data[:, 0]  # TODO add other columns to df
                 col_meta = pd.DataFrame(index=data)
                 break
+        x = scipy.sparse.csr_matrix(scipy.io.mmread(path).astype(dtype))
         if col_meta is None:
             col_meta = pd.DataFrame(index=pd.RangeIndex(start=0,
                                                         stop=x.shape[1],
+
                                                         step=1))
+        if row_meta is None:
+            row_meta = pd.DataFrame(
+                index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
+
         return wot.Dataset(x=x, row_meta=row_meta,
                            col_meta=col_meta)
 
