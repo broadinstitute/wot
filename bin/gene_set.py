@@ -18,14 +18,21 @@ parser.add_argument('--prefix',
                     required=True)
 parser.add_argument('--transpose', action='store_true',
                     help='Transpose the matrix')
+parser.add_argument('--verbose', action='store_true',
+                    help='Print progress information')
 args = parser.parse_args()
-
-ds = wot.read_dataset(args.matrix)
-
 gs = wot.read_gmx(args.gene_sets)
+if args.verbose:
+    print('Read gene sets')
+ds = wot.read_dataset(args.matrix)
+if args.verbose:
+    print('Read dataset')
+
 if args.transpose:
     ds.transpose()
 result = wot.score_gene_sets(ds=ds, gs=gs, z_score=True)
+if args.verbose:
+    print('Computed gene set scores')
 output_format = 'txt'
 wot.write_dataset(ds=result, path=wot.io.check_file_extension(args.prefix,
                                                               format=output_format),

@@ -5,7 +5,7 @@ import scipy
 
 def score_gene_sets(ds, gs, z_score=True):
     intersect = np.intersect1d(ds.col_meta.index, gs.row_meta.index,
-                               assume_unique=True)
+                               assume_unique=False)
     # subset dataset and gene sets to include only genes found in both and
     # genes in dataset that have at least one non-zero entry
     gs_indices = np.zeros(len(intersect), dtype=np.uint32)
@@ -42,4 +42,5 @@ def score_gene_sets(ds, gs, z_score=True):
     scores = x.dot(gs_x.todense() if not scipy.sparse.issparse(x) else gs_x)
     ngenes_in_set = gs_x.sum(axis=0)
     scores = scores / ngenes_in_set
+
     return wot.Dataset(x=scores, row_meta=ds.row_meta, col_meta=gs.col_meta)
