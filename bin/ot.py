@@ -14,10 +14,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--matrix',
                     help='Gene expression tab delimited file with cells on '
                          'rows and features on columns', required=True)
-parser.add_argument('--cell_growth_rates',
-                    help='Two column tab delimited file without header with '
-                         'cell ids and growth rates per day.',
-                    required=True)
+
 parser.add_argument('--cell_days',
                     help='Two column tab delimited file without header with '
                          'cell ids and days', required=True)
@@ -91,9 +88,14 @@ parser.add_argument('--gene_set_sigma', help='Random noise to add to '
                                              'proliferation and apoptosis '
                                              'scores', type=float,
                     action='append')
-parser.add_argument('--gene_set_scores', help='File containing "Proleration" '
-                                              'and '
-                                              '"Apoptosis" scores')
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('--gene_set_scores', help='File containing "Proliferation" '
+                                             'and '
+                                             '"Apoptosis" scores')
+group.add_argument('--cell_growth_rates',
+                   help='Two column tab delimited file without header with '
+                        'cell ids and growth rates per day.',
+                   required=True)
 parser.add_argument('--diagonal', help='Diagonal scaling matrix')
 parser.add_argument('--power', help='Diagonal scaling power', type=float)
 
@@ -113,21 +115,11 @@ day_pairs = pd.read_table(args.day_pairs, header=None, names=['t1', 't2'],
 days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
                                 names=['day'], quoting=csv.QUOTE_NONE)
 
-cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col=0,
-                                  header=None, names=['cell_growth_rate'],
-                                  quoting=csv.QUOTE_NONE)
-
 gene_set_scores = None
 gene_set_sigmas = None
 
 if eigenvals is not None:
     gene_expression = gene_expression.dot(np.diag(eigenvals))
-gene_expression = gene_expression.join(cell_growth_rates).join(days_data_frame)
-
-# cell_growth_rates = cell_growth_rates.align(gene_expression, copy=False,
-#                                             join='right')
-# days_data_frame = days_data_frame.align(gene_expression, copy=False,
-#                                         join='right')
 
 gene_set_writer = None
 if args.gene_set_scores is not None:
@@ -137,12 +129,26 @@ if args.gene_set_scores is not None:
         gene_set_scores.align(gene_expression, join='right', axis=0,
                               copy=False)[0]
     gene_set_sigmas = args.gene_set_sigma
-    gene_set_writer = open(args.prefix + '_growth.txt', 'w')
-    gene_set_writer.write(
-        't1' + '\t' + 't2' + '\t' + 'sigma' + '\t' + 'cluster_distance' + '\n')
+
+    apoptosis = gene_set_scores['Apoptosis']
+    proliferation = gene_set_scores['Proliferation']
+    g = wot.compute_growth_scores(proliferation.values,
+                                  apoptosis.values)
+    cell_growth_rates = pd.DataFrame(index=gene_set_scores.index,
+                                     data={'cell_growth_rate': g})
+    if gene_set_sigmas is not None:
+        gene_set_writer = open(args.prefix + '_growth.txt', 'w')
+        gene_set_writer.write(
+            't1' + '\t' + 't2' + '\t' + 'sigma' + '\t' + 'cluster_distance' +
+            '\n')
+else:
+    cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col=0,
+                                      header=None, names=['cell_growth_rate'],
+                                      quoting=csv.QUOTE_NONE)
 fields_to_drop_for_distance = [days_data_frame.columns[0],
                                cell_growth_rates.columns[0]]
 
+gene_expression = gene_expression.join(cell_growth_rates).join(days_data_frame)
 group_by_day = gene_expression.groupby(days_data_frame.columns[0])
 if args.verbose:
     print('Computing ' + str(day_pairs.shape[0]) + ' transport map' + 's' if
@@ -254,7 +260,7 @@ for day_index in range(day_pairs.shape[0]):
                              args.compress else None, doublequote=False,
                              quoting=csv.QUOTE_NONE)
 
-    if gene_set_scores is not None:
+    if gene_set_scores is not None and gene_set_sigmas is not None:
         _gene_set_scores = gene_set_scores.loc[m1.index]
         for sigma in gene_set_sigmas:
             apoptosis = _gene_set_scores['Apoptosis'] + np.random.normal(0,
