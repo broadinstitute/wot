@@ -109,12 +109,15 @@ if eigenvals is not None and args.power is not None:
 
 # cells on rows, features on columns
 gene_expression = pd.read_table(args.matrix, index_col=0,
-                                quoting=csv.QUOTE_NONE, sep=None)
+                                quoting=csv.QUOTE_NONE, engine='python',
+                                sep=None)
 
 day_pairs = pd.read_table(args.day_pairs, header=None, names=['t1', 't2'],
-                          index_col=False, quoting=csv.QUOTE_NONE, sep=None)
+                          index_col=False, quoting=csv.QUOTE_NONE,
+                          engine='python', sep=None)
 days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
-                                names=['day'], quoting=csv.QUOTE_NONE, sep=None)
+                                names=['day'], quoting=csv.QUOTE_NONE,
+                                engine='python', sep=None)
 
 gene_set_scores = None
 gene_set_sigmas = None
@@ -125,7 +128,8 @@ if eigenvals is not None:
 gene_set_writer = None
 if args.gene_set_scores is not None:
     gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0,
-                                    quoting=csv.QUOTE_NONE, sep=None)
+                                    quoting=csv.QUOTE_NONE, engine='python',
+                                    sep=None)
     gene_set_scores = \
         gene_set_scores.align(gene_expression, join='right', axis=0,
                               copy=False)[0]
@@ -145,7 +149,8 @@ if args.gene_set_scores is not None:
 else:
     cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col=0,
                                       header=None, names=['cell_growth_rate'],
-                                      quoting=csv.QUOTE_NONE, sep=None)
+                                      quoting=csv.QUOTE_NONE, engine='python',
+                                      sep=None)
 fields_to_drop_for_distance = [days_data_frame.columns[0],
                                cell_growth_rates.columns[0]]
 
@@ -163,6 +168,7 @@ total_cluster_size = None
 if args.clusters is not None:
     clusters = pd.read_table(args.clusters, index_col=0, header=None,
                              names=['cluster'], quoting=csv.QUOTE_NONE,
+                             engine='python',
                              sep=None)
     clusters = clusters.align(gene_expression, join='right', axis=0,
                               copy=False)[0]
