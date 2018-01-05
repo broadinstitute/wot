@@ -30,7 +30,7 @@ if args.verbose:
 
 if args.transpose:
     ds.transpose()
-result = wot.score_gene_sets(ds=ds, gs=gs, z_score=True)
+result = wot.score_gene_sets(ds=ds, gs=gs)
 if args.verbose:
     print('Computed gene set scores')
 output_format = 'txt'

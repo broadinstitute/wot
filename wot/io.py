@@ -10,38 +10,34 @@ import h5py
 def read_gmx(path):
     with open(path) as fp:
         ids = fp.readline().split('\t')
-
         descriptions = fp.readline().split('\t')
-        data = []
-        rows = []
-        cols = []
         row_id_to_index = {}
 
         ncols = len(ids)
         nrows = 0
         ids[len(ids) - 1] = ids[len(ids) - 1].rstrip()
         descriptions[len(ids) - 1] = descriptions[len(ids) - 1].rstrip()
+        arrays = []
         for line in fp:
             tokens = line.split('\t')
             for j in range(ncols):
                 value = tokens[j].strip()
                 if value != '':
-                    cols.append(j)
-                    data.append(1)
+
                     index = row_id_to_index.get(value)
                     if index is None:
-                        index = nrows
+                        index = len(row_id_to_index)
                         row_id_to_index[value] = index
-                        nrows += 1
-                    rows.append(index)
-        a = scipy.sparse.coo_matrix((data, (rows, cols)), shape=(nrows, ncols),
-                                    dtype=np.uint8).tocsr()
+                        arrays.append(np.zeros(shape=(ncols,), dtype=np.int8))
+                    data_row = arrays[index]
+                    data_row[j] = 1
 
         row_ids = np.empty(len(row_id_to_index), dtype='object')
         for rid in row_id_to_index:
             row_ids[row_id_to_index[rid]] = rid
 
-        return wot.Dataset(x=a, row_meta=pd.DataFrame(index=row_ids),
+        return wot.Dataset(x=np.array(arrays),
+                           row_meta=pd.DataFrame(index=row_ids),
                            col_meta=pd.DataFrame(data={'description':
                                                            descriptions},
                                                  index=ids))
