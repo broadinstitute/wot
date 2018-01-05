@@ -88,14 +88,15 @@ parser.add_argument('--gene_set_sigma', help='Random noise to add to '
                                              'proliferation and apoptosis '
                                              'scores', type=float,
                     action='append')
-group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument('--gene_set_scores', help='File containing "Proliferation" '
-                                             'and '
-                                             '"Apoptosis" scores')
-group.add_argument('--cell_growth_rates',
-                   help='Two column tab delimited file without header with '
-                        'cell ids and growth rates per day.',
-                   required=True)
+growth_rate_group = parser.add_mutually_exclusive_group(required=True)
+growth_rate_group.add_argument('--gene_set_scores',
+                               help='File containing "Proliferation" '
+                                    'and '
+                                    '"Apoptosis" scores')
+growth_rate_group.add_argument('--cell_growth_rates',
+                               help='Two column tab delimited file without '
+                                    'header with '
+                                    'cell ids and growth rates per day.')
 parser.add_argument('--diagonal', help='Diagonal scaling matrix')
 parser.add_argument('--power', help='Diagonal scaling power', type=float)
 
