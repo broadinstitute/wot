@@ -89,7 +89,7 @@ def write_dataset(ds, path, output_format='txt'):
 
         x = ds.x
         x = x.todense() if scipy.sparse.issparse(x) else x
-        f.create_dataset("matrix", shape=x, chunks=(500, 500),
+        f.create_dataset("matrix", shape=x, chunks=(1000, 1000),
                          maxshape=(None, x.shape[1]),
                          compression="gzip", compression_opts=9,
                          data=x)
@@ -97,7 +97,7 @@ def write_dataset(ds, path, output_format='txt'):
         for key in ds.layers:
             x = ds.layers[key]
             x = x.todense() if scipy.sparse.issparse(x) else x
-            f.create_dataset("/layers/" + key, shape=x, chunks=(100, 100),
+            f.create_dataset("/layers/" + key, shape=x, chunks=(1000, 1000),
                              maxshape=(None, x.shape[1]),
                              compression="gzip", compression_opts=9,
                              data=x)
@@ -141,13 +141,14 @@ def read_dataset(path, sep=None, dtype=np.float32, is_sparse=True):
                              basename_and_extension[0] + ".barcodes.tsv"),
                 os.path.join(sp[0],
                              basename_and_extension[0] + ".barcodes.txt"),
-                os.path.join(sp[0], "barcodes.tsv")):
+                os.path.join(sp[0], ".barcodes.tsv")):
             if os.path.isfile(f) or os.path.isfile(f + '.gz'):
                 data = np.genfromtxt(f
                                      if os.path.isfile(
                     f) else f + '.gz', dtype=str)
                 if len(data.shape) > 1:
                     data = data[:, 0]  # TODO add other columns to df
+
                 row_meta = pd.DataFrame(index=data)
                 break
         col_meta = None
@@ -155,7 +156,7 @@ def read_dataset(path, sep=None, dtype=np.float32, is_sparse=True):
                                       ".genes.tsv"),
                   os.path.join(sp[0], basename_and_extension[0] +
                                       ".genes.txt"),
-                  os.path.join(sp[0], "genes.tsv")):
+                  os.path.join(sp[0], ".genes.tsv")):
             if os.path.isfile(f) or os.path.isfile(f + '.gz'):
                 data = np.genfromtxt(f
                                      if os.path.isfile(
@@ -170,7 +171,6 @@ def read_dataset(path, sep=None, dtype=np.float32, is_sparse=True):
         if col_meta is None:
             col_meta = pd.DataFrame(index=pd.RangeIndex(start=0,
                                                         stop=x.shape[1],
-
                                                         step=1))
         if row_meta is None:
             row_meta = pd.DataFrame(
