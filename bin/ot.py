@@ -114,10 +114,11 @@ gene_expression = pd.read_table(args.matrix, index_col=0,
 
 day_pairs = pd.read_table(args.day_pairs, header=None, names=['t1', 't2'],
                           index_col=False, quoting=csv.QUOTE_NONE,
-                          engine='python', sep=None)
+                          engine='python', sep=None, dtype=np.float32)
 days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
                                 names=['day'], quoting=csv.QUOTE_NONE,
-                                engine='python', sep=None)
+                                engine='python', sep=None,
+                                dtype={'day': np.float32})
 
 gene_set_scores = None
 gene_set_sigmas = None
