@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import wot
+import wot.ot
 import pandas as pd
 import numpy as np
 import sklearn.metrics.pairwise
@@ -81,8 +81,11 @@ parser.add_argument('--no_save', action='store_true',
                     help='Do not save transport maps.')
 parser.add_argument('--compress', action='store_true',
                     help='gzip output files')
-parser.add_argument('--verbose', action='store_true',
-                    help='Print progress information')
+
+parser.add_argument('--epsilon_adjust', help='Scaling factor to adjust epsilon',
+                    type=float, default=1.1)
+parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda',
+                    type=float, default=1.5)
 
 parser.add_argument('--gene_set_sigma', help='Random noise to add to '
                                              'proliferation and apoptosis '
@@ -99,7 +102,8 @@ growth_rate_group.add_argument('--cell_growth_rates',
                                     'cell ids and growth rates per day.')
 parser.add_argument('--diagonal', help='Diagonal scaling matrix')
 parser.add_argument('--power', help='Diagonal scaling power', type=float)
-
+parser.add_argument('--verbose', action='store_true',
+                    help='Print progress information')
 args = parser.parse_args()
 eigenvals = None
 if args.diagonal is not None:
@@ -126,6 +130,9 @@ gene_set_sigmas = None
 if eigenvals is not None:
     gene_expression = gene_expression.dot(np.diag(eigenvals))
 
+params_writer = open(args.prefix + '_params.txt', 'w')
+params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda' +
+                    '\n')
 gene_set_writer = None
 if args.gene_set_scores is not None:
     gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0,
@@ -138,8 +145,8 @@ if args.gene_set_scores is not None:
 
     apoptosis = gene_set_scores['Apoptosis']
     proliferation = gene_set_scores['Proliferation']
-    g = wot.compute_growth_scores(proliferation.values,
-                                  apoptosis.values)
+    g = wot.ot.compute_growth_scores(proliferation.values,
+                                     apoptosis.values)
     cell_growth_rates = pd.DataFrame(index=gene_set_scores.index,
                                      data={'cell_growth_rate': g})
     if gene_set_sigmas is not None:
@@ -175,9 +182,9 @@ if args.clusters is not None:
                               copy=False)[0]
     grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
     cluster_ids = list(grouped_by_cluster.groups.keys())
-    total_cluster_size = wot.get_column_weights(clusters.index,
-                                                grouped_by_cluster,
-                                                cluster_ids)
+    total_cluster_size = wot.ot.get_column_weights(clusters.index,
+                                                   grouped_by_cluster,
+                                                   cluster_ids)
 
     if args.subsample_iter > 0:
         if args.subsample_cells is None:
@@ -203,6 +210,10 @@ all_cell_ids = set()
 for day_index in range(day_pairs.shape[0]):
     t1 = day_pairs.iloc[day_index, 0]
     t2 = day_pairs.iloc[day_index, 1]
+    if group_by_day.groups.get(t1) is None or group_by_day.groups.get(
+            t2) is None:
+        print('skipping transport map from ' + str(t1) + ' to ' + str(t2))
+        continue
     m1 = group_by_day.get_group(t1)
     m2 = group_by_day.get_group(t2)
     delta_t = t2 - t1
@@ -219,25 +230,30 @@ for day_index in range(day_pairs.shape[0]):
     cost_matrix = unnormalized_cost_matrix / np.median(
         unnormalized_cost_matrix)
 
-    result = wot.optimal_transport(cost_matrix=cost_matrix,
-                                   growth_rate=m1[
-                                       cell_growth_rates.columns[0]].values,
-                                   delta_days=delta_t,
-                                   max_transport_fraction=args.max_transport_fraction,
-                                   min_transport_fraction=args.min_transport_fraction,
-                                   min_growth_fit=args.min_growth_fit,
-                                   l0_max=args.l0_max, lambda1=args.lambda1,
-                                   lambda2=args.lambda2,
-                                   epsilon=args.epsilon,
-                                   scaling_iter=args.scaling_iter)
+    result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
+                                      growth_rate=m1[
+                                          cell_growth_rates.columns[0]].values,
+                                      delta_days=delta_t,
+                                      max_transport_fraction=args.max_transport_fraction,
+                                      min_transport_fraction=args.min_transport_fraction,
+                                      min_growth_fit=args.min_growth_fit,
+                                      l0_max=args.l0_max, lambda1=args.lambda1,
+                                      lambda2=args.lambda2,
+                                      epsilon=args.epsilon,
+                                      scaling_iter=args.scaling_iter,
+                                      epsilon_adjust=args.epsilon_adjust,
+                                      lambda_adjust=args.lambda_adjust)
 
+    params_writer.write(
+        str(t1) + '\t' + str(t2) + '\t' + str(result['epsilon']) + '\t' + str(
+            result['lambda']) + '\n')
     transport_map = pd.DataFrame(result['transport'], index=m1.index,
                                  columns=m2.index)
     if args.verbose:
         print('Done computing transport map')
 
     if args.clusters is not None:
-        cluster_transport_map = wot.transport_map_by_cluster(
+        cluster_transport_map = wot.ot.transport_map_by_cluster(
             transport_map, grouped_by_cluster, cluster_ids)
         all_cell_ids.update(transport_map.columns)
         all_cell_ids.update(transport_map.index)
@@ -281,28 +297,31 @@ for day_index in range(day_pairs.shape[0]):
                 0,
                 sigma,
                 _gene_set_scores.shape[0])
-            g = wot.compute_growth_scores(proliferation.values,
-                                          apoptosis.values)
+            g = wot.ot.compute_growth_scores(proliferation.values,
+                                             apoptosis.values)
 
-            perturbed_result = wot.optimal_transport(cost_matrix=cost_matrix,
-                                                     growth_rate=g,
-                                                     delta_days=delta_t,
-                                                     max_transport_fraction=args.max_transport_fraction,
-                                                     min_transport_fraction=args.min_transport_fraction,
-                                                     min_growth_fit=args.min_growth_fit,
-                                                     l0_max=args.l0_max,
-                                                     lambda1=args.lambda1,
-                                                     lambda2=args.lambda2,
-                                                     epsilon=args.epsilon,
-                                                     scaling_iter=args.scaling_iter)
+            perturbed_result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
+                                                        growth_rate=g,
+                                                        delta_days=delta_t,
+                                                        max_transport_fraction=args.max_transport_fraction,
+                                                        min_transport_fraction=args.min_transport_fraction,
+                                                        min_growth_fit=args.min_growth_fit,
+                                                        l0_max=args.l0_max,
+                                                        lambda1=args.lambda1,
+                                                        lambda2=args.lambda2,
+                                                        epsilon=args.epsilon,
+                                                        scaling_iter=args.scaling_iter,
+                                                        epsilon_adjust=args.epsilon_adjust,
+                                                        lambda_adjust=args.lambda_adjust)
             perturbed_transport_map = pd.DataFrame(
                 perturbed_result['transport'],
                 index=m1.index,
                 columns=m2.index)
-            perturbed_transport_map_by_cluster = wot.transport_map_by_cluster(
-                perturbed_transport_map, grouped_by_cluster, cluster_ids)
+            perturbed_transport_map_by_cluster = \
+                wot.ot.transport_map_by_cluster(
+                    perturbed_transport_map, grouped_by_cluster, cluster_ids)
 
-            d = wot.transport_map_distance(
+            d = wot.ot.transport_map_distance(
                 transport_map_1=cluster_transport_map,
                 transport_map_2=perturbed_transport_map_by_cluster,
                 column_weights=total_cluster_size)
@@ -342,14 +361,14 @@ for day_index in range(day_pairs.shape[0]):
                 p = np.ones(cost_matrix.shape[0]) / cost_matrix.shape[0]
                 q = np.ones(cost_matrix.shape[1]) / cost_matrix.shape[1]
                 g = m1_sample.cell_growth_rate.values ** delta_t
-                subsampled_result = wot.transport_stable(p, q, cost_matrix,
-                                                         result['lambda1'],
-                                                         result['lambda2'],
-                                                         result['epsilon'],
-                                                         args.scaling_iter,
-                                                         g)
+                subsampled_result = wot.ot.transport_stable(p, q, cost_matrix,
+                                                            result['lambda1'],
+                                                            result['lambda2'],
+                                                            result['epsilon'],
+                                                            args.scaling_iter,
+                                                            g)
 
-                subsampled_maps.append(wot.transport_map_by_cluster(
+                subsampled_maps.append(wot.ot.transport_map_by_cluster(
                     pd.DataFrame(
                         subsampled_result,
                         index=m1_sample.index,
@@ -383,14 +402,14 @@ if resample:
 
 if gene_set_writer is not None:
     gene_set_writer.close()
-
+params_writer.close()
 if not resample and args.clusters is not None:
     if args.verbose:
         print('Saving summarized transport map')
-    weights = wot.get_weights(all_cell_ids, column_cell_ids_by_time,
-                              grouped_by_cluster, cluster_ids)
+    weights = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time,
+                                 grouped_by_cluster, cluster_ids)
     cluster_weights_by_time = weights['cluster_weights_by_time']
-    combined_cluster_map = wot.transport_maps_by_time(
+    combined_cluster_map = wot.ot.transport_maps_by_time(
         cluster_transport_maps,
         cluster_weights_by_time)
     combined_cluster_map.to_csv(

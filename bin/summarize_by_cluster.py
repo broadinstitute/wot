@@ -41,7 +41,7 @@ all_cell_ids = set()
 
 for f in os.listdir(input_dir):
     if os.path.isfile(os.path.join(input_dir, f)):
-        file_info = wot.get_file_basename_and_extension(f)
+        file_info = wot.io.get_file_basename_and_extension(f)
         basename = file_info[0]
         path = os.path.join(input_dir, f)
         transport_map = pd.read_table(path, index_col=0,
@@ -49,7 +49,7 @@ for f in os.listdir(input_dir):
         all_cell_ids.update(transport_map.columns)
         all_cell_ids.update(transport_map.index)
         column_cell_ids_by_time.append(transport_map.columns)
-        cluster_transport_map = wot.transport_map_by_cluster(
+        cluster_transport_map = wot.ot.transport_map_by_cluster(
             transport_map, grouped_by_cluster, cluster_ids)
         if args.details:
             cluster_transport_map.to_csv(args.prefix + basename + '.txt' + (
@@ -62,10 +62,10 @@ for f in os.listdir(input_dir):
                                          else None)
         cluster_transport_maps.append(cluster_transport_map)
 
-weights = wot.get_weights(all_cell_ids, column_cell_ids_by_time,
+weights = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time,
                           grouped_by_cluster, cluster_ids)
 cluster_weights_by_time = weights['cluster_weights_by_time']
-combined_cluster_map = wot.transport_maps_by_time(cluster_transport_maps,
+combined_cluster_map = wot.ot.transport_maps_by_time(cluster_transport_maps,
                                                   cluster_weights_by_time)
 combined_cluster_map.to_csv(args.prefix + '.txt' + ('.gz' if
                                                     args.compress else ''),

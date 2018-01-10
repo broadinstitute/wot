@@ -42,7 +42,7 @@ ids = pandas.read_table(args.id, quoting=csv.QUOTE_NONE).iloc[:, 0]
 transport_maps_inputs = []  # file, start, end
 for f in os.listdir(input_dir):
     if os.path.isfile(os.path.join(input_dir, f)):
-        file_info = wot.get_file_basename_and_extension(f)
+        file_info = wot.io.get_file_basename_and_extension(f)
         basename = file_info[0]
         tokens = basename.split('_')
         path = os.path.join(input_dir, f)
@@ -63,7 +63,7 @@ for f in os.listdir(input_dir):
 transport_maps_inputs.sort(
     key=lambda x: x['t_minus_1_f'])  # sort by t_minus_1 (start time)
 
-result = wot.trajectory(ids, transport_maps_inputs, time, args.normalize)
+result = wot.ot.trajectory(ids, transport_maps_inputs, time, args.normalize)
 
 
 def output(f, is_descendants):
