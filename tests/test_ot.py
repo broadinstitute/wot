@@ -240,7 +240,7 @@ class TestOT(unittest.TestCase):
         transport_maps = list()
         ncells = [4, 2, 5, 6, 3]
         for i in range(0, len(ncells) - 1):
-            transport_map = pd.read_csv('transport_maps/t' + str(i) +
+            transport_map = pd.read_csv('inputs/transport_maps/t' + str(i) +
                                         '_t' + str(i + 1) + '.csv',
                                         index_col=0)
 

@@ -22,21 +22,34 @@ parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
 
 args = parser.parse_args()
-ds = wot.io.read_dataset(args.matrix)
+use_dask = True
+if use_dask:
+    import chest
+    cache = chest.Chest()
+    dask.set_options(cache=cache)
+
+ds = wot.io.read_dataset(args.matrix, use_dask=use_dask)
+
 if args.verbose:
     print('Read dataset')
-gs = wot.io.read_gene_sets(args.gene_sets, ds.col_meta.index.values.compute())
+gene_ids = ds.col_meta.index.values
+
+if use_dask:
+    gene_ids = gene_ids.compute()
+gs = wot.io.read_gene_sets(args.gene_sets, gene_ids, use_dask=use_dask)
+
 if args.verbose:
     print('Read gene sets')
 
 result = wot.score_gene_sets(ds=ds, gs=gs, z_score_ds=not args.no_zscore)
 
-result.x, result.row_meta, result.col_meta = dask.compute(result.x,
-                                                          result.row_meta,
-                                                          result.col_meta)
-if args.verbose:
-    print('Computed gene set scores')
+if use_dask:
+    result.x, result.row_meta, result.col_meta = dask.compute(result.x, result.row_meta, result.col_meta)
 output_format = 'txt'
-wot.io.write_dataset(ds=result, path=wot.io.check_file_extension(args.prefix,
-                                                              format=output_format),
-                  output_format=output_format)
+path = wot.io.check_file_extension(args.prefix,
+                                   format=output_format)
+if args.verbose:
+    print('Computed gene set scores, writing output to ' + path)
+
+wot.io.write_dataset(ds=result, path=path,
+                     output_format=output_format)

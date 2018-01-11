@@ -8,19 +8,19 @@ import numpy as np
 import os
 
 
-def read_gene_sets(path, feature_ids=None):
+def read_gene_sets(path, feature_ids=None, chunks=(200, 200), use_dask=True):
     path = str(path)
     basename_and_extension = get_file_basename_and_extension(path)
     ext = basename_and_extension[1]
     if ext == 'gmt':
-        return read_gmt(path, feature_ids)
+        return read_gmt(path, feature_ids, chunks=chunks, use_dask=use_dask)
     elif ext == 'gmx':
-        return read_gmx(path, feature_ids)
+        return read_gmx(path, feature_ids, chunks=chunks, use_dask=use_dask)
     else:
         raise ValueError('Unknown file format')
 
 
-def read_gmt(path, feature_ids=None):
+def read_gmt(path, feature_ids=None, chunks=(200, 200), use_dask=True):
     with open(path) as fp:
         row_id_to_index = {}
         if feature_ids is not None:
@@ -65,14 +65,16 @@ def read_gmt(path, feature_ids=None):
                 if row_index is not None:
                     x[row_index, j] = 1
 
-        return wot.Dataset(x=x,
-                           row_meta=pd.DataFrame(index=row_ids),
-                           col_meta=pd.DataFrame(data={'description':
-                                                           set_descriptions},
-                                                 index=set_names))
+        row_meta = pd.DataFrame(index=row_ids),
+        col_meta = pd.DataFrame(data={'description': set_descriptions}, index=set_names)
+        if use_dask:
+            x = da.from_array(x, chunks=chunks)
+            row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
+            col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
+        return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
 
 
-def read_gmx(path, feature_ids=None):
+def read_gmx(path, feature_ids=None, chunks=(200, 200), use_dask=True):
     with open(path) as fp:
         ids = fp.readline().split('\t')
         descriptions = fp.readline().split('\t')
@@ -80,12 +82,12 @@ def read_gmx(path, feature_ids=None):
         ids[len(ids) - 1] = ids[len(ids) - 1].rstrip()
         descriptions[len(ids) - 1] = descriptions[len(ids) - 1].rstrip()
         row_id_to_index = {}
-        matrix = None
+        x = None
         array_of_arrays = None
         if feature_ids is not None:
             for i in range(len(feature_ids)):
                 row_id_to_index[feature_ids[i]] = i
-            matrix = np.zeros(shape=(len(feature_ids), ncols), dtype=np.int8)
+            x = np.zeros(shape=(len(feature_ids), ncols), dtype=np.int8)
         else:
             array_of_arrays = []
         for line in fp:
@@ -93,28 +95,35 @@ def read_gmx(path, feature_ids=None):
             for j in range(ncols):
                 value = tokens[j].strip()
                 if value != '':
-                    i = row_id_to_index.get(value)
+                    row_index = row_id_to_index.get(value)
                     if feature_ids is None:
-                        if i is None:
-                            i = len(row_id_to_index)
-                            row_id_to_index[value] = i
+                        if row_index is None:
+                            row_index = len(row_id_to_index)
+                            row_id_to_index[value] = row_index
                             array_of_arrays.append(np.zeros(shape=(ncols,),
                                                             dtype=np.int8))
                     elif i is not None:
-                        matrix[i, j] = 1
+                        x[row_index, j] = 1
         if feature_ids is None:
             feature_ids = np.empty(len(row_id_to_index), dtype='object')
             for rid in row_id_to_index:
                 feature_ids[row_id_to_index[rid]] = rid
-        return wot.Dataset(
-            x=np.array(array_of_arrays),
-            row_meta=pd.DataFrame(index=feature_ids),
-            col_meta=pd.DataFrame(data={'description': descriptions},
-                                  index=ids))
+        if feature_ids is None:
+            x = np.concatenate(array_of_arrays, axis=0)
+
+        row_meta = pd.DataFrame(index=feature_ids)
+        col_meta = pd.DataFrame(data={'description': descriptions},
+                                index=ids)
+        if use_dask:
+            x = da.from_array(x, chunks=chunks)
+            row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
+            col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
+
+        return wot.Dataset(x, row_meta=row_meta, col_meta=col_meta)
 
 
 def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
-                 h5_col_meta=None, use_dask=True):
+                 h5_col_meta=None, use_dask=True, genome10x=None):
     path = str(path)
     basename_and_extension = get_file_basename_and_extension(path)
     ext = basename_and_extension[1]
@@ -217,11 +226,33 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
         else:
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom':
+        f = h5py.File(path, 'r')
+        if genome10x is not None or f['/mm10'] is not None:
+            genome10x = '/mm10' if genome10x is None else genome10x
+            group = f['/' + genome10x]
+
+            from scipy.sparse import csr_matrix
+            M, N = group['shape'][()]
+            data = group['data'][()]
+            if data.dtype == np.dtype('int32'):
+                data = data.astype('float32')
+            x = csr_matrix((data, group['indices'][()], group['indptr'][()]), shape=(N, M))
+            col_meta = pd.DataFrame(index=group['genes'][()].astype(str),
+                                    data={"gene_names": group['gene_names'][()].astype(str)})
+            row_meta = pd.DataFrame(index=group['barcodes'][()].astype(str))
+            f.close()
+            if not use_dask:
+                return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
+            else:
+                x = da.from_array(x.todense(), chunks=chunks)
+                row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
+                col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
+                return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
         if ext == 'loom':
             h5_x = '/matrix'
             h5_row_meta = '/row_attrs'
             h5_col_meta = '/col_attrs'
-        f = h5py.File(path, 'r')
+
         g = f[h5_row_meta]
         data = {}
         for key in g:
@@ -250,7 +281,6 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             f.close()
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
         else:
-            f = h5py.File(path, 'r')
             x = da.from_array(f[h5_x], chunks=chunks)
             # TODO load in chunks
             row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)

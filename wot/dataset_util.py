@@ -25,15 +25,14 @@ def score_gene_sets(ds, gs, z_score_ds=True):
     # ds has cells on rows, genes on columns
     gs_x = gs.x
     ds_x = ds.x
-    filter = gs_x.sum(axis=1) > 0
-    gs_x = gs_x[filter, :]
-    ds_x = ds_x[:, filter]
-    if z_score_ds:
-        x = z_score(ds_x)
-    else:
-        x = ds_x
 
-    scores = x.dot(gs_x)
+    indices = gs_x.sum(axis=1) > 0
+    gs_x = gs_x[indices, :]
+    ds_x = ds_x[:, indices]
+    if z_score_ds:
+        ds_x = z_score(ds_x)
+
+    scores = ds_x.dot(gs_x)
     ngenes_in_set = gs_x.sum(axis=0)
     scores = scores / ngenes_in_set
     return wot.Dataset(x=scores, row_meta=ds.row_meta, col_meta=gs.col_meta)

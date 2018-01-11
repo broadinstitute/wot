@@ -26,21 +26,10 @@ class TestGeneSetEnrichment(unittest.TestCase):
         output_file = 'gene_set_test_output.txt'
         output = pd.read_table(output_file, index_col=0)
         np.testing.assert_array_equal(output.values,
-                                      np.array([[1, 0, 1.5], [4, 0,
-                                                              4.5]]))
-        os.remove(output_file)
+                                      np.array([[1, 0.5, 1.5], [4, 2,
+                                                                4.5]]))
 
-    def test_tmp(self):
-        subprocess.call(args=['python', os.path.abspath(
-            '../bin/gene_set.py'),
-                              '--matrix',
-                              os.path.abspath(
-                                  'C:/Users/jgould/datasets/2i/Ex.Mat.2i.log.transf.flt.mtx.gz'),
-                              '--gene_sets', os.path.abspath(
-                'inputs/io/msigdb.v6.1.symbols.gmt'),
-                              '--prefix', 'msig_out' '--verbose'],
-                        cwd=os.getcwd(),
-                        stderr=subprocess.STDOUT)
+        os.remove(output_file)
 
     def test_score_gene_sets(self):
         ds = wot.Dataset(x=np.array([[1, 2, 3, 0],
@@ -64,3 +53,8 @@ class TestGeneSetEnrichment(unittest.TestCase):
         np.testing.assert_array_equal(result.x,
                                       np.array([[1, 0, 1.5], [4, 0,
                                                               4.5]]))
+
+
+
+if __name__ == '__main__':
+    unittest.main()
