@@ -22,7 +22,7 @@ parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
 
 args = parser.parse_args()
-use_dask = True
+use_dask = False
 
 ds = wot.io.read_dataset(args.matrix, use_dask=use_dask)
 
