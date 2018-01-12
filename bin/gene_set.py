@@ -23,10 +23,6 @@ parser.add_argument('--verbose', action='store_true',
 
 args = parser.parse_args()
 use_dask = True
-if use_dask:
-    import chest
-    cache = chest.Chest()
-    dask.set_options(cache=cache)
 
 ds = wot.io.read_dataset(args.matrix, use_dask=use_dask)
 
