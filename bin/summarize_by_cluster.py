@@ -3,6 +3,8 @@
 
 import argparse
 import wot
+import wot.ot
+import wot.io
 import pandas as pd
 import os
 import csv
