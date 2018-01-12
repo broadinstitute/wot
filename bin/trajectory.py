@@ -5,6 +5,8 @@ import argparse
 import pandas
 import os.path
 import wot
+import wot.io
+import wot.ot
 import csv
 
 parser = argparse.ArgumentParser(
