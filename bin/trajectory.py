@@ -50,6 +50,10 @@ for f in os.listdir(input_dir):
         path = os.path.join(input_dir, f)
         t = tokens[len(tokens) - 1]
         t_minus_1 = tokens[len(tokens) - 2]
+        try:
+            t_minus_1_f = float(t_minus_1)
+        except ValueError:
+            continue
         transport_map = pandas.read_table(path, index_col=0,
                                           quoting=csv.QUOTE_NONE)
         if t_minus_1 == time:
@@ -60,8 +64,7 @@ for f in os.listdir(input_dir):
             transport_map = transport_map[ids]
         transport_maps_inputs.append(
             {'transport_map': transport_map,
-             't_minus_1': t_minus_1, 't': t, 't_minus_1_f': float(
-                t_minus_1)})
+             't_minus_1': t_minus_1, 't': t, 't_minus_1_f': t_minus_1_f})
 transport_maps_inputs.sort(
     key=lambda x: x['t_minus_1_f'])  # sort by t_minus_1 (start time)
 
