@@ -50,19 +50,17 @@ for f in os.listdir(input_dir):
         path = os.path.join(input_dir, f)
         t = tokens[len(tokens) - 1]
         t_minus_1 = tokens[len(tokens) - 2]
-        t_f = None
-        t_minus_1_f = None
         try:
             t_minus_1_f = float(t_minus_1)
-            t_f = float(t)
+
         except ValueError:
             continue
         transport_map = pandas.read_table(path, index_col=0,
                                           quoting=csv.QUOTE_NONE)
-        if t_minus_1_f == time:
+        if str(t_minus_1_f) == str(time):
             # subset rows
             transport_map = transport_map[transport_map.index.isin(ids)]
-        if t_f == time:
+        if str(float(t)) == str(time):
             # subset columns
             transport_map = transport_map[ids]
         transport_maps_inputs.append(
