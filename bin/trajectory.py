@@ -17,7 +17,7 @@ parser.add_argument('--dir',
                     required=True)
 parser.add_argument('--time',
                     help='The time t',
-                    required=True, type=float)
+                    required=True)
 parser.add_argument('--prefix',
                     help='Prefix for ouput file names.',
                     required=True)
