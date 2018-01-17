@@ -57,7 +57,7 @@ for f in args.file:
     compare_to = pd.read_table(f, index_col=0)
     if args.verbose:
         print(f)
-    d = wot.transport_map_distance(transport_map_1=ref_transport_map,
+    d = wot.ot.transport_map_distance(transport_map_1=ref_transport_map,
                                    transport_map_2=compare_to,
                                    column_weights=total_cluster_size)
     names.append(f)

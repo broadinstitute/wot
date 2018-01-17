@@ -6,6 +6,7 @@ import pandas as pd
 import wot
 import numpy as np
 import os
+import scipy.sparse
 
 
 def read_gene_sets(path, feature_ids=None, chunks=(200, 200), use_dask=True):
@@ -160,7 +161,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
                 df_data = {}
                 if len(data.shape) > 1:
                     index = data[:, 0]  # TODO add other columns to df
-                    df_data = {'Symbol': data[:, 1]}
+                    df_data = {'symbol': data[:, 1]}
 
                 col_meta = pd.DataFrame(index=index, data=df_data)
                 break
@@ -234,8 +235,8 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             from scipy.sparse import csr_matrix
             M, N = group['shape'][()]
             data = group['data'][()]
-            if data.dtype == np.dtype('int32'):
-                data = data.astype('float32')
+            # if data.dtype == np.dtype('int32'):
+            #     data = data.astype('float32')
             x = csr_matrix((data, group['indices'][()], group['indptr'][()]), shape=(N, M))
             col_meta = pd.DataFrame(index=group['genes'][()].astype(str),
                                     data={"gene_names": group['gene_names'][()].astype(str)})
@@ -362,21 +363,33 @@ def get_file_basename_and_extension(name):
 
 def write_dataset(ds, path, output_format='txt'):
     if output_format == 'txt' or output_format == 'txt.gz':
-        f = pd.DataFrame(data=ds.x, index=ds.row_meta.index,
-                         columns=ds.col_meta.index)
-        f.to_csv(path,
-                 index_label="id",
-                 sep='\t',
-                 compression='gzip' if output_format == 'txt.gz'
-                 else None)
+        pd.DataFrame(ds.x, index=ds.row_meta.index, columns=ds.col_meta.index).to_csv(path,
+                                                                                      index_label="id",
+                                                                                      sep='\t',
+                                                                                      doublequote=False,
+                                                                                      compression='gzip' if output_format == 'txt.gz'
+                                                                                      else None)
     elif output_format == 'loom':
         f = h5py.File(path, 'w')
         x = ds.x
-        f.create_dataset("/matrix", shape=x.shape, chunks=(1000, 1000) if
+        is_sparse = scipy.sparse.isspmatrix(x)
+        dset = f.create_dataset("/matrix", shape=x.shape, chunks=(1000, 1000) if
         x.shape[0] >= 1000 and x.shape[1] >= 1000 else None,
-                         maxshape=(None, x.shape[1]),
-                         compression="gzip", compression_opts=9,
-                         data=x)
+                                maxshape=(None, x.shape[1]),
+                                compression="gzip", compression_opts=9,
+                                data=None if is_sparse else x)
+        if is_sparse:
+            # write in chunks of 1000
+            start = 0
+            step = min(x.shape[0], 1000)
+            stop = step
+            nchunks = x.shape[0] / step
+            for i in range(nchunks):
+                stop = min(x.shape[0], stop)
+                dset[start:stop:, ] = x[start:stop:, ].todense()
+                start += step
+                stop += step
+
         # f.create_group('/layers')
         # for key in ds.layers:
         #     x = ds.layers[key]
@@ -394,20 +407,21 @@ def write_dataset(ds, path, output_format='txt'):
                 array = array.astype('S')
             f[path] = array
 
-        save_metadata_array('/row_attrs/' + ('id' if ds.row_meta.index.name is
-                                                     None else
-        ds.row_meta.index.name),
-                            ds.row_meta.index.values)
-        save_metadata_array('/col_attrs/' + ('id' if ds.col_meta.index.name is
-                                                     None else
-        ds.col_meta.index.name), ds.col_meta.index.values)
-
-        for name in ds.row_meta.columns:
-            save_metadata_array('/row_attrs/' + name,
-                                ds.row_meta[name].values())
-        for name in ds.col_meta.columns:
-            save_metadata_array('/col_attrs/' + name,
-                                ds.col_meta[name].values())
+        if ds.row_meta is not None:
+            save_metadata_array('/row_attrs/' + ('id' if ds.row_meta.index.name is
+                                                         None else
+            ds.row_meta.index.name),
+                                ds.row_meta.index.values)
+            for name in ds.row_meta.columns:
+                save_metadata_array('/row_attrs/' + name,
+                                    ds.row_meta[name].values)
+        if ds.col_meta is not None:
+            save_metadata_array('/col_attrs/' + ('id' if ds.col_meta.index.name is
+                                                         None else
+            ds.col_meta.index.name), ds.col_meta.index.values)
+            for name in ds.col_meta.columns:
+                save_metadata_array('/col_attrs/' + name,
+                                    ds.col_meta[name].values)
         f.close()
 
     else:

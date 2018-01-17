@@ -8,6 +8,53 @@ import numpy as np
 import sklearn.metrics.pairwise
 import csv
 
+
+# from gslrandom import PyRNG, multinomial
+# def coupling_sampler(Lineage, nf=1e-3, s=1, threads=1, nmin=10):
+#     Pairs = [[] for _ in range(s)]
+#     for lineage in Lineage:
+#         if len(lineage) > 0:
+#             l = lineage / lineage.sum(0)
+#             l = l / l.sum()
+#             l = l.flatten()
+#             sd = np.exp(scipy.stats.entropy(l))
+#             n = max(nmin, int(sd * nf)) * np.ones(s, dtype=np.uint32)
+#             P = np.ones((s, len(l)), dtype=np.uint32)
+#             l_tile = np.tile(l, (s, 1))
+#             rngs = [PyRNG(np.random.randint(2 ** 16)) for _ in range(threads)]
+#             P = multinomial(rngs, n, l_tile, P)
+#             # Too slow: P = np.random.multinomial(n,l,size=s)
+#             for i in range(s):
+#                 pairs = np.nonzero(P[i].reshape(lineage.shape))
+#                 Pairs[i].append(pairs)
+#             del P, l_tile
+#         else:
+#             for i in range(s):
+#                 Pairs[i].append([])
+#     return Pairs
+
+
+def point_cloud_distance(c1, c2, l, epsilon, scaling_iter):
+    cloud_distances = sklearn.metrics.pairwise.pairwise_distances(c1, Y=c2, metric='sqeuclidean')
+    cloud_distances = cloud_distances / np.median(cloud_distances)
+    cloud_coupling = wot.ot.transport_stable(
+        np.ones(cloud_distances.shape[0]) / cloud_distances.shape[0],
+        np.ones(cloud_distances.shape[1]) / cloud_distances.shape[1], cloud_distances,
+        l, l,
+        epsilon,
+        scaling_iter,
+        np.ones(c1.shape[0]))
+    return np.sqrt(np.sum(np.multiply(cloud_coupling, cloud_distances)))
+
+
+# def point_cloud_distance(c1, c2, l, epsilon, scaling_iter):
+#     cloud_distances = sklearn.metrics.pairwise.pairwise_distances(c1, Y=c2, metric='sqeuclidean')
+#     cloud_distances = cloud_distances / np.median(cloud_distances)
+#     return np.sqrt(
+#         pot.emd2(np.ones((cloud_distances.shape[0],), dtype=np.float64) / cloud_distances.shape[0],
+#                  np.ones((cloud_distances.shape[1],), dtype=np.float64) / cloud_distances.shape[1], cloud_distances))
+
+
 parser = argparse.ArgumentParser(
     description='Compute transport maps between pairs of time points')
 
@@ -66,17 +113,12 @@ parser.add_argument('--clusters',
                     required=False)
 parser.add_argument('--cluster_details', action='store_true',
                     help='Save cluster details when clusters is specified.')
-parser.add_argument('--subsample_cells', help='Number of cells to sample '
-                                              'without '
-                                              'replacement.', type=int,
-                    action='append')
+
 # parser.add_argument('--subsample_genes', help='Number of genes to sample '
 #                                               'without '
 #                                               'replacement.', type=int,
 #                     action='append')
-parser.add_argument('--subsample_iter', help='Number of subsample iterations '
-                                             'to perform',
-                    type=int, default=0)
+
 parser.add_argument('--no_save', action='store_true',
                     help='Do not save transport maps.')
 parser.add_argument('--compress', action='store_true',
@@ -87,10 +129,10 @@ parser.add_argument('--epsilon_adjust', help='Scaling factor to adjust epsilon',
 parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda',
                     type=float, default=1.5)
 
-parser.add_argument('--gene_set_sigma', help='Random noise to add to '
-                                             'proliferation and apoptosis '
-                                             'scores', type=float,
-                    action='append')
+# parser.add_argument('--gene_set_sigma', help='Random noise to add to '
+#                                              'proliferation and apoptosis '
+#                                              'scores', type=float,
+#                     action='append')
 growth_rate_group = parser.add_mutually_exclusive_group(required=True)
 growth_rate_group.add_argument('--gene_set_scores',
                                help='File containing "Proliferation" '
@@ -102,6 +144,15 @@ growth_rate_group.add_argument('--cell_growth_rates',
                                     'cell ids and growth rates per day.')
 parser.add_argument('--diagonal', help='Diagonal scaling matrix')
 parser.add_argument('--power', help='Diagonal scaling power', type=float)
+
+parser.add_argument('--subsample_iter', help='Number of subsample iterations '
+                                             'to perform',
+                    type=int, default=0)
+parser.add_argument('--subsample_cells', help='Fraction of cells to sample '
+                                              'without '
+                                              'replacement.', type=float)
+parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
+parser.add_argument('--npairs', help='Pairs of cells to sample from interpolated transport map', type=int)
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
 args = parser.parse_args()
@@ -132,7 +183,7 @@ if eigenvals is not None:
 
 params_writer = open(args.prefix + '_params.txt', 'w')
 params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda1' + '\t' + 'lambda2'
-                    '\n')
+                                                                                      '\n')
 gene_set_writer = None
 if args.gene_set_scores is not None:
     gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0,
@@ -141,7 +192,7 @@ if args.gene_set_scores is not None:
     gene_set_scores = \
         gene_set_scores.align(gene_expression, join='right', axis=0,
                               copy=False)[0]
-    gene_set_sigmas = args.gene_set_sigma
+    # gene_set_sigmas = args.gene_set_sigma
 
     apoptosis = gene_set_scores['Apoptosis']
     proliferation = gene_set_scores['Proliferation']
@@ -170,8 +221,6 @@ if args.verbose:
 
 cluster_transport_maps = []
 resample = False
-subsample_cells = [0]
-subsample_genes = [0]
 total_cluster_size = None
 if args.clusters is not None:
     clusters = pd.read_table(args.clusters, index_col=0, header=None,
@@ -186,24 +235,16 @@ if args.clusters is not None:
                                                    grouped_by_cluster,
                                                    cluster_ids)
 
-    if args.subsample_iter > 0:
-        if args.subsample_cells is None:
-            print('subsample_cells required when '
-                  'subsample_iter > 0')
-            exit(1)
-        resample = True
+if args.subsample_iter > 0:
+    if args.subsample_cells is None:
+        print('subsample_cells required when '
+              'subsample_iter > 0')
+        exit(1)
+    resample = True
 
-        subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
-        # if args.subsample_genes is not None:
-        #     subsample_genes = args.subsample_genes
-        #     subsample_writer.write('ngenes\t')
-        if args.subsample_cells is not None:
-            subsample_cells = args.subsample_cells
-            subsample_writer.write('ncells\tt1 ncells\tt2ncells\t')
-
-        subsample_writer.write('t1' + '\t' + 't2' + '\t' + 'standard '
-                                                           'deviation mean' +
-                               '\n')
+    subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
+    subsample_writer.write('is_resampled' + '\t' + 't1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' +
+                           '\n')
 column_cell_ids_by_time = []
 all_cell_ids = set()
 
@@ -222,15 +263,13 @@ for day_index in range(day_pairs.shape[0]):
             'Computing transport map from ' + str(
                 t1) + ' to ' + str(
                 t2))
-    x = m1.drop(fields_to_drop_for_distance, axis=1)
-    y = Y = m2.drop(fields_to_drop_for_distance, axis=1)
-    unnormalized_cost_matrix = sklearn.metrics.pairwise.pairwise_distances(x, y,
-                                                                           metric='sqeuclidean')
 
-    cost_matrix = unnormalized_cost_matrix / np.median(
-        unnormalized_cost_matrix)
+    c = sklearn.metrics.pairwise.pairwise_distances(m1.drop(fields_to_drop_for_distance, axis=1).values,
+                                                    m2.drop(fields_to_drop_for_distance, axis=1).values,
+                                                    metric='sqeuclidean')
+    c = c / np.median(c)
 
-    result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
+    result = wot.ot.optimal_transport(cost_matrix=c,
                                       growth_rate=m1[
                                           cell_growth_rates.columns[0]].values,
                                       delta_days=delta_t,
@@ -243,10 +282,9 @@ for day_index in range(day_pairs.shape[0]):
                                       scaling_iter=args.scaling_iter,
                                       epsilon_adjust=args.epsilon_adjust,
                                       lambda_adjust=args.lambda_adjust)
-
     params_writer.write(
         str(t1) + '\t' + str(t2) + '\t' + str(result['epsilon']) + '\t' + str(
-            result['lambda1']) +  '\t' + str(
+            result['lambda1']) + '\t' + str(
             result['lambda2']) + '\n')
     transport_map = pd.DataFrame(result['transport'], index=m1.index,
                                  columns=m2.index)
@@ -286,119 +324,144 @@ for day_index in range(day_pairs.shape[0]):
                              args.compress else None, doublequote=False,
                              quoting=csv.QUOTE_NONE)
 
-    if gene_set_scores is not None and gene_set_sigmas is not None:
-        _gene_set_scores = gene_set_scores.loc[m1.index]
-        for sigma in gene_set_sigmas:
-            apoptosis = _gene_set_scores['Apoptosis'] + np.random.normal(0,
-                                                                         sigma,
-                                                                         _gene_set_scores.shape[
-                                                                             0])
-            proliferation = _gene_set_scores[
-                                'Proliferation'] + np.random.normal(
-                0,
-                sigma,
-                _gene_set_scores.shape[0])
-            g = wot.ot.compute_growth_scores(proliferation.values,
-                                             apoptosis.values)
-
-            perturbed_result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
-                                                        growth_rate=g,
-                                                        delta_days=delta_t,
-                                                        max_transport_fraction=args.max_transport_fraction,
-                                                        min_transport_fraction=args.min_transport_fraction,
-                                                        min_growth_fit=args.min_growth_fit,
-                                                        l0_max=args.l0_max,
-                                                        lambda1=args.lambda1,
-                                                        lambda2=args.lambda2,
-                                                        epsilon=args.epsilon,
-                                                        scaling_iter=args.scaling_iter,
-                                                        epsilon_adjust=args.epsilon_adjust,
-                                                        lambda_adjust=args.lambda_adjust)
-            perturbed_transport_map = pd.DataFrame(
-                perturbed_result['transport'],
-                index=m1.index,
-                columns=m2.index)
-            perturbed_transport_map_by_cluster = \
-                wot.ot.transport_map_by_cluster(
-                    perturbed_transport_map, grouped_by_cluster, cluster_ids)
-
-            d = wot.ot.transport_map_distance(
-                transport_map_1=cluster_transport_map,
-                transport_map_2=perturbed_transport_map_by_cluster,
-                column_weights=total_cluster_size)
-
-            gene_set_writer.write(
-                str(t1) + '\t' + str(t2) + '\t' + str(sigma) + '\t' + str(
-                    d) + '\n')
-            gene_set_writer.flush()
-    if resample:
+    if resample:  # resample and optionally perturb parameters
         rnd = np.random.RandomState()
-        for ncells in subsample_cells:
-            n = min(ncells, m1.shape[0], m2.shape[0]);
-            if args.verbose:
-                print(
-                    'Resampling using ' + str(n) + '/' + str(m1.shape[0]) + ' '
-                                                                            'and '
-                    + str(n) + '/' + str(m2.shape[0]))
-            subsampled_maps = []
-            for subsample in range(args.subsample_iter):
-                if args.verbose:
-                    print('Subsample iteration ' + str(subsample + 1))
+        fraction = args.subsample_cells
+        actual_time = t1 + (t2 - t1) * args.t_interpolate
+        actual_mtx = group_by_day.get_group(actual_time)
 
-                m1_sample = m1.sample(n=n,
+        actual_mtx = actual_mtx.drop(fields_to_drop_for_distance, axis=1).values
+        # distance between interpolated expression matrix and actual expression matrix
+
+        m1_mtx = m1.drop(fields_to_drop_for_distance, axis=1).values
+
+        m2_mtx = m2.drop(fields_to_drop_for_distance, axis=1).values
+
+        m2_indices = np.random.choice(m2_mtx.shape[0], size=args.npairs, replace=True)
+        m2_mtx = m2_mtx[m2_indices, :]
+        m1_indices = []
+        tm = result['transport']
+        tm = tm / tm.sum(axis=0)
+
+        for s in range(args.npairs):
+            idx = m2_indices[s]
+            m1_indices.append(np.random.choice(m1_mtx.shape[0], 1, p=tm[:, idx])[0])
+            # m1_indices.append(np.random.choice(m1_mtx.shape[0], 1)[0])
+        m1_mtx = m1_mtx[m1_indices, :]
+        distance = point_cloud_distance(actual_mtx, m1_mtx + args.t_interpolate * (m2_mtx - m1_mtx), result['lambda1'],
+                                        result['epsilon'],
+                                        args.scaling_iter)
+        subsample_writer.write('no' + '\t' +
+                               str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(distance) + '\n')
+        subsample_writer.flush()
+
+        for subsample_iter in range(args.subsample_iter):
+            if args.verbose:
+                print('Subsample iteration ' + str(subsample_iter + 1))
+
+            # compare pairs
+            interpolated_matrices = []
+            for i in range(2):
+                m1_sample = m1.sample(n=int(m1.shape[0] * fraction),
                                       replace=False,
                                       axis=0,
                                       random_state=rnd)
-                m2_sample = m2.sample(n=n, replace=False, axis=0,
+                m2_sample = m2.sample(n=int(m2.shape[0] * fraction), replace=False, axis=0,
                                       random_state=rnd)
-                unnormalized_cost_matrix = \
-                    sklearn.metrics.pairwise.pairwise_distances(
-                        m1_sample.drop(fields_to_drop_for_distance, axis=1),
-                        Y=m2_sample.drop(fields_to_drop_for_distance, axis=1),
-                        metric='sqeuclidean')
-                cost_matrix = unnormalized_cost_matrix / np.median(
-                    unnormalized_cost_matrix)
+                # if gene_set_scores is not None and gene_set_sigmas is not None:
+                #     _gene_set_scores = gene_set_scores.loc[m1.index]
+                #
+                #     apoptosis = _gene_set_scores['Apoptosis'] + np.random.normal(0,
+                #                                                                  sigma,
+                #                                                                  _gene_set_scores.shape[
+                #                                                                      0])
+                #     proliferation = _gene_set_scores[
+                #                         'Proliferation'] + np.random.normal(
+                #         0,
+                #         sigma,
+                #         _gene_set_scores.shape[0])
+                #     g = wot.ot.compute_growth_scores(proliferation.values,
+                #                                      apoptosis.values)
+                m1_mtx = m1_sample.drop(fields_to_drop_for_distance, axis=1).values
+                m2_mtx = m2_sample.drop(fields_to_drop_for_distance, axis=1).values
+                c = sklearn.metrics.pairwise.pairwise_distances(m1_mtx, Y=m2_mtx, metric='sqeuclidean')
+                c = c / np.median(c)
+                perturbed_transport = wot.ot.transport_stable(np.ones(c.shape[0]) / c.shape[0],
+                                                              np.ones(c.shape[1]) / c.shape[1], c,
+                                                              result['lambda1'],
+                                                              result['lambda2'], result['epsilon'],
+                                                              args.scaling_iter, m1_sample[
+                                                                  cell_growth_rates.columns[0]].values)
+                # perturbed_result = wot.ot.optimal_transport(
+                #     cost_matrix=c,
+                #     growth_rate=m1_sample[
+                #         cell_growth_rates.columns[0]].values,
+                #     delta_days=delta_t,
+                #     max_transport_fraction=args.max_transport_fraction,
+                #     min_transport_fraction=args.min_transport_fraction,
+                #     min_growth_fit=args.min_growth_fit,
+                #     l0_max=args.l0_max, lambda1=args.lambda1,
+                #     lambda2=args.lambda2,
+                #     epsilon=args.epsilon,
+                #     scaling_iter=args.scaling_iter,
+                #     epsilon_adjust=args.epsilon_adjust,
+                #     lambda_adjust=args.lambda_adjust)
+                # perturbed_transport = perturbed_result['transport']
+                perturbed_transport = perturbed_transport / perturbed_transport.sum(axis=0)  # normalize columns to 1
+                # perturbed_transport = perturbed_transport / perturbed_transport.sum()  # total to 1
 
-                p = np.ones(cost_matrix.shape[0]) / cost_matrix.shape[0]
-                q = np.ones(cost_matrix.shape[1]) / cost_matrix.shape[1]
-                g = m1_sample.cell_growth_rate.values ** delta_t
-                subsampled_result = wot.ot.transport_stable(p, q, cost_matrix,
-                                                            result['lambda1'],
-                                                            result['lambda2'],
-                                                            result['epsilon'],
-                                                            args.scaling_iter,
-                                                            g)
+                # sampled_indices = np.random.choice(len(l), size=args.npairs, replace=True, p=l)
 
-                subsampled_maps.append(wot.ot.transport_map_by_cluster(
-                    pd.DataFrame(
-                        subsampled_result,
-                        index=m1_sample.index,
-                        columns=m2_sample.index), grouped_by_cluster,
-                    cluster_ids))
+                # P = np.random.multinomial(n, perturbed_transport, size=s)
+                m2_indices = np.random.choice(m2_mtx.shape[0], size=args.npairs, replace=True)
+                m2_mtx = m2_mtx[m2_indices, :]
+                m1_indices = []
+                for s in range(args.npairs):
+                    idx = m2_indices[s]
+                    m1_indices.append(np.random.choice(m1_mtx.shape[0], 1, p=perturbed_transport[:, idx])[0])
+                m1_mtx = m1_mtx[m1_indices, :]
 
-            cluster_shape = subsampled_maps[0].shape
-            vals = np.zeros(
-                (cluster_shape[0], cluster_shape[1], len(subsampled_maps)))
-            for subsample_i in range(len(subsampled_maps)):
-                subsampled_map = subsampled_maps[subsample_i]
-                for i in range(cluster_shape[0]):
-                    for j in range(cluster_shape[1]):
-                        vals[i, j, subsample_i] = subsampled_map.iloc[i, j]
+                interpolated_matrices.append(m1_mtx + args.t_interpolate * (m2_mtx - m1_mtx))
 
-            stdevs = np.zeros(cluster_shape[0] * cluster_shape[1])
-            counter = 0
-            for i in range(cluster_shape[0]):
-                for j in range(cluster_shape[1]):
-                    stdevs[counter] = np.sqrt(np.var(vals[i, j]))
-                    counter += 1
-            mean_stdev = np.mean(stdevs)
-            subsample_writer.write(
-                str(m1.shape[0]) + '\t' + str(m2.shape[0]) + '\t' + str(n) +
-                '\t' + str(t1) + '\t' + str(t2) + '\t' + str(
-                    mean_stdev) + '\n')
+            distance = point_cloud_distance(interpolated_matrices[0], interpolated_matrices[1], result['lambda1'],
+                                            result['epsilon'],
+                                            args.scaling_iter)
+            subsample_writer.write('yes' + '\t' +
+                                   str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+                distance) + '\n')
+
             subsample_writer.flush()
 
-if resample:
+        # subsampled_maps.append(wot.ot.transport_map_by_cluster(
+        #     pd.DataFrame(
+        #         subsampled_result,
+        #         index=m1_sample.index,
+        #         columns=m2_sample.index), grouped_by_cluster,
+        #     cluster_ids))
+
+    # cluster_shape = subsampled_maps[0].shape
+    # vals = np.zeros(
+    #     (cluster_shape[0], cluster_shape[1], len(subsampled_maps)))
+    # for subsample_i in range(len(subsampled_maps)):
+    #     subsampled_map = subsampled_maps[subsample_i]
+    #     for i in range(cluster_shape[0]):
+    #         for j in range(cluster_shape[1]):
+    #             vals[i, j, subsample_i] = subsampled_map.iloc[i, j]
+    #
+    # stdevs = np.zeros(cluster_shape[0] * cluster_shape[1])
+    # counter = 0
+    # for i in range(cluster_shape[0]):
+    #     for j in range(cluster_shape[1]):
+    #         stdevs[counter] = np.sqrt(np.var(vals[i, j]))
+    #         counter += 1
+    # mean_stdev = np.mean(stdevs)
+    # subsample_writer.write(
+    #     str(m1.shape[0]) + '\t' + str(m2.shape[0]) + '\t' + str(n) +
+    #     '\t' + str(t1) + '\t' + str(t2) + '\t' + str(
+    #         mean_stdev) + '\n')
+    # subsample_writer.flush()
+
+if subsample_writer is not None:
     subsample_writer.close()
 
 if gene_set_writer is not None:
