@@ -34,5 +34,5 @@ def score_gene_sets(ds, gs, z_score_ds=True):
 
     scores = ds_x.dot(gs_x)
     ngenes_in_set = gs_x.sum(axis=0)
-    scores = scores / ngenes_in_set
+    scores = scores / ngenes_in_set  # scores contains cells on rows, gene sets on columns
     return wot.Dataset(x=scores, row_meta=ds.row_meta, col_meta=gs.col_meta)

@@ -4,7 +4,7 @@
 import argparse
 import wot.io
 import dask
-
+import dask.array as da
 parser = argparse.ArgumentParser(
     description='Compute the gene set scores for the given gene sets')
 parser.add_argument('--matrix',
@@ -41,6 +41,8 @@ result = wot.score_gene_sets(ds=ds, gs=gs, z_score_ds=not args.no_zscore)
 
 if use_dask:
     result.x, result.row_meta, result.col_meta = dask.compute(result.x, result.row_meta, result.col_meta)
+elif type(result.x) == da.core.Array:
+    result.x = result.x.compute()
 output_format = 'txt'
 path = wot.io.check_file_extension(args.prefix,
                                    format=output_format)

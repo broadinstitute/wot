@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import sklearn.metrics.pairwise
 import csv
+import ot as pot
 
 
 # from gslrandom import PyRNG, multinomial
@@ -55,25 +56,42 @@ def sample_from_transport_map(exp1, exp2, transport_map=None):
     # m1_subset = m1_mtx[m1_indices]
 
 
-def point_cloud_distance(c1, c2, l, epsilon, scaling_iter):
-    cloud_distances = sklearn.metrics.pairwise.pairwise_distances(c1, Y=c2, metric='sqeuclidean')
-    cloud_distances = cloud_distances / np.median(cloud_distances)
-    cloud_coupling = wot.ot.transport_stable(
-        np.ones(cloud_distances.shape[0]) / cloud_distances.shape[0],
-        np.ones(cloud_distances.shape[1]) / cloud_distances.shape[1], cloud_distances,
-        l, l,
-        epsilon,
-        scaling_iter,
-        np.ones(c1.shape[0]))
-    return np.sqrt(np.sum(np.multiply(cloud_coupling, cloud_distances)))
-
-
 # def point_cloud_distance(c1, c2, l, epsilon, scaling_iter):
 #     cloud_distances = sklearn.metrics.pairwise.pairwise_distances(c1, Y=c2, metric='sqeuclidean')
 #     cloud_distances = cloud_distances / np.median(cloud_distances)
-#     return np.sqrt(
-#         pot.emd2(np.ones((cloud_distances.shape[0],), dtype=np.float64) / cloud_distances.shape[0],
-#                  np.ones((cloud_distances.shape[1],), dtype=np.float64) / cloud_distances.shape[1], cloud_distances))
+#     cloud_coupling = wot.ot.transport_stable(
+#         np.ones(cloud_distances.shape[0]) / cloud_distances.shape[0],
+#         np.ones(cloud_distances.shape[1]) / cloud_distances.shape[1], cloud_distances,
+#         l, l,
+#         epsilon,
+#         scaling_iter,
+#         np.ones(c1.shape[0]))
+#     return np.sqrt(np.sum(np.multiply(cloud_coupling, cloud_distances)))
+
+
+def complement_sample(n):
+    indices = np.random.choice(n, int(n * 0.5))
+    indices_c = np.zeros(n, dtype=bool)
+    indices_c[indices] = True
+    indices_c = np.invert(indices_c)
+    return indices, indices_c
+
+
+def point_cloud_distance(c1, c2, growth_rate=None, delta_days=None):
+    cloud_distances = sklearn.metrics.pairwise.pairwise_distances(c1, Y=c2, metric='sqeuclidean')
+    cloud_distances = cloud_distances / np.median(cloud_distances)
+
+    if growth_rate is None:
+        p = np.ones((cloud_distances.shape[0]), dtype=np.float64) / cloud_distances.shape[0]
+        q = np.ones((cloud_distances.shape[1]), dtype=np.float64) / cloud_distances.shape[1]
+    else:
+        p = np.ones(c1.shape[0])
+        q = np.ones(c2.shape[1])
+        g = growth_rate ** delta_days
+        p = p * g
+        q = q / q.sum()
+        p = p / p.sum()
+    return np.sqrt(pot.emd2(p, q, cloud_distances, numItermax=max(10000000, c1.shape[0] * c2.shape[0])))
 
 
 parser = argparse.ArgumentParser(
@@ -169,6 +187,8 @@ parser.add_argument('--power', help='Diagonal scaling power', type=float)
 parser.add_argument('--subsample_iter', help='Number of subsample iterations '
                                              'to perform',
                     type=int, default=0)
+parser.add_argument('--entropy', action='store_true',
+                    help='Use entropic regularization when computing transport maps')
 parser.add_argument('--subsample_cells', help='Fraction of cells to sample '
                                               'without '
                                               'replacement.', type=float)
@@ -178,6 +198,7 @@ parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
 args = parser.parse_args()
 eigenvals = None
+use_entropy = args.entropy
 if args.diagonal is not None:
     eigenvals = np.loadtxt(args.diagonal, delimiter='\n')
 if eigenvals is not None and args.power is not None:
@@ -303,7 +324,7 @@ for day_index in range(day_pairs.shape[0]):
                                       epsilon=args.epsilon,
                                       scaling_iter=args.scaling_iter,
                                       epsilon_adjust=args.epsilon_adjust,
-                                      lambda_adjust=args.lambda_adjust)
+                                      lambda_adjust=args.lambda_adjust, use_entropy=use_entropy)
     params_writer.write(
         str(t1) + '\t' + str(t2) + '\t' + str(result['epsilon']) + '\t' + str(
             result['lambda1']) + '\t' + str(
@@ -348,11 +369,18 @@ for day_index in range(day_pairs.shape[0]):
 
     if resample:  # resample and optionally perturb parameters
         rnd = np.random.RandomState(123125)
-        fraction = args.subsample_cells
-        actual_time = t1 + (t2 - t1) * args.t_interpolate
-        actual_mtx = group_by_day.get_group(actual_time)
 
+        inferred_time = t1 + (t2 - t1) * args.t_interpolate
+        actual_mtx = group_by_day.get_group(inferred_time)
         actual_mtx = actual_mtx.drop(fields_to_drop_for_distance, axis=1).values
+        for tmp in range(3):
+            split1, split2 = complement_sample(actual_mtx.shape[0])
+
+            distance = point_cloud_distance(actual_mtx[split1], actual_mtx[split2])
+            subsample_writer.write('D vs D' + '\t' +
+                                   str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+                distance) + '\n')
+
         # distance between interpolated expression matrix and actual expression matrix
 
         m1_mtx = m1.drop(fields_to_drop_for_distance, axis=1).values
@@ -361,17 +389,22 @@ for day_index in range(day_pairs.shape[0]):
         m1_subset, m2_subset = sample_from_transport_map(m1_mtx, m2_mtx, result['transport'])
         m1_random_subset, m2_random_subset = sample_from_transport_map(m1_mtx, m2_mtx)
         inferred = m1_subset + args.t_interpolate * (m2_subset - m1_subset)
-        distance = point_cloud_distance(actual_mtx, inferred, result['lambda1'],
-                                        result['epsilon'],
-                                        args.scaling_iter)
+
+        # subsample_writer.write('t1 vs t2' + '\t' +
+        #                        str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+        #     point_cloud_distance(m1.drop(fields_to_drop_for_distance, axis=1).values,
+        #                          m2.drop(fields_to_drop_for_distance, axis=1).values, m1[
+        #                              cell_growth_rates.columns[0]].values, delta_t)) + '\n')
+        # subsample_writer.write('t1 vs inferred' + '\t' +
+        #                        str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+        #     point_cloud_distance(m1.drop(fields_to_drop_for_distance, axis=1).values, inferred, m1[
+        #         cell_growth_rates.columns[0]].values, inferred_time - t1)) + '\n')
         subsample_writer.write('observed vs inferred' + '\t' +
                                str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(distance) + '\n')
 
         random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
 
-        distance = point_cloud_distance(actual_mtx, random_inferred, result['lambda1'],
-                                        result['epsilon'],
-                                        args.scaling_iter)
+        distance = point_cloud_distance(actual_mtx, random_inferred)
         subsample_writer.write('observed vs random coupling inferred' + '\t' +
                                str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(distance) + '\n')
         subsample_writer.flush()
@@ -382,9 +415,12 @@ for day_index in range(day_pairs.shape[0]):
 
             # compare pairs
             interpolated_matrices = []
-            for i in range(2):
-                m1_sample = m1.sample(n=int(m1.shape[0] * fraction), replace=False, axis=0, random_state=rnd)
-                m2_sample = m2.sample(n=int(m2.shape[0] * fraction), replace=False, axis=0, random_state=rnd)
+
+            m1_indices_ = complement_sample(m1.shape[0])
+            m2_indices_ = complement_sample(m2.shape[0])
+            for split_iter in range(2):
+                m1_sample = m1.iloc[m1_indices_[split_iter]]
+                m2_sample = m2.iloc[m2_indices_[split_iter]]
                 # if gene_set_scores is not None and gene_set_sigmas is not None:
                 #     _gene_set_scores = gene_set_scores.loc[m1.index]
                 #
@@ -403,44 +439,33 @@ for day_index in range(day_pairs.shape[0]):
                 m2_mtx = m2_sample.drop(fields_to_drop_for_distance, axis=1).values
                 c = sklearn.metrics.pairwise.pairwise_distances(m1_mtx, Y=m2_mtx, metric='sqeuclidean')
                 c = c / np.median(c)
-                perturbed_transport = wot.ot.transport_stable(np.ones(c.shape[0]) / c.shape[0],
-                                                              np.ones(c.shape[1]) / c.shape[1], c,
-                                                              result['lambda1'],
-                                                              result['lambda2'], result['epsilon'],
-                                                              args.scaling_iter, m1_sample[
-                                                                  cell_growth_rates.columns[0]].values)
-                # perturbed_result = wot.ot.optimal_transport(
-                #     cost_matrix=c,
-                #     growth_rate=m1_sample[
-                #         cell_growth_rates.columns[0]].values,
-                #     delta_days=delta_t,
-                #     max_transport_fraction=args.max_transport_fraction,
-                #     min_transport_fraction=args.min_transport_fraction,
-                #     min_growth_fit=args.min_growth_fit,
-                #     l0_max=args.l0_max, lambda1=args.lambda1,
-                #     lambda2=args.lambda2,
-                #     epsilon=args.epsilon,
-                #     scaling_iter=args.scaling_iter,
-                #     epsilon_adjust=args.epsilon_adjust,
-                #     lambda_adjust=args.lambda_adjust)
-                # perturbed_transport = perturbed_result['transport']
 
-                # perturbed_transport = perturbed_transport / perturbed_transport.sum()  # total to 1
+                perturbed_result = wot.ot.optimal_transport(
+                    cost_matrix=c,
+                    growth_rate=m1_sample[
+                        cell_growth_rates.columns[0]].values,
+                    delta_days=delta_t,
+                    max_transport_fraction=args.max_transport_fraction,
+                    min_transport_fraction=args.min_transport_fraction,
+                    min_growth_fit=args.min_growth_fit,
+                    l0_max=args.l0_max, lambda1=args.lambda1,
+                    lambda2=args.lambda2,
+                    epsilon=args.epsilon,
+                    scaling_iter=args.scaling_iter,
+                    epsilon_adjust=args.epsilon_adjust,
+                    lambda_adjust=args.lambda_adjust, use_entropy=use_entropy)
+                perturbed_transport = perturbed_result['transport']
 
                 m1_mtx, m2_mtx = sample_from_transport_map(m1_mtx, m2_mtx, perturbed_transport)
 
                 interpolated_matrices.append(m1_mtx + args.t_interpolate * (m2_mtx - m1_mtx))
 
-            distance = point_cloud_distance(interpolated_matrices[0], interpolated_matrices[1], result['lambda1'],
-                                            result['epsilon'],
-                                            args.scaling_iter)
+            distance = point_cloud_distance(interpolated_matrices[0], interpolated_matrices[1])
             subsample_writer.write('inferred pair' + '\t' +
                                    str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
                 distance) + '\n')
             for interpolated_matrix in interpolated_matrices:
-                distance = point_cloud_distance(interpolated_matrix, actual_mtx, result['lambda1'],
-                                                result['epsilon'],
-                                                args.scaling_iter)
+                distance = point_cloud_distance(interpolated_matrix, actual_mtx)
                 subsample_writer.write('inferred pair vs observed' + '\t' +
                                        str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
                     distance) + '\n')

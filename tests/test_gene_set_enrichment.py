@@ -53,19 +53,6 @@ class TestGeneSetEnrichment(unittest.TestCase):
         np.testing.assert_array_equal(result.x,
                                       np.array([[1, 0, 1.5], [4, 0,
                                                               4.5]]))
-    def test_1M(self):
-        subprocess.call(args=['python', os.path.abspath(
-            '../bin/gene_set.py'),
-                              '--matrix',
-                              os.path.abspath(
-                                  '/Users/jgould/datasets/serum/Ex.Mat.serum.log.transf.flt.mtx'),
-                              '--gene_sets', os.path.abspath(
-                '/Users/jgould/datasets/gene_sets.gmx'),
-                              '--prefix',
-                              'serum_gene_sets',
-                              '--verbose'],
-                        cwd=os.getcwd(),
-                        stderr=subprocess.STDOUT)
 
 
 if __name__ == '__main__':
