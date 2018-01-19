@@ -174,7 +174,7 @@ parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda',
 #                     action='append')
 growth_rate_group = parser.add_mutually_exclusive_group(required=True)
 growth_rate_group.add_argument('--gene_set_scores',
-                               help='File containing "Proliferation" '
+                               help='File containing "Cell.cycle" '
                                     'and '
                                     '"Apoptosis" scores')
 growth_rate_group.add_argument('--cell_growth_rates',
@@ -237,7 +237,7 @@ if args.gene_set_scores is not None:
     # gene_set_sigmas = args.gene_set_sigma
 
     apoptosis = gene_set_scores['Apoptosis']
-    proliferation = gene_set_scores['Proliferation']
+    proliferation = gene_set_scores['Cell.cycle']
     g = wot.ot.compute_growth_scores(proliferation.values,
                                      apoptosis.values)
     cell_growth_rates = pd.DataFrame(index=gene_set_scores.index,
