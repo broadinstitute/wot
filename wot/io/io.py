@@ -9,7 +9,7 @@ import os
 import scipy.sparse
 
 
-def read_gene_sets(path, feature_ids=None, chunks=(200, 200), use_dask=True):
+def read_gene_sets(path, feature_ids=None, chunks=(200, 200), use_dask=False):
     path = str(path)
     basename_and_extension = get_file_basename_and_extension(path)
     ext = basename_and_extension[1]
@@ -21,7 +21,7 @@ def read_gene_sets(path, feature_ids=None, chunks=(200, 200), use_dask=True):
         raise ValueError('Unknown file format')
 
 
-def read_gmt(path, feature_ids=None, chunks=(200, 200), use_dask=True):
+def read_gmt(path, feature_ids=None, chunks=(200, 200), use_dask=False):
     with open(path) as fp:
         row_id_to_index = {}
         if feature_ids is not None:
@@ -75,7 +75,7 @@ def read_gmt(path, feature_ids=None, chunks=(200, 200), use_dask=True):
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
 
 
-def read_gmx(path, feature_ids=None, chunks=(200, 200), use_dask=True):
+def read_gmx(path, feature_ids=None, chunks=(200, 200), use_dask=False):
     with open(path) as fp:
         ids = fp.readline().split('\t')
         descriptions = fp.readline().split('\t')
@@ -124,7 +124,7 @@ def read_gmx(path, feature_ids=None, chunks=(200, 200), use_dask=True):
 
 
 def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
-                 h5_col_meta=None, use_dask=True, genome10x=None):
+                 h5_col_meta=None, use_dask=False, genome10x=None):
     path = str(path)
     basename_and_extension = get_file_basename_and_extension(path)
     ext = basename_and_extension[1]
@@ -194,8 +194,11 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             raise ValueError("Header line not of length 3: " + line)
         rows, cols, entries = map(int, line)
 
-        x = np.zeros(shape=(cols, rows), dtype=np.float32)
-
+        # x = np.zeros(shape=(cols, rows), dtype=np.float32)
+        V = np.zeros(entries, dtype=np.float32)
+        entry_number = 0
+        I = np.zeros(entries, dtype='intc')
+        J = np.zeros(entries, dtype='intc')
         while line:
             line = stream.readline()
             if not line or line.startswith(b'%'):
@@ -205,7 +208,11 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             i, j = map(int, l[:2])
             i, j = i - 1, j - 1
             aij = float(l[2])
-            x[j, i] = aij
+            V[entry_number] = aij
+            I[entry_number] = j
+            J[entry_number] = i
+            entry_number += 1
+        x = scipy.sparse.coo_matrix((V, (I, J)), shape=(cols, rows), dtype=np.float32).tocsr()
         stream.close()
         if col_meta is None:
             col_meta = pd.DataFrame(index=pd.RangeIndex(start=0,
@@ -217,7 +224,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
                 index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
 
         if use_dask:
-            return wot.Dataset(x=da.from_array(x, chunks=chunks),
+            return wot.Dataset(x=da.from_array(x.todense(), chunks=chunks),
                                row_meta=dd.from_pandas(row_meta,
                                                        npartitions=4,
                                                        sort=False),
@@ -228,7 +235,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom':
         f = h5py.File(path, 'r')
-        if genome10x is not None or f['/mm10'] is not None:
+        if genome10x is not None or f.get('/mm10') is not None:
             genome10x = '/mm10' if genome10x is None else genome10x
             group = f['/' + genome10x]
 
@@ -383,10 +390,10 @@ def write_dataset(ds, path, output_format='txt'):
             start = 0
             step = min(x.shape[0], 1000)
             stop = step
-            nchunks = x.shape[0] / step
+            nchunks = int(np.ceil(max(1, x.shape[0] / step)))
             for i in range(nchunks):
                 stop = min(x.shape[0], stop)
-                dset[start:stop:, ] = x[start:stop:, ].todense()
+                dset[start:stop] = x[start:stop].todense()
                 start += step
                 stop += step
 

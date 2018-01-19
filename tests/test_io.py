@@ -36,6 +36,43 @@ class TestIO(unittest.TestCase):
             self.assertTrue(len(index) == 1)
             self.assertTrue(index[0] >= 0)
 
+    def test_mtx_to_loom(self):
+        ds = wot.io.read_dataset(
+            'inputs/io/filtered_gene_bc_matrices/hg19/matrix.mtx')
+        ds.row_meta.index.rename('id', inplace=True)
+        ds.col_meta.index.rename('id', inplace=True)
+        wot.io.write_dataset(ds, 'test.loom', 'loom')
+        ds2 = wot.io.read_dataset('test.loom')
+        ds2.row_meta.set_index('id', inplace=True)
+        ds2.col_meta.set_index('id', inplace=True)
+        np.testing.assert_array_equal(ds.x.todense(),
+                                      ds2.x)
+        pd.testing.assert_frame_equal(
+            ds.row_meta,
+            ds2.row_meta)
+        pd.testing.assert_frame_equal(
+            ds.col_meta,
+            ds2.col_meta)
+
+    def test_read_gmt_dataset_order(self):
+        sets = (('ENSG00000248473', 'ENSG00000272431'), ('ENSG00000181323', 'ENSG00000266824'))
+        ds = wot.io.read_dataset(
+            'inputs/io/filtered_gene_bc_matrices/hg19/matrix.mtx')
+        gs = wot.io.read_gene_sets(
+            os.path.abspath('inputs/io/test_gene_sets2.gmx'), feature_ids=ds.col_meta.index.values)
+        for j in range(len(sets)):
+            expected_ids = sets[j]
+            indices = np.isin(gs.row_meta.index.values, expected_ids)
+            gs_x = gs.x[indices, [j]]
+            gs_row_meta = gs.row_meta.iloc[indices]
+            self.assertTrue(np.sum(gs_x) == 2)
+            ids = gs_row_meta.index.values
+
+            for id in expected_ids:
+                index = np.where(ids == id)
+                self.assertTrue(len(index) == 1)
+                self.assertTrue(index[0] >= 0)
+
     def test_read_mtx(self):
         ds2 = wot.io.read_dataset(
             'inputs/io/filtered_gene_bc_matrices/hg19/matrix.mtx')

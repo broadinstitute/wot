@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-import dask.array as da
+import numpy as np
 import wot
+import scipy.sparse
 
 
 def z_score(x, z_min=-5, z_max=5):
-    mean = da.mean(x, axis=0)  # 1 by ngenes
-    variance = da.var(x, axis=0)
-    stdev = da.sqrt(variance)
+    x = x.todense() if scipy.sparse.isspmatrix(x) else x
+    mean = np.mean(x, axis=0)  # 1 by ngenes
+    variance = np.var(x, axis=0)
+    stdev = np.sqrt(variance)
     x = (x - mean) / stdev
 
     if z_min is not None:
