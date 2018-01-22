@@ -1,5 +1,3 @@
-
-
 import unittest
 import numpy as np
 import pandas as pd
@@ -19,10 +17,10 @@ class TestOT(unittest.TestCase):
         m1 = np.random.rand(2, 3)
         m2 = m1
         result = wot.ot.transport_stable(np.ones(m1.shape[0]),
-                                      np.ones(m2.shape[0]),
-                                      sklearn.metrics.pairwise.pairwise_distances(
-                                          m1, Y=m2, metric='sqeuclidean'), 1, 1,
-                                      0.1, 250, np.ones(m1.shape[0]))
+                                         np.ones(m2.shape[0]),
+                                         sklearn.metrics.pairwise.pairwise_distances(
+                                             m1, Y=m2, metric='sqeuclidean'), 1, 1,
+                                         0.1, 250, np.ones(m1.shape[0]))
         self.assertEqual(result[0, 0], result[1, 1])
         self.assertEqual(result[0, 1], result[1, 0])
 
@@ -36,9 +34,9 @@ class TestOT(unittest.TestCase):
         last = -1
         for i in range(len(g)):
             result = wot.ot.transport_stable(np.ones(m1.shape[0]),
-                                          np.ones(m2.shape[0]), cost_matrix, 1,
-                                          1, 0.1, 250,
-                                          np.ones(m1.shape[0]) * g[i])
+                                             np.ones(m2.shape[0]), cost_matrix, 1,
+                                             1, 0.1, 250,
+                                             np.ones(m1.shape[0]) * g[i])
             sum = np.sum(result)
             self.assertTrue(sum > last)
             last = sum
@@ -53,9 +51,9 @@ class TestOT(unittest.TestCase):
         last = -1
         for i in range(len(e)):
             result = wot.ot.transport_stable(np.ones(m1.shape[0]),
-                                          np.ones(m2.shape[0]), cost_matrix, 1,
-                                          1, e[i], 250,
-                                          np.ones(m1.shape[0]))
+                                             np.ones(m2.shape[0]), cost_matrix, 1,
+                                             1, e[i], 250,
+                                             np.ones(m1.shape[0]))
             sum = np.sum([scipy.stats.entropy(r) for r in result])
             self.assertTrue(sum > last)
             last = sum
@@ -71,7 +69,7 @@ class TestOT(unittest.TestCase):
         # weighted average across time
         cluster_weights_by_time = [[0.4, 0.5, 0], [0.6, 0.5, 1]]
         result = wot.ot.transport_maps_by_time([map1, map2],
-                                            cluster_weights_by_time)
+                                               cluster_weights_by_time)
         pd.testing.assert_frame_equal(
             result,
             pd.DataFrame(
@@ -99,7 +97,7 @@ class TestOT(unittest.TestCase):
             column_cell_ids_by_time.append(transport_map.columns)
             all_cell_ids.update(transport_map.index)
         result = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time,
-                                 grouped_by_cluster, cluster_ids)
+                                    grouped_by_cluster, cluster_ids)
 
         self.assertTrue(
             np.array_equal(result['cluster_weights_by_time'],
@@ -125,7 +123,7 @@ class TestOT(unittest.TestCase):
             column_cell_ids_by_time.append(transport_map.columns)
             all_cell_ids.update(transport_map.index)
         result = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time,
-                                 grouped_by_cluster, cluster_ids)
+                                    grouped_by_cluster, cluster_ids)
 
         self.assertTrue(
             np.array_equal(result['cluster_weights_by_time'],
@@ -149,7 +147,7 @@ class TestOT(unittest.TestCase):
 
         # sum mass by cluster
         result = wot.ot.transport_map_by_cluster(transport_map, grouped_by_cluster,
-                                              cluster_ids)
+                                                 cluster_ids)
 
         pd.testing.assert_frame_equal(
             result,
@@ -161,20 +159,9 @@ class TestOT(unittest.TestCase):
                 index=cluster_ids, columns=cluster_ids))
 
     def test_growth_scores(self):
-        gene_set_scores = pd.read_table(
-            '../paper/paper_gene_set_scores.txt',
-            index_col=0)
-        precomputed = pd.read_table('../paper/growth.txt',
-                                    index_col=0, header=None, names=['id',
-                                                                     'score'])
-        scores = wot.ot.compute_growth_scores(gene_set_scores['Proliferation'],
-                                           gene_set_scores['Apoptosis'])
-
-        pd.testing.assert_index_equal(left=precomputed.index,
-                                      right=gene_set_scores.index,
-                                      check_names=False)
-
-        np.testing.assert_allclose(precomputed.iloc[:, 0],
+        scores = wot.ot.compute_growth_scores(np.array([-0.399883307]),
+                                              np.array([0.006853961]))
+        np.testing.assert_allclose(np.array([0.705444456674597]),
                                    scores,
                                    atol=0.000001)
 
@@ -338,14 +325,14 @@ class TestOT(unittest.TestCase):
             cost_matrix = cost_matrix / np.median(cost_matrix)
             growth_rate = m1.growth_score.values
             result = wot.ot.optimal_transport(cost_matrix, growth_rate,
-                                           delta_days=delta_t,
-                                           max_transport_fraction=max_transport_fraction,
-                                           min_transport_fraction=min_transport_fraction,
-                                           min_growth_fit=min_growth_fit,
-                                           l0_max=l0_max, lambda1=lambda1,
-                                           lambda2=lambda2, epsilon=epsilon,
-                                           growth_ratio=growth_ratio,
-                                           scaling_iter=scaling_iter)
+                                              delta_days=delta_t,
+                                              max_transport_fraction=max_transport_fraction,
+                                              min_transport_fraction=min_transport_fraction,
+                                              min_growth_fit=min_growth_fit,
+                                              l0_max=l0_max, lambda1=lambda1,
+                                              lambda2=lambda2, epsilon=epsilon,
+                                              growth_ratio=growth_ratio,
+                                              scaling_iter=scaling_iter)
             if i == 0:
                 self.assertTrue(result['epsilon'] == expected_epsilon_t0_t2)
                 self.assertTrue(result['lambda1'] == expected_lambda_t0_t2)
