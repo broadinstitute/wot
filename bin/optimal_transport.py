@@ -220,9 +220,11 @@ gene_set_sigmas = None
 if eigenvals is not None:
     gene_expression = gene_expression.dot(np.diag(eigenvals))
 
-params_writer = open(args.prefix + '_params.txt', 'w')
-params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda1' + '\t' + 'lambda2'
-                                                                                      '\n')
+params_writer = None
+if use_entropy:
+    params_writer = open(args.prefix + '_params.txt', 'w')
+    params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda1' + '\t' + 'lambda2'
+                                                                                          '\n')
 gene_set_writer = None
 if args.gene_set_scores is not None:
     gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0,
@@ -318,10 +320,11 @@ for day_index in range(day_pairs.shape[0]):
                                       scaling_iter=args.scaling_iter,
                                       epsilon_adjust=args.epsilon_adjust,
                                       lambda_adjust=args.lambda_adjust, use_entropy=use_entropy)
-    params_writer.write(
-        str(t1) + '\t' + str(t2) + '\t' + str(result['epsilon']) + '\t' + str(
-            result['lambda1']) + '\t' + str(
-            result['lambda2']) + '\n')
+    if use_entropy:
+        params_writer.write(
+            str(t1) + '\t' + str(t2) + '\t' + str(result['epsilon']) + '\t' + str(
+                result['lambda1']) + '\t' + str(
+                result['lambda2']) + '\n')
     transport_map = pd.DataFrame(result['transport'], index=m1.index,
                                  columns=m2.index)
     if args.verbose:
@@ -497,7 +500,9 @@ if subsample_writer is not None:
 
 if gene_set_writer is not None:
     gene_set_writer.close()
-params_writer.close()
+
+if params_writer is not None:
+    params_writer.close()
 if not resample and args.clusters is not None:
     if args.verbose:
         print('Saving summarized transport map')
