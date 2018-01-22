@@ -166,7 +166,7 @@ class TestOT(unittest.TestCase):
                                    atol=0.000001)
 
     def test_ot_commmand_line(self):
-        subprocess.call(args=['python', os.path.abspath('../bin/ot.py'),
+        subprocess.call(args=['python', os.path.abspath('../bin/optimal_transport'),
                               '--matrix',
                               os.path.abspath(
                                   '../finalInput/dmap_2i_normalized.txt'),

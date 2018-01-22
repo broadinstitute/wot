@@ -225,27 +225,18 @@ if use_entropy:
     params_writer = open(args.prefix + '_params.txt', 'w')
     params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda1' + '\t' + 'lambda2'
                                                                                           '\n')
-gene_set_writer = None
+
 if args.gene_set_scores is not None:
     gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0,
                                     quoting=csv.QUOTE_NONE, engine='python',
                                     sep=None)
-    gene_set_scores = \
-        gene_set_scores.align(gene_expression, join='right', axis=0,
-                              copy=False)[0]
-    # gene_set_sigmas = args.gene_set_sigma
-
     apoptosis = gene_set_scores['Apoptosis']
     proliferation = gene_set_scores['Cell.cycle']
     g = wot.ot.compute_growth_scores(proliferation.values,
                                      apoptosis.values)
     cell_growth_rates = pd.DataFrame(index=gene_set_scores.index,
                                      data={'cell_growth_rate': g})
-    if gene_set_sigmas is not None:
-        gene_set_writer = open(args.prefix + '_growth.txt', 'w')
-        gene_set_writer.write(
-            't1' + '\t' + 't2' + '\t' + 'sigma' + '\t' + 'cluster_distance' +
-            '\n')
+
 else:
     cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col=0,
                                       header=None, names=['cell_growth_rate'],
@@ -497,9 +488,6 @@ for day_index in range(day_pairs.shape[0]):
 
 if subsample_writer is not None:
     subsample_writer.close()
-
-if gene_set_writer is not None:
-    gene_set_writer.close()
 
 if params_writer is not None:
     params_writer.close()
