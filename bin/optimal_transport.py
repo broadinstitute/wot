@@ -189,11 +189,8 @@ parser.add_argument('--subsample_iter', help='Number of subsample iterations '
                     type=int, default=0)
 parser.add_argument('--entropy', action='store_true',
                     help='Use entropic regularization when computing transport maps')
-parser.add_argument('--subsample_cells', help='Fraction of cells to sample '
-                                              'without '
-                                              'replacement.', type=float)
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
-parser.add_argument('--npairs', help='Pairs of cells to sample from interpolated transport map', type=int)
+parser.add_argument('--npairs', help='Number of pairs of cells to sample from interpolated transport map', type=int)
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
 args = parser.parse_args()
@@ -278,11 +275,7 @@ if args.clusters is not None:
                                                    cluster_ids)
 
 subsample_writer = None
-if args.subsample_iter > 0:
-    if args.subsample_cells is None:
-        print('subsample_cells required when '
-              'subsample_iter > 0')
-        exit(1)
+if args.t_interpolate is not None:
     resample = True
 
     subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
@@ -376,10 +369,9 @@ for day_index in range(day_pairs.shape[0]):
         for tmp in range(3):
             split1, split2 = complement_sample(actual_mtx.shape[0])
 
-            distance = point_cloud_distance(actual_mtx[split1], actual_mtx[split2])
             subsample_writer.write('D vs D' + '\t' +
                                    str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                distance) + '\n')
+                point_cloud_distance(actual_mtx[split1], actual_mtx[split2])) + '\n')
 
         # distance between interpolated expression matrix and actual expression matrix
 
@@ -399,14 +391,16 @@ for day_index in range(day_pairs.shape[0]):
         #                        str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
         #     point_cloud_distance(m1.drop(fields_to_drop_for_distance, axis=1).values, inferred, m1[
         #         cell_growth_rates.columns[0]].values, inferred_time - t1)) + '\n')
+
         subsample_writer.write('observed vs inferred' + '\t' +
-                               str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(distance) + '\n')
+                               str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+            point_cloud_distance(actual_mtx, inferred)) + '\n')
 
         random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
 
-        distance = point_cloud_distance(actual_mtx, random_inferred)
         subsample_writer.write('observed vs random coupling inferred' + '\t' +
-                               str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(distance) + '\n')
+                               str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+            point_cloud_distance(actual_mtx, random_inferred)) + '\n')
         subsample_writer.flush()
 
         for subsample_iter in range(args.subsample_iter):
@@ -460,15 +454,13 @@ for day_index in range(day_pairs.shape[0]):
 
                 interpolated_matrices.append(m1_mtx + args.t_interpolate * (m2_mtx - m1_mtx))
 
-            distance = point_cloud_distance(interpolated_matrices[0], interpolated_matrices[1])
             subsample_writer.write('inferred pair' + '\t' +
                                    str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                distance) + '\n')
+                point_cloud_distance(interpolated_matrices[0], interpolated_matrices[1])) + '\n')
             for interpolated_matrix in interpolated_matrices:
-                distance = point_cloud_distance(interpolated_matrix, actual_mtx)
                 subsample_writer.write('inferred pair vs observed' + '\t' +
                                        str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                    distance) + '\n')
+                    point_cloud_distance(interpolated_matrix, actual_mtx)) + '\n')
             subsample_writer.flush()
 
         # subsampled_maps.append(wot.ot.transport_map_by_cluster(
