@@ -168,10 +168,8 @@ parser.add_argument('--epsilon_adjust', help='Scaling factor to adjust epsilon',
 parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda',
                     type=float, default=1.5)
 
-# parser.add_argument('--gene_set_sigma', help='Random noise to add to '
-#                                              'proliferation and apoptosis '
-#                                              'scores', type=float,
-#                     action='append')
+parser.add_argument('--beta_max', type=float, default=1.7)
+parser.add_argument('--delta_max', type=float, default=1.7)
 growth_rate_group = parser.add_mutually_exclusive_group(required=True)
 growth_rate_group.add_argument('--gene_set_scores',
                                help='File containing "Cell.cycle" '
@@ -232,8 +230,8 @@ if args.gene_set_scores is not None:
                                     sep=None)
     apoptosis = gene_set_scores['Apoptosis']
     proliferation = gene_set_scores['Cell.cycle']
-    g = wot.ot.compute_growth_scores(proliferation.values,
-                                     apoptosis.values)
+    g = wot.ot.compute_growth_scores(proliferation.values, apoptosis.values, beta_max=args.beta_max,
+                                     delta_max=args.delta_max)
     cell_growth_rates = pd.DataFrame(index=gene_set_scores.index,
                                      data={'cell_growth_rate': g})
 
@@ -270,10 +268,9 @@ if args.clusters is not None:
 subsample_writer = None
 if args.t_interpolate is not None:
     resample = True
-
     subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
     subsample_writer.write('type' + '\t' + 't1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' +
-                           '\n')
+                               '\n')
 column_cell_ids_by_time = []
 all_cell_ids = set()
 
@@ -456,13 +453,6 @@ for day_index in range(day_pairs.shape[0]):
                                        str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
                     point_cloud_distance(interpolated_matrix, actual_mtx)) + '\n')
             subsample_writer.flush()
-
-        # subsampled_maps.append(wot.ot.transport_map_by_cluster(
-        #     pd.DataFrame(
-        #         subsampled_result,
-        #         index=m1_sample.index,
-        #         columns=m2_sample.index), grouped_by_cluster,
-        #     cluster_ids))
 
     # cluster_shape = subsampled_maps[0].shape
     # vals = np.zeros(
