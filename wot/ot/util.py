@@ -2,8 +2,8 @@
 import numpy as np
 
 
-def compute_growth_scores(proliferation, apoptosis, beta_max=1.7, delta_max=1.7):
-    birth = __beta(proliferation, beta_max=beta_max)
+def compute_growth_scores(proliferation, apoptosis, beta_max=1.7, beta_center=0.25, delta_max=1.7):
+    birth = __beta(proliferation, beta_max=beta_max, center=beta_center)
     death = __delta(apoptosis, delta_max=delta_max)
     return np.exp(birth - death)
 

@@ -46,8 +46,8 @@ def optimal_transport(cost_matrix, growth_rate, p=None, q=None,
                       lambda2=1., min_transport_fraction=0.05,
                       max_transport_fraction=0.4, min_growth_fit=0.9,
                       l0_max=100, scaling_iter=250, epsilon_adjust=1.1,
-                      lambda_adjust=1.5, use_entropy=True):
-    if use_entropy:
+                      lambda_adjust=1.5, solver=None):
+    if solver is 'epsilon':
         return optimal_transport_with_entropy(cost_matrix, growth_rate, p=p, q=q,
                                               delta_days=delta_days, epsilon=epsilon, lambda1=lambda1,
                                               lambda2=lambda2, min_transport_fraction=min_transport_fraction,
@@ -56,23 +56,32 @@ def optimal_transport(cost_matrix, growth_rate, p=None, q=None,
                                               l0_max=l0_max, scaling_iter=scaling_iter,
                                               epsilon_adjust=epsilon_adjust,
                                               lambda_adjust=lambda_adjust)
-    else:
-        return optimal_transport_without_entropy(cost_matrix, growth_rate, p=p, q=q,
-                                                 delta_days=delta_days, epsilon=epsilon, lambda1=lambda1,
-                                                 lambda2=lambda2, min_transport_fraction=min_transport_fraction,
-                                                 max_transport_fraction=max_transport_fraction,
-                                                 min_growth_fit=min_growth_fit,
-                                                 l0_max=l0_max, scaling_iter=scaling_iter,
-                                                 epsilon_adjust=epsilon_adjust,
-                                                 lambda_adjust=lambda_adjust)
+    elif solver is 'sinkhorn_epsilon':
+        return sinkhorn_epsilon(cost_matrix, growth_rate, p=p, q=q,
+                                delta_days=delta_days, epsilon=epsilon, lambda1=lambda1,
+                                lambda2=lambda2, min_transport_fraction=min_transport_fraction,
+                                max_transport_fraction=max_transport_fraction,
+                                min_growth_fit=min_growth_fit,
+                                l0_max=l0_max, scaling_iter=scaling_iter,
+                                epsilon_adjust=epsilon_adjust,
+                                lambda_adjust=lambda_adjust)
+    elif solver is 'unregularized':
+        return unregularized(cost_matrix, growth_rate, p=p, q=q,
+                             delta_days=delta_days, epsilon=epsilon, lambda1=lambda1,
+                             lambda2=lambda2, min_transport_fraction=min_transport_fraction,
+                             max_transport_fraction=max_transport_fraction,
+                             min_growth_fit=min_growth_fit,
+                             l0_max=l0_max, scaling_iter=scaling_iter,
+                             epsilon_adjust=epsilon_adjust,
+                             lambda_adjust=lambda_adjust)
 
 
-def optimal_transport_without_entropy(cost_matrix, growth_rate, p=None, q=None,
-                                      delta_days=1, epsilon=0.1, lambda1=1.,
-                                      lambda2=1., min_transport_fraction=0.05,
-                                      max_transport_fraction=0.4, min_growth_fit=0.9,
-                                      l0_max=100, scaling_iter=250, epsilon_adjust=1.1,
-                                      lambda_adjust=1.5):
+def sinkhorn_epsilon(cost_matrix, growth_rate, p=None, q=None,
+                     delta_days=1, epsilon=0.1, lambda1=1.,
+                     lambda2=1., min_transport_fraction=0.05,
+                     max_transport_fraction=0.4, min_growth_fit=0.9,
+                     l0_max=100, scaling_iter=250, epsilon_adjust=1.1,
+                     lambda_adjust=1.5):
     p = np.ones(cost_matrix.shape[0])
     q = np.ones(cost_matrix.shape[1])
 
@@ -81,13 +90,29 @@ def optimal_transport_without_entropy(cost_matrix, growth_rate, p=None, q=None,
     p = p * g
     q = q / q.sum()
     p = p / p.sum()
+    val = pot.bregman.sinkhorn_epsilon_scaling(p, q, cost_matrix, epsilon, numItermax=1000, epsilon0=10000.0,
+                                               numInnerItermax=1000,
+                                               tau=1000.0, stopThr=1e-09, warmstart=None, verbose=False,
+                                               print_period=10,
+                                               log=False)
+    return {'transport': val, 'lambda1': 1, 'lambda2': 1, 'epsilon': 1}
 
+
+def unregularized(cost_matrix, growth_rate, p=None, q=None,
+                  delta_days=1, epsilon=0.1, lambda1=1.,
+                  lambda2=1., min_transport_fraction=0.05,
+                  max_transport_fraction=0.4, min_growth_fit=0.9,
+                  l0_max=100, scaling_iter=250, epsilon_adjust=1.1,
+                  lambda_adjust=1.5):
+    p = np.ones(cost_matrix.shape[0])
+    q = np.ones(cost_matrix.shape[1])
+
+    g = growth_rate ** delta_days
+
+    p = p * g
+    q = q / q.sum()
+    p = p / p.sum()
     val = pot.emd(p, q, cost_matrix, numItermax=max(10000000, cost_matrix.shape[0] * cost_matrix.shape[1]))
-
-    # row_sums = np.sum(val, axis=1)
-    # print(np.correlate(row_sums, q))
-    # print(np.correlate(row_sums, p))
-
     return {'transport': val, 'lambda1': 1, 'lambda2': 1, 'epsilon': 1}
 
 

@@ -169,6 +169,7 @@ parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda',
                     type=float, default=1.5)
 
 parser.add_argument('--beta_max', type=float, default=1.7)
+parser.add_argument('--beta_center', type=float, default=0.25)
 parser.add_argument('--delta_max', type=float, default=1.7)
 growth_rate_group = parser.add_mutually_exclusive_group(required=True)
 growth_rate_group.add_argument('--gene_set_scores',
@@ -185,15 +186,16 @@ parser.add_argument('--power', help='Diagonal scaling power', type=float)
 parser.add_argument('--subsample_iter', help='Number of subsample iterations '
                                              'to perform',
                     type=int, default=0)
-parser.add_argument('--entropy', action='store_true',
-                    help='Use entropic regularization when computing transport maps')
+parser.add_argument('--solver',
+                    help='Solver to use when computing transport maps. One of epsilon, sinkhorn_epsilon, unregularized',
+                    choices=['epsilon', 'sinkhorn_epsilon', 'unregularized'])
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
 parser.add_argument('--npairs', help='Number of pairs of cells to sample from interpolated transport map', type=int)
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
 args = parser.parse_args()
 eigenvals = None
-use_entropy = args.entropy
+solver = args.solver
 if args.diagonal is not None:
     eigenvals = np.loadtxt(args.diagonal, delimiter='\n')
 if eigenvals is not None and args.power is not None:
@@ -219,7 +221,7 @@ if eigenvals is not None:
     gene_expression = gene_expression.dot(np.diag(eigenvals))
 
 params_writer = None
-if use_entropy:
+if solver is 'epsilon':
     params_writer = open(args.prefix + '_params.txt', 'w')
     params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda1' + '\t' + 'lambda2'
                                                                                           '\n')
@@ -231,6 +233,7 @@ if args.gene_set_scores is not None:
     apoptosis = gene_set_scores['Apoptosis']
     proliferation = gene_set_scores['Cell.cycle']
     g = wot.ot.compute_growth_scores(proliferation.values, apoptosis.values, beta_max=args.beta_max,
+                                     beta_center=args.beta_center,
                                      delta_max=args.delta_max)
     cell_growth_rates = pd.DataFrame(index=gene_set_scores.index,
                                      data={'cell_growth_rate': g})
@@ -270,7 +273,7 @@ if args.t_interpolate is not None:
     resample = True
     subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
     subsample_writer.write('type' + '\t' + 't1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' +
-                               '\n')
+                           '\n')
 column_cell_ids_by_time = []
 all_cell_ids = set()
 
@@ -307,8 +310,8 @@ for day_index in range(day_pairs.shape[0]):
                                       epsilon=args.epsilon,
                                       scaling_iter=args.scaling_iter,
                                       epsilon_adjust=args.epsilon_adjust,
-                                      lambda_adjust=args.lambda_adjust, use_entropy=use_entropy)
-    if use_entropy:
+                                      lambda_adjust=args.lambda_adjust, solver=solver)
+    if solver is 'epsilon':
         params_writer.write(
             str(t1) + '\t' + str(t2) + '\t' + str(result['epsilon']) + '\t' + str(
                 result['lambda1']) + '\t' + str(
