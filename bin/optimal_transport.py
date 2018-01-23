@@ -171,6 +171,13 @@ parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda',
 parser.add_argument('--beta_max', type=float, default=1.7)
 parser.add_argument('--beta_center', type=float, default=0.25)
 parser.add_argument('--delta_max', type=float, default=1.7)
+
+parser.add_argument('--numItermax', type=int, default=100, help='For sinkhorn_epsilon solver')
+parser.add_argument('--epsilon0', type=float, default=100, help='For sinkhorn_epsilon solver')
+parser.add_argument('--numInnerItermax', type=int, default=10, help='For sinkhorn_epsilon solver')
+parser.add_argument('--tau', type=float, default=1000.0, help='For sinkhorn_epsilon solver')
+parser.add_argument('--stopThr', type=float, default=1e-06, help='For sinkhorn_epsilon solver')
+
 growth_rate_group = parser.add_mutually_exclusive_group(required=True)
 growth_rate_group.add_argument('--gene_set_scores',
                                help='File containing "Cell.cycle" '
@@ -196,6 +203,7 @@ parser.add_argument('--verbose', action='store_true',
 args = parser.parse_args()
 eigenvals = None
 solver = args.solver
+print(solver)
 if args.diagonal is not None:
     eigenvals = np.loadtxt(args.diagonal, delimiter='\n')
 if eigenvals is not None and args.power is not None:
@@ -310,7 +318,11 @@ for day_index in range(day_pairs.shape[0]):
                                       epsilon=args.epsilon,
                                       scaling_iter=args.scaling_iter,
                                       epsilon_adjust=args.epsilon_adjust,
-                                      lambda_adjust=args.lambda_adjust, solver=solver)
+                                      lambda_adjust=args.lambda_adjust,
+                                      numItermax=args.numItermax,
+                                      epsilon0=args.epsilon0,
+                                      numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr,
+                                      solver=solver)
     if solver is 'epsilon':
         params_writer.write(
             str(t1) + '\t' + str(t2) + '\t' + str(result['epsilon']) + '\t' + str(
@@ -441,7 +453,9 @@ for day_index in range(day_pairs.shape[0]):
                     epsilon=args.epsilon,
                     scaling_iter=args.scaling_iter,
                     epsilon_adjust=args.epsilon_adjust,
-                    lambda_adjust=args.lambda_adjust, use_entropy=use_entropy)
+                    lambda_adjust=args.lambda_adjust, numItermax=args.numItermax,
+                    epsilon0=args.epsilon0,
+                    numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr, solver=solver)
                 perturbed_transport = perturbed_result['transport']
 
                 m1_mtx, m2_mtx = sample_from_transport_map(m1_mtx, m2_mtx, perturbed_transport)
