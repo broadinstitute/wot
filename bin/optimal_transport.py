@@ -173,10 +173,10 @@ parser.add_argument('--beta_center', type=float, default=0.25)
 parser.add_argument('--delta_max', type=float, default=1.7)
 
 parser.add_argument('--numItermax', type=int, default=100, help='For sinkhorn_epsilon solver')
-parser.add_argument('--epsilon0', type=float, default=100, help='For sinkhorn_epsilon solver')
+parser.add_argument('--epsilon0', type=float, default=1, help='For sinkhorn_epsilon solver')
 parser.add_argument('--numInnerItermax', type=int, default=10, help='For sinkhorn_epsilon solver')
-parser.add_argument('--tau', type=float, default=1000.0, help='For sinkhorn_epsilon solver')
-parser.add_argument('--stopThr', type=float, default=1e-06, help='For sinkhorn_epsilon solver')
+parser.add_argument('--tau', type=float, default=100000, help='For sinkhorn_epsilon solver')
+parser.add_argument('--stopThr', type=float, default=1e-10, help='For sinkhorn_epsilon solver')
 
 growth_rate_group = parser.add_mutually_exclusive_group(required=True)
 growth_rate_group.add_argument('--gene_set_scores',
@@ -280,8 +280,7 @@ subsample_writer = None
 if args.t_interpolate is not None:
     resample = True
     subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
-    subsample_writer.write('type' + '\t' + 't1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' +
-                           '\n')
+    subsample_writer.write('t1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' + '\t' + 'type' + '\n')
 column_cell_ids_by_time = []
 all_cell_ids = set()
 
@@ -375,9 +374,8 @@ for day_index in range(day_pairs.shape[0]):
         for tmp in range(3):
             split1, split2 = complement_sample(actual_mtx.shape[0])
 
-            subsample_writer.write('D vs D' + '\t' +
-                                   str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                point_cloud_distance(actual_mtx[split1], actual_mtx[split2])) + '\n')
+            subsample_writer.write(str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+                point_cloud_distance(actual_mtx[split1], actual_mtx[split2])) + '\t' + 'D vs D' + '\n')
 
         # distance between interpolated expression matrix and actual expression matrix
 
@@ -398,15 +396,17 @@ for day_index in range(day_pairs.shape[0]):
         #     point_cloud_distance(m1.drop(fields_to_drop_for_distance, axis=1).values, inferred, m1[
         #         cell_growth_rates.columns[0]].values, inferred_time - t1)) + '\n')
 
-        subsample_writer.write('observed vs inferred' + '\t' +
-                               str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-            point_cloud_distance(actual_mtx, inferred)) + '\n')
+        subsample_writer.write(
+            str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+                point_cloud_distance(m1_mtx, m2_mtx)) + '\t' + 't1 vs t2' + '\n')
+        subsample_writer.write(
+            str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+                point_cloud_distance(actual_mtx, inferred)) + '\t' + 'observed vs inferred' + '\n')
 
         random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
 
-        subsample_writer.write('observed vs random coupling inferred' + '\t' +
-                               str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-            point_cloud_distance(actual_mtx, random_inferred)) + '\n')
+        subsample_writer.write(str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+            point_cloud_distance(actual_mtx, random_inferred)) + '\t' + 'observed vs random coupling inferred' + '\n')
         subsample_writer.flush()
 
         for subsample_iter in range(args.subsample_iter):
@@ -462,13 +462,12 @@ for day_index in range(day_pairs.shape[0]):
 
                 interpolated_matrices.append(m1_mtx + args.t_interpolate * (m2_mtx - m1_mtx))
 
-            subsample_writer.write('inferred pair' + '\t' +
-                                   str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                point_cloud_distance(interpolated_matrices[0], interpolated_matrices[1])) + '\n')
+            subsample_writer.write(str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+                point_cloud_distance(interpolated_matrices[0],
+                                     interpolated_matrices[1])) + '\t' + 'inferred pair' + '\n')
             for interpolated_matrix in interpolated_matrices:
-                subsample_writer.write('inferred pair vs observed' + '\t' +
-                                       str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                    point_cloud_distance(interpolated_matrix, actual_mtx)) + '\n')
+                subsample_writer.write(str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+                    point_cloud_distance(interpolated_matrix, actual_mtx)) + '\t' + 'inferred pair vs observed' + '\n')
             subsample_writer.flush()
 
     # cluster_shape = subsampled_maps[0].shape
