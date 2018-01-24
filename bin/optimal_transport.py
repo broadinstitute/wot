@@ -368,16 +368,18 @@ for day_index in range(day_pairs.shape[0]):
     if resample:  # resample and optionally perturb parameters
         rnd = np.random.RandomState(123125)
 
+
+        def write_subsample(point_cloud1, point_cloud2, point_cloud1_name, point_cloud2_name):
+            subsample_writer.write(
+                str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
+                    point_cloud_distance(point_cloud1,
+                                         point_cloud2)) + '\t' + point_cloud1_name + ' vs ' + point_cloud2_name + '\n')
+            subsample_writer.flush()
+
+
         inferred_time = t1 + (t2 - t1) * args.t_interpolate
         actual_mtx = group_by_day.get_group(inferred_time)
         actual_mtx = actual_mtx.drop(fields_to_drop_for_distance, axis=1).values
-        for tmp in range(3):
-            split1, split2 = complement_sample(actual_mtx.shape[0])
-
-            subsample_writer.write(str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                point_cloud_distance(actual_mtx[split1], actual_mtx[split2])) + '\t' + 'D vs D' + '\n')
-
-        # distance between interpolated expression matrix and actual expression matrix
 
         m1_mtx = m1.drop(fields_to_drop_for_distance, axis=1).values
         m2_mtx = m2.drop(fields_to_drop_for_distance, axis=1).values
@@ -386,28 +388,19 @@ for day_index in range(day_pairs.shape[0]):
         m1_random_subset, m2_random_subset = sample_from_transport_map(m1_mtx, m2_mtx)
         inferred = m1_subset + args.t_interpolate * (m2_subset - m1_subset)
 
-        # subsample_writer.write('t1 vs t2' + '\t' +
-        #                        str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-        #     point_cloud_distance(m1.drop(fields_to_drop_for_distance, axis=1).values,
-        #                          m2.drop(fields_to_drop_for_distance, axis=1).values, m1[
-        #                              cell_growth_rates.columns[0]].values, delta_t)) + '\n')
-        # subsample_writer.write('t1 vs inferred' + '\t' +
-        #                        str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-        #     point_cloud_distance(m1.drop(fields_to_drop_for_distance, axis=1).values, inferred, m1[
-        #         cell_growth_rates.columns[0]].values, inferred_time - t1)) + '\n')
-
-        subsample_writer.write(
-            str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                point_cloud_distance(m1_mtx, m2_mtx)) + '\t' + 't1 vs t2' + '\n')
-        subsample_writer.write(
-            str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                point_cloud_distance(actual_mtx, inferred)) + '\t' + 'observed vs inferred' + '\n')
-
         random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
 
-        subsample_writer.write(str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-            point_cloud_distance(actual_mtx, random_inferred)) + '\t' + 'observed vs random coupling inferred' + '\n')
-        subsample_writer.flush()
+        point_clouds = [m1_mtx, m2_mtx, actual_mtx, inferred, random_inferred]
+        point_cloud_names = ['P0', 'P1', 'P' + str(args.t_interpolate), 'I' + str(args.t_interpolate),
+                             'R' + str(args.t_interpolate)]
+        for ix in range(len(point_cloud_names)):
+            for iy in range(ix + 1, len(point_cloud_names)):
+                write_subsample(point_clouds[ix], point_clouds[iy], point_cloud_names[ix], point_cloud_names[iy])
+
+        for tmp in range(3):
+            split1, split2 = complement_sample(actual_mtx.shape[0])
+            write_subsample(actual_mtx[split1], actual_mtx[split2], 'P' + str(args.t_interpolate),
+                            'P' + str(args.t_interpolate))
 
         for subsample_iter in range(args.subsample_iter):
             if args.verbose:
@@ -462,13 +455,9 @@ for day_index in range(day_pairs.shape[0]):
 
                 interpolated_matrices.append(m1_mtx + args.t_interpolate * (m2_mtx - m1_mtx))
 
-            subsample_writer.write(str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                point_cloud_distance(interpolated_matrices[0],
-                                     interpolated_matrices[1])) + '\t' + 'inferred pair' + '\n')
+            write_subsample(interpolated_matrices[0], interpolated_matrices[1], 'I\'', 'I\'')
             for interpolated_matrix in interpolated_matrices:
-                subsample_writer.write(str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                    point_cloud_distance(interpolated_matrix, actual_mtx)) + '\t' + 'inferred pair vs observed' + '\n')
-            subsample_writer.flush()
+                write_subsample(interpolated_matrix, actual_mtx, 'I', 'I\'')
 
     # cluster_shape = subsampled_maps[0].shape
     # vals = np.zeros(
