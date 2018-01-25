@@ -457,7 +457,7 @@ for day_index in range(day_pairs.shape[0]):
 
             write_subsample(interpolated_matrices[0], interpolated_matrices[1], 'I\'', 'I\'')
             for interpolated_matrix in interpolated_matrices:
-                write_subsample(interpolated_matrix, actual_mtx, 'I', 'I\'')
+                write_subsample(interpolated_matrix, actual_mtx, 'P' + str(args.t_interpolate), 'I\'')
 
     # cluster_shape = subsampled_maps[0].shape
     # vals = np.zeros(
