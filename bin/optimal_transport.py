@@ -39,13 +39,13 @@ import ot as pot
 tm_thresh = 1e-8
 
 
-def sample_randomly(exp1, exp2):
+def sample_randomly(exp1, exp2, tm):
     p = np.ones(exp1.shape[0] * exp2.shape[0])
     p = p / p.sum()
-    # l = tm / tm.sum(axis=0)
-    # l = l.flatten()
-    # qq = np.where(l > tm_thresh)
-    pairs = np.random.multinomial(args.npairs, p, size=1)
+    l = tm / tm.sum(axis=0)
+    l = l.flatten()
+    qq = np.where(l > tm_thresh)
+    pairs = np.random.multinomial(len(qq[0]), p, size=1)
     pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
     return exp1[pairs[0]], exp2[pairs[1]]
 
@@ -191,8 +191,6 @@ parser.add_argument('--solver',
                     help='Solver to use when computing transport maps. One of epsilon, sinkhorn_epsilon, unregularized',
                     choices=['epsilon', 'sinkhorn_epsilon', 'unregularized'])
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
-parser.add_argument('--npairs', help='Number of pairs of cells to sample from interpolated transport map', type=int)
-
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
 args = parser.parse_args()
@@ -387,7 +385,7 @@ for day_index in range(day_pairs.shape[0]):
 
         m1_subset, m2_subset, m1_m2_subset_weights = sample_from_transport_map(m1_mtx, m2_mtx,
                                                                                result['transport'])
-        m1_random_subset, m2_random_subset = sample_randomly(m1_mtx, m2_mtx)
+        m1_random_subset, m2_random_subset = sample_randomly(m1_mtx, m2_mtx, result['transport'])
         inferred = m1_subset + args.t_interpolate * (m2_subset - m1_subset)
 
         random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
