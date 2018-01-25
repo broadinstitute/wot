@@ -34,7 +34,8 @@ import ot as pot
 #                 Pairs[i].append([])
 #     return Pairs
 
-
+# more than 10 to the minus 8
+# return indices and
 def sample_from_transport_map(exp1, exp2, transport_map=None):
     if transport_map is not None:
         tm = transport_map / transport_map.sum(axis=0)
@@ -45,7 +46,6 @@ def sample_from_transport_map(exp1, exp2, transport_map=None):
         l = l / l.sum()
     pairs = np.random.multinomial(args.npairs, l, size=1)
     pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
-
     return exp1[pairs[0]], exp2[pairs[1]]
     # random_m1_indices = []
     # for s in range(args.npairs):
@@ -397,12 +397,12 @@ for day_index in range(day_pairs.shape[0]):
             for iy in range(ix + 1, len(point_cloud_names)):
                 write_subsample(point_clouds[ix], point_clouds[iy], point_cloud_names[ix], point_cloud_names[iy])
 
-        for point_cloud_idx in [0, 1, 4]:
+        # self point cloud distances by splitting point clouds in 2
+        for point_cloud_idx in [0, 1, 2, 4]:
             cloud = point_clouds[point_cloud_idx]
-            for tmp in range(2):
-                split1, split2 = complement_sample(cloud.shape[0])
-                write_subsample(cloud[split1], cloud[split2], point_cloud_names[point_cloud_idx],
-                                point_cloud_names[point_cloud_idx])
+            split1, split2 = complement_sample(cloud.shape[0])
+            write_subsample(cloud[split1], cloud[split2], point_cloud_names[point_cloud_idx],
+                            point_cloud_names[point_cloud_idx])
 
         for subsample_iter in range(args.subsample_iter):
             if args.verbose:
