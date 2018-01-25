@@ -397,10 +397,12 @@ for day_index in range(day_pairs.shape[0]):
             for iy in range(ix + 1, len(point_cloud_names)):
                 write_subsample(point_clouds[ix], point_clouds[iy], point_cloud_names[ix], point_cloud_names[iy])
 
-        for tmp in range(3):
-            split1, split2 = complement_sample(actual_mtx.shape[0])
-            write_subsample(actual_mtx[split1], actual_mtx[split2], 'P' + str(args.t_interpolate),
-                            'P' + str(args.t_interpolate))
+        for point_cloud_idx in [0, 1, 4]:
+            cloud = point_clouds[point_cloud_idx]
+            for tmp in range(2):
+                split1, split2 = complement_sample(cloud.shape[0])
+                write_subsample(cloud[split1], cloud[split2], point_cloud_names[point_cloud_idx],
+                                point_cloud_names[point_cloud_idx])
 
         for subsample_iter in range(args.subsample_iter):
             if args.verbose:
@@ -419,7 +421,7 @@ for day_index in range(day_pairs.shape[0]):
                 #
                 #     apoptosis = _gene_set_scores['Apoptosis'] + np.random.normal(0,
                 #                                                                  sigma,
-                #                                                                  _gene_set_scores.shape[
+                #                                            o                      _gene_set_scores.shape[
                 #                                                                      0])
                 #     proliferation = _gene_set_scores[
                 #                         'Proliferation'] + np.random.normal(
