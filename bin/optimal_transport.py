@@ -196,7 +196,7 @@ parser.add_argument('--verbose', action='store_true',
 args = parser.parse_args()
 eigenvals = None
 solver = args.solver
-print(solver)
+
 if args.diagonal is not None:
     eigenvals = np.loadtxt(args.diagonal, delimiter='\n')
 if eigenvals is not None and args.power is not None:
@@ -273,7 +273,8 @@ subsample_writer = None
 if args.t_interpolate is not None:
     resample = True
     subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
-    subsample_writer.write('t1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' + '\t' + 'type' + '\n')
+    subsample_writer.write(
+        't1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' + '\t' + 'pairs' + '\t' + 'epsilon' + '\t' + 'beta_max' + '\t' + 'delta_max' + '\n')
 column_cell_ids_by_time = []
 all_cell_ids = set()
 
@@ -339,7 +340,7 @@ for day_index in range(day_pairs.shape[0]):
             cluster_transport_map.to_csv(
                 args.prefix + '_cluster_' + str(t1) + '_' + str(
                     t2) + '.txt' + ('.gz' if
-                args.compress else ''),
+                                    args.compress else ''),
                 index_label="id",
                 sep='\t',
                 compression='gzip' if args.compress
@@ -352,7 +353,7 @@ for day_index in range(day_pairs.shape[0]):
             print('Saving transport map')
         transport_map.to_csv(args.prefix + '_' + str(t1) + '_' + str(
             t2) + '.txt' + ('.gz' if
-        args.compress else ''), index_label='id',
+                            args.compress else ''), index_label='id',
                              sep='\t',
                              compression='gzip' if
                              args.compress else None, doublequote=False,
@@ -370,7 +371,8 @@ for day_index in range(day_pairs.shape[0]):
                 str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
                     point_cloud_distance(point_cloud1,
                                          point_cloud2, weights1,
-                                         weights2)) + '\t' + point_cloud1_name + ' vs ' + point_cloud2_name + '\n')
+                                         weights2)) + '\t' + point_cloud1_name + ' vs ' + point_cloud2_name + '\t' + str(
+                    args.epsilon) + '\t' + str(args.beta_max) + '\t' + str(args.delta_max) + '\n')
             subsample_writer.flush()
             if args.verbose:
                 print('done')
@@ -487,24 +489,24 @@ for day_index in range(day_pairs.shape[0]):
         #         mean_stdev) + '\n')
         # subsample_writer.flush()
 
-    if subsample_writer is not None:
-        subsample_writer.close()
+if subsample_writer is not None:
+    subsample_writer.close()
 
-    if params_writer is not None:
-        params_writer.close()
-    if not resample and args.clusters is not None:
-        if args.verbose:
-            print('Saving summarized transport map')
-        weights = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time,
-                                     grouped_by_cluster, cluster_ids)
-        cluster_weights_by_time = weights['cluster_weights_by_time']
-        combined_cluster_map = wot.ot.transport_maps_by_time(
-            cluster_transport_maps,
-            cluster_weights_by_time)
-        combined_cluster_map.to_csv(
-            args.prefix + '_cluster_summary.txt' + ('.gz' if
-            args.compress else ''),
-            index_label="id",
-            sep='\t',
-            compression='gzip' if args.compress
-            else None)
+if params_writer is not None:
+    params_writer.close()
+if not resample and args.clusters is not None:
+    if args.verbose:
+        print('Saving summarized transport map')
+    weights = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time,
+                                 grouped_by_cluster, cluster_ids)
+    cluster_weights_by_time = weights['cluster_weights_by_time']
+    combined_cluster_map = wot.ot.transport_maps_by_time(
+        cluster_transport_maps,
+        cluster_weights_by_time)
+    combined_cluster_map.to_csv(
+        args.prefix + '_cluster_summary.txt' + ('.gz' if
+                                                args.compress else ''),
+        index_label="id",
+        sep='\t',
+        compression='gzip' if args.compress
+        else None)
