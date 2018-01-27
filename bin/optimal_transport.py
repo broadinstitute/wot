@@ -89,7 +89,7 @@ def point_cloud_distance(c1, c2, a=None, b=None):
         b = np.ones((cloud_distances.shape[1]), dtype=np.float64) / cloud_distances.shape[1]
     else:
         b = b / b.sum()
-    return np.sqrt(pot.emd2(a, b, cloud_distances, numItermax=100000))
+    return np.sqrt(pot.emd2(a, b, cloud_distances, numItermax=10000000))
 
 
 parser = argparse.ArgumentParser(
@@ -193,6 +193,7 @@ parser.add_argument('--solver',
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
+parser.add_argument('--quick', action='store_true')
 args = parser.parse_args()
 eigenvals = None
 solver = args.solver
@@ -396,14 +397,31 @@ for day_index in range(day_pairs.shape[0]):
                         [random_inferred, None]]
         point_cloud_names = ['P0', 'P1', 'P' + str(args.t_interpolate), 'I' + str(args.t_interpolate),
                              'R' + str(args.t_interpolate)]
-        for ix in range(1, len(point_cloud_names)):
-            for iy in range(ix):
-                write_point_cloud_distance(point_clouds[ix][0], point_clouds[iy][0], point_clouds[ix][1],
-                                           point_clouds[iy][1],
-                                           point_cloud_names[ix], point_cloud_names[iy])
 
-            # self point cloud distances by splitting point clouds in 2
-        for point_cloud_idx in [0, 1, 2, 4]:
+        # (1) D(P0.5, P0.5)
+        # (5) D(R0.5, R0.5)
+        # (3) D(I0.5, I0.5) = D(I', I')
+
+        # (2) D(I0.5, P0.5)
+        # (4) D(R0.5, P0.5)
+
+        if args.quick:
+            self_indices = [2, 4]
+            index_pairs = [[2, 3], [2, 4]]
+        else:
+            self_indices = [0, 1, 2, 4]
+            index_pairs = []
+            for ix in range(1, len(point_cloud_names)):
+                for iy in range(ix):
+                    index_pairs.append([ix, iy])
+        for p in index_pairs:
+            ix = p[0]
+            iy = p[1]
+            write_point_cloud_distance(point_clouds[ix][0], point_clouds[iy][0], point_clouds[ix][1],
+                                       point_clouds[iy][1],
+                                       point_cloud_names[ix], point_cloud_names[iy])
+        # self point cloud distances by splitting point clouds in 2
+        for point_cloud_idx in self_indices:
             cloud = point_clouds[point_cloud_idx][0]
             split1, split2 = split_in_two(cloud.shape[0])
             write_point_cloud_distance(cloud[split1], cloud[split2], None, None,
