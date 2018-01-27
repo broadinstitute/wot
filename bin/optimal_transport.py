@@ -63,8 +63,8 @@ def sample_from_transport_map(exp1, exp2, tm):
         qq = np.where(l > args.tm_thresh)
         return exp1[q[0]], exp2[q[1]], l[qq]
     else:
-        tm = transport_map / transport_map.sum(axis=0)
-        l = tm.flatten()
+        l = tm / tm.sum(axis=0)
+        l = l.flatten()
         l = l / l.sum()
         pairs = np.random.multinomial(args.npairs, l, size=1)
         pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
