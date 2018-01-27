@@ -89,7 +89,7 @@ def point_cloud_distance(c1, c2, a=None, b=None):
         b = np.ones((cloud_distances.shape[1]), dtype=np.float64) / cloud_distances.shape[1]
     else:
         b = b / b.sum()
-    return np.sqrt(pot.emd2(a, b, cloud_distances, numItermax=max(10000000, c1.shape[0] * c2.shape[0])))
+    return np.sqrt(pot.emd2(a, b, cloud_distances, numItermax=100000))
 
 
 parser = argparse.ArgumentParser(
