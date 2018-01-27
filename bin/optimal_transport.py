@@ -9,6 +9,7 @@ import sklearn.metrics.pairwise
 import csv
 import ot as pot
 
+
 # from gslrandom import PyRNG, multinomial
 # def coupling_sampler(Lineage, nf=1e-3, s=1, threads=1, nmin=10):
 #     Pairs = [[] for _ in range(s)]
@@ -36,37 +37,38 @@ import ot as pot
 # more than 10 to the minus 8
 # return indices and
 
-tm_thresh = 1e-8
-
 
 def sample_randomly(exp1, exp2, tm):
+    if args.npairs is None or args.npairs <= 0:
+        l = tm / tm.sum(axis=0)
+        l = l.flatten()
+        qq = np.where(l > args.tm_thresh)
+        n = len(qq[0])
+    else:
+        n = args.npairs
     p = np.ones(exp1.shape[0] * exp2.shape[0])
     p = p / p.sum()
-    l = tm / tm.sum(axis=0)
-    l = l.flatten()
-    qq = np.where(l > tm_thresh)
-    pairs = np.random.multinomial(len(qq[0]), p, size=1)
+    pairs = np.random.multinomial(n, p, size=1)
     pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
     return exp1[pairs[0]], exp2[pairs[1]]
 
 
-# def sample_from_transport_map(exp1, exp2, transport_map):
-#     tm = transport_map / transport_map.sum(axis=0)
-#     l = tm.flatten()
-#     l = l / l.sum()
-#
-#     pairs = np.random.multinomial(args.npairs, l, size=1)
-#     pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
-#     return exp1[pairs[0]], exp2[pairs[1]]
-
 def sample_from_transport_map(exp1, exp2, tm):
-    l = tm / tm.sum(axis=0)
-    l = l.flatten()
-    # l = l / l.sum()
-    reshaped_tmap = l.reshape(exp1.shape[0], exp2.shape[0])
-    q = np.where(reshaped_tmap > tm_thresh)
-    qq = np.where(l > tm_thresh)
-    return exp1[q[0]], exp2[q[1]], l[qq]
+    if args.npairs is None or args.npairs <= 0:
+        l = tm / tm.sum(axis=0)
+        l = l.flatten()
+        # l = l / l.sum()
+        reshaped_tmap = l.reshape(exp1.shape[0], exp2.shape[0])
+        q = np.where(reshaped_tmap > args.tm_thresh)
+        qq = np.where(l > args.tm_thresh)
+        return exp1[q[0]], exp2[q[1]], l[qq]
+    else:
+        tm = transport_map / transport_map.sum(axis=0)
+        l = tm.flatten()
+        l = l / l.sum()
+        pairs = np.random.multinomial(args.npairs, l, size=1)
+        pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
+        return exp1[pairs[0]], exp2[pairs[1]], None
 
 
 def split_in_two(n):
@@ -194,6 +196,8 @@ parser.add_argument('--t_interpolate', help='Interpolation fraction between two 
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
 parser.add_argument('--quick', action='store_true')
+parser.add_argument('--npairs', type=int)
+parser.add_argument('--tm_thresh', type=float, default=1e-9)
 args = parser.parse_args()
 eigenvals = None
 solver = args.solver
@@ -393,17 +397,16 @@ for day_index in range(day_pairs.shape[0]):
 
         random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
 
-        point_clouds = [[m1_mtx, None], [m2_mtx, None], [actual_mtx, None], [inferred, m1_m2_subset_weights],
-                        [random_inferred, None]]
-        point_cloud_names = ['P0', 'P1', 'P' + str(args.t_interpolate), 'I' + str(args.t_interpolate),
-                             'R' + str(args.t_interpolate)]
+        point_clouds = [[m1_mtx, None, 'P0'], [m2_mtx, None, 'P1'], [actual_mtx, None, 'P' + str(args.t_interpolate)],
+                        [inferred, m1_m2_subset_weights, 'I' + str(args.t_interpolate)],
+                        [random_inferred, None, 'R' + str(args.t_interpolate)]]
 
-        # (1) D(P0.5, P0.5)
-        # (5) D(R0.5, R0.5)
-        # (3) D(I0.5, I0.5) = D(I', I')
+        # D(P0.5, P0.5)
+        # D(R0.5, R0.5)
+        # D(I0.5, I0.5) = D(I', I')
 
-        # (2) D(I0.5, P0.5)
-        # (4) D(R0.5, P0.5)
+        # D(I0.5, P0.5)
+        # D(R0.5, P0.5)
 
         if args.quick:
             self_indices = [2, 4]
@@ -411,7 +414,7 @@ for day_index in range(day_pairs.shape[0]):
         else:
             self_indices = [0, 1, 2, 4]
             index_pairs = []
-            for ix in range(1, len(point_cloud_names)):
+            for ix in range(1, len(point_clouds)):
                 for iy in range(ix):
                     index_pairs.append([ix, iy])
         for p in index_pairs:
@@ -419,13 +422,13 @@ for day_index in range(day_pairs.shape[0]):
             iy = p[1]
             write_point_cloud_distance(point_clouds[ix][0], point_clouds[iy][0], point_clouds[ix][1],
                                        point_clouds[iy][1],
-                                       point_cloud_names[ix], point_cloud_names[iy])
+                                       point_clouds[ix][2], point_clouds[iy][2])
         # self point cloud distances by splitting point clouds in 2
         for point_cloud_idx in self_indices:
             cloud = point_clouds[point_cloud_idx][0]
             split1, split2 = split_in_two(cloud.shape[0])
             write_point_cloud_distance(cloud[split1], cloud[split2], None, None,
-                                       point_cloud_names[point_cloud_idx], point_cloud_names[point_cloud_idx])
+                                       point_clouds[point_cloud_idx][2], point_clouds[point_cloud_idx][2])
 
         for subsample_iter in range(args.subsample_iter):
             if args.verbose:
