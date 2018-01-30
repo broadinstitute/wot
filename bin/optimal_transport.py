@@ -365,8 +365,6 @@ for day_index in range(day_pairs.shape[0]):
                              quoting=csv.QUOTE_NONE)
 
     if resample:  # resample and optionally perturb parameters
-        rnd = np.random.RandomState(123125)
-
 
         def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, point_cloud1_name,
                                        point_cloud2_name):
