@@ -1,27 +1,56 @@
 # -*- coding: utf-8 -*-
 import h5py
-import dask.array as da
-import dask.dataframe as dd
 import pandas as pd
 import wot
 import numpy as np
 import os
 import scipy.sparse
+import glob
 
 
-def read_gene_sets(path, feature_ids=None, chunks=(200, 200), use_dask=False):
+def read_transport_maps(input_dir, ids=None, time=None):
+    transport_maps_inputs = []  # file, start, end
+    for path in glob.glob(input_dir):
+        if os.path.isfile(path):
+            file_info = wot.io.get_file_basename_and_extension(os.path.basename(path))
+            basename = file_info[0]
+            tokens = basename.split('_')
+            t1 = tokens[len(tokens) - 2]
+            t2 = tokens[len(tokens) - 1]
+
+            try:
+                t1 = float(t1)
+                t2 = float(t2)
+
+            except ValueError:
+                continue
+            transport_map = pd.read_table(path, index_col=0, )
+            if ids is not None and t1 == time:
+                # subset rows
+                transport_map = transport_map[transport_map.index.isin(ids)]
+            if ids is not None and t2 == time:
+                # subset columns
+                transport_map = transport_map[ids]
+            transport_maps_inputs.append(
+                {'transport_map': transport_map, 't1': t1, 't2': t2})
+
+    transport_maps_inputs.sort(key=lambda x: x['t1'])  # sort by t1 (start time)
+    return transport_maps_inputs
+
+
+def read_gene_sets(path, feature_ids=None):
     path = str(path)
     basename_and_extension = get_file_basename_and_extension(path)
     ext = basename_and_extension[1]
     if ext == 'gmt':
-        return read_gmt(path, feature_ids, chunks=chunks, use_dask=use_dask)
+        return read_gmt(path, feature_ids)
     elif ext == 'gmx':
-        return read_gmx(path, feature_ids, chunks=chunks, use_dask=use_dask)
+        return read_gmx(path, feature_ids)
     else:
         raise ValueError('Unknown file format')
 
 
-def read_gmt(path, feature_ids=None, chunks=(200, 200), use_dask=False):
+def read_gmt(path, feature_ids=None):
     with open(path) as fp:
         row_id_to_index = {}
         if feature_ids is not None:
@@ -68,14 +97,10 @@ def read_gmt(path, feature_ids=None, chunks=(200, 200), use_dask=False):
 
         row_meta = pd.DataFrame(index=row_ids),
         col_meta = pd.DataFrame(data={'description': set_descriptions}, index=set_names)
-        if use_dask:
-            x = da.from_array(x, chunks=chunks)
-            row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
-            col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
 
 
-def read_gmx(path, feature_ids=None, chunks=(200, 200), use_dask=False):
+def read_gmx(path, feature_ids=None):
     with open(path) as fp:
         ids = fp.readline().split('\t')
         descriptions = fp.readline().split('\t')
@@ -115,11 +140,6 @@ def read_gmx(path, feature_ids=None, chunks=(200, 200), use_dask=False):
         row_meta = pd.DataFrame(index=feature_ids)
         col_meta = pd.DataFrame(data={'description': descriptions},
                                 index=ids)
-        if use_dask:
-            x = da.from_array(x, chunks=chunks)
-            row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
-            col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
-
         return wot.Dataset(x, row_meta=row_meta, col_meta=col_meta)
 
 
@@ -223,16 +243,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             row_meta = pd.DataFrame(
                 index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
 
-        if use_dask:
-            return wot.Dataset(x=da.from_array(x.todense(), chunks=chunks),
-                               row_meta=dd.from_pandas(row_meta,
-                                                       npartitions=4,
-                                                       sort=False),
-                               col_meta=dd.from_pandas(col_meta,
-                                                       npartitions=4,
-                                                       sort=False))
-        else:
-            return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
+        return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom':
         f = h5py.File(path, 'r')
         if genome10x is not None or f.get('/mm10') is not None:
@@ -249,13 +260,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
                                     data={"gene_names": group['gene_names'][()].astype(str)})
             row_meta = pd.DataFrame(index=group['barcodes'][()].astype(str))
             f.close()
-            if not use_dask:
-                return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
-            else:
-                x = da.from_array(x.todense(), chunks=chunks)
-                row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
-                col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
-                return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
+            return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
         if ext == 'loom':
             h5_x = '/matrix'
             h5_row_meta = '/row_attrs'
@@ -289,6 +294,8 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             f.close()
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
         else:
+            import dask.array as da
+            import dask.dataframe as dd
             x = da.from_array(f[h5_x], chunks=chunks)
             # TODO load in chunks
             row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
@@ -311,7 +318,6 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
                 len(column_ids) - 1].rstrip()
 
             i = 0
-            dask_arrays = []
             np_arrays = []
             for line in fp:
                 line = line.rstrip()
@@ -319,25 +325,11 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
                     tokens = line.split(sep)
                     row_ids.append(tokens[0])
                     np_arrays.append(np.array(tokens[1:], dtype=np.float32))
-                    if use_dask and len(np_arrays) == 100:
-                        dask_arrays.append(
-                            da.from_array(np.array(np_arrays), chunks=chunks))
-                        np_arrays = []
                     i += 1
-            if use_dask:
-                if len(np_arrays) > 0:
-                    dask_arrays.append(
-                        da.from_array(np.array(np_arrays), chunks=chunks))
-                x = da.concatenate(dask_arrays, axis=0)
-                return wot.Dataset(x=x, row_meta=dd.from_pandas(pd.DataFrame(
-                    index=row_ids), npartitions=4, sort=False),
-                                   col_meta=dd.from_pandas(pd.DataFrame(
-                                       index=column_ids), npartitions=4,
-                                       sort=False))
-            else:
-                return wot.Dataset(x=np.array(np_arrays),
-                                   row_meta=pd.DataFrame(index=row_ids),
-                                   col_meta=pd.DataFrame(index=column_ids))
+
+            return wot.Dataset(x=np.array(np_arrays),
+                               row_meta=pd.DataFrame(index=row_ids),
+                               col_meta=pd.DataFrame(index=column_ids))
 
 
 def check_file_extension(name, format):
@@ -417,7 +409,7 @@ def write_dataset(ds, path, output_format='txt'):
         if ds.row_meta is not None:
             save_metadata_array('/row_attrs/' + ('id' if ds.row_meta.index.name is
                                                          None else
-            ds.row_meta.index.name),
+                                                 ds.row_meta.index.name),
                                 ds.row_meta.index.values)
             for name in ds.row_meta.columns:
                 save_metadata_array('/row_attrs/' + name,
@@ -425,7 +417,7 @@ def write_dataset(ds, path, output_format='txt'):
         if ds.col_meta is not None:
             save_metadata_array('/col_attrs/' + ('id' if ds.col_meta.index.name is
                                                          None else
-            ds.col_meta.index.name), ds.col_meta.index.values)
+                                                 ds.col_meta.index.name), ds.col_meta.index.values)
             for name in ds.col_meta.columns:
                 save_metadata_array('/col_attrs/' + name,
                                     ds.col_meta[name].values)
