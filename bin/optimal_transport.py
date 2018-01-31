@@ -8,6 +8,8 @@ import numpy as np
 import sklearn.metrics.pairwise
 import csv
 import ot as pot
+import os
+import io
 
 
 # from gslrandom import PyRNG, multinomial
@@ -46,8 +48,13 @@ def sample_randomly(exp1, exp2, tm):
         n = len(qq[0])
     else:
         n = args.npairs
-    p = np.ones(exp1.shape[0] * exp2.shape[0])
+
+    column_sums = np.sum(tm, axis=0)
+    row_sums = np.sum(tm, axis=1)
+    p = np.outer(row_sums, column_sums)
     p = p / p.sum()
+    # p = np.ones(exp1.shape[0] * exp2.shape[0])
+
     pairs = np.random.multinomial(n, p, size=1)
     pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
     return exp1[pairs[0]], exp2[pairs[1]]
@@ -189,6 +196,8 @@ parser.add_argument('--diagonal', help='Diagonal scaling matrix')
 parser.add_argument('--power', help='Diagonal scaling power', type=float)
 
 parser.add_argument('--subsample_iter', help='Number of subsample iterations to perform', type=int, default=0)
+parser.add_argument('--resample_iter', help='Number of subsample iterations to perform', type=int, default=5)
+
 parser.add_argument('--solver',
                     help='Solver to use when computing transport maps. One of epsilon, sinkhorn_epsilon, unregularized',
                     choices=['epsilon', 'sinkhorn_epsilon', 'unregularized'])
@@ -212,9 +221,14 @@ gene_expression = pd.read_table(args.matrix, index_col=0,
                                 quoting=csv.QUOTE_NONE, engine='python',
                                 sep=None)
 
-day_pairs = pd.read_table(args.day_pairs, header=None, names=['t1', 't2'],
-                          index_col=False, quoting=csv.QUOTE_NONE,
-                          engine='python', sep=None, dtype=np.float32)
+if not os.path.isfile(args.day_pairs):
+    day_pairs = pd.read_table(io.StringIO(args.day_pairs), header=None, names=['t1', 't2'],
+                              index_col=False, lineterminator=';', sep=',', dtype=np.float32)
+else:
+    day_pairs = pd.read_table(args.day_pairs, header=None, names=['t1', 't2'],
+                              index_col=False, quoting=csv.QUOTE_NONE,
+                              engine='python', sep=None, dtype=np.float32)
+
 days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
                                 names=['day'], quoting=csv.QUOTE_NONE,
                                 engine='python', sep=None,
@@ -299,12 +313,11 @@ for day_index in range(day_pairs.shape[0]):
                 t1) + ' to ' + str(
                 t2) + '...', end='')
 
-    c = sklearn.metrics.pairwise.pairwise_distances(m1.drop(fields_to_drop_for_distance, axis=1).values,
-                                                    m2.drop(fields_to_drop_for_distance, axis=1).values,
-                                                    metric='sqeuclidean')
-    c = c / np.median(c)
-
-    result = wot.ot.optimal_transport(cost_matrix=c,
+    cost_matrix = sklearn.metrics.pairwise.pairwise_distances(m1.drop(fields_to_drop_for_distance, axis=1).values,
+                                                              m2.drop(fields_to_drop_for_distance, axis=1).values,
+                                                              metric='sqeuclidean')
+    cost_matrix = cost_matrix / np.median(cost_matrix)
+    result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
                                       growth_rate=m1[
                                           cell_growth_rates.columns[0]].values,
                                       delta_days=delta_t,
@@ -387,126 +400,114 @@ for day_index in range(day_pairs.shape[0]):
 
         m1_mtx = m1.drop(fields_to_drop_for_distance, axis=1).values
         m2_mtx = m2.drop(fields_to_drop_for_distance, axis=1).values
+        for resample_index in range(args.resample_iter):
+            m1_subset, m2_subset, m1_m2_subset_weights = sample_from_transport_map(m1_mtx, m2_mtx,
+                                                                                   result['transport'])
+            m1_random_subset, m2_random_subset = sample_randomly(m1_mtx, m2_mtx, result['transport'])
+            inferred = m1_subset + args.t_interpolate * (m2_subset - m1_subset)
 
-        m1_subset, m2_subset, m1_m2_subset_weights = sample_from_transport_map(m1_mtx, m2_mtx,
-                                                                               result['transport'])
-        m1_random_subset, m2_random_subset = sample_randomly(m1_mtx, m2_mtx, result['transport'])
-        inferred = m1_subset + args.t_interpolate * (m2_subset - m1_subset)
+            random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
 
-        random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
+            point_clouds = [[m1_mtx, None, 'P0'], [m2_mtx, None, 'P1'],
+                            [actual_mtx, None, 'P' + str(args.t_interpolate)],
+                            [inferred, m1_m2_subset_weights, 'I' + str(args.t_interpolate)],
+                            [random_inferred, None, 'R' + str(args.t_interpolate)]]
 
-        point_clouds = [[m1_mtx, None, 'P0'], [m2_mtx, None, 'P1'], [actual_mtx, None, 'P' + str(args.t_interpolate)],
-                        [inferred, m1_m2_subset_weights, 'I' + str(args.t_interpolate)],
-                        [random_inferred, None, 'R' + str(args.t_interpolate)]]
+            # D(P0.5, P0.5)
+            # D(R0.5, R0.5)
+            # D(I0.5, I0.5) = D(I', I')
 
-        # D(P0.5, P0.5)
-        # D(R0.5, R0.5)
-        # D(I0.5, I0.5) = D(I', I')
+            # D(I0.5, P0.5)
+            # D(R0.5, P0.5)
 
-        # D(I0.5, P0.5)
-        # D(R0.5, P0.5)
+            if args.quick:
+                self_indices = [2, 4]
+                index_pairs = [[2, 3], [2, 4]]
+            else:
+                self_indices = [0, 1, 2, 4]
+                index_pairs = []
+                for ix in range(1, len(point_clouds)):
+                    for iy in range(ix):
+                        index_pairs.append([ix, iy])
+            for p in index_pairs:
+                ix = p[0]
+                iy = p[1]
+                write_point_cloud_distance(point_clouds[ix][0], point_clouds[iy][0], point_clouds[ix][1],
+                                           point_clouds[iy][1],
+                                           point_clouds[ix][2], point_clouds[iy][2])
+            # self point cloud distances by splitting point clouds in 2
+            for point_cloud_idx in self_indices:
+                cloud = point_clouds[point_cloud_idx][0]
+                split1, split2 = split_in_two(cloud.shape[0])
+                write_point_cloud_distance(cloud[split1], cloud[split2], None, None,
+                                           point_clouds[point_cloud_idx][2], point_clouds[point_cloud_idx][2])
 
-        if args.quick:
-            self_indices = [2, 4]
-            index_pairs = [[2, 3], [2, 4]]
-        else:
-            self_indices = [0, 1, 2, 4]
-            index_pairs = []
-            for ix in range(1, len(point_clouds)):
-                for iy in range(ix):
-                    index_pairs.append([ix, iy])
-        for p in index_pairs:
-            ix = p[0]
-            iy = p[1]
-            write_point_cloud_distance(point_clouds[ix][0], point_clouds[iy][0], point_clouds[ix][1],
-                                       point_clouds[iy][1],
-                                       point_clouds[ix][2], point_clouds[iy][2])
-        # self point cloud distances by splitting point clouds in 2
-        for point_cloud_idx in self_indices:
-            cloud = point_clouds[point_cloud_idx][0]
-            split1, split2 = split_in_two(cloud.shape[0])
-            write_point_cloud_distance(cloud[split1], cloud[split2], None, None,
-                                       point_clouds[point_cloud_idx][2], point_clouds[point_cloud_idx][2])
+            for subsample_iter in range(args.subsample_iter):
+                if args.verbose:
+                    print('Subsample iteration ' + str(subsample_iter + 1))
 
-        for subsample_iter in range(args.subsample_iter):
-            if args.verbose:
-                print('Subsample iteration ' + str(subsample_iter + 1))
+                # compare pairs
+                interpolated_matrices = []
+                interpolated_weights = []
+                m1_indices_ = split_in_two(m1.shape[0])
+                m2_indices_ = split_in_two(m2.shape[0])
+                for split_iter in range(2):
+                    m1_sample = m1.iloc[m1_indices_[split_iter]]
+                    m2_sample = m2.iloc[m2_indices_[split_iter]]
+                    m1_mtx_sample = m1_sample.drop(fields_to_drop_for_distance, axis=1).values
+                    m2_mtx_sample = m2_sample.drop(fields_to_drop_for_distance, axis=1).values
+                    c = sklearn.metrics.pairwise.pairwise_distances(m1_mtx_sample, Y=m2_mtx_sample,
+                                                                    metric='sqeuclidean')
+                    c = c / np.median(c)
 
-            # compare pairs
-            interpolated_matrices = []
-            interpolated_weights = []
-            m1_indices_ = split_in_two(m1.shape[0])
-            m2_indices_ = split_in_two(m2.shape[0])
-            for split_iter in range(2):
-                m1_sample = m1.iloc[m1_indices_[split_iter]]
-                m2_sample = m2.iloc[m2_indices_[split_iter]]
-                # if gene_set_scores is not None and gene_set_sigmas is not None:
-                #     _gene_set_scores = gene_set_scores.loc[m1.index]
-                #
-                #     apoptosis = _gene_set_scores['Apoptosis'] + np.random.normal(0,
-                #                                                                  sigma,
-                #                                            o                      _gene_set_scores.shape[
-                #                                                                      0])
-                #     proliferation = _gene_set_scores[
-                #                         'Proliferation'] + np.random.normal(
-                #         0,
-                #         sigma,
-                #         _gene_set_scores.shape[0])
-                #     g = wot.ot.compute_growth_scores(proliferation.values,
-                #                                      apoptosis.values)
-                m1_mtx = m1_sample.drop(fields_to_drop_for_distance, axis=1).values
-                m2_mtx = m2_sample.drop(fields_to_drop_for_distance, axis=1).values
-                c = sklearn.metrics.pairwise.pairwise_distances(m1_mtx, Y=m2_mtx, metric='sqeuclidean')
-                c = c / np.median(c)
+                    perturbed_result = wot.ot.optimal_transport(
+                        cost_matrix=c,
+                        growth_rate=m1_sample[
+                            cell_growth_rates.columns[0]].values,
+                        delta_days=delta_t,
+                        max_transport_fraction=args.max_transport_fraction,
+                        min_transport_fraction=args.min_transport_fraction,
+                        min_growth_fit=args.min_growth_fit,
+                        l0_max=args.l0_max, lambda1=args.lambda1,
+                        lambda2=args.lambda2,
+                        epsilon=args.epsilon,
+                        scaling_iter=args.scaling_iter,
+                        epsilon_adjust=args.epsilon_adjust,
+                        lambda_adjust=args.lambda_adjust, numItermax=args.numItermax,
+                        epsilon0=args.epsilon0,
+                        numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr, solver=solver)
+                    perturbed_transport = perturbed_result['transport']
+                    m1_mtx_sample, m2_mtx_sample, m1_m2_sample_weights = sample_from_transport_map(m1_mtx_sample,
+                                                                                                   m2_mtx_sample,
+                                                                                                   perturbed_transport)
+                    interpolated_matrices.append(m1_mtx_sample + args.t_interpolate * (m2_mtx_sample - m1_mtx_sample))
+                    interpolated_weights.append(m1_m2_sample_weights)
+                write_point_cloud_distance(interpolated_matrices[0], interpolated_matrices[1], None, None, 'I\'', 'I\'')
+                for i in range(len(interpolated_matrices)):
+                    write_point_cloud_distance(interpolated_matrices[i], actual_mtx, interpolated_weights[i], None,
+                                               'P' + str(args.t_interpolate), 'I\'')
 
-                perturbed_result = wot.ot.optimal_transport(
-                    cost_matrix=c,
-                    growth_rate=m1_sample[
-                        cell_growth_rates.columns[0]].values,
-                    delta_days=delta_t,
-                    max_transport_fraction=args.max_transport_fraction,
-                    min_transport_fraction=args.min_transport_fraction,
-                    min_growth_fit=args.min_growth_fit,
-                    l0_max=args.l0_max, lambda1=args.lambda1,
-                    lambda2=args.lambda2,
-                    epsilon=args.epsilon,
-                    scaling_iter=args.scaling_iter,
-                    epsilon_adjust=args.epsilon_adjust,
-                    lambda_adjust=args.lambda_adjust, numItermax=args.numItermax,
-                    epsilon0=args.epsilon0,
-                    numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr, solver=solver)
-                perturbed_transport = perturbed_result['transport']
-
-                m1_mtx, m2_mtx, m1_m2_weights = sample_from_transport_map(m1_mtx, m2_mtx, perturbed_transport)
-
-                interpolated_matrices.append(m1_mtx + args.t_interpolate * (m2_mtx - m1_mtx))
-                interpolated_weights.append(m1_m2_weights)
-            write_point_cloud_distance(interpolated_matrices[0], interpolated_matrices[1], None, None, 'I\'', 'I\'')
-            for i in range(len(interpolated_matrices)):
-                write_point_cloud_distance(interpolated_matrices[i], actual_mtx, interpolated_weights[i], None,
-                                           'P' + str(args.t_interpolate), 'I\'')
-
-        # cluster_shape = subsampled_maps[0].shape
-        # vals = np.zeros(
-        #     (cluster_shape[0], cluster_shape[1], len(subsampled_maps)))
-        # for subsample_i in range(len(subsampled_maps)):
-        #     subsampled_map = subsampled_maps[subsample_i]
-        #     for i in range(cluster_shape[0]):
-        #         for j in range(cluster_shape[1]):
-        #             vals[i, j, subsample_i] = subsampled_map.iloc[i, j]
-        #
-        # stdevs = np.zeros(cluster_shape[0] * cluster_shape[1])
-        # counter = 0
-        # for i in range(cluster_shape[0]):
-        #     for j in range(cluster_shape[1]):
-        #         stdevs[counter] = np.sqrt(np.var(vals[i, j]))
-        #         counter += 1
-        # mean_stdev = np.mean(stdevs)
-        # subsample_writer.write(
-        #     str(m1.shape[0]) + '\t' + str(m2.shape[0]) + '\t' + str(n) +
-        #     '\t' + str(t1) + '\t' + str(t2) + '\t' + str(
-        #         mean_stdev) + '\n')
-        # subsample_writer.flush()
+            # cluster_shape = subsampled_maps[0].shape
+            # vals = np.zeros(
+            #     (cluster_shape[0], cluster_shape[1], len(subsampled_maps)))
+            # for subsample_i in range(len(subsampled_maps)):
+            #     subsampled_map = subsampled_maps[subsample_i]
+            #     for i in range(cluster_shape[0]):
+            #         for j in range(cluster_shape[1]):
+            #             vals[i, j, subsample_i] = subsampled_map.iloc[i, j]
+            #
+            # stdevs = np.zeros(cluster_shape[0] * cluster_shape[1])
+            # counter = 0
+            # for i in range(cluster_shape[0]):
+            #     for j in range(cluster_shape[1]):
+            #         stdevs[counter] = np.sqrt(np.var(vals[i, j]))
+            #         counter += 1
+            # mean_stdev = np.mean(stdevs)
+            # subsample_writer.write(
+            #     str(m1.shape[0]) + '\t' + str(m2.shape[0]) + '\t' + str(n) +
+            #     '\t' + str(t1) + '\t' + str(t2) + '\t' + str(
+            #         mean_stdev) + '\n')
+            # subsample_writer.flush()
 
 if subsample_writer is not None:
     subsample_writer.close()
