@@ -52,6 +52,7 @@ def sample_randomly(exp1, exp2, tm):
     column_sums = np.sum(tm, axis=0)
     row_sums = np.sum(tm, axis=1)
     p = np.outer(row_sums, column_sums)
+    p = p.flatten()
     p = p / p.sum()
     # p = np.ones(exp1.shape[0] * exp2.shape[0])
 
