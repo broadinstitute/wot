@@ -200,7 +200,7 @@ parser.add_argument('--resample_iter', help='Number of subsample iterations to p
 
 parser.add_argument('--solver',
                     help='Solver to use when computing transport maps. One of epsilon, sinkhorn_epsilon, unregularized',
-                    choices=['epsilon', 'sinkhorn_epsilon', 'unregularized'])
+                    choices=['epsilon', 'sinkhorn_epsilon', 'unregularized'], default='sinkhorn_epsilon')
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
