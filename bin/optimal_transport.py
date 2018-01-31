@@ -36,11 +36,8 @@ import io
 #                 Pairs[i].append([])
 #     return Pairs
 
-# more than 10 to the minus 8
-# return indices and
 
-
-def sample_randomly(exp1, exp2, tm):
+def sample_randomly(exp1, exp2, tm, uniform=False):
     if args.npairs is None or args.npairs <= 0:
         l = tm / tm.sum(axis=0)
         l = l.flatten()
@@ -49,13 +46,14 @@ def sample_randomly(exp1, exp2, tm):
     else:
         n = args.npairs
 
-    column_sums = np.sum(tm, axis=0)
-    row_sums = np.sum(tm, axis=1)
-    p = np.outer(row_sums, column_sums)
-    p = p.flatten()
+    if not uniform:
+        column_sums = np.sum(tm, axis=0)
+        row_sums = np.sum(tm, axis=1)
+        p = np.outer(row_sums, column_sums)
+        p = p.flatten()
+    else:
+        p = np.ones(exp1.shape[0] * exp2.shape[0])
     p = p / p.sum()
-    # p = np.ones(exp1.shape[0] * exp2.shape[0])
-
     pairs = np.random.multinomial(n, p, size=1)
     pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
     return exp1[pairs[0]], exp2[pairs[1]]
@@ -404,26 +402,34 @@ for day_index in range(day_pairs.shape[0]):
         for resample_index in range(args.resample_iter):
             m1_subset, m2_subset, m1_m2_subset_weights = sample_from_transport_map(m1_mtx, m2_mtx,
                                                                                    result['transport'])
-            m1_random_subset, m2_random_subset = sample_randomly(m1_mtx, m2_mtx, result['transport'])
             inferred = m1_subset + args.t_interpolate * (m2_subset - m1_subset)
 
+            m1_random_subset, m2_random_subset = sample_randomly(m1_mtx, m2_mtx, result['transport'])
             random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
+
+            m1_uniform_random_subset, m2_uniform_random_subset = sample_randomly(m1_mtx, m2_mtx, result['transport'],
+                                                                                 True)
+            uniform_random_inferred = m1_uniform_random_subset + args.t_interpolate * (
+                    m2_uniform_random_subset - m1_uniform_random_subset)
 
             point_clouds = [[m1_mtx, None, 'P0'], [m2_mtx, None, 'P1'],
                             [actual_mtx, None, 'P' + str(args.t_interpolate)],
                             [inferred, m1_m2_subset_weights, 'I' + str(args.t_interpolate)],
-                            [random_inferred, None, 'R' + str(args.t_interpolate)]]
+                            [random_inferred, None, 'R' + str(args.t_interpolate)],
+                            [uniform_random_inferred, None, 'RU' + str(args.t_interpolate)]]
 
+            # self distances
             # D(P0.5, P0.5)
             # D(R0.5, R0.5)
             # D(I0.5, I0.5) = D(I', I')
 
+            # pairs
             # D(I0.5, P0.5)
             # D(R0.5, P0.5)
 
             if args.quick:
-                self_indices = [2, 4]
-                index_pairs = [[2, 3], [2, 4]]
+                self_indices = [2, 4, 5]
+                index_pairs = [[2, 3], [2, 4], [2, 5]]
             else:
                 self_indices = [0, 1, 2, 4]
                 index_pairs = []
