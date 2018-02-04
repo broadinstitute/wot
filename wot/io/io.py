@@ -76,24 +76,26 @@ def read_gmt(path, feature_ids=None):
             set_descriptions.append(description)
             ids = tokens[2:]
             set_ids = []
+            members.append(set_ids)
             for i in range(len(ids)):
                 id = ids[i].strip()
                 if id != '':
-                    set_ids.append(id)
+                    row_index = row_id_to_index.get(id)
                     if feature_ids is None:
-                        index = row_id_to_index.get(id)
-                        if index is None:
-                            index = len(row_id_to_index)
-                            row_id_to_index[id] = index
+                        set_ids.append(id)
+                        if row_index is None:
+                            row_index = len(row_id_to_index)
+                            row_id_to_index[id] = row_index
                             row_ids.append(id)
-            members.append(set_ids)
+                    elif row_index is not None:
+                        set_ids.append(id)
+
         x = np.zeros(shape=(len(row_ids), len(set_names)), dtype=np.int8)
         for j in range(len(members)):
             ids = members[j]
             for id in ids:
                 row_index = row_id_to_index.get(id)
-                if row_index is not None:
-                    x[row_index, j] = 1
+                x[row_index, j] = 1
 
         row_meta = pd.DataFrame(index=row_ids),
         col_meta = pd.DataFrame(data={'description': set_descriptions}, index=set_names)
@@ -128,7 +130,7 @@ def read_gmx(path, feature_ids=None):
                             row_id_to_index[value] = row_index
                             array_of_arrays.append(np.zeros(shape=(ncols,),
                                                             dtype=np.int8))
-                    elif i is not None:
+                    elif row_index is not None:
                         x[row_index, j] = 1
         if feature_ids is None:
             feature_ids = np.empty(len(row_id_to_index), dtype='object')
