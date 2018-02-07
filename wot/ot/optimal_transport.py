@@ -40,7 +40,6 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerIt
     alpha2 = lambda2 / (lambda2 + epsilon_i)
     epsilon_index = 0
     iterations_since_epsilon_adjusted = 0
-    np.seterr(all='raise')
 
     for i in range(scaling_iter):
         # scaling iteration
