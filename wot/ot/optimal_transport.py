@@ -34,10 +34,8 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerIt
     u = np.zeros(len(p))
     v = np.zeros(len(q))
     b = np.ones(len(q))
+    K = np.copy(-C / epsilon_i)
 
-    K0 = np.exp(-C / epsilon_i)
-    K = np.copy(K0)
-    print(C.dtype)
     alpha1 = lambda1 / (lambda1 + epsilon_i)
     alpha2 = lambda2 / (lambda2 + epsilon_i)
     epsilon_index = 0
@@ -45,43 +43,28 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerIt
     np.seterr(all='raise')
     for i in range(scaling_iter):
         # scaling iteration
-        print('ky ' + str(np.min(K.dot(np.multiply(b, dy)))))
+
         a = (p / (K.dot(np.multiply(b, dy)))) ** alpha1 * np.exp(-u / (lambda1 + epsilon_i))
-        print('kx ' + str(np.min(K.T.dot(np.multiply(a, dx)))))
         b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
-        print('a ' + str(np.max(a)) + "\t" + str(np.min(a)))
-        print('b ' + str(np.max(b)) + "\t" + str(np.min(b)))
-        print('epsilon_i ' + str(epsilon_i))
+
         # stabilization
         iterations_since_epsilon_adjusted += 1
         if (max(max(abs(a)), max(abs(b))) > tau):
-            print('stabilize ')
             u = u + epsilon_i * np.log(a)
             v = v + epsilon_i * np.log(b)  # absorb
-            K = (K0.T * np.exp(u / epsilon_i)).T * np.exp(v / epsilon_i)
+            K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
             a = np.ones(len(p))
             b = np.ones(len(q))
 
         if (warm_start and iterations_since_epsilon_adjusted == numInnerItermax):
             epsilon_index += 1
             iterations_since_epsilon_adjusted = 0
-
-            print('a_warm ' + str(np.max(a)) + "\t" + str(np.min(a)))
-            print('b_warm ' + str(np.max(b)) + "\t" + str(np.min(b)))
             u = u + epsilon_i * np.log(a)
             v = v + epsilon_i * np.log(b)  # absorb
-            print('u_warm ' + str(np.max(u)) + "\t" + str(np.min(u)))
-            print('v_warm ' + str(np.max(v)) + "\t" + str(np.min(v)))
             epsilon_i = get_reg(epsilon_index)
-            print('epsilon_i_get_reg ' + str(epsilon_i))
             alpha1 = lambda1 / (lambda1 + epsilon_i)
             alpha2 = lambda2 / (lambda2 + epsilon_i)
-            K0 = np.exp(-C / epsilon_i)
-            print('K0 ' + str(np.min(K0)) + '\t' + str(np.max(K0)))
-            print('u / epsilon_i ' + str(np.min(np.exp(u / epsilon_i)).T) + '\t' + str(
-                np.max(u / epsilon_i).T))
-            print('v / epsilon_i ' + str(np.min(np.exp(v / epsilon_i))) + '\t' + str(np.max(np.exp(v / epsilon_i))))
-            K = (K0.T * np.exp(u / epsilon_i)).T * np.exp(v / epsilon_i)
+            K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
             a = np.ones(len(p))
             b = np.ones(len(q))
 
