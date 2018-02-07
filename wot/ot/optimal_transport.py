@@ -34,16 +34,16 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerIt
     u = np.zeros(len(p))
     v = np.zeros(len(q))
     b = np.ones(len(q))
-    K = np.copy(-C / epsilon_i)
+    K = np.exp(-C / epsilon_i)
 
     alpha1 = lambda1 / (lambda1 + epsilon_i)
     alpha2 = lambda2 / (lambda2 + epsilon_i)
     epsilon_index = 0
     iterations_since_epsilon_adjusted = 0
     np.seterr(all='raise')
+
     for i in range(scaling_iter):
         # scaling iteration
-
         a = (p / (K.dot(np.multiply(b, dy)))) ** alpha1 * np.exp(-u / (lambda1 + epsilon_i))
         b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
 
