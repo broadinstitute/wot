@@ -5,6 +5,89 @@ import scipy.stats
 import ot as pot
 
 
+def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
+                       epsilon0=None):
+    """
+    Compute the optimal transport with stabilized numerics.
+    Args:
+        p: uniform distribution on input cells
+        q: uniform distribution on output cells
+        C: cost matrix to transport cell i to cell j
+        lambda1: regularization parameter for marginal constraint for p.
+        lambda2: regularization parameter for marginal constraint for q.
+        epsilon: entropy parameter
+        scaling_iter: number of scaling iterations
+        g: growth value for input cells
+    """
+    warm_start = tau is not None
+    epsilon_final = epsilon
+
+    def get_reg(n):  # exponential decreasing
+        return (epsilon0 - epsilon_final) * np.exp(-n) + epsilon_final
+
+    epsilon_i = epsilon0 if warm_start else epsilon
+    dx = np.ones(C.shape[0]) / C.shape[0]
+    dy = np.ones(C.shape[1]) / C.shape[1]
+    p = g
+    q = np.ones(C.shape[1]) * np.average(g)
+
+    u = np.zeros(len(p))
+    v = np.zeros(len(q))
+    b = np.ones(len(q))
+
+    K0 = np.exp(-C / epsilon_i)
+    K = np.copy(K0)
+    print(C.dtype)
+    alpha1 = lambda1 / (lambda1 + epsilon_i)
+    alpha2 = lambda2 / (lambda2 + epsilon_i)
+    epsilon_index = 0
+    iterations_since_epsilon_adjusted = 0
+    np.seterr(all='raise')
+    for i in range(scaling_iter):
+        # scaling iteration
+        print('ky ' + str(np.min(K.dot(np.multiply(b, dy)))))
+        a = (p / (K.dot(np.multiply(b, dy)))) ** alpha1 * np.exp(-u / (lambda1 + epsilon_i))
+        print('kx ' + str(np.min(K.T.dot(np.multiply(a, dx)))))
+        b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
+        print('a ' + str(np.max(a)) + "\t" + str(np.min(a)))
+        print('b ' + str(np.max(b)) + "\t" + str(np.min(b)))
+        print('epsilon_i ' + str(epsilon_i))
+        # stabilization
+        iterations_since_epsilon_adjusted += 1
+        if (max(max(abs(a)), max(abs(b))) > tau):
+            print('stabilize ')
+            u = u + epsilon_i * np.log(a)
+            v = v + epsilon_i * np.log(b)  # absorb
+            K = (K0.T * np.exp(u / epsilon_i)).T * np.exp(v / epsilon_i)
+            a = np.ones(len(p))
+            b = np.ones(len(q))
+
+        if (warm_start and iterations_since_epsilon_adjusted == numInnerItermax):
+            epsilon_index += 1
+            iterations_since_epsilon_adjusted = 0
+
+            print('a_warm ' + str(np.max(a)) + "\t" + str(np.min(a)))
+            print('b_warm ' + str(np.max(b)) + "\t" + str(np.min(b)))
+            u = u + epsilon_i * np.log(a)
+            v = v + epsilon_i * np.log(b)  # absorb
+            print('u_warm ' + str(np.max(u)) + "\t" + str(np.min(u)))
+            print('v_warm ' + str(np.max(v)) + "\t" + str(np.min(v)))
+            epsilon_i = get_reg(epsilon_index)
+            print('epsilon_i_get_reg ' + str(epsilon_i))
+            alpha1 = lambda1 / (lambda1 + epsilon_i)
+            alpha2 = lambda2 / (lambda2 + epsilon_i)
+            K0 = np.exp(-C / epsilon_i)
+            print('K0 ' + str(np.min(K0)) + '\t' + str(np.max(K0)))
+            print('u / epsilon_i ' + str(np.min(np.exp(u / epsilon_i)).T) + '\t' + str(
+                np.max(u / epsilon_i).T))
+            print('v / epsilon_i ' + str(np.min(np.exp(v / epsilon_i))) + '\t' + str(np.max(np.exp(v / epsilon_i))))
+            K = (K0.T * np.exp(u / epsilon_i)).T * np.exp(v / epsilon_i)
+            a = np.ones(len(p))
+            b = np.ones(len(q))
+
+    return (K.T * a).T * b
+
+
 def transport_stable(p, q, C, lambda1, lambda2, epsilon, scaling_iter, g):
     """
     Compute the optimal transport with stabilized numerics.
@@ -47,7 +130,14 @@ def optimal_transport(cost_matrix, growth_rate, p=None, q=None, solver=None,
                       max_transport_fraction=0.4, min_growth_fit=0.9,
                       l0_max=100, scaling_iter=250, epsilon_adjust=1.1,
                       lambda_adjust=1.5, numItermax=100, epsilon0=100.0, numInnerItermax=10, tau=1000.0, stopThr=1e-06):
-    if solver == 'epsilon':
+    if solver == 'unbalanced':
+
+        g = growth_rate ** delta_days
+        transport = transport_stablev2(C=cost_matrix, lambda1=lambda1, lambda2=lambda2, epsilon=epsilon,
+                                       scaling_iter=scaling_iter, g=g, numInnerItermax=numInnerItermax, tau=tau,
+                                       epsilon0=epsilon0)
+        return {'transport': transport}
+    elif solver == 'floating_epsilon':
         return optimal_transport_with_entropy(cost_matrix, growth_rate, p=p, q=q,
                                               delta_days=delta_days, epsilon=epsilon, lambda1=lambda1,
                                               lambda2=lambda2, min_transport_fraction=min_transport_fraction,

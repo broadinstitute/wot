@@ -159,29 +159,24 @@ parser.add_argument('--clusters',
 parser.add_argument('--cluster_details', action='store_true',
                     help='Save cluster details when clusters is specified.')
 
-# parser.add_argument('--subsample_genes', help='Number of genes to sample '
-#                                               'without '
-#                                               'replacement.', type=int,
-#                     action='append')
-
 parser.add_argument('--no_save', action='store_true',
                     help='Do not save transport maps.')
 parser.add_argument('--compress', action='store_true',
                     help='gzip output files')
 
-parser.add_argument('--epsilon_adjust', help='Scaling factor to adjust epsilon',
+parser.add_argument('--epsilon_adjust', help='Scaling factor to adjust epsilon for floating_epsilon solver',
                     type=float, default=1.1)
-parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda',
+parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda for floating_epsilon solver',
                     type=float, default=1.5)
 
-parser.add_argument('--beta_max', type=float, default=1.7)
-parser.add_argument('--beta_center', type=float, default=0.25)
-parser.add_argument('--delta_max', type=float, default=1.7)
+parser.add_argument('--beta_max', type=float, default=1.7, help='Growth function parameter')
+parser.add_argument('--beta_center', type=float, default=0.25, help='Growth function parameter')
+parser.add_argument('--delta_max', type=float, default=1.7, help='Growth function parameter')
 
 parser.add_argument('--numItermax', type=int, default=100, help='For sinkhorn_epsilon solver')
-parser.add_argument('--epsilon0', type=float, default=1, help='For sinkhorn_epsilon solver')
-parser.add_argument('--numInnerItermax', type=int, default=10, help='For sinkhorn_epsilon solver')
-parser.add_argument('--tau', type=float, default=100000, help='For sinkhorn_epsilon solver')
+parser.add_argument('--epsilon0', type=float, default=1, help='For sinkhorn_epsilon and unbalanced solvers')
+parser.add_argument('--numInnerItermax', type=int, default=10, help='For sinkhorn_epsilon and unbalanced solvers')
+parser.add_argument('--tau', type=float, default=100000, help='For sinkhorn_epsilon and unbalanced solvers')
 parser.add_argument('--stopThr', type=float, default=1e-10, help='For sinkhorn_epsilon solver')
 
 growth_rate_group = parser.add_mutually_exclusive_group(required=True)
@@ -198,8 +193,9 @@ parser.add_argument('--subsample_iter', help='Number of subsample iterations to 
 parser.add_argument('--resample_iter', help='Number of subsample iterations to perform', type=int, default=5)
 
 parser.add_argument('--solver',
-                    help='Solver to use when computing transport maps. One of epsilon, sinkhorn_epsilon, unregularized',
-                    choices=['epsilon', 'sinkhorn_epsilon', 'unregularized'], default='sinkhorn_epsilon')
+                    help='Solver to use when computing transport maps. One of unbalanced, floating_epsilon, '
+                         'sinkhorn_epsilon, unregularized',
+                    choices=['epsilon', 'sinkhorn_epsilon', 'unbalanced', 'unregularized'], default='sinkhorn_epsilon')
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
@@ -240,7 +236,7 @@ if eigenvals is not None:
     gene_expression = gene_expression.dot(np.diag(eigenvals))
 
 params_writer = None
-if solver is 'epsilon':
+if solver is 'floating_epsilon':
     params_writer = open(args.prefix + '_params.txt', 'w')
     params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda1' + '\t' + 'lambda2'
                                                                                           '\n')
@@ -333,7 +329,7 @@ for day_index in range(day_pairs.shape[0]):
                                       epsilon0=args.epsilon0,
                                       numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr,
                                       solver=solver)
-    if solver is 'epsilon':
+    if solver is 'floating_epsilon':
         params_writer.write(
             str(t1) + '\t' + str(t2) + '\t' + str(result['epsilon']) + '\t' + str(
                 result['lambda1']) + '\t' + str(
