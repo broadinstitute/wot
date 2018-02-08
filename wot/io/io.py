@@ -128,17 +128,16 @@ def read_gmx(path, feature_ids=None):
                         if row_index is None:
                             row_index = len(row_id_to_index)
                             row_id_to_index[value] = row_index
-                            array_of_arrays.append(np.zeros(shape=(ncols,),
-                                                            dtype=np.int8))
+                            array_of_arrays.append(np.zeros(shape=(ncols,), dtype=np.int8))
+                        array_of_arrays[row_index][j] = 1
                     elif row_index is not None:
                         x[row_index, j] = 1
         if feature_ids is None:
             feature_ids = np.empty(len(row_id_to_index), dtype='object')
             for rid in row_id_to_index:
                 feature_ids[row_id_to_index[rid]] = rid
-        if feature_ids is None:
-            x = np.concatenate(array_of_arrays, axis=0)
-
+        if array_of_arrays is not None:
+            x = np.array(array_of_arrays)
         row_meta = pd.DataFrame(index=feature_ids)
         col_meta = pd.DataFrame(data={'description': descriptions},
                                 index=ids)
@@ -280,6 +279,8 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
                                 index=pd.RangeIndex(start=0, stop=f[
                                     h5_x].shape[0],
                                                     step=1))
+        if data.get('id') is not None:
+            row_meta.set_index('id', inplace=True)
         g = f[h5_col_meta]
         data = {}
         for key in g:
@@ -291,6 +292,8 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
                                 index=pd.RangeIndex(start=0, stop=f[
                                     h5_x].shape[1],
                                                     step=1))
+        if data.get('id') is not None:
+            col_meta.set_index('id', inplace=True)
         if not use_dask:
             x = f[h5_x][()]
             f.close()

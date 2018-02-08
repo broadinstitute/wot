@@ -288,7 +288,8 @@ if args.t_interpolate is not None:
     resample = True
     subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
     subsample_writer.write(
-        't1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' + '\t' + 'pairs' + '\t' + 'epsilon' + '\t' + 'beta_max' + '\t' + 'delta_max' + '\n')
+        't1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' + '\t' + 'pairs' + '\t' + 'epsilon' + '\t'
+        + 'beta_max' + '\t' + 'delta_max' + '\t' + 'lambda' + '\n')
 column_cell_ids_by_time = []
 all_cell_ids = set()
 
@@ -383,7 +384,8 @@ for day_index in range(day_pairs.shape[0]):
                     point_cloud_distance(point_cloud1,
                                          point_cloud2, weights1,
                                          weights2)) + '\t' + point_cloud1_name + ' vs ' + point_cloud2_name + '\t' + str(
-                    args.epsilon) + '\t' + str(args.beta_max) + '\t' + str(args.delta_max) + '\n')
+                    args.epsilon) + '\t' + str(args.beta_max) + '\t' + str(args.lambda1) + '\t' + str(
+                    args.delta_max) + '\n')
             subsample_writer.flush()
             if args.verbose:
                 print('done')

@@ -3,8 +3,7 @@
 
 import argparse
 import wot.io
-import dask
-import dask.array as da
+
 parser = argparse.ArgumentParser(
     description='Compute the gene set scores for the given gene sets')
 parser.add_argument('--matrix',
@@ -32,7 +31,7 @@ gene_ids = ds.col_meta.index.values
 
 if use_dask:
     gene_ids = gene_ids.compute()
-gs = wot.io.read_gene_sets(args.gene_sets, gene_ids, use_dask=use_dask)
+gs = wot.io.read_gene_sets(args.gene_sets, gene_ids)
 
 if args.verbose:
     print('Read gene sets')
@@ -40,9 +39,9 @@ if args.verbose:
 result = wot.score_gene_sets(ds=ds, gs=gs, z_score_ds=not args.no_zscore)
 
 if use_dask:
+    import dask
     result.x, result.row_meta, result.col_meta = dask.compute(result.x, result.row_meta, result.col_meta)
-elif type(result.x) == da.core.Array:
-    result.x = result.x.compute()
+
 output_format = 'txt'
 path = wot.io.check_file_extension(args.prefix,
                                    format=output_format)

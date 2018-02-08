@@ -6,12 +6,11 @@ import ot as pot
 
 
 def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
-                       epsilon0=None):
+                       epsilon0=None, extra_iter=1000):
     """
     Compute the optimal transport with stabilized numerics.
     Args:
-        p: uniform distribution on input cells
-        q: uniform distribution on output cells
+
         C: cost matrix to transport cell i to cell j
         lambda1: regularization parameter for marginal constraint for p.
         lambda2: regularization parameter for marginal constraint for q.
@@ -66,6 +65,10 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerIt
             K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
             a = np.ones(len(p))
             b = np.ones(len(q))
+
+    for i in range(extra_iter):
+        a = (p / (K.dot(np.multiply(b, dy)))) ** alpha1 * np.exp(-u / (lambda1 + epsilon_i))
+        b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
 
     return (K.T * a).T * b
 

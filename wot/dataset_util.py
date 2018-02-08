@@ -28,11 +28,20 @@ def score_gene_sets(ds, gs, z_score_ds=True):
     gs_x = gs.x
     ds_x = ds.x
 
-    indices = gs_x.sum(axis=1) > 0
+    indices = gs_x.sum(axis=1) > 0 # keep genes that are in gene sets
     gs_x = gs_x[indices, :]
     ds_x = ds_x[:, indices]
     if z_score_ds:
-        ds_x = z_score(ds_x)
+        ds_x = ds_x.todense() if scipy.sparse.isspmatrix(ds_x) else ds_x
+        mean = np.mean(ds_x, axis=0)
+        variance = np.var(ds_x, axis=0)
+        indices = variance > 0
+        gs_x = gs_x[indices, :]
+        ds_x = ds_x[:, indices]
+
+        ds_x = (ds_x - mean) / np.sqrt(variance)
+        ds_x[ds_x < -5] = -5
+        ds_x[ds_x > 5] = 5
 
     scores = ds_x.dot(gs_x)
     ngenes_in_set = gs_x.sum(axis=0)
