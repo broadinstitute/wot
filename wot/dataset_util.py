@@ -5,7 +5,7 @@ import scipy.sparse
 
 
 def z_score(x, z_min=-5, z_max=5):
-    x = x.todense() if scipy.sparse.isspmatrix(x) else x
+    x = x.toarray() if scipy.sparse.isspmatrix(x) else x
     mean = np.mean(x, axis=0)  # 1 by ngenes
     variance = np.var(x, axis=0)
     stdev = np.sqrt(variance)
@@ -28,11 +28,11 @@ def score_gene_sets(ds, gs, z_score_ds=True):
     gs_x = gs.x
     ds_x = ds.x
 
-    indices = gs_x.sum(axis=1) > 0 # keep genes that are in gene sets
+    indices = gs_x.sum(axis=1) > 0  # keep genes that are in gene sets
     gs_x = gs_x[indices, :]
     ds_x = ds_x[:, indices]
     if z_score_ds:
-        ds_x = ds_x.todense() if scipy.sparse.isspmatrix(ds_x) else ds_x
+        ds_x = ds_x.toarray() if scipy.sparse.isspmatrix(ds_x) else ds_x
         mean = np.mean(ds_x, axis=0)
         variance = np.var(ds_x, axis=0)
         indices = variance > 0

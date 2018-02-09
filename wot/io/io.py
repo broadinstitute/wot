@@ -390,7 +390,7 @@ def write_dataset(ds, path, output_format='txt'):
             nchunks = int(np.ceil(max(1, x.shape[0] / step)))
             for i in range(nchunks):
                 stop = min(x.shape[0], stop)
-                dset[start:stop] = x[start:stop].todense()
+                dset[start:stop] = x[start:stop].toarray()
                 start += step
                 stop += step
 

@@ -37,7 +37,7 @@ import io
 #     return Pairs
 
 
-def sample_randomly(exp1, exp2, tm, uniform=False):
+def sample_randomly(exp1, exp2, tm, g):
     if args.npairs is None or args.npairs <= 0:
         l = tm / tm.sum(axis=0)
         l = l.flatten()
@@ -46,13 +46,30 @@ def sample_randomly(exp1, exp2, tm, uniform=False):
     else:
         n = args.npairs
 
-    if not uniform:
-        column_sums = np.sum(tm, axis=0)
-        row_sums = np.sum(tm, axis=1)
-        p = np.outer(row_sums, column_sums)
-        p = p.flatten()
+    # column_sums = np.sum(tm, axis=0)
+    # row_sums = np.sum(tm, axis=1)
+    # p = np.outer(row_sums, column_sums)
+
+    p = g
+    q = np.ones(exp2.shape[0]) * np.average(g)
+    p = np.outer(p, q)
+    p = p.flatten()
+    p = p / p.sum()
+    pairs = np.random.multinomial(n, p, size=1)
+    pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
+    return exp1[pairs[0]], exp2[pairs[1]]
+
+
+def sample_uniformly(exp1, exp2, tm):
+    if args.npairs is None or args.npairs <= 0:
+        l = tm / tm.sum(axis=0)
+        l = l.flatten()
+        qq = np.where(l > args.tm_thresh)
+        n = len(qq[0])
     else:
-        p = np.ones(exp1.shape[0] * exp2.shape[0])
+        n = args.npairs
+
+    p = np.ones(exp1.shape[0] * exp2.shape[0])
     p = p / p.sum()
     pairs = np.random.multinomial(n, p, size=1)
     pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
@@ -402,11 +419,11 @@ for day_index in range(day_pairs.shape[0]):
                                                                                    result['transport'])
             inferred = m1_subset + args.t_interpolate * (m2_subset - m1_subset)
 
-            m1_random_subset, m2_random_subset = sample_randomly(m1_mtx, m2_mtx, result['transport'])
+            m1_random_subset, m2_random_subset = sample_randomly(m1_mtx, m2_mtx, result['transport'], m1[
+                cell_growth_rates.columns[0]].values ** delta_t)
             random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
 
-            m1_uniform_random_subset, m2_uniform_random_subset = sample_randomly(m1_mtx, m2_mtx, result['transport'],
-                                                                                 True)
+            m1_uniform_random_subset, m2_uniform_random_subset = sample_uniformly(m1_mtx, m2_mtx, result['transport'])
             uniform_random_inferred = m1_uniform_random_subset + args.t_interpolate * (
                     m2_uniform_random_subset - m1_uniform_random_subset)
 
