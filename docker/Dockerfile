@@ -12,8 +12,8 @@ ENV PATH=/root/miniconda/bin:$PATH
 ENV MPLBACKEND="PS"
 RUN conda install -y cython numpy pandas scikit-learn scipy h5py
 RUN conda install -y -c conda-forge pot
-RUN curl -L -k -o wot.zip https://github.com/broadinstitute/wot/archive/develop.zip && unzip wot.zip
-RUN cd /wot-develop && pip install -e .
-RUN rm -f wot.zip
+COPY wot /wot
+RUN cd /wot && pip install -e .
+
 
 

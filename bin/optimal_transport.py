@@ -104,7 +104,6 @@ def split_in_two(n):
 
 def point_cloud_distance(c1, c2, a=None, b=None):
     cloud_distances = sklearn.metrics.pairwise.pairwise_distances(c1, Y=c2, metric='sqeuclidean')
-    cloud_distances = cloud_distances / np.median(cloud_distances)
 
     if a is None:
         a = np.ones((cloud_distances.shape[0]), dtype=np.float64) / cloud_distances.shape[0]
@@ -396,13 +395,18 @@ for day_index in range(day_pairs.shape[0]):
                                        point_cloud2_name):
             if args.verbose:
                 print('Computing distance between ' + point_cloud1_name + ' and ' + point_cloud2_name + '...', end='')
+
+            subsample_writer.write(
+                't1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' + '\t' + 'pairs' + '\t' + 'epsilon' + '\t'
+                + 'beta_max' + '\t' + 'delta_max' + '\t' + 'lambda' + '\n')
+
             subsample_writer.write(
                 str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
                     point_cloud_distance(point_cloud1,
                                          point_cloud2, weights1,
                                          weights2)) + '\t' + point_cloud1_name + ' vs ' + point_cloud2_name + '\t' + str(
-                    args.epsilon) + '\t' + str(args.beta_max) + '\t' + str(args.lambda1) + '\t' + str(
-                    args.delta_max) + '\n')
+                    args.epsilon) + '\t' + str(args.beta_max) + '\t' + str(
+                    args.delta_max) + '\t' + str(args.lambda1) + '\n')
             subsample_writer.flush()
             if args.verbose:
                 print('done')
