@@ -131,6 +131,10 @@ parser.add_argument('--day_pairs',
                          'pairs of days to compute transport maps for',
                     required=True)
 
+parser.add_argument('--covariate',
+                    help='Two column tab delimited file without header with '
+                         'cell ids and covariate value')
+
 parser.add_argument('--epsilon', type=float, default=0.1,
                     help='Controls the entropy of the transport map. An '
                          'extremely large entropy parameter will give a '
@@ -205,8 +209,8 @@ growth_rate_group.add_argument('--cell_growth_rates',
 parser.add_argument('--diagonal', help='Diagonal scaling matrix')
 parser.add_argument('--power', help='Diagonal scaling power', type=float)
 
-parser.add_argument('--subsample_iter', help='Number of subsample iterations to perform', type=int, default=0)
-parser.add_argument('--resample_iter', help='Number of subsample iterations to perform', type=int, default=5)
+parser.add_argument('--subsample_iter', help='Number of subsample iterations to perform', type=int, default=2)
+parser.add_argument('--resample_iter', help='Number of resample iterations to perform', type=int, default=5)
 
 parser.add_argument('--solver',
                     help='Solver to use when computing transport maps. One of unbalanced, floating_epsilon, '
@@ -274,10 +278,24 @@ else:
                                       header=None, names=['cell_growth_rate'],
                                       quoting=csv.QUOTE_NONE, engine='python',
                                       sep=None)
-fields_to_drop_for_distance = [days_data_frame.columns[0],
-                               cell_growth_rates.columns[0]]
-
+fields_to_drop_for_distance = [days_data_frame.columns[0], cell_growth_rates.columns[0]]
 gene_expression = gene_expression.join(cell_growth_rates).join(days_data_frame)
+
+if args.covariate is not None:
+    covariate_df = pd.read_table(args.covariate, index_col=0,
+                                 header=None, names=['covariate'],
+                                 quoting=csv.QUOTE_NONE, engine='python',
+                                 sep=None)
+    import itertools
+
+    unique_covariates = pd.unique(covariate_df[covariate_df.columns[0]].values)
+    covariate_pairs = list(itertools.product(unique_covariates, unique_covariates))
+    args.resample_iter = 1
+    gene_expression = gene_expression.join(covariate_df)
+    fields_to_drop_for_distance.append(covariate_df.columns[0])
+else:
+    covariate_pairs = [['', '']]
+
 group_by_day = gene_expression.groupby(days_data_frame.columns[0])
 if args.verbose:
     print('Computing ' + str(day_pairs.shape[0]) + ' transport map' + 's' if
@@ -316,8 +334,8 @@ for day_index in range(day_pairs.shape[0]):
             t2) is None:
         print('skipping transport map from ' + str(t1) + ' to ' + str(t2))
         continue
-    m1 = group_by_day.get_group(t1)
-    m2 = group_by_day.get_group(t2)
+    p0 = group_by_day.get_group(t1)
+    p1 = group_by_day.get_group(t2)
     delta_t = t2 - t1
     if args.verbose:
         print(
@@ -325,12 +343,12 @@ for day_index in range(day_pairs.shape[0]):
                 t1) + ' to ' + str(
                 t2) + '...', end='')
 
-    cost_matrix = sklearn.metrics.pairwise.pairwise_distances(m1.drop(fields_to_drop_for_distance, axis=1).values,
-                                                              m2.drop(fields_to_drop_for_distance, axis=1).values,
+    cost_matrix = sklearn.metrics.pairwise.pairwise_distances(p0.drop(fields_to_drop_for_distance, axis=1).values,
+                                                              p1.drop(fields_to_drop_for_distance, axis=1).values,
                                                               metric='sqeuclidean')
     cost_matrix = cost_matrix / np.median(cost_matrix)
     result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
-                                      growth_rate=m1[
+                                      growth_rate=p0[
                                           cell_growth_rates.columns[0]].values,
                                       delta_days=delta_t,
                                       max_transport_fraction=args.max_transport_fraction,
@@ -351,8 +369,8 @@ for day_index in range(day_pairs.shape[0]):
             str(t1) + '\t' + str(t2) + '\t' + str(result['epsilon']) + '\t' + str(
                 result['lambda1']) + '\t' + str(
                 result['lambda2']) + '\n')
-    transport_map = pd.DataFrame(result['transport'], index=m1.index,
-                                 columns=m2.index)
+    transport_map = pd.DataFrame(result['transport'], index=p0.index,
+                                 columns=p1.index)
     if args.verbose:
         print('done')
 
@@ -389,151 +407,165 @@ for day_index in range(day_pairs.shape[0]):
                              args.compress else None, doublequote=False,
                              quoting=csv.QUOTE_NONE)
 
-    if resample:  # resample and optionally perturb parameters
-
+    if resample:
         def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, point_cloud1_name,
                                        point_cloud2_name):
             if args.verbose:
                 print('Computing distance between ' + point_cloud1_name + ' and ' + point_cloud2_name + '...', end='')
 
             subsample_writer.write(
-                't1' + '\t' + 't2' + '\t' + 't_interpolate' + '\t' + 'distance' + '\t' + 'pairs' + '\t' + 'epsilon' + '\t'
-                + 'beta_max' + '\t' + 'delta_max' + '\t' + 'lambda' + '\n')
-
-            subsample_writer.write(
-                str(t1) + '\t' + str(t2) + '\t' + str(args.t_interpolate) + '\t' + str(
-                    point_cloud_distance(point_cloud1,
-                                         point_cloud2, weights1,
-                                         weights2)) + '\t' + point_cloud1_name + ' vs ' + point_cloud2_name + '\t' + str(
-                    args.epsilon) + '\t' + str(args.beta_max) + '\t' + str(
-                    args.delta_max) + '\t' + str(args.lambda1) + '\n')
+                str(t1)
+                + '\t' + str(t2)
+                + '\t' + str(args.t_interpolate)
+                + '\t' + str(point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2))
+                + '\t' + point_cloud1_name + ' vs ' + point_cloud2_name
+                + '\t' + str(args.epsilon)
+                + '\t' + str(args.beta_max)
+                + '\t' + str(args.delta_max)
+                + '\t' + str(args.lambda1)
+                + '\n')
             subsample_writer.flush()
             if args.verbose:
                 print('done')
 
 
         inferred_time = t1 + (t2 - t1) * args.t_interpolate
-        actual_mtx = group_by_day.get_group(inferred_time)
-        actual_mtx = actual_mtx.drop(fields_to_drop_for_distance, axis=1).values
+        p_0_5 = group_by_day.get_group(inferred_time)
+
+        p0_p1_map = result['transport']
+        m1 = p0
+        m2 = p1
 
         m1_mtx = m1.drop(fields_to_drop_for_distance, axis=1).values
         m2_mtx = m2.drop(fields_to_drop_for_distance, axis=1).values
+
         for resample_index in range(args.resample_iter):
-            m1_subset, m2_subset, m1_m2_subset_weights = sample_from_transport_map(m1_mtx, m2_mtx,
-                                                                                   result['transport'])
+            m1_subset, m2_subset, m1_m2_subset_weights = sample_from_transport_map(m1_mtx, m2_mtx, p0_p1_map)
             inferred = m1_subset + args.t_interpolate * (m2_subset - m1_subset)
 
-            m1_random_subset, m2_random_subset = sample_randomly(m1_mtx, m2_mtx, result['transport'], m1[
+            m1_random_subset, m2_random_subset = sample_randomly(m1_mtx, m2_mtx, p0_p1_map, m1[
                 cell_growth_rates.columns[0]].values ** delta_t)
             random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
 
-            m1_uniform_random_subset, m2_uniform_random_subset = sample_uniformly(m1_mtx, m2_mtx, result['transport'])
+            m1_uniform_random_subset, m2_uniform_random_subset = sample_uniformly(m1_mtx, m2_mtx, p0_p1_map)
             uniform_random_inferred = m1_uniform_random_subset + args.t_interpolate * (
                     m2_uniform_random_subset - m1_uniform_random_subset)
 
-            point_clouds = [[m1_mtx, None, 'P0'], [m2_mtx, None, 'P1'],
-                            [actual_mtx, None, 'P' + str(args.t_interpolate)],
-                            [inferred, m1_m2_subset_weights, 'I' + str(args.t_interpolate)],
-                            [random_inferred, None, 'R' + str(args.t_interpolate)],
-                            [uniform_random_inferred, None, 'RU' + str(args.t_interpolate)]]
+            point_clouds = [{'m': p_0_5.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None,
+                             'name': 'P' + str(args.t_interpolate)},
+                            {'m': inferred, 'weights': m1_m2_subset_weights, 'name': 'I' + str(args.t_interpolate)},
+                            {'m': random_inferred, 'weights': None, 'name': 'R' + str(args.t_interpolate)},
+                            {'m': uniform_random_inferred, 'weights': None, 'name': 'RU' + str(args.t_interpolate)}]
 
             # self distances
-            # D(P0.5, P0.5)
-            # D(R0.5, R0.5)
-            # D(I0.5, I0.5) = D(I', I')
+            # D(P0.5, P0.5) split according to condition instead of in half
+            # D(R0.5, R0.5) split randomly in two or all covariate splits
+            # D(I0.5, I0.5) = split randomly in two or all covariate splits
 
-            # pairs
-            # D(I0.5, P0.5)
-            # D(R0.5, P0.5)
+            # pairs I0.5, R0.5 and P0.5.
+            for i in range(1, len(point_clouds)):
+                pc1 = point_clouds[i]
+                for j in range(i):
+                    pc2 = point_clouds[j]
+                    write_point_cloud_distance(pc1['m'], pc2['m'],
+                                               pc1['weights'],
+                                               pc1['weights'],
+                                               pc1['name'], pc2['name'])
 
-            if args.quick:
-                self_indices = [2, 4, 5]
-                index_pairs = [[2, 3], [2, 4], [2, 5]]
+            # P0.5 to P0.5 self point cloud distance
+            if not args.covariate:
+                p_0_5_mtx = p_0_5.drop(fields_to_drop_for_distance, axis=1).values
+                split1, split2 = split_in_two(p_0_5_mtx.shape[0])
+                write_point_cloud_distance(p_0_5_mtx[split1], p_0_5_mtx[split2], None, None,
+                                           'P' + str(args.t_interpolate),
+                                           'P' + str(args.t_interpolate))
             else:
-                self_indices = [0, 1, 2, 4]
-                index_pairs = []
-                for ix in range(1, len(point_clouds)):
-                    for iy in range(ix):
-                        index_pairs.append([ix, iy])
-            for p in index_pairs:
-                ix = p[0]
-                iy = p[1]
-                write_point_cloud_distance(point_clouds[ix][0], point_clouds[iy][0], point_clouds[ix][1],
-                                           point_clouds[iy][1],
-                                           point_clouds[ix][2], point_clouds[iy][2])
-            # self point cloud distances by splitting point clouds in 2
-            for point_cloud_idx in self_indices:
-                cloud = point_clouds[point_cloud_idx][0]
-                split1, split2 = split_in_two(cloud.shape[0])
-                write_point_cloud_distance(cloud[split1], cloud[split2], None, None,
-                                           point_clouds[point_cloud_idx][2], point_clouds[point_cloud_idx][2])
+                for covariate_pair in covariate_pairs:
+                    subset1 = p_0_5[p_0_5[covariate_df.columns[0]] == covariate_pair[0]]
+                    subset2 = p_0_5[p_0_5[covariate_df.columns[0]] == covariate_pair[1]]
+                    write_point_cloud_distance(subset1.drop(fields_to_drop_for_distance, axis=1).values,
+                                               subset2.drop(fields_to_drop_for_distance, axis=1).values, None, None,
+                                               'P' + str(args.t_interpolate) + '_' + str(covariate_pair[0]),
+                                               'P' + str(args.t_interpolate) + '_' + str(covariate_pair[1]))
 
-            for subsample_iter in range(args.subsample_iter):
-                if args.verbose:
-                    print('Subsample iteration ' + str(subsample_iter + 1))
+            # I' to I' self distance and R to R self distance
+            self_distance_iters = args.subsample_iter if not args.covariate else len(covariate_pairs)
+            interpolated_point_clouds = []
+            random_point_clouds = []
+            for self_distance_iter in range(self_distance_iters):
 
-                # compare pairs
-                interpolated_matrices = []
-                interpolated_weights = []
-                m1_indices_ = split_in_two(m1.shape[0])
-                m2_indices_ = split_in_two(m2.shape[0])
-                for split_iter in range(2):
-                    m1_sample = m1.iloc[m1_indices_[split_iter]]
-                    m2_sample = m2.iloc[m2_indices_[split_iter]]
-                    m1_mtx_sample = m1_sample.drop(fields_to_drop_for_distance, axis=1).values
-                    m2_mtx_sample = m2_sample.drop(fields_to_drop_for_distance, axis=1).values
-                    c = sklearn.metrics.pairwise.pairwise_distances(m1_mtx_sample, Y=m2_mtx_sample,
-                                                                    metric='sqeuclidean')
-                    c = c / np.median(c)
+                if args.covariate:
+                    covariate_pair = covariate_pairs[self_distance_iter]  # pairs of [[C1, C2],[C2, C2], ...]
+                    m1_indices = np.where(m1[covariate_df.columns[0]] == covariate_pair[0])[0]
+                    m2_indices = np.where(m2[covariate_df.columns[0]] == covariate_pair[1])[0]
+                else:
+                    m1_indices = split_in_two(m1.shape[0])
+                    m2_indices = split_in_two(m2.shape[0])
 
-                    perturbed_result = wot.ot.optimal_transport(
-                        cost_matrix=c,
-                        growth_rate=m1_sample[
-                            cell_growth_rates.columns[0]].values,
-                        delta_days=delta_t,
-                        max_transport_fraction=args.max_transport_fraction,
-                        min_transport_fraction=args.min_transport_fraction,
-                        min_growth_fit=args.min_growth_fit,
-                        l0_max=args.l0_max, lambda1=args.lambda1,
-                        lambda2=args.lambda2,
-                        epsilon=args.epsilon,
-                        scaling_iter=args.scaling_iter,
-                        epsilon_adjust=args.epsilon_adjust,
-                        lambda_adjust=args.lambda_adjust, numItermax=args.numItermax,
-                        epsilon0=args.epsilon0,
-                        numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr, solver=solver)
-                    perturbed_transport = perturbed_result['transport']
-                    m1_mtx_sample, m2_mtx_sample, m1_m2_sample_weights = sample_from_transport_map(m1_mtx_sample,
-                                                                                                   m2_mtx_sample,
-                                                                                                   perturbed_transport)
-                    interpolated_matrices.append(m1_mtx_sample + args.t_interpolate * (m2_mtx_sample - m1_mtx_sample))
-                    interpolated_weights.append(m1_m2_sample_weights)
-                write_point_cloud_distance(interpolated_matrices[0], interpolated_matrices[1], None, None, 'I\'', 'I\'')
-                for i in range(len(interpolated_matrices)):
-                    write_point_cloud_distance(interpolated_matrices[i], actual_mtx, interpolated_weights[i], None,
-                                               'P' + str(args.t_interpolate), 'I\'')
+                m1_sample = m1.iloc[m1_indices]
+                m2_sample = m2.iloc[m2_indices]
+                m1_mtx_sample = m1_sample.drop(fields_to_drop_for_distance, axis=1).values
+                m2_mtx_sample = m2_sample.drop(fields_to_drop_for_distance, axis=1).values
+                c = sklearn.metrics.pairwise.pairwise_distances(m1_mtx_sample, Y=m2_mtx_sample, metric='sqeuclidean')
+                c = c / np.median(c)
 
-            # cluster_shape = subsampled_maps[0].shape
-            # vals = np.zeros(
-            #     (cluster_shape[0], cluster_shape[1], len(subsampled_maps)))
-            # for subsample_i in range(len(subsampled_maps)):
-            #     subsampled_map = subsampled_maps[subsample_i]
-            #     for i in range(cluster_shape[0]):
-            #         for j in range(cluster_shape[1]):
-            #             vals[i, j, subsample_i] = subsampled_map.iloc[i, j]
-            #
-            # stdevs = np.zeros(cluster_shape[0] * cluster_shape[1])
-            # counter = 0
-            # for i in range(cluster_shape[0]):
-            #     for j in range(cluster_shape[1]):
-            #         stdevs[counter] = np.sqrt(np.var(vals[i, j]))
-            #         counter += 1
-            # mean_stdev = np.mean(stdevs)
-            # subsample_writer.write(
-            #     str(m1.shape[0]) + '\t' + str(m2.shape[0]) + '\t' + str(n) +
-            #     '\t' + str(t1) + '\t' + str(t2) + '\t' + str(
-            #         mean_stdev) + '\n')
-            # subsample_writer.flush()
+                perturbed_result = wot.ot.optimal_transport(
+                    cost_matrix=c,
+                    growth_rate=m1_sample[
+                        cell_growth_rates.columns[0]].values,
+                    delta_days=delta_t,
+                    max_transport_fraction=args.max_transport_fraction,
+                    min_transport_fraction=args.min_transport_fraction,
+                    min_growth_fit=args.min_growth_fit,
+                    l0_max=args.l0_max, lambda1=args.lambda1,
+                    lambda2=args.lambda2,
+                    epsilon=args.epsilon,
+                    scaling_iter=args.scaling_iter,
+                    epsilon_adjust=args.epsilon_adjust,
+                    lambda_adjust=args.lambda_adjust, numItermax=args.numItermax,
+                    epsilon0=args.epsilon0,
+                    numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr, solver=solver)
+                perturbed_transport = perturbed_result['transport']
+                name_suffix = ('_' + str(covariate_pair[0]) + '_' + str(
+                    covariate_pair[1])) if args.covariate is not None else ''
+
+                coupling_sample = sample_from_transport_map(m1_mtx_sample,
+                                                            m2_mtx_sample,
+                                                            perturbed_transport)
+                interpolated_point_clouds.append({
+                    'm': coupling_sample[0] + args.t_interpolate * (coupling_sample[1] - coupling_sample[0]),
+                    'weights': coupling_sample[2], 'name': 'I\'' + name_suffix})
+                random_coupling_sample = sample_randomly(m1_mtx_sample,
+                                                         m2_mtx_sample,
+                                                         perturbed_transport,
+                                                         m1_sample[
+                                                             cell_growth_rates.columns[
+                                                                 0]].values ** delta_t)
+
+                random_point_clouds.append({
+                    'm': random_coupling_sample[0] + args.t_interpolate * (
+                            random_coupling_sample[1] - random_coupling_sample[0]),
+                    'weights': None, 'name': 'R' + str(args.t_interpolate) + name_suffix})
+
+            # compare all pairs of Is and Rs
+
+            for i in range(1, len(interpolated_point_clouds)):
+                for j in range(i):
+                    write_point_cloud_distance(interpolated_point_clouds[i]['m'], interpolated_point_clouds[j]['m'],
+                                               interpolated_point_clouds[i]['weights'],
+                                               interpolated_point_clouds[j]['weights'],
+                                               interpolated_point_clouds[i]['name'],
+                                               interpolated_point_clouds[j]['name'])
+                    write_point_cloud_distance(random_point_clouds[i]['m'], random_point_clouds[j]['m'],
+                                               random_point_clouds[i]['weights'],
+                                               random_point_clouds[j]['weights'],
+                                               random_point_clouds[i]['name'],
+                                               random_point_clouds[j]['name'])
+                # I' vs. P0.5
+                # for i in range(len(interpolated_point_clouds)):
+                #     write_point_cloud_distance(interpolated_point_clouds[i]['m'], p_0_5,
+                #                                interpolated_point_clouds[i]['weights'], None,
+                #                                'P' + str(args.t_interpolate), i_name)
 
 if subsample_writer is not None:
     subsample_writer.close()
