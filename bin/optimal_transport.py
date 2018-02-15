@@ -480,20 +480,27 @@ for day_index in range(day_pairs.shape[0]):
                                            'P' + str(args.t_interpolate),
                                            'P' + str(args.t_interpolate))
             else:
+                seen = {}  # keep track of [c1,c2] and [c2, c1] as they are redundant
                 for covariate_pair in covariate_pairs:
-                    subset1 = p_0_5[p_0_5[covariate_df.columns[0]] == covariate_pair[0]]
-                    subset2 = p_0_5[p_0_5[covariate_df.columns[0]] == covariate_pair[1]]
-                    write_point_cloud_distance(subset1.drop(fields_to_drop_for_distance, axis=1).values,
-                                               subset2.drop(fields_to_drop_for_distance, axis=1).values, None, None,
-                                               'P' + str(args.t_interpolate) + '_' + str(covariate_pair[0]),
-                                               'P' + str(args.t_interpolate) + '_' + str(covariate_pair[1]))
+                    key = list(covariate_pair)
+                    key.sort()
+                    key = tuple(key)
+                    if covariate_pair[0] != covariate_pair[1] and seen.get(key) is None:
+                        seen[key] = True
+                        subset1 = p_0_5[p_0_5[covariate_df.columns[0]] == covariate_pair[0]]
+                        subset2 = p_0_5[p_0_5[covariate_df.columns[0]] == covariate_pair[1]]
+                        write_point_cloud_distance(subset1.drop(fields_to_drop_for_distance, axis=1).values,
+                                                   subset2.drop(fields_to_drop_for_distance, axis=1).values, None, None,
+                                                   'P' + str(args.t_interpolate) + '_' + str(covariate_pair[0]),
+                                                   'P' + str(args.t_interpolate) + '_' + str(covariate_pair[1]))
 
             # I' to I' self distance and R to R self distance
             self_distance_iters = args.subsample_iter if not args.covariate else len(covariate_pairs)
             interpolated_point_clouds = []
             random_point_clouds = []
             for self_distance_iter in range(self_distance_iters):
-
+                if args.verbose:
+                    print('Computing sampled transport map...', end='')
                 if args.covariate:
                     covariate_pair = covariate_pairs[self_distance_iter]  # pairs of [[C1, C2],[C2, C2], ...]
                     m1_indices = np.where(m1[covariate_df.columns[0]] == covariate_pair[0])[0]
@@ -525,6 +532,8 @@ for day_index in range(day_pairs.shape[0]):
                     lambda_adjust=args.lambda_adjust, numItermax=args.numItermax,
                     epsilon0=args.epsilon0,
                     numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr, solver=solver)
+                if args.verbose:
+                    print('done')
                 perturbed_transport = perturbed_result['transport']
                 name_suffix = ('_' + str(covariate_pair[0]) + '_' + str(
                     covariate_pair[1])) if args.covariate is not None else ''
