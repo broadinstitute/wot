@@ -462,7 +462,10 @@ for day_index in range(day_pairs.shape[0]):
             # D(R0.5, R0.5) split randomly in two or all covariate splits
             # D(I0.5, I0.5) = split randomly in two or all covariate splits
 
-            # pairs I0.5, R0.5 and P0.5.
+            # pairs I0.5, R0.5 and P0.5 and maybe(P0 and P1)
+            if not args.quick:
+                point_clouds.append({'m': p0, 'weights': None, 'name': 'P0'});
+                point_clouds.append({'m': p1, 'weights': None, 'name': 'P1'});
             for i in range(1, len(point_clouds)):
                 pc1 = point_clouds[i]
                 for j in range(i):
@@ -503,58 +506,60 @@ for day_index in range(day_pairs.shape[0]):
                     print('Computing sampled transport map...', end='')
                 if args.covariate:
                     covariate_pair = covariate_pairs[self_distance_iter]  # pairs of [[C1, C2],[C2, C2], ...]
-                    m1_indices = np.where(m1[covariate_df.columns[0]] == covariate_pair[0])[0]
-                    m2_indices = np.where(m2[covariate_df.columns[0]] == covariate_pair[1])[0]
+                    m1_indices_list = [np.where(m1[covariate_df.columns[0]] == covariate_pair[0])[0]]
+                    m2_indices_list = [np.where(m2[covariate_df.columns[0]] == covariate_pair[1])[0]]
                 else:
-                    m1_indices = np.random.choice(m1.shape[0], int(m1.shape[0] * 0.5))
-                    m2_indices = np.random.choice(m2.shape[0], int(m2.shape[0] * 0.5))
+                    m1_indices_list = split_in_two(m1.shape[0])
+                    m2_indices_list = split_in_two(m2.shape[0])
 
-                m1_sample = m1.iloc[m1_indices]
-                m2_sample = m2.iloc[m2_indices]
-                m1_mtx_sample = m1_sample.drop(fields_to_drop_for_distance, axis=1).values
-                m2_mtx_sample = m2_sample.drop(fields_to_drop_for_distance, axis=1).values
-                c = sklearn.metrics.pairwise.pairwise_distances(m1_mtx_sample, Y=m2_mtx_sample, metric='sqeuclidean')
-                c = c / np.median(c)
+                for inner_index in range(len(m1_indices_list)):
+                    m1_sample = m1.iloc[m1_indices_list[inner_index]]
+                    m2_sample = m2.iloc[m2_indices_list[inner_index]]
+                    m1_mtx_sample = m1_sample.drop(fields_to_drop_for_distance, axis=1).values
+                    m2_mtx_sample = m2_sample.drop(fields_to_drop_for_distance, axis=1).values
+                    c = sklearn.metrics.pairwise.pairwise_distances(m1_mtx_sample, Y=m2_mtx_sample,
+                                                                    metric='sqeuclidean')
+                    c = c / np.median(c)
 
-                perturbed_result = wot.ot.optimal_transport(
-                    cost_matrix=c,
-                    growth_rate=m1_sample[
-                        cell_growth_rates.columns[0]].values,
-                    delta_days=delta_t,
-                    max_transport_fraction=args.max_transport_fraction,
-                    min_transport_fraction=args.min_transport_fraction,
-                    min_growth_fit=args.min_growth_fit,
-                    l0_max=args.l0_max, lambda1=args.lambda1,
-                    lambda2=args.lambda2,
-                    epsilon=args.epsilon,
-                    scaling_iter=args.scaling_iter,
-                    epsilon_adjust=args.epsilon_adjust,
-                    lambda_adjust=args.lambda_adjust, numItermax=args.numItermax,
-                    epsilon0=args.epsilon0,
-                    numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr, solver=solver)
-                if args.verbose:
-                    print('done')
-                perturbed_transport = perturbed_result['transport']
-                name_suffix = ('_' + str(covariate_pair[0]) + '_' + str(
-                    covariate_pair[1])) if args.covariate is not None else ''
+                    perturbed_result = wot.ot.optimal_transport(
+                        cost_matrix=c,
+                        growth_rate=m1_sample[
+                            cell_growth_rates.columns[0]].values,
+                        delta_days=delta_t,
+                        max_transport_fraction=args.max_transport_fraction,
+                        min_transport_fraction=args.min_transport_fraction,
+                        min_growth_fit=args.min_growth_fit,
+                        l0_max=args.l0_max, lambda1=args.lambda1,
+                        lambda2=args.lambda2,
+                        epsilon=args.epsilon,
+                        scaling_iter=args.scaling_iter,
+                        epsilon_adjust=args.epsilon_adjust,
+                        lambda_adjust=args.lambda_adjust, numItermax=args.numItermax,
+                        epsilon0=args.epsilon0,
+                        numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr, solver=solver)
+                    if args.verbose:
+                        print('done')
+                    perturbed_transport = perturbed_result['transport']
+                    name_suffix = ('_' + str(covariate_pair[0]) + '_' + str(
+                        covariate_pair[1])) if args.covariate is not None else ''
 
-                coupling_sample = sample_from_transport_map(m1_mtx_sample,
-                                                            m2_mtx_sample,
-                                                            perturbed_transport)
-                interpolated_point_clouds.append({
-                    'm': coupling_sample[0] + args.t_interpolate * (coupling_sample[1] - coupling_sample[0]),
-                    'weights': coupling_sample[2], 'name': 'I\'' + name_suffix})
-                random_coupling_sample = sample_randomly(m1_mtx_sample,
-                                                         m2_mtx_sample,
-                                                         perturbed_transport,
-                                                         m1_sample[
-                                                             cell_growth_rates.columns[
-                                                                 0]].values ** delta_t)
+                    coupling_sample = sample_from_transport_map(m1_mtx_sample,
+                                                                m2_mtx_sample,
+                                                                perturbed_transport)
+                    interpolated_point_clouds.append({
+                        'm': coupling_sample[0] + args.t_interpolate * (coupling_sample[1] - coupling_sample[0]),
+                        'weights': coupling_sample[2], 'name': 'I\'' + name_suffix})
+                    random_coupling_sample = sample_randomly(m1_mtx_sample,
+                                                             m2_mtx_sample,
+                                                             perturbed_transport,
+                                                             m1_sample[
+                                                                 cell_growth_rates.columns[
+                                                                     0]].values ** delta_t)
 
-                random_point_clouds.append({
-                    'm': random_coupling_sample[0] + args.t_interpolate * (
-                            random_coupling_sample[1] - random_coupling_sample[0]),
-                    'weights': None, 'name': 'R' + str(args.t_interpolate) + name_suffix})
+                    random_point_clouds.append({
+                        'm': random_coupling_sample[0] + args.t_interpolate * (
+                                random_coupling_sample[1] - random_coupling_sample[0]),
+                        'weights': None, 'name': 'R' + str(args.t_interpolate) + name_suffix})
 
             # compare all pairs of Is and Rs
 
