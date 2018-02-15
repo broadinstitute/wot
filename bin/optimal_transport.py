@@ -506,8 +506,8 @@ for day_index in range(day_pairs.shape[0]):
                     m1_indices = np.where(m1[covariate_df.columns[0]] == covariate_pair[0])[0]
                     m2_indices = np.where(m2[covariate_df.columns[0]] == covariate_pair[1])[0]
                 else:
-                    m1_indices = split_in_two(m1.shape[0])
-                    m2_indices = split_in_two(m2.shape[0])
+                    m1_indices = np.random.choice(m1.shape[0], int(m1.shape[0] * 0.5))
+                    m2_indices = np.random.choice(m2.shape[0], int(m2.shape[0] * 0.5))
 
                 m1_sample = m1.iloc[m1_indices]
                 m2_sample = m2.iloc[m2_indices]

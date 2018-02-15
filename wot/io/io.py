@@ -281,7 +281,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
 
             row_indices = list(row_indices)
             if len(row_indices) is 0:
-                raise ValueError('No row indices passed')
+                raise ValueError('No row indices passed filter')
 
         data = {}
         for key in g:
