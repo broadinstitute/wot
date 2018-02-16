@@ -458,7 +458,7 @@ for day_index in range(day_pairs.shape[0]):
                             {'m': uniform_random_inferred, 'weights': None, 'name': 'RU' + str(args.t_interpolate)}]
 
             # self distances
-            # D(P0.5, P0.5) split according to condition instead of in half
+            # D(P0.5, P0.5) split randomly in two or all covariate splits
             # D(R0.5, R0.5) split randomly in two or all covariate splits
             # D(I0.5, I0.5) = split randomly in two or all covariate splits
 
@@ -560,26 +560,42 @@ for day_index in range(day_pairs.shape[0]):
                         'm': random_coupling_sample[0] + args.t_interpolate * (
                                 random_coupling_sample[1] - random_coupling_sample[0]),
                         'weights': None, 'name': 'R' + str(args.t_interpolate) + name_suffix})
-
-            # compare all pairs of Is and Rs
-
-            for i in range(1, len(interpolated_point_clouds)):
-                for j in range(i):
-                    write_point_cloud_distance(interpolated_point_clouds[i]['m'], interpolated_point_clouds[j]['m'],
-                                               interpolated_point_clouds[i]['weights'],
-                                               interpolated_point_clouds[j]['weights'],
-                                               interpolated_point_clouds[i]['name'],
-                                               interpolated_point_clouds[j]['name'])
-                    write_point_cloud_distance(random_point_clouds[i]['m'], random_point_clouds[j]['m'],
-                                               random_point_clouds[i]['weights'],
-                                               random_point_clouds[j]['weights'],
-                                               random_point_clouds[i]['name'],
-                                               random_point_clouds[j]['name'])
-                # I' vs. P0.5
-                # for i in range(len(interpolated_point_clouds)):
-                #     write_point_cloud_distance(interpolated_point_clouds[i]['m'], p_0_5,
-                #                                interpolated_point_clouds[i]['weights'], None,
-                #                                'P' + str(args.t_interpolate), i_name)
+                if not args.covariate:
+                    # compare 50-50 splits of Is and Rs
+                    for i in range(1, len(interpolated_point_clouds)):
+                        for j in range(i):
+                            write_point_cloud_distance(interpolated_point_clouds[i]['m'],
+                                                       interpolated_point_clouds[j]['m'],
+                                                       interpolated_point_clouds[i]['weights'],
+                                                       interpolated_point_clouds[j]['weights'],
+                                                       interpolated_point_clouds[i]['name'],
+                                                       interpolated_point_clouds[j]['name'])
+                            write_point_cloud_distance(random_point_clouds[i]['m'], random_point_clouds[j]['m'],
+                                                       random_point_clouds[i]['weights'],
+                                                       random_point_clouds[j]['weights'],
+                                                       random_point_clouds[i]['name'],
+                                                       random_point_clouds[j]['name'])
+                    interpolated_point_clouds = []
+                    random_point_clouds = []
+            # compare all covariate pairs of Is and Rs
+            if args.covariate:
+                for i in range(1, len(interpolated_point_clouds)):
+                    for j in range(i):
+                        write_point_cloud_distance(interpolated_point_clouds[i]['m'], interpolated_point_clouds[j]['m'],
+                                                   interpolated_point_clouds[i]['weights'],
+                                                   interpolated_point_clouds[j]['weights'],
+                                                   interpolated_point_clouds[i]['name'],
+                                                   interpolated_point_clouds[j]['name'])
+                        write_point_cloud_distance(random_point_clouds[i]['m'], random_point_clouds[j]['m'],
+                                                   random_point_clouds[i]['weights'],
+                                                   random_point_clouds[j]['weights'],
+                                                   random_point_clouds[i]['name'],
+                                                   random_point_clouds[j]['name'])
+                    # I' vs. P0.5
+                    # for i in range(len(interpolated_point_clouds)):
+                    #     write_point_cloud_distance(interpolated_point_clouds[i]['m'], p_0_5,
+                    #                                interpolated_point_clouds[i]['weights'], None,
+                    #                                'P' + str(args.t_interpolate), i_name)
 
 if subsample_writer is not None:
     subsample_writer.close()
