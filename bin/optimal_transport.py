@@ -472,7 +472,7 @@ for day_index in range(day_pairs.shape[0]):
                     pc2 = point_clouds[j]
                     write_point_cloud_distance(pc1['m'], pc2['m'],
                                                pc1['weights'],
-                                               pc1['weights'],
+                                               pc2['weights'],
                                                pc1['name'], pc2['name'])
 
             # P0.5 to P0.5 self point cloud distance
