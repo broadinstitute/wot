@@ -464,8 +464,8 @@ for day_index in range(day_pairs.shape[0]):
 
             # pairs I0.5, R0.5 and P0.5 and maybe(P0 and P1)
             if not args.quick:
-                point_clouds.append({'m': p0, 'weights': None, 'name': 'P0'});
-                point_clouds.append({'m': p1, 'weights': None, 'name': 'P1'});
+                point_clouds.append({'m': m1_mtx, 'weights': None, 'name': 'P0'});
+                point_clouds.append({'m': m2_mtx, 'weights': None, 'name': 'P1'});
             for i in range(1, len(point_clouds)):
                 pc1 = point_clouds[i]
                 for j in range(i):
