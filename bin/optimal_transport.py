@@ -450,10 +450,11 @@ for day_index in range(day_pairs.shape[0]):
             # uniform_random_inferred = m1_uniform_random_subset + args.t_interpolate * (
             #         m2_uniform_random_subset - m1_uniform_random_subset)
             p_0_5_mtx = p_0_5.drop(fields_to_drop_for_distance, axis=1).values
-            point_clouds = [{'m': p_0_5_mtx, 'weights': None,
+            point_clouds = [{'m': p_0_5_mtx,
+                             'weights': None,
                              'name': 'P' + str(args.t_interpolate)},
-                            {'m': inferred, 'weights': m1_m2_subset_weights, 'name': 'I' + str(args.t_interpolate)},
-                            {'m': random_inferred, 'weights': None, 'name': 'R' + str(args.t_interpolate)}]
+                            {'m': inferred, 'weights': m1_m2_subset_weights, 'name': 'I' + str(args.t_interpolate)}]
+            #  {'m': random_inferred, 'weights': None, 'name': 'R' + str(args.t_interpolate)}
             # {'m': uniform_random_inferred, 'weights': None, 'name': 'RU' + str(args.t_interpolate)}
 
             # self distances
@@ -465,9 +466,16 @@ for day_index in range(day_pairs.shape[0]):
             if not args.quick:
                 point_clouds.append({'m': m1_mtx, 'weights': None, 'name': 'P0'})
                 point_clouds.append({'m': m2_mtx, 'weights': None, 'name': 'P1'})
-                point_clouds.append({'m': np.concatenate((m1_mtx, m2_mtx)), 'weights': None, 'name': 'P0+P1'})
                 point_clouds.append(
-                    {'m': np.concatenate((inferred, p_0_5_mtx)), 'weights': None,
+                    {'m': np.concatenate((m1_mtx, m2_mtx)),
+                     'weights': np.concatenate((np.ones((m1_mtx.shape[0]), dtype=np.float64) / m1_mtx.shape[
+                         0], np.ones((m2_mtx.shape[0]), dtype=np.float64) / m2_mtx.shape[
+                                                    0])) / 2,
+                     'name': 'P0+P1'})
+                point_clouds.append(
+                    {'m': np.concatenate((inferred, p_0_5_mtx)),
+                     'weights': np.concatenate((np.ones((inferred.shape[0]), dtype=np.float64) / inferred.shape[
+                         0], np.ones((p_0_5_mtx.shape[0]), dtype=np.float64) / p_0_5_mtx.shape[0])) / 2,
                      'name': 'I' + str(args.t_interpolate) + '+P' + str(args.t_interpolate)})
             # pairs of point cloud distances
             for i in range(1, len(point_clouds)):
