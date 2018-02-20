@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import argparse
 import wot.ot
+import wot.io
 import pandas as pd
 import numpy as np
 import sklearn.metrics.pairwise
-import csv
 import ot as pot
-import os
-import io
 
 
 # from gslrandom import PyRNG, multinomial
@@ -91,7 +88,8 @@ def sample_from_transport_map(exp1, exp2, tm):
         l = l / l.sum()
         pairs = np.random.multinomial(args.npairs, l, size=1)
         pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
-        return exp1[pairs[0]], exp2[pairs[1]], None
+        return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]], 'indices0': pairs[0], 'indices1': pairs[1],
+                'weights': None}
 
 
 def split_in_two(n):
@@ -212,6 +210,7 @@ parser.add_argument('--npairs', type=int)
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
 parser.add_argument('--no_i', action='store_true', help='Do not include interpolated point clouds in computations')
 parser.add_argument('--no_p', action='store_true', help='Do not include non-interpolated point clouds in computations')
+parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
 args = parser.parse_args()
 ot_helper = wot.ot.OptimalTransportHelper(args)
 covariate_df = None
@@ -282,9 +281,19 @@ def callback(cb_args):
     if result is not None:
         p0_p1_map = result['transport']
 
-        tm_subset0, tm_subset1, p0_m1_subset_weights = sample_from_transport_map(p0_mtx, p1_mtx, p0_p1_map)
-        inferred = tm_subset0 + args.t_interpolate * (tm_subset1 - tm_subset0)
+        tm_sample = sample_from_transport_map(p0_mtx, p1_mtx, p0_p1_map)
+        tm_subset0 = tm_sample['pc0']
+        tm_subset1 = tm_sample['pc1']
+        p0_m1_subset_weights = tm_sample['weights']
+        # p0_m1_subset_weights =
 
+        inferred = tm_subset0 + args.t_interpolate * (tm_subset1 - tm_subset0)
+        if args.save:
+            wot.io.write_dataset(wot.Dataset(inferred, pd.DataFrame(
+                index=p0.iloc[tm_sample['indices0']].index + ';' + p1.iloc[tm_sample['indices1']].index),
+                                             pd.DataFrame(
+                                                 index=pd.RangeIndex(start=0, stop=inferred.shape[1], step=1))),
+                                 args.prefix + '_I_' + str(t0) + '_' + str(t1) + '.txt')
         # m1_random_subset, m2_random_subset = sample_randomly(p0_mtx, p1_mtx, p0_p1_map, p0[
         #     cell_growth_rates.columns[0]].values ** delta_t)
         # random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
