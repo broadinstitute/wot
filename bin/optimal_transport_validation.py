@@ -229,17 +229,18 @@ covariate_df = None
 #     covariate_pairs = [['', '']]
 
 ot_helper = wot.ot.OptimalTransportHelper(args, join=None if covariate_df is None else [covariate_df])
-
-subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
-subsample_writer.write(
-    't0'
-    + '\t' + 't1'
-    + '\t' + 'distance'
-    + '\t' + 'pair0'
-    + '\t' + 'pair1'
-    + '\t' + 'epsilon'
-    + '\t' + 'lambda'
-    + '\t' + 'power' + '\n')
+subsample_writer = None
+if not args.no_i or not args.no_p:
+    subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
+    subsample_writer.write(
+        't0'
+        + '\t' + 't1'
+        + '\t' + 'distance'
+        + '\t' + 'pair0'
+        + '\t' + 'pair1'
+        + '\t' + 'epsilon'
+        + '\t' + 'lambda'
+        + '\t' + 'power' + '\n')
 
 fields_to_drop_for_distance = ot_helper.fields_to_drop_for_distance
 computed = {}
@@ -285,27 +286,42 @@ def callback(cb_args):
         tm_subset0 = tm_sample['pc0']
         tm_subset1 = tm_sample['pc1']
         p0_m1_subset_weights = tm_sample['weights']
-        # p0_m1_subset_weights =
 
         inferred = tm_subset0 + args.t_interpolate * (tm_subset1 - tm_subset0)
+        I = {'m': inferred, 'weights': p0_m1_subset_weights, 'name': 'I' + t_interpolate_s, 't': inferred_time}
+        if not args.no_i:
+            compute_self_distance(I)
+            for i in range(len(static_point_clouds)):
+                compute_distances(static_point_clouds[i], I)
         if args.save:
-            wot.io.write_dataset(wot.Dataset(inferred, pd.DataFrame(
-                index=p0.iloc[tm_sample['indices0']].index + ';' + p1.iloc[tm_sample['indices1']].index),
+            inferred_row_meta = pd.DataFrame(
+                index=p0.iloc[tm_sample['indices0']].index + ';' + p1.iloc[tm_sample['indices1']].index)
+            # save inferred matrix
+            wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta,
                                              pd.DataFrame(
                                                  index=pd.RangeIndex(start=0, stop=inferred.shape[1], step=1))),
-                                 args.prefix + '_I_' + str(t0) + '_' + str(t1) + '.txt')
-        # m1_random_subset, m2_random_subset = sample_randomly(p0_mtx, p1_mtx, p0_p1_map, p0[
-        #     cell_growth_rates.columns[0]].values ** delta_t)
-        # random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
+                                 args.prefix + '_I_' + str(inferred_time) + '.txt')
 
-        # m1_uniform_random_subset, m2_uniform_random_subset = sample_uniformly(p0_mtx, p1_mtx, p0_p1_map)
-        # uniform_random_inferred = m1_uniform_random_subset + args.t_interpolate * (
-        #         m2_uniform_random_subset - m1_uniform_random_subset)
+            I_P0_5_distance = sklearn.metrics.pairwise.pairwise_distances(inferred, Y=p_0_5_mtx, metric='sqeuclidean')
+            # save cost matrix
+            wot.io.write_dataset(wot.Dataset(I_P0_5_distance, inferred_row_meta, pd.DataFrame(index=p_0_5.index)),
+                                 args.prefix + '_cost_I' + str(inferred_time) + '_P_' + str(
+                                     inferred_time) + '.txt')
+            coupling = pot.emd(np.ones((I_P0_5_distance.shape[0]), dtype=np.float64) / I_P0_5_distance.shape[0],
+                               np.ones((I_P0_5_distance.shape[1]), dtype=np.float64) / I_P0_5_distance.shape[1],
+                               I_P0_5_distance, numItermax=10000000)
+            # save coupling
+            wot.io.write_dataset(wot.Dataset(coupling, inferred_row_meta, pd.DataFrame(index=p_0_5.index)),
+                                 args.prefix + '_transport_I' + str(inferred_time) + '_P_' + str(
+                                     inferred_time) + '.txt')
 
-        I = {'m': inferred, 'weights': p0_m1_subset_weights, 'name': 'I' + t_interpolate_s, 't': inferred_time}
-        compute_self_distance(I)
-        for i in range(len(static_point_clouds)):
-            compute_distances(static_point_clouds[i], I)
+            # m1_random_subset, m2_random_subset = sample_randomly(p0_mtx, p1_mtx, p0_p1_map, p0[
+            #     cell_growth_rates.columns[0]].values ** delta_t)
+            # random_inferred = m1_random_subset + args.t_interpolate * (m2_random_subset - m1_random_subset)
+
+            # m1_uniform_random_subset, m2_uniform_random_subset = sample_uniformly(p0_mtx, p1_mtx, p0_p1_map)
+            # uniform_random_inferred = m1_uniform_random_subset + args.t_interpolate * (
+            #         m2_uniform_random_subset - m1_uniform_random_subset)
             # {'m': random_inferred, 'weights': None, 'name': 'R' + t_interpolate_s}
             # {'m': uniform_random_inferred, 'weights': None, 'name': 'RU' + t_interpolate_s}
 
@@ -493,7 +509,7 @@ def callback(cb_args):
             #                                'P' + t_interpolate_s, i_name)
 
 
-if not args.no_i:
+if not args.no_i or args.save:
     ot_helper.compute_transport_maps(callback)
 else:
     for day_index in range(ot_helper.day_pairs.shape[0]):
@@ -507,4 +523,5 @@ else:
         p1 = ot_helper.group_by_day.get_group(t1)
         callback({'t0': t0, 't1': t1, 'p0': p0, 'p1': p1, 'result': None})
 
-subsample_writer.close()
+if subsample_writer is not None:
+    subsample_writer.close()
