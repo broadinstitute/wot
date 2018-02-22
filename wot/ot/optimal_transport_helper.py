@@ -88,7 +88,9 @@ class OptimalTransportHelper:
                                             'cell ids and growth rates per day.')
         parser.add_argument('--diagonal', help='Diagonal scaling matrix')
         parser.add_argument('--power', help='Diagonal scaling power', type=float)
-
+        parser.add_argument('--covariate',
+                            help='Two column tab delimited file without header with '
+                                 'cell ids and covariate value')
         parser.add_argument('--solver',
                             help='Solver to use when computing transport maps. One of unbalanced, floating_epsilon, '
                                  'sinkhorn_epsilon, unregularized',
@@ -99,7 +101,7 @@ class OptimalTransportHelper:
                             help='Print progress information')
         return parser
 
-    def __init__(self, args, join=None):
+    def __init__(self, args):
         eigenvals = None
         if args.diagonal is not None:
             eigenvals = np.loadtxt(args.diagonal, delimiter='\n')
@@ -145,10 +147,24 @@ class OptimalTransportHelper:
         fields_to_drop_for_distance = [days_data_frame.columns[0], cell_growth_rates.columns[0]]
         gene_expression = gene_expression.join(cell_growth_rates).join(days_data_frame)
 
-        if join is not None:
-            for f in join:
-                gene_expression = gene_expression.join(f)
-                fields_to_drop_for_distance.append(f.columns[0])
+        if args.covariate is not None:
+            covariate_df = pd.read_table(args.covariate, index_col=0,
+                                         header=None, names=['covariate'],
+                                         quoting=csv.QUOTE_NONE, engine='python',
+                                         sep=None)
+            gene_expression = gene_expression.join(covariate_df)
+            fields_to_drop_for_distance.append(covariate_df.columns[0])
+            import itertools
+
+            unique_covariates = list(pd.unique(covariate_df[covariate_df.columns[0]].values))
+            # unique_covariates.append(None)
+            covariate_pairs = list(itertools.product(unique_covariates, unique_covariates))
+            self.covariate_pairs = covariate_pairs
+            self.covariate_df = covariate_df
+            self.unique_covariates = unique_covariates
+        else:
+            self.covariate_pairs = [[None, None]]
+            self.covariate_df = None
         group_by_day = gene_expression.groupby(days_data_frame.columns[0])
         if args.verbose:
             print('Computing ' + str(day_pairs.shape[0]) + ' transport map' + 's' if
@@ -165,6 +181,8 @@ class OptimalTransportHelper:
         fields_to_drop_for_distance = self.fields_to_drop_for_distance
         cell_growth_rates = self.cell_growth_rates
         args = self.args
+        covariate_df = self.covariate_df
+        covariate_pairs = self.covariate_pairs
         for day_index in range(day_pairs.shape[0]):
             t0 = day_pairs.iloc[day_index, 0]
             t1 = day_pairs.iloc[day_index, 1]
@@ -172,38 +190,48 @@ class OptimalTransportHelper:
                     t1) is None:
                 print('skipping transport map from ' + str(t0) + ' to ' + str(t1))
                 continue
-            p0 = group_by_day.get_group(t0)
-            p1 = group_by_day.get_group(t1)
+            p0_full = group_by_day.get_group(t0)
+            p1_full = group_by_day.get_group(t1)
+
             delta_t = t1 - t0
-            if args.verbose:
-                print(
-                    'Computing transport map from ' + str(
-                        t0) + ' to ' + str(
-                        t1) + '...', end='')
+            for covariate_pair in covariate_pairs:
+                cv0 = covariate_pair[0]
+                p0 = p0_full if cv0 is None else p0_full[p0_full[covariate_df.columns[0]] == cv0]
+                cv1 = covariate_pair[1]
+                p1 = p1_full if cv1 is None else p1_full[p1_full[covariate_df.columns[0]] == cv1]
+                if args.verbose:
+                    print(
+                        'Computing transport map from ' + str(
+                            t0) + ' to ' + str(
+                            t1) + '...', end='')
 
-            cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
-                p0.drop(fields_to_drop_for_distance, axis=1).values,
-                p1.drop(fields_to_drop_for_distance, axis=1).values,
-                metric='sqeuclidean')
-            cost_matrix = cost_matrix / np.median(cost_matrix)
-            result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
-                                              growth_rate=p0[
-                                                  cell_growth_rates.columns[0]].values,
-                                              delta_days=delta_t,
-                                              max_transport_fraction=args.max_transport_fraction,
-                                              min_transport_fraction=args.min_transport_fraction,
-                                              min_growth_fit=args.min_growth_fit,
-                                              l0_max=args.l0_max, lambda1=args.lambda1,
-                                              lambda2=args.lambda2,
-                                              epsilon=args.epsilon,
-                                              scaling_iter=args.scaling_iter,
-                                              epsilon_adjust=args.epsilon_adjust,
-                                              lambda_adjust=args.lambda_adjust,
-                                              numItermax=args.numItermax,
-                                              epsilon0=args.epsilon0,
-                                              numInnerItermax=args.numInnerItermax, tau=args.tau, stopThr=args.stopThr,
-                                              solver=args.solver)
+                cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
+                    p0.drop(fields_to_drop_for_distance, axis=1).values,
+                    p1.drop(fields_to_drop_for_distance, axis=1).values,
+                    metric='sqeuclidean')
+                cost_matrix = cost_matrix / np.median(cost_matrix)
+                result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
+                                                  growth_rate=p0[
+                                                      cell_growth_rates.columns[0]].values,
+                                                  delta_days=delta_t,
+                                                  max_transport_fraction=args.max_transport_fraction,
+                                                  min_transport_fraction=args.min_transport_fraction,
+                                                  min_growth_fit=args.min_growth_fit,
+                                                  l0_max=args.l0_max, lambda1=args.lambda1,
+                                                  lambda2=args.lambda2,
+                                                  epsilon=args.epsilon,
+                                                  scaling_iter=args.scaling_iter,
+                                                  epsilon_adjust=args.epsilon_adjust,
+                                                  lambda_adjust=args.lambda_adjust,
+                                                  numItermax=args.numItermax,
+                                                  epsilon0=args.epsilon0,
+                                                  numInnerItermax=args.numInnerItermax, tau=args.tau,
+                                                  stopThr=args.stopThr,
+                                                  solver=args.solver)
 
-            if args.verbose:
-                print('done')
-            callback({'t0': t0, 't1': t1, 'p0': p0, 'p1': p1, 'result': result})
+                if args.verbose:
+                    print('done')
+                name = (str(cv0) if cv0 is not None else 'full') + '_' + (str(cv1) if cv1 is not None else 'full')
+                callback({'t0': t0, 't1': t1, 'p0': p0.drop(fields_to_drop_for_distance, axis=1).values,
+                          'p1': p1.drop(fields_to_drop_for_distance, axis=1).values,
+                          'result': result, 'name': name})

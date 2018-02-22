@@ -145,13 +145,98 @@ def compute_self_distance(pc):
         print('done')
 
 
+def compute_covariate_self_distance(pc):
+    if args.verbose:
+        print('Computing self distance for ' + pc['name'] + '...', end='')
+    # Self-dist(A, "batch-mode")  = Distance(A1,A2).
+    df = pc['df']
+
+    for i in range(1, len(ot_helper.unique_covariates)):
+        cv0 = ot_helper.unique_covariates[i]
+        p0 = df if cv0 is None else df[df[ot_helper.covariate_df.columns[0]] == cv0]
+        for j in range(i):
+            cv1 = ot_helper.unique_covariates[j]
+            # order doesn't matter for self distances
+            p1 = df if cv1 is None else df[df[ot_helper.covariate_df.columns[0]] == cv1]
+            write_point_cloud_distance(point_cloud1=p0.drop(fields_to_drop_for_distance, axis=1).values,
+                                       point_cloud2=p1.drop(fields_to_drop_for_distance, axis=1).values,
+                                       weights1=None, weights2=None, point_cloud1_name=pc['name'] + '_' + str(cv0),
+                                       point_cloud2_name=pc['name'] + '_' + str(cv1), t0=pc['t'],
+                                       t1=pc['t'])
+    if args.verbose:
+        print('done')
+
+
+def compute_covariate_distances(pc0, pc1):
+    df0 = pc0['df']
+    df1 = pc1['df']
+
+    # In batch mode, when we compute Distance(A,B), we don't do random 80% subsamples.
+    # D(A1,B1), D(A2,B1), D(A1,B2), D(A2,B2)
+
+    # And in batch mode when we compute self-distance for A+B, we don't do random splits of A+B.
+    # Instead, we do:
+    # D(A1+B1,A2+B2),  D(A1+B2, A2+B1)
+
+    if args.verbose:
+        print('Computing distances between ' + pc0['name'] + ' and ' + pc1['name'] + '...', end='')
+
+    # merge all pairs
+    for covariate_pair1 in ot_helper.covariate_pairs:
+        a_cv0 = covariate_pair1[0]
+        a_cv1 = covariate_pair1[1]
+        a_p0 = df0 if a_cv0 is None else df0[df0[ot_helper.covariate_df.columns[0]] == a_cv0]
+        a_p1 = df1 if a_cv1 is None else df1[df1[ot_helper.covariate_df.columns[0]] == a_cv1]
+
+        A = merge_point_clouds(
+            {'m': a_p0.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None,
+             'name': '', 't': t0},
+            {'m': a_p1.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None,
+             'name': '', 't': t0})
+        for covariate_pair2 in ot_helper.covariate_pairs:
+            b_cv0 = covariate_pair2[0]
+            b_cv1 = covariate_pair2[1]
+            if b_cv0 == a_cv0 and b_cv1 == a_cv1:
+                continue
+            p0_2 = df0 if b_cv0 is None else df0[df0[ot_helper.covariate_df.columns[0]] == b_cv0]
+            p1_2 = df1 if b_cv1 is None else df1[df1[ot_helper.covariate_df.columns[0]] == b_cv1]
+            B = merge_point_clouds(
+                {'m': p0_2.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None,
+                 'name': '', 't': t0},
+                {'m': p1_2.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None,
+                 'name': '', 't': t0})
+            write_point_cloud_distance(point_cloud1=A['m'],
+                                       point_cloud2=B['m'],
+                                       weights1=None, weights2=None,
+                                       point_cloud1_name=pc0['name'] + '_' + str(a_cv0) + '+' + pc1['name'] + '_' + str(
+                                           a_cv1),
+                                       point_cloud2_name=pc0['name'] + '_' + str(b_cv0) + '+' + pc1['name'] + '_' + str(
+                                           b_cv1), t0=str(pc0['t']) + '_' + str(pc1['t']),
+                                       t1=str(pc0['t']) + '_' + str(pc1['t']))
+
+    for covariate_pair in ot_helper.covariate_pairs:
+        # do all pairs of distances of pc0 and pc1 including covariate
+        cv0 = covariate_pair[0]
+        cv1 = covariate_pair[1]
+        p0 = df0 if cv0 is None else df0[df0[ot_helper.covariate_df.columns[0]] == cv0]
+        p1 = df1 if cv1 is None else df1[df1[ot_helper.covariate_df.columns[0]] == cv1]
+        write_point_cloud_distance(point_cloud1=p0.drop(fields_to_drop_for_distance, axis=1).values,
+                                   point_cloud2=p1.drop(fields_to_drop_for_distance, axis=1).values,
+                                   weights1=None, weights2=None,
+                                   point_cloud1_name=pc0['name'] + '_' + str(cv0),
+                                   point_cloud2_name=pc1['name'] + '_' + str(cv1),
+                                   t0=pc0['t'],
+                                   t1=pc1['t'])
+    if args.verbose:
+        print('done')
+
+
 def compute_distances(pc0, pc1):
     if args.verbose:
         print('Computing distances between ' + pc0['name'] + ' and ' + pc1['name'] + '...', end='')
     merged = merge_point_clouds(pc0, pc1)
     merged_mtx = merged['m']
     # merge, then split in 2
-
     for k in range(args.resample_iter):
         split_indices1, split_indices2 = split_in_two(merged['m'].shape[0])
         write_point_cloud_distance(point_cloud1=merged_mtx[split_indices1],
@@ -200,9 +285,6 @@ def point_cloud_distance(c1, c2, a=None, b=None):
 
 
 parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute point cloud distances')
-# parser.add_argument('--covariate',
-#                     help='Two column tab delimited file without header with '
-#                          'cell ids and covariate value')
 # parser.add_argument('--quick', action='store_true')
 parser.add_argument('--resample_iter', help='Number of resample iterations to perform', type=int, default=10)
 parser.add_argument('--subsample_percent', help='Percent to subsample from a point cloud', type=float, default=80)
@@ -213,22 +295,8 @@ parser.add_argument('--no_p', action='store_true', help='Do not include non-inte
 parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
 args = parser.parse_args()
 ot_helper = wot.ot.OptimalTransportHelper(args)
-covariate_df = None
-# if args.covariate is not None:
-#     covariate_df = pd.read_table(args.covariate, index_col=0,
-#                                  header=None, names=['covariate'],
-#                                  quoting=csv.QUOTE_NONE, engine='python',
-#                                  sep=None)
-#     import itertools
-#
-#     unique_covariates = pd.unique(covariate_df[covariate_df.columns[0]].values)
-#     covariate_pairs = list(itertools.product(unique_covariates, unique_covariates))
-#     args.resample_iter = 1
-#
-# else:
-#     covariate_pairs = [['', '']]
 
-ot_helper = wot.ot.OptimalTransportHelper(args, join=None if covariate_df is None else [covariate_df])
+ot_helper = wot.ot.OptimalTransportHelper(args)
 subsample_writer = None
 if not args.no_i or not args.no_p:
     subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
@@ -243,77 +311,108 @@ if not args.no_i or not args.no_p:
         + '\t' + 'power' + '\n')
 
 fields_to_drop_for_distance = ot_helper.fields_to_drop_for_distance
-computed = {}
+computed = {}  # avoid duplicate computations
 
 subsample_percent = args.subsample_percent / 100.0
 t_interpolate_s = str(args.t_interpolate)
 group_by_day = ot_helper.group_by_day
 
 
-def callback(cb_args):
+def transport_map_callback(cb_args):
     t0 = cb_args['t0']
     t1 = cb_args['t1']
-    p0 = cb_args['p0']
-    p1 = cb_args['p1']
+
     inferred_time = t0 + (t1 - t0) * args.t_interpolate
-    p_0_5 = group_by_day.get_group(inferred_time)
-    p_0_5_mtx = p_0_5.drop(fields_to_drop_for_distance, axis=1).values
-    p0_mtx = p0.drop(fields_to_drop_for_distance, axis=1).values
-    p1_mtx = p1.drop(fields_to_drop_for_distance, axis=1).values
-    static_point_clouds = list()
-    static_point_clouds.append({'m': p0_mtx, 'weights': None, 'name': 'P0', 't': t0})
-    static_point_clouds.append({'m': p_0_5_mtx, 'weights': None, 'name': 'P' + t_interpolate_s, 't': inferred_time})
-    static_point_clouds.append({'m': p1_mtx, 'weights': None, 'name': 'P1', 't': t1})
+    p0_5 = group_by_day.get_group(inferred_time)
+    p0 = group_by_day.get_group(t0)
+    p1 = group_by_day.get_group(t1)
+
+    point_clouds_to_compare_with_i = list()
+
+    point_clouds_to_compare_with_i.append(
+        {'m': p0.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P0', 't': t0})
+    point_clouds_to_compare_with_i.append(
+        {'m': p0_5.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P' + t_interpolate_s,
+         't': inferred_time})
+    point_clouds_to_compare_with_i.append(
+        {'m': p1.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P1', 't': t1})
+
+    self_distance_function = compute_self_distance
+    compute_distances_function = compute_distances
+    point_clouds = point_clouds_to_compare_with_i
+    if ot_helper.covariate_df is not None:
+        self_distance_function = compute_covariate_self_distance
+        compute_distances_function = compute_covariate_distances
+        dfs = list()
+        dfs.append({'df': p0, 'weights': None, 'name': 'P0', 't': t0})
+        dfs.append({'df': p0_5, 'weights': None, 'name': 'P' + t_interpolate_s, 't': inferred_time})
+        dfs.append({'df': p1, 'weights': None, 'name': 'P1', 't': t1})
+        point_clouds = dfs
+        if not args.no_i:
+            for cloud in dfs:
+                df = cloud['df']
+                for i in range(len(ot_helper.unique_covariates)):
+                    cv = ot_helper.unique_covariates[i]
+                    p = df if cv is None else df[df[ot_helper.covariate_df.columns[0]] == cv]
+                    point_clouds_to_compare_with_i.append(
+                        {'m': p.drop(fields_to_drop_for_distance), 'weights': None,
+                         'name': cloud['name'] + '_' + str(cv), 't': cloud['t']})
+
     if not args.no_p:
-        for i in range(len(static_point_clouds)):
-            name = str(static_point_clouds[i]['t'])
+        for i in range(len(point_clouds)):
+            name = str(point_clouds[i]['t'])
             if computed.get(name) is None:
                 computed[name] = True
-                compute_self_distance(static_point_clouds[i])
-        for i in range(1, len(static_point_clouds)):
+                self_distance_function(point_clouds[i])
+        for i in range(1, len(point_clouds)):
             for j in range(i):
-                name = str(static_point_clouds[i]['t']) + str(
-                    static_point_clouds[j]['t'])  # avoid duplicate computations
+                name = str(point_clouds[i]['t']) + str(
+                    point_clouds[j]['t'])
                 if computed.get(name) is None:
                     computed[name] = True
-                    compute_distances(static_point_clouds[j], static_point_clouds[i])
+                    compute_distances_function(point_clouds[j], point_clouds[i])
 
-    result = cb_args['result']
-    if result is not None:
-        p0_p1_map = result['transport']
+    transport_result = cb_args['result']
+    if transport_result is not None:
+        p0_p1_map = transport_result['transport']
 
-        tm_sample = sample_from_transport_map(p0_mtx, p1_mtx, p0_p1_map)
+        tm_sample = sample_from_transport_map(cb_args['p0'], cb_args['p1'], p0_p1_map)
         tm_subset0 = tm_sample['pc0']
         tm_subset1 = tm_sample['pc1']
         p0_m1_subset_weights = tm_sample['weights']
 
         inferred = tm_subset0 + args.t_interpolate * (tm_subset1 - tm_subset0)
-        I = {'m': inferred, 'weights': p0_m1_subset_weights, 'name': 'I' + t_interpolate_s, 't': inferred_time}
+        I = {'m': inferred, 'weights': p0_m1_subset_weights, 'name': 'I' + t_interpolate_s + '_' + cb_args['name'],
+             't': inferred_time}
         if not args.no_i:
             compute_self_distance(I)
-            for i in range(len(static_point_clouds)):
-                compute_distances(static_point_clouds[i], I)
+            for i in range(len(point_clouds_to_compare_with_i)):
+                compute_distances(point_clouds_to_compare_with_i[i], I)
         if args.save:
             inferred_row_meta = pd.DataFrame(
                 index=p0.iloc[tm_sample['indices0']].index + ';' + p1.iloc[tm_sample['indices1']].index)
             # save inferred matrix
             wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta,
-                                             pd.DataFrame(
-                                                 index=pd.RangeIndex(start=0, stop=inferred.shape[1], step=1))),
+                                             pd.DataFrame(index=p0_5.columns)),
                                  args.prefix + '_I_' + str(inferred_time) + '.txt')
 
-            I_P0_5_distance = sklearn.metrics.pairwise.pairwise_distances(inferred, Y=p_0_5_mtx, metric='sqeuclidean')
+            # save actual matrix
+            # wot.io.write_dataset(wot.Dataset(p_0_5_mtx, pd.DataFrame(index=p0_5.index),
+            #                                  pd.DataFrame(index=p0_5.columns)),
+            #                      args.prefix + '_P_' + str(inferred_time) + '.txt')
+            #
+            # I_P0_5_distance = sklearn.metrics.pairwise.pairwise_distances(inferred, Y=p_0_5_mtx, metric='sqeuclidean')
             # save cost matrix
-            wot.io.write_dataset(wot.Dataset(I_P0_5_distance, inferred_row_meta, pd.DataFrame(index=p_0_5.index)),
-                                 args.prefix + '_cost_I' + str(inferred_time) + '_P_' + str(
-                                     inferred_time) + '.txt')
-            coupling = pot.emd(np.ones((I_P0_5_distance.shape[0]), dtype=np.float64) / I_P0_5_distance.shape[0],
-                               np.ones((I_P0_5_distance.shape[1]), dtype=np.float64) / I_P0_5_distance.shape[1],
-                               I_P0_5_distance, numItermax=10000000)
+            # wot.io.write_dataset(wot.Dataset(I_P0_5_distance, inferred_row_meta, pd.DataFrame(index=p0_5.index)),
+            #                      args.prefix + '_cost_I' + str(inferred_time) + '_P_' + str(
+            #                          inferred_time) + '.txt')
+            # coupling = pot.emd(np.ones((I_P0_5_distance.shape[0]), dtype=np.float64) / I_P0_5_distance.shape[0],
+            #                    np.ones((I_P0_5_distance.shape[1]), dtype=np.float64) / I_P0_5_distance.shape[1],
+            #                    I_P0_5_distance, numItermax=10000000)
             # save coupling
-            wot.io.write_dataset(wot.Dataset(coupling, inferred_row_meta, pd.DataFrame(index=p_0_5.index)),
-                                 args.prefix + '_transport_I' + str(inferred_time) + '_P_' + str(
-                                     inferred_time) + '.txt')
+            # wot.io.write_dataset(wot.Dataset(coupling, inferred_row_meta, pd.DataFrame(index=p0_5.index)),
+            #                      args.prefix + '_transport_I' + str(inferred_time) + '_P_' + str(
+            #                          inferred_time) + '.txt')
 
             # m1_random_subset, m2_random_subset = sample_randomly(p0_mtx, p1_mtx, p0_p1_map, p0[
             #     cell_growth_rates.columns[0]].values ** delta_t)
@@ -510,7 +609,7 @@ def callback(cb_args):
 
 
 if not args.no_i or args.save:
-    ot_helper.compute_transport_maps(callback)
+    ot_helper.compute_transport_maps(transport_map_callback)
 else:
     for day_index in range(ot_helper.day_pairs.shape[0]):
         t0 = ot_helper.day_pairs.iloc[day_index, 0]
@@ -519,9 +618,11 @@ else:
                 t1) is None:
             print('skipping transport map from ' + str(t0) + ' to ' + str(t1))
             continue
-        p0 = ot_helper.group_by_day.get_group(t0)
-        p1 = ot_helper.group_by_day.get_group(t1)
-        callback({'t0': t0, 't1': t1, 'p0': p0, 'p1': p1, 'result': None})
+        p0_full = ot_helper.group_by_day.get_group(t0)
+        p1_full = ot_helper.group_by_day.get_group(t1)
+        transport_map_callback({'t0': t0, 't1': t1, 'p0': p0_full.drop(fields_to_drop_for_distance, axis=1).values,
+                                'p1': p1_full.drop(fields_to_drop_for_distance, axis=1).values,
+                                'result': None, 'name': None})
 
 if subsample_writer is not None:
     subsample_writer.close()
