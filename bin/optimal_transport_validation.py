@@ -377,11 +377,11 @@ def transport_map_callback(cb_args):
         p0_p1_map = transport_result['transport']
 
         tm_sample = sample_from_transport_map(cb_args['p0'], cb_args['p1'], p0_p1_map)
-        tm_subset0 = tm_sample['pc0']
-        tm_subset1 = tm_sample['pc1']
+        pc0 = tm_sample['pc0']
+        pc1 = tm_sample['pc1']
         p0_m1_subset_weights = tm_sample['weights']
 
-        inferred = tm_subset0 + args.t_interpolate * (tm_subset1 - tm_subset0)
+        inferred = pc0 + args.t_interpolate * (pc1 - pc0)
         I = {'m': inferred, 'weights': p0_m1_subset_weights, 'name': 'I' + t_interpolate_s + '_' + cb_args['name'],
              't': inferred_time}
         if not args.no_i:
@@ -390,7 +390,7 @@ def transport_map_callback(cb_args):
                 compute_distances(point_clouds_to_compare_with_i[i], I)
         if args.save:
             inferred_row_meta = pd.DataFrame(
-                index=p0.iloc[tm_sample['indices0']].index + ';' + p1.iloc[tm_sample['indices1']].index)
+                index=cb_args['df0'].iloc[tm_sample['indices0']].index + ';' + cb_args['df1'].iloc[tm_sample['indices1']].index)
             # save inferred matrix
             wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta,
                                              pd.DataFrame(

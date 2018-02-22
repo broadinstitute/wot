@@ -234,4 +234,4 @@ class OptimalTransportHelper:
                 name = (str(cv0) if cv0 is not None else 'full') + '_' + (str(cv1) if cv1 is not None else 'full')
                 callback({'t0': t0, 't1': t1, 'p0': p0.drop(fields_to_drop_for_distance, axis=1).values,
                           'p1': p1.drop(fields_to_drop_for_distance, axis=1).values,
-                          'result': result, 'name': name})
+                          'result': result, 'name': name, 'df0': p0, 'df1': p1})
