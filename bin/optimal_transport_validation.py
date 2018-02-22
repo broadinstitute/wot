@@ -393,7 +393,8 @@ def transport_map_callback(cb_args):
                 index=p0.iloc[tm_sample['indices0']].index + ';' + p1.iloc[tm_sample['indices1']].index)
             # save inferred matrix
             wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta,
-                                             pd.DataFrame(index=p0_5.columns)),
+                                             pd.DataFrame(
+                                                 index=p0_5.drop(fields_to_drop_for_distance, axis=1).columns)),
                                  args.prefix + '_I_' + str(inferred_time) + '.txt')
 
             # save actual matrix
