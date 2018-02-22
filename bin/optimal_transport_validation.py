@@ -355,7 +355,7 @@ def transport_map_callback(cb_args):
                     cv = ot_helper.unique_covariates[i]
                     p = df if cv is None else df[df[ot_helper.covariate_df.columns[0]] == cv]
                     point_clouds_to_compare_with_i.append(
-                        {'m': p.drop(fields_to_drop_for_distance), 'weights': None,
+                        {'m': p.drop(fields_to_drop_for_distance, axis=1), 'weights': None,
                          'name': cloud['name'] + '_' + str(cv), 't': cloud['t']})
 
     if not args.no_p:
