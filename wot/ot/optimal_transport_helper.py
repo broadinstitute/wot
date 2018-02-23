@@ -69,6 +69,8 @@ class OptimalTransportHelper:
         parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda for floating_epsilon solver',
                             type=float, default=1.5)
 
+        parser.add_argument('--beta_min', type=float, default=0, help='Growth function parameter')
+        parser.add_argument('--delta_min', type=float, default=0.15, help='Growth function parameter')
         parser.add_argument('--beta_max', type=float, default=1.7, help='Growth function parameter')
         parser.add_argument('--beta_center', type=float, default=0.25, help='Growth function parameter')
         parser.add_argument('--delta_max', type=float, default=1.7, help='Growth function parameter')
@@ -135,7 +137,8 @@ class OptimalTransportHelper:
             proliferation = gene_set_scores['Cell.cycle']
             g = wot.ot.compute_growth_scores(proliferation.values, apoptosis.values, beta_max=args.beta_max,
                                              beta_center=args.beta_center,
-                                             delta_max=args.delta_max)
+                                             delta_max=args.delta_max, delta_min=args.delta_min,
+                                             beta_min=args.beta_min)
             cell_growth_rates = pd.DataFrame(index=gene_set_scores.index,
                                              data={'cell_growth_rate': g})
 
