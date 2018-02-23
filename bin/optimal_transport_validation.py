@@ -259,6 +259,7 @@ def compute_distances(pc0, pc1):
                                      int(pc0['m'].shape[0] * subsample_percent))
         indices_j = np.random.choice(pc1['m'].shape[0],
                                      int(pc1['m'].shape[0] * subsample_percent))
+
         write_point_cloud_distance(point_cloud1=pc0['m'][indices_i],
                                    point_cloud2=pc1['m'][indices_j],
                                    weights1=None, weights2=None,
@@ -357,9 +358,10 @@ def transport_map_callback(cb_args):
                 for i in range(len(ot_helper.unique_covariates)):
                     cv = ot_helper.unique_covariates[i]
                     p = df if cv is None else df[df[ot_helper.covariate_df.columns[0]] == cv]
-                    point_clouds_to_compare_with_i.append(
-                        {'m': p.drop(fields_to_drop_for_distance, axis=1), 'weights': None,
-                         'name': cloud['name'] + '_' + str(cv), 't': cloud['t']})
+                    if p.shape[0] > 0:
+                        point_clouds_to_compare_with_i.append(
+                            {'m': p.drop(fields_to_drop_for_distance, axis=1), 'weights': None,
+                             'name': cloud['name'] + '_' + str(cv), 't': cloud['t']})
 
     if not args.no_p:
         for i in range(len(point_clouds)):
@@ -389,8 +391,18 @@ def transport_map_callback(cb_args):
              't': inferred_time}
         if not args.no_i:
             compute_self_distance(I)
-            for i in range(len(point_clouds_to_compare_with_i)):
-                compute_distances(point_clouds_to_compare_with_i[i], I)
+            if args.covariate is not None:
+                for i in range(len(point_clouds_to_compare_with_i)):
+                    write_point_cloud_distance(point_cloud1=point_clouds_to_compare_with_i[i]['m'],
+                                               point_cloud2=I['m'],
+                                               weights1=None, weights2=None,
+                                               point_cloud1_name=point_clouds_to_compare_with_i[i]['name'],
+                                               point_cloud2_name=I['name'],
+                                               t0=point_clouds_to_compare_with_i[i]['t'],
+                                               t1=I['t'])
+            else:
+                for i in range(len(point_clouds_to_compare_with_i)):
+                    compute_distances(point_clouds_to_compare_with_i[i], I)
         if args.save:
             inferred_row_meta = pd.DataFrame(
                 index=cb_args['df0'].iloc[tm_sample['indices0']].index + ';' + cb_args['df1'].iloc[
