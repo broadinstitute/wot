@@ -271,6 +271,9 @@ def compute_distances(pc0, pc1):
 
 
 def point_cloud_distance(c1, c2, a=None, b=None):
+    if ot_helper.eigenvals is not None:
+        c1 = c1.dot(ot_helper.eigenvals)
+        c2 = c2.dot(ot_helper.eigenvals)
     cloud_distances = sklearn.metrics.pairwise.pairwise_distances(c1, Y=c2, metric='sqeuclidean')
 
     if a is None:
@@ -390,7 +393,8 @@ def transport_map_callback(cb_args):
                 compute_distances(point_clouds_to_compare_with_i[i], I)
         if args.save:
             inferred_row_meta = pd.DataFrame(
-                index=cb_args['df0'].iloc[tm_sample['indices0']].index + ';' + cb_args['df1'].iloc[tm_sample['indices1']].index)
+                index=cb_args['df0'].iloc[tm_sample['indices0']].index + ';' + cb_args['df1'].iloc[
+                    tm_sample['indices1']].index)
             # save inferred matrix
             wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta,
                                              pd.DataFrame(

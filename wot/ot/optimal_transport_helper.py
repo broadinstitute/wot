@@ -9,6 +9,7 @@ import os
 
 
 class OptimalTransportHelper:
+
     @staticmethod
     def create_base_parser(description):
         parser = argparse.ArgumentParser(
@@ -124,8 +125,7 @@ class OptimalTransportHelper:
                                         engine='python', sep=None,
                                         dtype={'day': np.float32})
 
-        if eigenvals is not None:
-            gene_expression = gene_expression.dot(np.diag(eigenvals))
+        self.eigenvals = np.diag(eigenvals) if eigenvals is not None else None
 
         if args.gene_set_scores is not None:
             gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0,
@@ -175,6 +175,14 @@ class OptimalTransportHelper:
         self.cell_growth_rates = cell_growth_rates
         self.args = args
 
+    def compute_cost_matrix(self, a, b):
+        if self.eigenvals is not None:
+            a = a.dot(self.eigenvals)
+            b = b.dot(self.eigenvals)
+        cost_matrix = sklearn.metrics.pairwise.pairwise_distances(a, b, metric='sqeuclidean')
+        cost_matrix = cost_matrix / np.median(cost_matrix)
+        return cost_matrix
+
     def compute_transport_maps(self, callback):
         day_pairs = self.day_pairs
         group_by_day = self.group_by_day
@@ -204,12 +212,10 @@ class OptimalTransportHelper:
                         'Computing transport map from ' + str(
                             t0) + ' to ' + str(
                             t1) + '...', end='')
-
-                cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
+                cost_matrix = self.compute_cost_matrix(
                     p0.drop(fields_to_drop_for_distance, axis=1).values,
-                    p1.drop(fields_to_drop_for_distance, axis=1).values,
-                    metric='sqeuclidean')
-                cost_matrix = cost_matrix / np.median(cost_matrix)
+                    p1.drop(fields_to_drop_for_distance, axis=1).values)
+
                 result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
                                                   growth_rate=p0[
                                                       cell_growth_rates.columns[0]].values,
