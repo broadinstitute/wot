@@ -27,7 +27,7 @@ class OptimalTransportHelper:
                                  'pairs of days to compute transport maps for',
                             required=True)
 
-        parser.add_argument('--epsilon', type=float, default=0.1,
+        parser.add_argument('--epsilon', type=float, default=0.05,
                             help='Controls the entropy of the transport map. An '
                                  'extremely large entropy parameter will give a '
                                  'maximally entropic transport map, and an '
@@ -59,7 +59,7 @@ class OptimalTransportHelper:
                                  'fidelity '
                                  'of the constraints on q',
                             type=float)
-        parser.add_argument('--scaling_iter', default=250,
+        parser.add_argument('--scaling_iter', default=3000,
                             help='Number of scaling iterations', type=int)
         parser.add_argument('--min_growth_fit', type=float, default=0.9)
         parser.add_argument('--l0_max', type=float, default=100)
@@ -77,9 +77,9 @@ class OptimalTransportHelper:
 
         parser.add_argument('--numItermax', type=int, default=100, help='For sinkhorn_epsilon solver')
         parser.add_argument('--epsilon0', type=float, default=1, help='For sinkhorn_epsilon and unbalanced solvers')
-        parser.add_argument('--numInnerItermax', type=int, default=10,
+        parser.add_argument('--numInnerItermax', type=int, default=50,
                             help='For sinkhorn_epsilon and unbalanced solvers')
-        parser.add_argument('--tau', type=float, default=100000, help='For sinkhorn_epsilon and unbalanced solvers')
+        parser.add_argument('--tau', type=float, default=10000, help='For sinkhorn_epsilon and unbalanced solvers')
         parser.add_argument('--stopThr', type=float, default=1e-10, help='For sinkhorn_epsilon solver')
 
         growth_rate_group = parser.add_mutually_exclusive_group(required=True)
