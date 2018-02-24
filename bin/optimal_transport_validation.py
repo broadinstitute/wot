@@ -133,7 +133,7 @@ def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, p
 
 def compute_self_distance(pc):
     if args.verbose:
-        print('Computing self distance for ' + pc['name'] + '...', end='')
+        print('Computing self distance for ' + pc['name'] + ' ' + str(pc['t']) + '...', end='')
 
     for k in range(args.resample_iter):
         split_indices1, split_indices2 = split_in_two(pc['m'].shape[0])
@@ -148,7 +148,7 @@ def compute_self_distance(pc):
 
 def compute_covariate_self_distance(pc):
     if args.verbose:
-        print('Computing self distance for ' + pc['name'] + '...', end='')
+        print('Computing self distance for ' + pc['name'] + ' ' + str(pc['t']) + '...', end='')
     # Self-dist(A, "batch-mode")  = Distance(A1,A2).
     df = pc['df']
 
@@ -180,7 +180,8 @@ def compute_covariate_distances(pc0, pc1):
     # D(A1+B1,A2+B2),  D(A1+B2, A2+B1)
 
     if args.verbose:
-        print('Computing distances between ' + pc0['name'] + ' and ' + pc1['name'] + '...', end='')
+        print('Computing distances between ' + pc0['name'] + ' ' + str(pc0['t']) + ' and ' + pc1['name'] + ' ' + str(
+            pc1['t']) + '...', end='')
 
     # merge all pairs
     for covariate_pair1 in ot_helper.covariate_pairs:
@@ -234,7 +235,8 @@ def compute_covariate_distances(pc0, pc1):
 
 def compute_distances(pc0, pc1):
     if args.verbose:
-        print('Computing distances between ' + pc0['name'] + ' and ' + pc1['name'] + '...', end='')
+        print('Computing distances between ' + pc0['name'] + ' ' + str(pc0['t']) + ' and ' + pc1['name'] + ' ' + str(
+            pc1['t']) + '...', end='')
     merged = merge_point_clouds(pc0, pc1)
     merged_mtx = merged['m']
     # merge, then split in 2
@@ -290,7 +292,7 @@ def point_cloud_distance(c1, c2, a=None, b=None):
 
 
 parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute point cloud distances')
-# parser.add_argument('--quick', action='store_true')
+
 parser.add_argument('--resample_iter', help='Number of resample iterations to perform', type=int, default=10)
 parser.add_argument('--subsample_percent', help='Percent to subsample from a point cloud', type=float, default=80)
 parser.add_argument('--npairs', type=int, default=10000)
@@ -298,6 +300,8 @@ parser.add_argument('--t_interpolate', help='Interpolation fraction between two 
 parser.add_argument('--no_i', action='store_true', help='Do not include interpolated point clouds in computations')
 parser.add_argument('--no_p', action='store_true', help='Do not include non-interpolated point clouds in computations')
 parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
+parser.add_argument('--quick', action='store_true', help='Compute I0.5 vs P0.5, P0 vs P0.5, and P1 vs P0.5 only')
+
 args = parser.parse_args()
 ot_helper = wot.ot.OptimalTransportHelper(args)
 
@@ -335,25 +339,29 @@ def transport_map_callback(cb_args):
     p1 = group_by_day.get_group(t1)
 
     point_clouds_to_compare_with_i = list()
+    if not args.quick:
+        point_clouds_to_compare_with_i.append(
+            {'m': p0.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P0', 't': t0})
+        point_clouds_to_compare_with_i.append(
+            {'m': p1.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P1', 't': t1})
 
-    point_clouds_to_compare_with_i.append(
-        {'m': p0.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P0', 't': t0})
     point_clouds_to_compare_with_i.append(
         {'m': p0_5.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P' + t_interpolate_s,
          't': inferred_time})
-    point_clouds_to_compare_with_i.append(
-        {'m': p1.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P1', 't': t1})
 
     self_distance_function = compute_self_distance
     compute_distances_function = compute_distances
     point_clouds = point_clouds_to_compare_with_i
+
     if ot_helper.covariate_df is not None:
         self_distance_function = compute_covariate_self_distance
         compute_distances_function = compute_covariate_distances
         dfs = list()
-        dfs.append({'df': p0, 'weights': None, 'name': 'P0', 't': t0})
+        if not args.quick:
+            dfs.append({'df': p0, 'weights': None, 'name': 'P0', 't': t0})
+            dfs.append({'df': p1, 'weights': None, 'name': 'P1', 't': t1})
         dfs.append({'df': p0_5, 'weights': None, 'name': 'P' + t_interpolate_s, 't': inferred_time})
-        dfs.append({'df': p1, 'weights': None, 'name': 'P1', 't': t1})
+
         point_clouds = dfs
         if not args.no_i:
             for cloud in dfs:
