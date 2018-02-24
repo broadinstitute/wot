@@ -69,12 +69,6 @@ class OptimalTransportHelper:
         parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda for floating_epsilon solver',
                             type=float, default=1.5)
 
-        parser.add_argument('--beta_min', type=float, default=0, help='Growth function parameter')
-        parser.add_argument('--delta_min', type=float, default=0.15, help='Growth function parameter')
-        parser.add_argument('--beta_max', type=float, default=1.7, help='Growth function parameter')
-        parser.add_argument('--beta_center', type=float, default=0.25, help='Growth function parameter')
-        parser.add_argument('--delta_max', type=float, default=1.7, help='Growth function parameter')
-
         parser.add_argument('--numItermax', type=int, default=100, help='For sinkhorn_epsilon solver')
         parser.add_argument('--epsilon0', type=float, default=1, help='For sinkhorn_epsilon and unbalanced solvers')
         parser.add_argument('--numInnerItermax', type=int, default=50,
@@ -82,9 +76,15 @@ class OptimalTransportHelper:
         parser.add_argument('--tau', type=float, default=10000, help='For sinkhorn_epsilon and unbalanced solvers')
         parser.add_argument('--stopThr', type=float, default=1e-10, help='For sinkhorn_epsilon solver')
 
+        parser.add_argument('--beta_min', type=float, default=0, help='Growth function parameter')
+        parser.add_argument('--delta_min', type=float, default=0.15, help='Growth function parameter')
+        parser.add_argument('--beta_max', type=float, default=1.7, help='Growth function parameter')
+        parser.add_argument('--beta_center', type=float, default=0.25, help='Growth function parameter')
+        parser.add_argument('--delta_max', type=float, default=1.7, help='Growth function parameter')
+
         growth_rate_group = parser.add_mutually_exclusive_group(required=True)
-        growth_rate_group.add_argument('--gene_set_scores',
-                                       help='File containing "Cell.cycle" and "Apoptosis" scores')
+        growth_rate_group.add_argument('--gene_set_scores', help='File containing "Cell.cycle" and "Apoptosis" scores')
+
         growth_rate_group.add_argument('--cell_growth_rates',
                                        help='Two column tab delimited file without '
                                             'header with '
