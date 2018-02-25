@@ -116,9 +116,11 @@ def merge_point_clouds(point_cloud0, point_cloud1):
 
 
 def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, point_cloud1_name,
-                               point_cloud2_name, t0, t1):
+                               point_cloud2_name, t0, t1, interval_start, interval_end):
     subsample_writer.write(
-        str(t0)
+        str(interval_start)
+        + '\t' + str(interval_end)
+        + '\t' + str(t0)
         + '\t' + str(t1)
         + '\t' + str(point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2))
         + '\t' + point_cloud1_name
@@ -131,7 +133,7 @@ def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, p
     subsample_writer.flush()
 
 
-def compute_self_distance(pc):
+def compute_self_distance(pc, interval_start, interval_end):
     if args.verbose:
         print('Computing self distance for ' + pc['name'] + ' ' + str(pc['t']) + '...', end='')
 
@@ -141,12 +143,12 @@ def compute_self_distance(pc):
                                    point_cloud2=pc['m'][split_indices2],
                                    weights1=None, weights2=None, point_cloud1_name=pc['name'],
                                    point_cloud2_name=pc['name'], t0=pc['t'],
-                                   t1=pc['t'])
+                                   t1=pc['t'], interval_start=interval_start, interval_end=interval_end)
     if args.verbose:
         print('done')
 
 
-def compute_covariate_self_distance(pc):
+def compute_covariate_self_distance(pc, interval_start, interval_end):
     if args.verbose:
         print('Computing self distance for ' + pc['name'] + ' ' + str(pc['t']) + '...', end='')
     # Self-dist(A, "batch-mode")  = Distance(A1,A2).
@@ -163,12 +165,12 @@ def compute_covariate_self_distance(pc):
                                        point_cloud2=p1.drop(fields_to_drop_for_distance, axis=1).values,
                                        weights1=None, weights2=None, point_cloud1_name=pc['name'] + '_' + str(cv0),
                                        point_cloud2_name=pc['name'] + '_' + str(cv1), t0=pc['t'],
-                                       t1=pc['t'])
+                                       t1=pc['t'], interval_start=interval_start, interval_end=interval_end)
     if args.verbose:
         print('done')
 
 
-def compute_covariate_distances(pc0, pc1):
+def compute_covariate_distances(pc0, pc1, interval_start, interval_end):
     df0 = pc0['df']
     df1 = pc1['df']
 
@@ -214,7 +216,8 @@ def compute_covariate_distances(pc0, pc1):
                                            a_cv1),
                                        point_cloud2_name=pc0['name'] + '_' + str(b_cv0) + '+' + pc1['name'] + '_' + str(
                                            b_cv1), t0=str(pc0['t']) + '_' + str(pc1['t']),
-                                       t1=str(pc0['t']) + '_' + str(pc1['t']))
+                                       t1=str(pc0['t']) + '_' + str(pc1['t']), interval_start=interval_start,
+                                       interval_end=interval_end)
 
     for covariate_pair in ot_helper.covariate_pairs:
         # do all pairs of distances of pc0 and pc1 including covariate
@@ -228,12 +231,12 @@ def compute_covariate_distances(pc0, pc1):
                                    point_cloud1_name=pc0['name'] + '_' + str(cv0),
                                    point_cloud2_name=pc1['name'] + '_' + str(cv1),
                                    t0=pc0['t'],
-                                   t1=pc1['t'])
+                                   t1=pc1['t'], interval_start=interval_start, interval_end=interval_end)
     if args.verbose:
         print('done')
 
 
-def compute_distances(pc0, pc1):
+def compute_distances(pc0, pc1, interval_start, interval_end):
     if args.verbose:
         print('Computing distances between ' + pc0['name'] + ' ' + str(pc0['t']) + ' and ' + pc1['name'] + ' ' + str(
             pc1['t']) + '...', end='')
@@ -246,7 +249,7 @@ def compute_distances(pc0, pc1):
                                    point_cloud2=merged_mtx[split_indices2],
                                    weights1=None, weights2=None, point_cloud1_name=merged['name'],
                                    point_cloud2_name=merged['name'], t0=pc0['t'],
-                                   t1=pc1['t'])
+                                   t1=pc1['t'], interval_start=interval_start, interval_end=interval_end)
 
     # full point cloud
     write_point_cloud_distance(point_cloud1=pc0['m'],
@@ -255,7 +258,7 @@ def compute_distances(pc0, pc1):
                                point_cloud1_name=pc0['name'],
                                point_cloud2_name=pc1['name'],
                                t0=pc0['t'],
-                               t1=pc1['t'])
+                               t1=pc1['t'], interval_start=interval_start, interval_end=interval_end)
     # take % from each cloud
     for k in range(args.resample_iter):
         indices_i = np.random.choice(pc0['m'].shape[0],
@@ -269,7 +272,7 @@ def compute_distances(pc0, pc1):
                                    point_cloud1_name=pc0['name'] + '_sub',
                                    point_cloud2_name=pc1['name'] + '_sub',
                                    t0=pc0['t'],
-                                   t1=pc1['t'])
+                                   t1=pc1['t'], interval_start=interval_start, interval_end=interval_end)
     if args.verbose:
         print('done')
 
@@ -310,7 +313,9 @@ subsample_writer = None
 if not args.no_i or not args.no_p:
     subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
     subsample_writer.write(
-        't0'
+        'interval_start'
+        + '\t' + 'interval_end'
+        + '\t' + 't0'
         + '\t' + 't1'
         + '\t' + 'distance'
         + '\t' + 'pair0'
@@ -378,15 +383,16 @@ def transport_map_callback(cb_args):
         for i in range(len(point_clouds)):
             name = str(point_clouds[i]['t'])
             if computed.get(name) is None:
-                computed[name] = True
-                self_distance_function(point_clouds[i])
+                # computed[name] = True Do duplicate computes for ease of file parsing
+                self_distance_function(point_clouds[i], t0, t1)
+
         for i in range(1, len(point_clouds)):
             for j in range(i):
                 name = str(point_clouds[i]['t']) + '_' + str(
                     point_clouds[j]['t'])
                 if computed.get(name) is None:
-                    computed[name] = True
-                    compute_distances_function(point_clouds[j], point_clouds[i])
+                    # computed[name] = True
+                    compute_distances_function(point_clouds[j], point_clouds[i], t0, t1)
 
     transport_result = cb_args['result']
     if transport_result is not None:
@@ -401,7 +407,7 @@ def transport_map_callback(cb_args):
         I = {'m': inferred, 'weights': p0_m1_subset_weights, 'name': 'I' + t_interpolate_s + '_' + cb_args['name'],
              't': inferred_time}
         if not args.no_i:
-            compute_self_distance(I)
+            compute_self_distance(I, t0, t1)
             if args.covariate is not None:
                 for i in range(len(point_clouds_to_compare_with_i)):
                     write_point_cloud_distance(point_cloud1=point_clouds_to_compare_with_i[i]['m'],
@@ -410,10 +416,10 @@ def transport_map_callback(cb_args):
                                                point_cloud1_name=point_clouds_to_compare_with_i[i]['name'],
                                                point_cloud2_name=I['name'],
                                                t0=point_clouds_to_compare_with_i[i]['t'],
-                                               t1=I['t'])
+                                               t1=I['t'], interval_start=t0, interval_end=t1)
             else:
                 for i in range(len(point_clouds_to_compare_with_i)):
-                    compute_distances(point_clouds_to_compare_with_i[i], I)
+                    compute_distances(point_clouds_to_compare_with_i[i], I, t0, t1)
         if args.save:
             inferred_row_meta = pd.DataFrame(
                 index=cb_args['df0'].iloc[tm_sample['indices0']].index + ';' + cb_args['df1'].iloc[
