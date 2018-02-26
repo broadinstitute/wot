@@ -74,19 +74,17 @@ def sample_uniformly(exp1, exp2, tm):
 
 
 def sample_from_transport_map(exp1, exp2, tm):
+    probabilties = tm / np.power(tm.sum(axis=0), 1.0 / args.t_interpolate)
+    probabilties = probabilties.flatten()
     if args.npairs is None or args.npairs <= 0:
-        l = tm / tm.sum(axis=0)
-        l = l.flatten()
         # l = l / l.sum()
-        reshaped_tmap = l.reshape(exp1.shape[0], exp2.shape[0])
+        reshaped_tmap = probabilties.reshape(exp1.shape[0], exp2.shape[0])
         q = np.where(reshaped_tmap > args.tm_thresh)
-        qq = np.where(l > args.tm_thresh)
-        return exp1[q[0]], exp2[q[1]], l[qq]
+        qq = np.where(probabilties > args.tm_thresh)
+        return exp1[q[0]], exp2[q[1]], probabilties[qq]
     else:
-        l = tm / tm.sum(axis=0)
-        l = l.flatten()
-        l = l / l.sum()
-        pairs = np.random.multinomial(args.npairs, l, size=1)
+        probabilties = probabilties / probabilties.sum()
+        pairs = np.random.multinomial(args.npairs, probabilties, size=1)
         pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
         return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]], 'indices0': pairs[0], 'indices1': pairs[1],
                 'weights': None}
