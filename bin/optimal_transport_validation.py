@@ -74,7 +74,7 @@ def sample_uniformly(exp1, exp2, tm):
 
 
 def sample_from_transport_map(exp1, exp2, tm):
-    probabilties = tm / np.power(tm.sum(axis=0), 1.0 / args.t_interpolate)
+    probabilties = tm / np.power(tm.sum(axis=0), 1.0 - args.t_interpolate)
     probabilties = probabilties.flatten()
     if args.npairs is None or args.npairs <= 0:
         # l = l / l.sum()
