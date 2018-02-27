@@ -128,6 +128,7 @@ def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, p
         + '\t' + str(args.lambda1)
         + '\t' + str(args.power)
         + '\t' + str(args.beta_min)
+        + '\t' + str(args.delta_min)
         + '\n')
     subsample_writer.flush()
 
@@ -335,8 +336,9 @@ if not args.no_i or not args.no_p:
         + '\t' + 'epsilon'
         + '\t' + 'lambda'
         + '\t' + 'power'
-        + '\t' + 'beta_min' +
-        '\n')
+        + '\t' + 'beta_min'
+        + '\t' + 'delta_min'
+        + '\n')
 
 fields_to_drop_for_distance = ot_helper.fields_to_drop_for_distance
 computed = {}  # avoid duplicate computations
