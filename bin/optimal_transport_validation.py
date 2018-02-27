@@ -194,9 +194,9 @@ def compute_covariate_distances(pc0, pc1, interval_start, interval_end):
 
         A = merge_point_clouds(
             {'m': a_p0.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None,
-             'name': '', 't': t0},
+             'name': '', 't': pc0['t']},
             {'m': a_p1.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None,
-             'name': '', 't': t0})
+             'name': '', 't': pc1['t']})
         for covariate_pair2 in ot_helper.covariate_pairs:
             b_cv0 = covariate_pair2[0]
             b_cv1 = covariate_pair2[1]
@@ -206,9 +206,9 @@ def compute_covariate_distances(pc0, pc1, interval_start, interval_end):
             p1_2 = df1 if b_cv1 is None else df1[df1[ot_helper.covariate_df.columns[0]] == b_cv1]
             B = merge_point_clouds(
                 {'m': p0_2.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None,
-                 'name': '', 't': t0},
+                 'name': '', 't': str(pc0['t']) + '_' + str(pc1['t'])},
                 {'m': p1_2.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None,
-                 'name': '', 't': t0})
+                 'name': '', 't': str(pc0['t']) + '_' + str(pc1['t'])})
             write_point_cloud_distance(point_cloud1=A['m'],
                                        point_cloud2=B['m'],
                                        weights1=None, weights2=None,
@@ -300,8 +300,6 @@ parser.add_argument('--resample_iter', help='Number of resample iterations to pe
 parser.add_argument('--subsample_percent', help='Percent to subsample from a point cloud', type=float, default=80)
 parser.add_argument('--npairs', type=int, default=10000)
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
-parser.add_argument('--no_i', action='store_true', help='Do not include interpolated point clouds in computations')
-parser.add_argument('--no_p', action='store_true', help='Do not include non-interpolated point clouds in computations')
 parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
 parser.add_argument('--quick', choices=['random', 'P0P1'],
                     help='If "random", compute D(I0.5,P0.5), D(I0.5+P0.5,I0.5+P0.5), D(R0.5, P0.5), D(R0.5+P0.5,R0.5+P0.5). '
@@ -322,23 +320,21 @@ else:
                   ['P1', 'I' + t_interpolate_s], ['R' + t_interpolate_s, 'P' + t_interpolate_s],
                   ['R' + t_interpolate_s, 'P0'], ['R' + t_interpolate_s, 'P1']]
 
-subsample_writer = None
-if not args.no_i or not args.no_p:
-    subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
-    subsample_writer.write(
-        'interval_start'
-        + '\t' + 'interval_end'
-        + '\t' + 't0'
-        + '\t' + 't1'
-        + '\t' + 'distance'
-        + '\t' + 'pair0'
-        + '\t' + 'pair1'
-        + '\t' + 'epsilon'
-        + '\t' + 'lambda'
-        + '\t' + 'power'
-        + '\t' + 'beta_min'
-        + '\t' + 'delta_min'
-        + '\n')
+subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
+subsample_writer.write(
+    'interval_start'
+    + '\t' + 'interval_end'
+    + '\t' + 't0'
+    + '\t' + 't1'
+    + '\t' + 'distance'
+    + '\t' + 'pair0'
+    + '\t' + 'pair1'
+    + '\t' + 'epsilon'
+    + '\t' + 'lambda'
+    + '\t' + 'power'
+    + '\t' + 'beta_min'
+    + '\t' + 'delta_min'
+    + '\n')
 
 fields_to_drop_for_distance = ot_helper.fields_to_drop_for_distance
 computed = {}  # avoid duplicate computations
@@ -651,21 +647,5 @@ def transport_map_callback(cb_args):
         #                                'P' + t_interpolate_s, i_name)
 
 
-if not args.no_i or args.save:
-    ot_helper.compute_transport_maps(transport_map_callback)
-else:
-    for day_index in range(ot_helper.day_pairs.shape[0]):
-        t0 = ot_helper.day_pairs.iloc[day_index, 0]
-        t1 = ot_helper.day_pairs.iloc[day_index, 1]
-        if ot_helper.group_by_day.groups.get(t0) is None or ot_helper.group_by_day.groups.get(
-                t1) is None:
-            print('skipping transport map from ' + str(t0) + ' to ' + str(t1))
-            continue
-        p0_full = ot_helper.group_by_day.get_group(t0)
-        p1_full = ot_helper.group_by_day.get_group(t1)
-        transport_map_callback({'t0': t0, 't1': t1, 'p0': p0_full.drop(fields_to_drop_for_distance, axis=1).values,
-                                'p1': p1_full.drop(fields_to_drop_for_distance, axis=1).values,
-                                'result': None, 'name': None})
-
-if subsample_writer is not None:
-    subsample_writer.close()
+ot_helper.compute_transport_maps(transport_map_callback)
+subsample_writer.close()
