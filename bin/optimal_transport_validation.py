@@ -390,7 +390,7 @@ def transport_map_callback(cb_args):
                                  args.prefix + '_I_' + str(inferred_time) + '.txt')
 
         random_sample = sample_randomly(cb_args['p0'], cb_args['p1'], p0_p1_map,
-                                        p0[ot_helper.cell_growth_rates.columns[0]].values ** (t1 - t0))
+                                        p0[ot_helper.cell_growth_rates.columns[0]].values ** (args.t_interpolate - t0))
         pc0 = random_sample['pc0']
         pc1 = random_sample['pc1']
         p0_m1_subset_weights = random_sample['weights']
