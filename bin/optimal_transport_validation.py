@@ -54,7 +54,8 @@ def sample_randomly(exp1, exp2, tm, g):
     p = p / p.sum()
     pairs = np.random.multinomial(n, p, size=1)
     pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
-    return exp1[pairs[0]], exp2[pairs[1]]
+    return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]], 'indices0': pairs[0], 'indices1': pairs[1],
+            'weights': None}
 
 
 def sample_uniformly(exp1, exp2, tm):
