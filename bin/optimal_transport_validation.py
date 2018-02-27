@@ -316,9 +316,10 @@ elif args.quick == 'P0P1':
     pair_names = [['I' + t_interpolate_s, 'P' + t_interpolate_s], ['P0', 'P' + t_interpolate_s],
                   ['P1', 'P' + t_interpolate_s]]
 else:
-    pair_names = [['P0', 'P' + t_interpolate_s], ['P0', 'P' + t_interpolate_s], ['P' + t_interpolate_s, 'P1'],
+    pair_names = [['P0', 'P' + t_interpolate_s], ['P' + t_interpolate_s, 'P1'],
                   ['P0', 'P1'], ['P0', 'I' + t_interpolate_s], ['P' + t_interpolate_s, 'I' + t_interpolate_s],
-                  ['P1', 'I' + t_interpolate_s]]
+                  ['P1', 'I' + t_interpolate_s], ['R' + t_interpolate_s, 'P' + t_interpolate_s],
+                  ['R' + t_interpolate_s, 'P0'], ['R' + t_interpolate_s, 'P1']]
 
 subsample_writer = None
 if not args.no_i or not args.no_p:
