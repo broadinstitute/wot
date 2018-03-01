@@ -173,7 +173,7 @@ class OptimalTransportHelper:
 
         if args.ncells is not None:
             group_by_day = group_by_day.apply(
-                lambda x: x.sample(n=args.ncells) if x.shape[0] > args.ncells else x).groupby(
+                lambda x: x.sample(n=args.ncells, axis=0) if x.shape[0] > args.ncells else x).groupby(
                 days_data_frame.columns[0])
 
         if args.verbose:
