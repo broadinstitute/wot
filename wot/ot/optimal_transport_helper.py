@@ -172,7 +172,9 @@ class OptimalTransportHelper:
         group_by_day = gene_expression.groupby(days_data_frame.columns[0])
 
         if args.ncells is not None:
-            group_by_day.apply(lambda x: x.sample(n=args.ncells) if x.shape[0] > args.ncells else x)
+            group_by_day = group_by_day.apply(
+                lambda x: x.sample(n=args.ncells) if x.shape[0] > args.ncells else x).groupby(
+                days_data_frame.columns[0])
 
         if args.verbose:
             print('Computing ' + str(day_pairs.shape[0]) + ' transport map' + 's' if
