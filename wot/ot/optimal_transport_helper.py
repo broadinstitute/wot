@@ -172,8 +172,10 @@ class OptimalTransportHelper:
         group_by_day = gene_expression.groupby(days_data_frame.columns[0])
 
         if args.ncells is not None:
-            group_by_day = group_by_day.apply(
-                lambda x: x.sample(n=args.ncells, axis=0) if x.shape[0] > args.ncells else x).groupby(
+            tmp = group_by_day.apply(
+                lambda x: x.sample(n=args.ncells, axis=0) if x.shape[0] > args.ncells else x)
+            tmp.index = tmp.index.droplevel()
+            group_by_day = tmp.groupby(
                 days_data_frame.columns[0])
 
         if args.verbose:
