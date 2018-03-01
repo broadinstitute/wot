@@ -38,6 +38,7 @@ class OptimalTransportHelper:
                                  'numerical instability in the algorithm')
         parser.add_argument('--prefix',
                             help='Prefix for ouput file names', required=True)
+        parser.add_argument('--ncells', help='Number of cells to sample from each timepoint', type=int)
 
         parser.add_argument('--max_transport_fraction',
                             default=0.4,
@@ -169,6 +170,10 @@ class OptimalTransportHelper:
             self.covariate_pairs = [[None, None]]
             self.covariate_df = None
         group_by_day = gene_expression.groupby(days_data_frame.columns[0])
+
+        if args.ncells is not None:
+            group_by_day.apply(lambda x: x.sample(n=args.ncells) if x.shape[0] > args.ncells else x)
+
         if args.verbose:
             print('Computing ' + str(day_pairs.shape[0]) + ' transport map' + 's' if
                   day_pairs.shape[0] > 1 else '')
