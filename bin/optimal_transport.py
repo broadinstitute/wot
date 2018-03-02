@@ -44,7 +44,7 @@ def callback(cb_args):
             str(cb_args['t0']) + '\t' + str(cb_args['t1']) + '\t' + str(result['epsilon']) + '\t' + str(
                 result['lambda1']) + '\t' + str(
                 result['lambda2']) + '\n')
-    transport_map = pd.DataFrame(result['transport'], index=cb_args['p0'].index, columns=cb_args['p1'].index)
+    transport_map = pd.DataFrame(result['transport'], index=cb_args['df0'].index, columns=cb_args['df1'].index)
     if args.clusters is not None:
         cluster_transport_map = wot.ot.transport_map_by_cluster(
             transport_map, grouped_by_cluster, cluster_ids)
