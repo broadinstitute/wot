@@ -78,7 +78,7 @@ class OptimalTransportHelper:
         parser.add_argument('--stopThr', type=float, default=1e-10, help='For sinkhorn_epsilon solver')
 
         parser.add_argument('--beta_min', type=float, default=0.3, help='Growth function parameter')
-        parser.add_argument('--delta_min', type=float, default=0.15, help='Growth function parameter')
+        parser.add_argument('--delta_min', type=float, default=0.38, help='Growth function parameter')
         parser.add_argument('--beta_max', type=float, default=1.7, help='Growth function parameter')
         parser.add_argument('--beta_center', type=float, default=0.25, help='Growth function parameter')
         parser.add_argument('--delta_max', type=float, default=1.7, help='Growth function parameter')
@@ -117,16 +117,16 @@ class OptimalTransportHelper:
 
         if not os.path.isfile(args.day_pairs):
             day_pairs = pd.read_table(io.StringIO(args.day_pairs), header=None, names=['t0', 't1'],
-                                      index_col=False, lineterminator=';', sep=',', dtype=np.float32)
+                                      index_col=False, lineterminator=';', sep=',', dtype=np.float64)
         else:
             day_pairs = pd.read_table(args.day_pairs, header=None, names=['t0', 't1'],
                                       index_col=False, quoting=csv.QUOTE_NONE,
-                                      engine='python', sep=None, dtype=np.float32)
+                                      engine='python', sep=None, dtype=np.float64)
 
         days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
                                         names=['day'], quoting=csv.QUOTE_NONE,
                                         engine='python', sep=None,
-                                        dtype={'day': np.float32})
+                                        dtype={'day': np.float64})
 
         self.eigenvals = np.diag(eigenvals) if eigenvals is not None else None
 
