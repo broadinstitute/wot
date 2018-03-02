@@ -8,6 +8,7 @@ import csv
 
 parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute transport maps between pairs of time points')
 parser.add_argument('--compress', action='store_true', help='gzip output files')
+parser.add_argument('--clusters', help='Two column file with cell id and cluster id')
 args = parser.parse_args()
 ot_helper = wot.ot.OptimalTransportHelper(args)
 
@@ -75,7 +76,6 @@ def callback(cb_args):
                          compression='gzip' if
                          args.compress else None, doublequote=False,
                          quoting=csv.QUOTE_NONE)
-
 
 
 ot_helper.compute_transport_maps(callback)
