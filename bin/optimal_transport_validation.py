@@ -323,6 +323,7 @@ parser.add_argument('--subsample_percent', help='Percent to subsample from a poi
 parser.add_argument('--npairs', type=int, default=10000)
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
 parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
+parser.add_argument('--save_transport', action='store_true', help='Save transport maps')
 parser.add_argument('--quick', choices=['random', 'P0P1'],
                     help='If "random", compute D(I0.5,P0.5), D(I0.5+P0.5,I0.5+P0.5), D(R0.5, P0.5), D(R0.5+P0.5,R0.5+P0.5). '
                          + 'If "P0P1", compute D(I0.5,P0.5), D(I0.5+P0.5,I0.5+P0.5), D(P0, P0.5), D(P0+P0.5,P0+P0.5), D(P1, P0.5), D(P1+P0.5,P1+P0.5)')
@@ -396,6 +397,12 @@ def transport_map_callback(cb_args):
     transport_result = cb_args['result']
     if transport_result is not None:
         p0_p1_map = transport_result['transport']
+        if args.save_transport:
+            transport_map = pd.DataFrame(p0_p1_map, index=cb_args['df0'].index, columns=cb_args['df1'].index)
+            transport_map.to_csv(args.prefix + '_' + str(cb_args['t0']) + '_' + str(cb_args['t1']) + '.txt',
+                                 index_label='id',
+                                 sep='\t',
+                                 doublequote=False)
 
         tm_sample = sample_from_transport_map(cb_args['p0'], cb_args['p1'], p0_p1_map)
         pc0 = tm_sample['pc0']
@@ -425,6 +432,14 @@ def transport_map_callback(cb_args):
         point_clouds.append(
             {'m': inferred, 'weights': p0_m1_subset_weights, 'name': 'R' + t_interpolate_s,
              't': inferred_time})
+        if args.save:
+            inferred_row_meta = pd.DataFrame(
+                index=cb_args['df0'].iloc[tm_sample['indices0']].index + ';' + cb_args['df1'].iloc[
+                    tm_sample['indices1']].index)
+            wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta,
+                                             pd.DataFrame(
+                                                 index=p0_5.drop(fields_to_drop_for_distance, axis=1).columns)),
+                                 args.prefix + '_random_' + str(inferred_time) + '.txt')
 
     if ot_helper.covariate_df is not None:
         self_distance_function = compute_covariate_self_distance
