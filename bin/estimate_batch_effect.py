@@ -83,7 +83,7 @@ covariate_df = covariate_df.dropna()
 
 unique_covariates = pd.unique(covariate_df[covariate_df.columns[0]].values)
 unique_days = pd.unique(days_df[days_df.columns[0]].values)
-
+eigenvals = None
 if args.cell_days_filter is not None:
     unique_days = np.intersect1d(unique_days, np.array(args.cell_days_filter))
 if args.diagonal is not None:
