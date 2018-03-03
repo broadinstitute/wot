@@ -216,7 +216,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
         rows, cols, entries = map(int, line)
 
         # x = np.zeros(shape=(cols, rows), dtype=np.float32)
-        V = np.zeros(entries, dtype=np.float32)
+        V = np.zeros(entries)
         entry_number = 0
         I = np.zeros(entries, dtype='intc')
         J = np.zeros(entries, dtype='intc')
@@ -233,7 +233,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             I[entry_number] = j
             J[entry_number] = i
             entry_number += 1
-        x = scipy.sparse.coo_matrix((V, (I, J)), shape=(cols, rows), dtype=np.float32).tocsr()
+        x = scipy.sparse.coo_matrix((V, (I, J)), shape=(cols, rows)).tocsr()
         stream.close()
         if col_meta is None:
             col_meta = pd.DataFrame(index=pd.RangeIndex(start=0,
@@ -354,7 +354,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
                 if line != '':
                     tokens = line.split(sep)
                     row_ids.append(tokens[0])
-                    np_arrays.append(np.array(tokens[1:], dtype=np.float32))
+                    np_arrays.append(np.array(tokens[1:], dtype=np.float64))
                     i += 1
 
             return wot.Dataset(x=np.array(np_arrays),

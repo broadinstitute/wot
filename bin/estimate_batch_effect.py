@@ -64,6 +64,7 @@ parser.add_argument('--cell_days_filter',
 parser.add_argument('--covariate',
                     help='Two column tab delimited file without header with '
                          'cell ids and covariate value')
+parser.add_argument('--niter', help='Number of iterations', type=float, default=50)
 args = parser.parse_args()
 days_df = pd.read_table(args.cell_days, index_col=0, header=None, names=['day'], engine='python', sep=None,
                         dtype={'day': np.float32})
@@ -92,7 +93,7 @@ if eigenvals is not None and args.power is not None:
 if eigenvals is not None:
     ds.x = ds.x.dot(np.diag(eigenvals))
 
-niter = 50
+niter = args.niter
 writer = open(args.prefix + '_batch_estimate.txt', 'w')
 writer.write('time' + '\t' + 'comparison' + '\t' + 'distance' + '\n')
 
