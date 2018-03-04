@@ -434,8 +434,8 @@ def transport_map_callback(cb_args):
              't': inferred_time})
         if args.save:
             inferred_row_meta = pd.DataFrame(
-                index=cb_args['df0'].iloc[tm_sample['indices0']].index + ';' + cb_args['df1'].iloc[
-                    tm_sample['indices1']].index)
+                index=cb_args['df0'].iloc[random_sample['indices0']].index + ';' + cb_args['df1'].iloc[
+                    random_sample['indices1']].index)
             wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta,
                                              pd.DataFrame(
                                                  index=p0_5.drop(fields_to_drop_for_distance, axis=1).columns)),
