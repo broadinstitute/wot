@@ -59,7 +59,7 @@ def sample_randomly(exp1, exp2, tm, g):
     reshaped_s = s.reshape(exp1.shape[0], exp2.shape[0])
     pairs = np.nonzero(reshaped_s)
     weights = reshaped_s[pairs]
-    return {'pc0': exp1[pairs[0]] * weights[:, None], 'pc1': exp2[pairs[1]] * weights[:, None],
+    return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]],
             'indices0': pairs[0],
             'indices1': pairs[1],
             'weights': weights}
@@ -99,7 +99,7 @@ def sample_from_transport_map(exp1, exp2, tm):
         reshaped_s = s.reshape(exp1.shape[0], exp2.shape[0])
         pairs = np.nonzero(reshaped_s)
         weights = reshaped_s[pairs]
-        return {'pc0': exp1[pairs[0]] * weights[:, None], 'pc1': exp2[pairs[1]] * weights[:, None],
+        return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]],
                 'indices0': pairs[0],
                 'indices1': pairs[1],
                 'weights': weights}
