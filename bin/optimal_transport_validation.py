@@ -95,7 +95,6 @@ def sample_from_transport_map(exp1, exp2, tm):
         # pairs = np.random.multinomial(args.npairs, probabilties, size=1)
         # pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
         #  return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]], 'indices0': pairs[0], 'indices1': pairs[1], 'weights': None}
-        probabilties = probabilties / probabilties.sum()
         s = np.random.multinomial(args.npairs, probabilties, size=1)
         reshaped_s = s.reshape(exp1.shape[0], exp2.shape[0])
         pairs = np.nonzero(reshaped_s)
