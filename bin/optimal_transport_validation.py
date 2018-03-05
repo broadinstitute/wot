@@ -51,11 +51,18 @@ def sample_randomly(exp1, exp2, tm, g):
     q = np.ones(exp2.shape[0]) * np.average(g)
     p = np.outer(p, q)
     p = p.flatten()
-    p = p / p.sum()
-    pairs = np.random.multinomial(n, p, size=1)
-    pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
-    return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]], 'indices0': pairs[0], 'indices1': pairs[1],
-            'weights': None}
+    probabilties = p / p.sum()
+    # pairs = np.random.multinomial(n, p, size=1)
+    # pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
+
+    s = np.random.multinomial(n, probabilties, size=1)
+    reshaped_s = s.reshape(exp1.shape[0], exp2.shape[0])
+    pairs = np.nonzero(reshaped_s)
+    weights = reshaped_s[pairs]
+    return {'pc0': exp1[pairs[0]] * weights[:, None], 'pc1': exp2[pairs[1]] * weights[:, None],
+            'indices0': pairs[0],
+            'indices1': pairs[1],
+            'weights': weights}
 
 
 def sample_uniformly(exp1, exp2, tm):
@@ -85,10 +92,18 @@ def sample_from_transport_map(exp1, exp2, tm):
         return exp1[q[0]], exp2[q[1]], probabilties[qq]
     else:
         probabilties = probabilties / probabilties.sum()
-        pairs = np.random.multinomial(args.npairs, probabilties, size=1)
-        pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
-        return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]], 'indices0': pairs[0], 'indices1': pairs[1],
-                'weights': None}
+        # pairs = np.random.multinomial(args.npairs, probabilties, size=1)
+        # pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
+        #  return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]], 'indices0': pairs[0], 'indices1': pairs[1], 'weights': None}
+        probabilties = probabilties / probabilties.sum()
+        s = np.random.multinomial(args.npairs, probabilties, size=1)
+        reshaped_s = s.reshape(exp1.shape[0], exp2.shape[0])
+        pairs = np.nonzero(reshaped_s)
+        weights = reshaped_s[pairs]
+        return {'pc0': exp1[pairs[0]] * weights[:, None], 'pc1': exp2[pairs[1]] * weights[:, None],
+                'indices0': pairs[0],
+                'indices1': pairs[1],
+                'weights': weights}
 
 
 def split_in_two(n):
