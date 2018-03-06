@@ -151,24 +151,8 @@ class OptimalTransportHelper:
         fields_to_drop_for_distance = [days_data_frame.columns[0], cell_growth_rates.columns[0]]
         gene_expression = gene_expression.join(cell_growth_rates).join(days_data_frame)
 
-        if args.covariate is not None:
-            covariate_df = pd.read_table(args.covariate, index_col=0,
-                                         header=None, names=['covariate'],
-                                         quoting=csv.QUOTE_NONE, engine='python',
-                                         sep=None)
-            gene_expression = gene_expression.join(covariate_df)
-            fields_to_drop_for_distance.append(covariate_df.columns[0])
-            import itertools
-
-            unique_covariates = list(pd.unique(covariate_df[covariate_df.columns[0]].values))
-            # unique_covariates.append(None)
-            covariate_pairs = list(itertools.product(unique_covariates, unique_covariates))
-            self.covariate_pairs = covariate_pairs
-            self.covariate_df = covariate_df
-            self.unique_covariates = unique_covariates
-        else:
-            self.covariate_pairs = [[None, None]]
-            self.covariate_df = None
+        self.covariate_pairs = [[None, None]]
+        self.covariate_df = None
         group_by_day = gene_expression.groupby(days_data_frame.columns[0])
 
         if args.ncells is not None:
