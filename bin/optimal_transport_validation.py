@@ -147,7 +147,6 @@ def point_cloud_s(p, q, interval_start, interval_end, interval_start_n,
     # D(Q_A,Q_B)
     # D(P_B, Q_B)
 
-    print(p['name'] + '\t' + q['name'])
     write_point_cloud_distance(point_cloud1=p['m'],
                                point_cloud2=q['m'],
                                weights1=p['weights'], weights2=q['weights'],
