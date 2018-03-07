@@ -146,7 +146,8 @@ def point_cloud_s(p, q, interval_start, interval_end, interval_start_n,
     # D(P_A, Q_A)
     # D(Q_A,Q_B)
     # D(P_B, Q_B)
-
+    if args.verbose:
+        print('Computing distances between ' + p['name'] + ' and ' + q['name'])
     write_point_cloud_distance(point_cloud1=p['m'],
                                point_cloud2=q['m'],
                                weights1=p['weights'], weights2=q['weights'],
@@ -157,34 +158,39 @@ def point_cloud_s(p, q, interval_start, interval_end, interval_start_n,
                                interval_start_n=interval_start_n, interval_middle_n=interval_middle_n,
                                interval_end_n=interval_end_n)
 
+    def dist(p1, p2):
+
+        weights1 = p1['p']['weights']
+        indices1 = p1['indices']
+        if weights1 is not None:
+            weights1 = weights1[indices1]
+
+        weights2 = p2['p']['weights']
+        indices2 = p2['indices']
+        if weights2 is not None:
+            weights2 = weights2[indices2]
+        write_point_cloud_distance(point_cloud1=p1['p']['m'][indices1],
+                                   point_cloud2=p2['p']['m'][indices2],
+                                   weights1=weights1, weights2=weights2,
+                                   point_cloud1_name=p1['p']['name'] + p1['suffix'],
+                                   point_cloud2_name=p2['p']['name'] + p2['suffix'],
+                                   t0=p1['p']['t'], t1=p2['p']['t'], interval_start=interval_start,
+                                   interval_end=interval_end,
+                                   interval_start_n=interval_start_n, interval_middle_n=interval_middle_n,
+                                   interval_end_n=interval_end_n)
+
     for k in range(args.resample_iter):
         p_indices_a, p_indices_b = split_in_two(p['m'].shape[0])
         q_indices_a, q_indices_b = split_in_two(q['m'].shape[0])
 
-        pairs = [{'p': p, 'indices': p_indices_a}, {'p': p, 'indices': p_indices_b}, {'p': q, 'indices': q_indices_a},
-                 {'p': q, 'indices': q_indices_b}]
+        pairs = [{'p': p, 'indices': p_indices_a, 'suffix': '_A'}, {'p': p, 'indices': p_indices_b, 'suffix': '_B'},
+                 {'p': q, 'indices': q_indices_a, 'suffix': '_A'},
+                 {'p': q, 'indices': q_indices_b, 'suffix': '_B'}]
 
-        for i in range(1, len(pairs)):
-            p1 = pairs[i]
-            weights1 = p1['p']['weights']
-            indices1 = p1['indices']
-            if weights1 is not None:
-                weights1 = weights1[indices1]
-            for j in range(i):
-                p2 = pairs[j]
-                weights2 = p2['p']['weights']
-                indices2 = p2['indices']
-                if weights2 is not None:
-                    weights2 = weights2[indices2]
-                write_point_cloud_distance(point_cloud1=p1['p']['m'][indices1],
-                                           point_cloud2=p2['p']['m'][indices2],
-                                           weights1=weights1, weights2=weights2,
-                                           point_cloud1_name=p1['p']['name'] + '_sub',
-                                           point_cloud2_name=p2['p']['name'] + '_sub',
-                                           t0=p1['p']['t'], t1=p2['p']['t'], interval_start=interval_start,
-                                           interval_end=interval_end,
-                                           interval_start_n=interval_start_n, interval_middle_n=interval_middle_n,
-                                           interval_end_n=interval_end_n)
+        dist(pairs[0], pairs[1])
+        dist(pairs[0], pairs[2])
+        dist(pairs[2], pairs[3])
+        dist(pairs[1], pairs[3])
 
 
 def point_cloud_distance(c1, c2, a=None, b=None):
@@ -206,7 +212,7 @@ def point_cloud_distance(c1, c2, a=None, b=None):
 
 parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute point cloud distances')
 
-parser.add_argument('--resample_iter', help='Number of resample iterations to perform', type=int, default=10)
+parser.add_argument('--resample_iter', help='Number of resample iterations to perform', type=int, default=4)
 parser.add_argument('--npairs', type=int, default=10000)
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
 parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
