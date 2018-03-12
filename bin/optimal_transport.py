@@ -53,16 +53,14 @@ def callback(cb_args):
         column_cell_ids_by_time.append(transport_map.columns)
         if args.verbose:
             print('Summarized transport map by cluster')
-        if args.cluster_details:
-            if args.verbose:
-                print('Saving cluster transport map')
-            cluster_transport_map.to_csv(
-                args.prefix + '_cluster_' + str(cb_args['t0']) + '_' + str(cb_args['t1']) + '.txt' + (
-                    '.gz' if args.compress else ''),
-                index_label="id",
-                sep='\t',
-                compression='gzip' if args.compress
-                else None)
+
+        cluster_transport_map.to_csv(
+            args.prefix + '_cluster_' + str(cb_args['t0']) + '_' + str(cb_args['t1']) + '.txt' + (
+                '.gz' if args.compress else ''),
+            index_label="id",
+            sep='\t',
+            compression='gzip' if args.compress
+            else None)
         cluster_transport_maps.append(cluster_transport_map)
 
     # save the tranport map

@@ -6,139 +6,10 @@ import wot.io
 import pandas as pd
 import numpy as np
 import sklearn.metrics.pairwise
-import ot as pot
-
-
-# from gslrandom import PyRNG, multinomial
-# def coupling_sampler(Lineage, nf=1e-3, s=1, threads=1, nmin=10):
-#     Pairs = [[] for _ in range(s)]
-#     for lineage in Lineage:
-#         if len(lineage) > 0:
-#             l = lineage / lineage.sum(0)
-#             l = l / l.sum()
-#             l = l.flatten()
-#             sd = np.exp(scipy.stats.entropy(l))
-#             n = max(nmin, int(sd * nf)) * np.ones(s, dtype=np.uint32)
-#             P = np.ones((s, len(l)), dtype=np.uint32)
-#             l_tile = np.tile(l, (s, 1))
-#             rngs = [PyRNG(np.random.randint(2 ** 16)) for _ in range(threads)]
-#             P = multinomial(rngs, n, l_tile, P)
-#             # Too slow: P = np.random.multinomial(n,l,size=s)
-#             for i in range(s):
-#                 pairs = np.nonzero(P[i].reshape(lineage.shape))
-#                 Pairs[i].append(pairs)
-#             del P, l_tile
-#         else:
-#             for i in range(s):
-#                 Pairs[i].append([])
-#     return Pairs
-
-
-def sample_randomly(exp1, exp2, tm, g):
-    if args.npairs is None or args.npairs <= 0:
-        l = tm / tm.sum(axis=0)
-        l = l.flatten()
-        qq = np.where(l > args.tm_thresh)
-        n = len(qq[0])
-    else:
-        n = args.npairs
-
-    # column_sums = np.sum(tm, axis=0)
-    # row_sums = np.sum(tm, axis=1)
-    # p = np.outer(row_sums, column_sums)
-
-    p = g
-    q = np.ones(exp2.shape[0]) * np.average(g)
-    p = np.outer(p, q)
-    p = p.flatten()
-    probabilties = p / p.sum()
-    # pairs = np.random.multinomial(n, p, size=1)
-    # pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
-
-    s = np.random.multinomial(n, probabilties, size=1)
-    reshaped_s = s.reshape(exp1.shape[0], exp2.shape[0])
-    pairs = np.nonzero(reshaped_s)
-    weights = reshaped_s[pairs]
-    return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]],
-            'indices0': pairs[0],
-            'indices1': pairs[1],
-            'weights': weights}
-
-
-def sample_uniformly(exp1, exp2, tm):
-    if args.npairs is None or args.npairs <= 0:
-        l = tm / tm.sum(axis=0)
-        l = l.flatten()
-        qq = np.where(l > args.tm_thresh)
-        n = len(qq[0])
-    else:
-        n = args.npairs
-
-    p = np.ones(exp1.shape[0] * exp2.shape[0])
-    p = p / p.sum()
-    pairs = np.random.multinomial(n, p, size=1)
-    pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
-    return exp1[pairs[0]], exp2[pairs[1]]
-
-
-def sample_from_transport_map(exp1, exp2, tm):
-    probabilties = tm / np.power(tm.sum(axis=0), 1.0 - args.t_interpolate)
-    probabilties = probabilties.flatten()
-    if args.npairs is None or args.npairs <= 0:
-        # l = l / l.sum()
-        reshaped_tmap = probabilties.reshape(exp1.shape[0], exp2.shape[0])
-        q = np.where(reshaped_tmap > args.tm_thresh)
-        qq = np.where(probabilties > args.tm_thresh)
-        return exp1[q[0]], exp2[q[1]], probabilties[qq]
-    else:
-        probabilties = probabilties / probabilties.sum()
-        # pairs = np.random.multinomial(args.npairs, probabilties, size=1)
-        # pairs = np.nonzero(pairs.reshape(exp1.shape[0], exp2.shape[0]))
-        #  return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]], 'indices0': pairs[0], 'indices1': pairs[1], 'weights': None}
-        s = np.random.multinomial(args.npairs, probabilties, size=1)
-        reshaped_s = s.reshape(exp1.shape[0], exp2.shape[0])
-        pairs = np.nonzero(reshaped_s)
-        weights = reshaped_s[pairs]
-        return {'pc0': exp1[pairs[0]], 'pc1': exp2[pairs[1]],
-                'indices0': pairs[0],
-                'indices1': pairs[1],
-                'weights': weights}
-
-
-def split_in_two(n):
-    indices = np.random.choice(n, int(n * 0.5))
-    indices_c = np.zeros(n, dtype=bool)
-    indices_c[indices] = True
-    indices_c = np.invert(indices_c)
-    return indices, indices_c
-
-
-def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, point_cloud1_name,
-                               point_cloud2_name, t0, t1, interval_start, interval_end, interval_start_n,
-                               interval_middle_n, interval_end_n):
-    subsample_writer.write(
-        str(interval_start)
-        + '\t' + str(interval_end)
-        + '\t' + str(t0)
-        + '\t' + str(t1)
-        + '\t' + str(point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2))
-        + '\t' + point_cloud1_name
-        + '\t' + point_cloud2_name
-        + '\t' + str(args.epsilon)
-        + '\t' + str(args.lambda1)
-        + '\t' + str(args.power)
-        + '\t' + str(args.beta_min)
-        + '\t' + str(args.delta_min)
-        + '\t' + str(args.beta_max)
-        + '\t' + str(interval_start_n)
-        + '\t' + str(interval_middle_n)
-        + '\t' + str(interval_end_n)
-        + '\n')
-    subsample_writer.flush()
 
 
 def point_cloud_s(p, q, interval_start, interval_end, interval_start_n,
-                  interval_middle_n, interval_end_n):
+                  interval_middle_n, interval_end_n, resample_iter):
     # Given a pair of point clouds: P,Q.
     # Compute random splits P_A, P_B  Q_A, Q_B.
     # Compute distances
@@ -146,8 +17,7 @@ def point_cloud_s(p, q, interval_start, interval_end, interval_start_n,
     # D(P_A, Q_A)
     # D(Q_A,Q_B)
     # D(P_B, Q_B)
-    if args.verbose:
-        print('Computing distances between ' + p['name'] + ' and ' + q['name'])
+
     write_point_cloud_distance(point_cloud1=p['m'],
                                point_cloud2=q['m'],
                                weights1=p['weights'], weights2=q['weights'],
@@ -179,9 +49,9 @@ def point_cloud_s(p, q, interval_start, interval_end, interval_start_n,
                                    interval_start_n=interval_start_n, interval_middle_n=interval_middle_n,
                                    interval_end_n=interval_end_n)
 
-    for k in range(args.resample_iter):
-        p_indices_a, p_indices_b = split_in_two(p['m'].shape[0])
-        q_indices_a, q_indices_b = split_in_two(q['m'].shape[0])
+    for k in range(resample_iter):
+        p_indices_a, p_indices_b = wot.ot.split_in_two(p['m'].shape[0])
+        q_indices_a, q_indices_b = wot.ot.split_in_two(q['m'].shape[0])
 
         pairs = [{'p': p, 'indices': p_indices_a, 'suffix': '_A'}, {'p': p, 'indices': p_indices_b, 'suffix': '_B'},
                  {'p': q, 'indices': q_indices_a, 'suffix': '_A'},
@@ -193,21 +63,53 @@ def point_cloud_s(p, q, interval_start, interval_end, interval_start_n,
         dist(pairs[1], pairs[3])
 
 
-def point_cloud_distance(c1, c2, a=None, b=None):
-    if ot_helper.eigenvals is not None:
-        c1 = c1.dot(ot_helper.eigenvals)
-        c2 = c2.dot(ot_helper.eigenvals)
-    cloud_distances = sklearn.metrics.pairwise.pairwise_distances(c1, Y=c2, metric='sqeuclidean')
+# from gslrandom import PyRNG, multinomial
+# def coupling_sampler(Lineage, nf=1e-3, s=1, threads=1, nmin=10):
+#     Pairs = [[] for _ in range(s)]
+#     for lineage in Lineage:
+#         if len(lineage) > 0:
+#             l = lineage / lineage.sum(0)
+#             l = l / l.sum()
+#             l = l.flatten()
+#             sd = np.exp(scipy.stats.entropy(l))
+#             n = max(nmin, int(sd * nf)) * np.ones(s, dtype=np.uint32)
+#             P = np.ones((s, len(l)), dtype=np.uint32)
+#             l_tile = np.tile(l, (s, 1))
+#             rngs = [PyRNG(np.random.randint(2 ** 16)) for _ in range(threads)]
+#             P = multinomial(rngs, n, l_tile, P)
+#             # Too slow: P = np.random.multinomial(n,l,size=s)
+#             for i in range(s):
+#                 pairs = np.nonzero(P[i].reshape(lineage.shape))
+#                 Pairs[i].append(pairs)
+#             del P, l_tile
+#         else:
+#             for i in range(s):
+#                 Pairs[i].append([])
+#     return Pairs
 
-    if a is None:
-        a = np.ones((cloud_distances.shape[0]), dtype=np.float64) / cloud_distances.shape[0]
-    else:
-        a = a / a.sum()
-    if b is None:
-        b = np.ones((cloud_distances.shape[1]), dtype=np.float64) / cloud_distances.shape[1]
-    else:
-        b = b / b.sum()
-    return np.sqrt(pot.emd2(a, b, cloud_distances, numItermax=10000000))
+
+def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, point_cloud1_name,
+                               point_cloud2_name, t0, t1, interval_start, interval_end, interval_start_n,
+                               interval_middle_n, interval_end_n):
+    subsample_writer.write(
+        str(interval_start)
+        + '\t' + str(interval_end)
+        + '\t' + str(t0)
+        + '\t' + str(t1)
+        + '\t' + str(wot.ot.point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, ot_helper.eigenvals))
+        + '\t' + point_cloud1_name
+        + '\t' + point_cloud2_name
+        + '\t' + str(args.epsilon)
+        + '\t' + str(args.lambda1)
+        + '\t' + str(args.power)
+        + '\t' + str(args.beta_min)
+        + '\t' + str(args.delta_min)
+        + '\t' + str(args.beta_max)
+        + '\t' + str(interval_start_n)
+        + '\t' + str(interval_middle_n)
+        + '\t' + str(interval_end_n)
+        + '\n')
+    subsample_writer.flush()
 
 
 parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute point cloud distances')
@@ -294,7 +196,8 @@ def transport_map_callback(cb_args):
                                  sep='\t',
                                  doublequote=False)
 
-        tm_sample = sample_from_transport_map(cb_args['p0'], cb_args['p1'], p0_p1_map)
+        tm_sample = wot.ot.sample_from_transport_map(cb_args['p0'], cb_args['p1'], p0_p1_map, args.npairs,
+                                                       args.t_interpolate)
         pc0 = tm_sample['pc0']
         pc1 = tm_sample['pc1']
         p0_m1_subset_weights = tm_sample['weights']
@@ -313,8 +216,9 @@ def transport_map_callback(cb_args):
                                                  index=p0_5.drop(fields_to_drop_for_distance, axis=1).columns)),
                                  args.prefix + '_I_' + str(inferred_time) + '.txt')
 
-        random_sample = sample_randomly(cb_args['p0'], cb_args['p1'], p0_p1_map,
-                                        p0[ot_helper.cell_growth_rates.columns[0]].values ** (args.t_interpolate - t0))
+        random_sample = wot.ot.sample_randomly(cb_args['p0'], cb_args['p1'], p0_p1_map,
+                                                 p0[ot_helper.cell_growth_rates.columns[0]].values ** (
+                                                         args.t_interpolate - t0), args.npairs)
         pc0 = random_sample['pc0']
         pc1 = random_sample['pc1']
         p0_m1_subset_weights = random_sample['weights']
@@ -359,7 +263,8 @@ def transport_map_callback(cb_args):
     for pair in pair_names:
         point_cloud_s(get_cloud(pair[0]), get_cloud(pair[1]), t0, t1,
                       interval_start_n=interval_start_n,
-                      interval_middle_n=interval_middle_n, interval_end_n=interval_end_n)
+                      interval_middle_n=interval_middle_n, interval_end_n=interval_end_n,
+                      resample_iter=args.resample_iter)
 
 
 ot_helper.compute_transport_maps(transport_map_callback)

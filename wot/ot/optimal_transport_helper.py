@@ -154,7 +154,7 @@ class OptimalTransportHelper:
         self.covariate_pairs = [[None, None]]
         self.covariate_df = None
         group_by_day = gene_expression.groupby(days_data_frame.columns[0])
-
+        self.gene_expression = gene_expression
         if args.ncells is not None:
             tmp = group_by_day.apply(
                 lambda x: x.sample(n=args.ncells, axis=0) if x.shape[0] > args.ncells else x)
