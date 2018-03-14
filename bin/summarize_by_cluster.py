@@ -8,6 +8,7 @@ import wot.io
 import pandas as pd
 import os
 import csv
+import numpy as np
 
 parser = argparse.ArgumentParser(
     description='Convert a series of cell transport maps to a single '
@@ -46,8 +47,10 @@ for f in os.listdir(input_dir):
         file_info = wot.io.get_file_basename_and_extension(f)
         basename = file_info[0]
         path = os.path.join(input_dir, f)
-        transport_map = pd.read_table(path, index_col=0,
-                                      quoting=csv.QUOTE_NONE)
+        transport_map = pd.read_table(path, index_col=0)
+        if np.isnan(transport_map.values.sum()):
+            print(os.path.join(input_dir, f) + ' contains missing values-skipping.')
+            continue
         all_cell_ids.update(transport_map.columns)
         all_cell_ids.update(transport_map.index)
         column_cell_ids_by_time.append(transport_map.columns)
@@ -69,6 +72,9 @@ weights = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time,
 cluster_weights_by_time = weights['cluster_weights_by_time']
 combined_cluster_map = wot.ot.transport_maps_by_time(cluster_transport_maps,
                                                      cluster_weights_by_time)
+if np.isnan(combined_cluster_map.values.sum()):
+    print('Combined clusters contains missing values.')
+
 combined_cluster_map.to_csv(args.prefix + '.txt' + ('.gz' if
                                                     args.compress else ''),
                             index_label="id",

@@ -99,7 +99,7 @@ class OptimalTransportHelper:
                             help='Solver to use when computing transport maps. One of unbalanced, floating_epsilon, '
                                  'sinkhorn_epsilon, unregularized',
                             choices=['epsilon', 'sinkhorn_epsilon', 'unbalanced', 'unregularized'],
-                            default='sinkhorn_epsilon')
+                            default='unbalanced')
 
         parser.add_argument('--verbose', action='store_true',
                             help='Print progress information')
