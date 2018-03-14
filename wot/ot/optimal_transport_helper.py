@@ -5,6 +5,7 @@ import sklearn.metrics
 import argparse
 import io
 import wot.ot
+import wot.io
 import os
 
 
@@ -113,7 +114,7 @@ class OptimalTransportHelper:
             eigenvals = np.power(eigenvals, args.power)
 
         # cells on rows, features on columns
-        gene_expression = pd.read_table(args.matrix, index_col=0, quoting=csv.QUOTE_NONE, engine='python', sep=None)
+        ds = wot.io.read_dataset(args.matrix)
 
         if not os.path.isfile(args.day_pairs):
             day_pairs = pd.read_table(io.StringIO(args.day_pairs), header=None, names=['t0', 't1'],
@@ -148,28 +149,36 @@ class OptimalTransportHelper:
                                               header=None, names=['cell_growth_rate'],
                                               quoting=csv.QUOTE_NONE, engine='python',
                                               sep=None)
-        fields_to_drop_for_distance = [days_data_frame.columns[0], cell_growth_rates.columns[0]]
-        gene_expression = gene_expression.join(cell_growth_rates).join(days_data_frame)
-
+        ds.row_meta = ds.row_meta.join(cell_growth_rates).join(days_data_frame)
         self.covariate_pairs = [[None, None]]
         self.covariate_df = None
-        group_by_day = gene_expression.groupby(days_data_frame.columns[0])
-        self.gene_expression = gene_expression
+        day_to_indices = {}
+        days = ds.row_meta[days_data_frame.columns[0]]
+        for i in range(len(days)):
+            val = days[i]
+            indices = day_to_indices.get(val)
+            if indices is None:
+                indices = []
+                day_to_indices[val] = indices
+            indices.append(i)
+
+        self.ds = ds
         if args.ncells is not None:
-            tmp = group_by_day.apply(
-                lambda x: x.sample(n=args.ncells, axis=0) if x.shape[0] > args.ncells else x)
-            tmp.index = tmp.index.droplevel()
-            group_by_day = tmp.groupby(
-                days_data_frame.columns[0])
+            for day in day_to_indices:
+                indices = day_to_indices[day]
+                if len(indices) > args.ncells:
+                    np.random.shuffle(indices)
+                    indices = indices[0:args.ncells]
+                    day_to_indices[day] = indices
 
         if args.verbose:
             print('Computing ' + str(day_pairs.shape[0]) + ' transport map' + 's' if
                   day_pairs.shape[0] > 1 else '')
         self.day_pairs = day_pairs
-        self.group_by_day = group_by_day
-        self.fields_to_drop_for_distance = fields_to_drop_for_distance
+        self.day_to_indices = day_to_indices
         self.cell_growth_rates = cell_growth_rates
         self.args = args
+        self.t_interpolate = vars(args).get('t_interpolate')
 
     def compute_cost_matrix(self, a, b):
         if self.eigenvals is not None:
@@ -181,40 +190,68 @@ class OptimalTransportHelper:
 
     def compute_transport_maps(self, callback):
         day_pairs = self.day_pairs
-        group_by_day = self.group_by_day
-        fields_to_drop_for_distance = self.fields_to_drop_for_distance
         cell_growth_rates = self.cell_growth_rates
         args = self.args
         covariate_df = self.covariate_df
         covariate_pairs = self.covariate_pairs
+        day_to_indices = self.day_to_indices
+        ds = self.ds
         for day_index in range(day_pairs.shape[0]):
             t0 = day_pairs.iloc[day_index, 0]
             t1 = day_pairs.iloc[day_index, 1]
-            if group_by_day.groups.get(t0) is None or group_by_day.groups.get(
-                    t1) is None:
-                print('skipping transport map from ' + str(t0) + ' to ' + str(t1))
-                continue
-            p0_full = group_by_day.get_group(t0)
-            p1_full = group_by_day.get_group(t1)
+            t0_indices = day_to_indices[t0]
+            t1_indices = day_to_indices[t1]
+
+            p0_full = wot.Dataset(ds.x[t0_indices], ds.row_meta.iloc[t0_indices], ds.col_meta)
+            p1_full = wot.Dataset(ds.x[t1_indices], ds.row_meta.iloc[t1_indices], ds.col_meta)
+            p0_5_full = None
+
+            if self.t_interpolate is not None:
+                t0_5 = t0 + (t1 - t0) * self.t_interpolate
+                t0_5_indices = day_to_indices[t0_5]
+                p0_5_full = wot.Dataset(ds.x[t0_5_indices], ds.row_meta.iloc[t0_5_indices], ds.col_meta)
+
+            # if args.local_pca:
+            #     stack = list()
+            #     stack.append(p0_full.x)
+            #     stack.append(p1_full.x)
+            #     if p0_5_full is not None:
+            #         stack.append(p0_5_full.x)
+            #     x = np.hstack(stack)
+            #     x = x - x.mean(axis=0)
+            #     pca = sklearn.decomposition.PCA(n_components=30)
+            #     pca.fit(x.T)
+            #     x = pca.components_
+            #     p0_full = wot.Dataset(x[0:len(t0_indices)], p0_full.row_meta, p0_full.col_meta)
+            #     p1_full = wot.Dataset(x[len(t0_indices):], p1_full.row_meta, p1_full.col_meta)
+            #     if p0_5_full is not None:
+            #         p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):], p0_5_full.row_meta,
+            #                                 p0_5_full.col_meta)
+            #     self.eigenvals = pca.explained_variance_
 
             delta_t = t1 - t0
             for covariate_pair in covariate_pairs:
                 cv0 = covariate_pair[0]
-                p0 = p0_full if cv0 is None else p0_full[p0_full[covariate_df.columns[0]] == cv0]
+                p0_expr = None if cv0 is None else p0_full.row_meta[p0_full.row_meta[covariate_df.columns[0]] == cv0]
                 cv1 = covariate_pair[1]
-                p1 = p1_full if cv1 is None else p1_full[p1_full[covariate_df.columns[0]] == cv1]
+                p1_expr = None if cv1 is None else p1_full.row_meta[p1_full.row_meta[covariate_df.columns[0]] == cv1]
+
+                if p0_expr is None:
+                    p0 = wot.Dataset(p0_full.x, p0_full.row_meta, p0_full.col_meta)
+                else:
+                    p0 = wot.Dataset(p0_full.x[p0_expr], p0_full.row_meta.iloc[p0_expr], p0_full.col_meta)
+                if p1_expr is None:
+                    p1 = wot.Dataset(p1_full.x, p1_full.row_meta, p1_full.col_meta)
+                else:
+                    p1 = wot.Dataset(p1_full.x[p1_expr], p1_full.row_meta.iloc[p1_expr], p1_full.col_meta)
                 if args.verbose:
                     print(
                         'Computing transport map from ' + str(
                             t0) + ' to ' + str(
                             t1) + '...', end='')
-                cost_matrix = self.compute_cost_matrix(
-                    p0.drop(fields_to_drop_for_distance, axis=1).values,
-                    p1.drop(fields_to_drop_for_distance, axis=1).values)
-
+                cost_matrix = self.compute_cost_matrix(p0.x, p1.x)
                 result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
-                                                  growth_rate=p0[
-                                                      cell_growth_rates.columns[0]].values,
+                                                  growth_rate=p0.row_meta[cell_growth_rates.columns[0]].values,
                                                   delta_days=delta_t,
                                                   max_transport_fraction=args.max_transport_fraction,
                                                   min_transport_fraction=args.min_transport_fraction,
@@ -234,6 +271,5 @@ class OptimalTransportHelper:
                 if args.verbose:
                     print('done')
                 name = (str(cv0) if cv0 is not None else 'full') + '_' + (str(cv1) if cv1 is not None else 'full')
-                callback({'t0': t0, 't1': t1, 'p0': p0.drop(fields_to_drop_for_distance, axis=1).values,
-                          'p1': p1.drop(fields_to_drop_for_distance, axis=1).values,
-                          'result': result, 'name': name, 'df0': p0, 'df1': p1})
+                callback({'t0': t0, 't1': t1, 'result': result, 'name': name, 'df0': p0.row_meta, 'df1': p1.row_meta,
+                          'P0': p0_full, 'P1': p1_full, 'P0.5': p0_5_full})

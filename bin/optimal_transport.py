@@ -5,6 +5,7 @@
 import wot.ot
 import pandas as pd
 import csv
+import numpy as np
 
 parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute transport maps between pairs of time points')
 parser.add_argument('--compress', action='store_true', help='gzip output files')
@@ -25,7 +26,7 @@ if args.clusters is not None:
                              names=['cluster'], quoting=csv.QUOTE_NONE,
                              engine='python',
                              sep=None)
-    clusters = clusters.align(ot_helper.gene_expression, join='right', axis=0,
+    clusters = clusters.align(ot_helper.ds.row_meta, join='right', axis=0,
                               copy=False)[0]
     grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
     cluster_ids = list(grouped_by_cluster.groups.keys())
@@ -67,6 +68,9 @@ def callback(cb_args):
 
     if args.verbose:
         print('Saving transport map')
+    if np.isnan(transport_map.values.sum()):
+        print(str(cb_args['t0']) + '_' + str(cb_args['t1']) + ' contains missing values.')
+
     transport_map.to_csv(args.prefix + '_' + str(cb_args['t0']) + '_' + str(cb_args['t1']) + '.txt' + ('.gz' if
                                                                                                        args.compress else ''),
                          index_label='id',

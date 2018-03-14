@@ -160,30 +160,27 @@ subsample_writer.write(
     + '\t' + 'interval_end_n'
     + '\n')
 
-fields_to_drop_for_distance = ot_helper.fields_to_drop_for_distance
-
-group_by_day = ot_helper.group_by_day
-
 
 def transport_map_callback(cb_args):
     t0 = cb_args['t0']
     t1 = cb_args['t1']
 
     inferred_time = t0 + (t1 - t0) * args.t_interpolate
-    p0 = group_by_day.get_group(t0)
-    p0_5 = group_by_day.get_group(inferred_time)
-    p1 = group_by_day.get_group(t1)
-    interval_start_n = p0.shape[0]
-    interval_middle_n = p0_5.shape[0]
-    interval_end_n = p1.shape[0]
+    p0 = cb_args['P0']
+    p1 = cb_args['P1']
+    p0_5 = cb_args['P0.5']
+
+    interval_start_n = p0.x.shape[0]
+    interval_middle_n = p0_5.x.shape[0]
+    interval_end_n = p1.x.shape[0]
     point_clouds = list()
 
     point_clouds.append(
-        {'m': p0.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P0', 't': t0})
+        {'m': p0.x, 'weights': None, 'name': 'P0', 't': t0})
     point_clouds.append(
-        {'m': p1.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P1', 't': t1})
+        {'m': p1.x, 'weights': None, 'name': 'P1', 't': t1})
     point_clouds.append(
-        {'m': p0_5.drop(fields_to_drop_for_distance, axis=1).values, 'weights': None, 'name': 'P' + t_interpolate_s,
+        {'m': p0_5.x, 'weights': None, 'name': 'P' + t_interpolate_s,
          't': inferred_time})
 
     transport_result = cb_args['result']
@@ -197,7 +194,7 @@ def transport_map_callback(cb_args):
                                  doublequote=False)
 
         tm_sample = wot.ot.sample_from_transport_map(cb_args['p0'], cb_args['p1'], p0_p1_map, args.npairs,
-                                                       args.t_interpolate)
+                                                     args.t_interpolate)
         pc0 = tm_sample['pc0']
         pc1 = tm_sample['pc1']
         p0_m1_subset_weights = tm_sample['weights']
@@ -211,14 +208,12 @@ def transport_map_callback(cb_args):
                 index=cb_args['df0'].iloc[tm_sample['indices0']].index + ';' + cb_args['df1'].iloc[
                     tm_sample['indices1']].index)
             # save inferred matrix
-            wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta,
-                                             pd.DataFrame(
-                                                 index=p0_5.drop(fields_to_drop_for_distance, axis=1).columns)),
+            wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta, p0.col_meta),
                                  args.prefix + '_I_' + str(inferred_time) + '.txt')
 
         random_sample = wot.ot.sample_randomly(cb_args['p0'], cb_args['p1'], p0_p1_map,
-                                                 p0[ot_helper.cell_growth_rates.columns[0]].values ** (
-                                                         args.t_interpolate - t0), args.npairs)
+                                               p0.row_meta[ot_helper.cell_growth_rates.columns[0]].values ** (
+                                                       args.t_interpolate - t0), args.npairs)
         pc0 = random_sample['pc0']
         pc1 = random_sample['pc1']
         p0_m1_subset_weights = random_sample['weights']
@@ -230,24 +225,20 @@ def transport_map_callback(cb_args):
             inferred_row_meta = pd.DataFrame(
                 index=cb_args['df0'].iloc[random_sample['indices0']].index + ';' + cb_args['df1'].iloc[
                     random_sample['indices1']].index)
-            wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta,
-                                             pd.DataFrame(
-                                                 index=p0_5.drop(fields_to_drop_for_distance, axis=1).columns)),
+            wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta, p0.col_meta),
                                  args.prefix + '_random_' + str(inferred_time) + '.txt')
 
     if covariate_df is not None:
         batch_names = []
-        p0_5_cv = p0_5.copy(False).join(covariate_df)
-        fields_to_drop_for_distance_cv = list(fields_to_drop_for_distance)
-        fields_to_drop_for_distance_cv.append(covariate_df.columns[0])
+        p0_5_cv = wot.Dataset(p0_5.x, p0_5.row_meta.copy(False).join(covariate_df), p0_5.col_meta)
         for i in range(len(unique_covariates)):
             cv = unique_covariates[i]
-            p = p0_5_cv[p0_5_cv[covariate_df.columns[0]] == cv]
-
-            if p.shape[0] > 0:
+            exp = p0_5_cv[p0_5_cv[covariate_df.columns[0]] == cv]
+            p = wot.Dataset(p0_5_cv.x[exp], p0_5.row_meta.iloc[exp], p0_5_cv.col_meta)
+            if p.x.shape[0] > 0:
                 name = 'P' + t_interpolate_s + '_' + str(cv)
                 point_clouds.append(
-                    {'m': p.drop(fields_to_drop_for_distance_cv, axis=1).values, 'weights': None,
+                    {'m': p.x, 'weights': None,
                      'name': name, 't': inferred_time})
                 batch_names.append(name)
         for i in range(1, len(batch_names)):
