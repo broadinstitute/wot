@@ -62,25 +62,23 @@ for i in range(start_time_index, end_time_index + 1):
     if tmap is None:
         tmap = tmap_i
     else:
-        print(tmap.shape)
-        print(tmap_i.shape)
-        tmap = tmap.dot(tmap_i)  # / np.sqrt(np.sum(tmap_i.values))
+        tmap = tmap.dot(tmap_i / np.sqrt(np.sum(tmap_i.values)))
 nsets = cell_sets.x.shape[1]
 cell_set_ids = cell_sets.col_meta.index.values
 cell_set_id_to_row_indices = {}
 cell_set_id_to_column_indices = {}
 for i in range(len(cell_set_ids)):
     cell_set_id = cell_set_ids[i]
-    cluster_ids = cell_sets.row_meta.index[np.where(cell_sets.x[:, i]) > 0]
+    cluster_ids = cell_sets.row_meta.index[cell_sets.x[:, i] > 0]
     cell_ids = clusters.index.values[clusters['cluster'].isin(cluster_ids)]
-    cell_set_id_to_row_indices[cell_set_id] = np.where(tmap.index.values.isin(cell_ids))
-    cell_set_id_to_column_indices[cell_set_id] = np.where(tmap.index.columns.isin(cell_ids))
+    cell_set_id_to_row_indices[cell_set_id] = np.where(tmap.index.isin(cell_ids))
+    cell_set_id_to_column_indices[cell_set_id] = np.where(np.isin(tmap.columns, cell_ids))
 summary = pd.DataFrame(index=cell_set_ids, columns=cell_set_ids, data=0.0)
-for i in range(len(cell_sets)):
-    row_indices = cell_set_id_to_row_indices[cell_sets[i]]
-    tmap_r = tmap[row_indices]
-    for j in range(len(cell_sets)):
-        column_indices = cell_set_id_to_row_indices[cell_sets[j]]
+for i in range(nsets):
+    row_indices = cell_set_id_to_row_indices[cell_set_ids[i]]
+    tmap_r = tmap.values[row_indices]
+    for j in range(nsets):
+        column_indices = cell_set_id_to_row_indices[cell_set_ids[j]]
         summary.iloc[i, j] += tmap_r[:, column_indices].sum()
 
 tmap.to_csv(prefix + '_' + str(start_time) + '_' + str(end_time) + '_transition.txt', index_label='id', sep='\t',

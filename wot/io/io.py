@@ -121,7 +121,7 @@ def read_gmt(path, feature_ids=None):
                 row_index = row_id_to_index.get(id)
                 x[row_index, j] = 1
 
-        row_meta = pd.DataFrame(index=row_ids),
+        row_meta = pd.DataFrame(index=row_ids)
         col_meta = pd.DataFrame(data={'description': set_descriptions}, index=set_names)
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
 
