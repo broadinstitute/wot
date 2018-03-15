@@ -236,10 +236,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
         x = scipy.sparse.coo_matrix((V, (I, J)), shape=(cols, rows)).tocsr()
         stream.close()
         if col_meta is None:
-            col_meta = pd.DataFrame(index=pd.RangeIndex(start=0,
-                                                        stop=x.shape[1],
-
-                                                        step=1))
+            col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1))
         if row_meta is None:
             row_meta = pd.DataFrame(
                 index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import csv
 import sklearn.metrics
+import sklearn.decomposition
 import argparse
 import io
 import wot.ot
@@ -93,6 +94,8 @@ class OptimalTransportHelper:
                                             'cell ids and growth rates per day.')
         parser.add_argument('--diagonal', help='Diagonal scaling matrix')
         parser.add_argument('--power', help='Diagonal scaling power', type=float)
+        parser.add_argument('--local_pca', help='Convert day pairs matrix to PCA coordinates', type=int)
+
         parser.add_argument('--covariate',
                             help='Two column tab delimited file without header with '
                                  'cell ids and covariate value')
@@ -211,23 +214,29 @@ class OptimalTransportHelper:
                 t0_5_indices = day_to_indices[t0_5]
                 p0_5_full = wot.Dataset(ds.x[t0_5_indices], ds.row_meta.iloc[t0_5_indices], ds.col_meta)
 
-            # if args.local_pca:
-            #     stack = list()
-            #     stack.append(p0_full.x)
-            #     stack.append(p1_full.x)
-            #     if p0_5_full is not None:
-            #         stack.append(p0_5_full.x)
-            #     x = np.hstack(stack)
-            #     x = x - x.mean(axis=0)
-            #     pca = sklearn.decomposition.PCA(n_components=30)
-            #     pca.fit(x.T)
-            #     x = pca.components_
-            #     p0_full = wot.Dataset(x[0:len(t0_indices)], p0_full.row_meta, p0_full.col_meta)
-            #     p1_full = wot.Dataset(x[len(t0_indices):], p1_full.row_meta, p1_full.col_meta)
-            #     if p0_5_full is not None:
-            #         p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):], p0_5_full.row_meta,
-            #                                 p0_5_full.col_meta)
-            #     self.eigenvals = pca.explained_variance_
+            if args.local_pca is not None:
+                import scipy.sparse
+                matrices = list()
+                matrices.append(p0_full.x if not scipy.sparse.isspmatrix(p0_full.x) else p0_full.x.toarray())
+                matrices.append(p1_full.x if not scipy.sparse.isspmatrix(p1_full.x) else p1_full.x.toarray())
+                if p0_5_full is not None:
+                    matrices.append(p0_5_full.x if not scipy.sparse.isspmatrix(p0_5_full.x) else p0_5_full.x.toarray())
+                x = np.vstack(matrices)
+                x = x - x.mean(axis=0)
+                pca = sklearn.decomposition.PCA(n_components=args.local_pca)
+                pca.fit(x.T)
+                x = pca.components_.T
+                p0_full = wot.Dataset(x[0:len(t0_indices)],
+                                      p0_full.row_meta,
+                                      pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
+                p1_full = wot.Dataset(x[len(t0_indices):],
+                                      p1_full.row_meta,
+                                      pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
+                if p0_5_full is not None:
+                    p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):],
+                                            p0_5_full.row_meta,
+                                            pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
+                self.eigenvals = np.diag(pca.singular_values_)
 
             delta_t = t1 - t0
             for covariate_pair in covariate_pairs:
