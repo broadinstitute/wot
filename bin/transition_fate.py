@@ -81,7 +81,7 @@ for i in range(nsets):
         column_indices = cell_set_id_to_row_indices[cell_set_ids[j]]
         summary.iloc[i, j] += tmap_r[:, column_indices].sum()
 
-tmap.to_csv(prefix + '_' + str(start_time) + '_' + str(end_time) + '_transition.txt', index_label='id', sep='\t',
-            doublequote=False, quoting=csv.QUOTE_NONE)
+# tmap.to_csv(prefix + '_' + str(start_time) + '_' + str(end_time) + '_transition.txt', index_label='id', sep='\t',
+#             doublequote=False, quoting=csv.QUOTE_NONE)
 summary.to_csv(prefix + '_' + str(start_time) + '_' + str(end_time) + '_transition_summary.txt', index_label='id',
                sep='\t', doublequote=False, quoting=csv.QUOTE_NONE)
