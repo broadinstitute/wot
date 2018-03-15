@@ -104,7 +104,7 @@ class OptimalTransportHelper:
                                  'sinkhorn_epsilon, unregularized',
                             choices=['epsilon', 'sinkhorn_epsilon', 'unbalanced', 'unregularized'],
                             default='unbalanced')
-
+        parser.add_argument('--cell_filter', help='File with one cell id per line to include')
         parser.add_argument('--verbose', action='store_true',
                             help='Print progress information')
         return parser
@@ -118,6 +118,13 @@ class OptimalTransportHelper:
 
         # cells on rows, features on columns
         ds = wot.io.read_dataset(args.matrix)
+        if args.cell_filter is not None:
+            cell_ids = np.loadtxt(args.cell_filter, delimiter='\n', dtype=str)
+            indices = np.where(np.isin(ds.row_meta.index.values, cell_ids))
+            prior = ds.x.shape[0]
+            ds = wot.Dataset(ds.x[indices], ds.row_meta.iloc[indices], ds.col_meta)
+            if args.verbose:
+                print('Keeping ' + str(ds.x.shape[0]) + '/' + str(prior) + ' cells')
 
         if not os.path.isfile(args.day_pairs):
             day_pairs = pd.read_table(io.StringIO(args.day_pairs), header=None, names=['t0', 't1'],

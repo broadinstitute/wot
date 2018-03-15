@@ -5,7 +5,6 @@
 import wot.ot
 import pandas as pd
 import csv
-import numpy as np
 import wot.io
 
 parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute transport maps between pairs of time points')
