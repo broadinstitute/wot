@@ -6,10 +6,12 @@ import wot.ot
 import pandas as pd
 import csv
 import numpy as np
+import wot.io
 
 parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute transport maps between pairs of time points')
-parser.add_argument('--compress', action='store_true', help='gzip output files')
 parser.add_argument('--clusters', help='Two column file with cell id and cluster id')
+parser.add_argument('--format', help='Output file format', default='txt')
+
 args = parser.parse_args()
 ot_helper = wot.ot.OptimalTransportHelper(args)
 
@@ -55,29 +57,22 @@ def callback(cb_args):
         if args.verbose:
             print('Summarized transport map by cluster')
 
-        cluster_transport_map.to_csv(
-            args.prefix + '_cluster_' + str(cb_args['t0']) + '_' + str(cb_args['t1']) + '.txt' + (
-                '.gz' if args.compress else ''),
-            index_label="id",
-            sep='\t',
-            compression='gzip' if args.compress
-            else None)
+        wot.io.write_dataset(
+            wot.Dataset(cluster_transport_map.values, pd.DataFrame(index=cluster_transport_map.index),
+                        pd.DataFrame(index=cluster_transport_map.columns)),
+            args.prefix + '_cluster_' + str(cb_args['t0']) + '_' + str(cb_args['t1']),
+            output_format=args.format)
         cluster_transport_maps.append(cluster_transport_map)
 
     # save the tranport map
 
     if args.verbose:
         print('Saving transport map')
-    if np.isnan(transport_map.values.sum()):
-        print(str(cb_args['t0']) + '_' + str(cb_args['t1']) + ' contains missing values.')
 
-    transport_map.to_csv(args.prefix + '_' + str(cb_args['t0']) + '_' + str(cb_args['t1']) + '.txt' + ('.gz' if
-                                                                                                       args.compress else ''),
-                         index_label='id',
-                         sep='\t',
-                         compression='gzip' if
-                         args.compress else None, doublequote=False,
-                         quoting=csv.QUOTE_NONE)
+    filename = args.prefix + '_' + str(cb_args['t0']) + '_' + str(cb_args['t1'])
+
+    wot.io.write_dataset(wot.Dataset(result['transport'], cb_args['df0'], cb_args['df1']), filename,
+                         output_format=args.format)
 
 
 ot_helper.compute_transport_maps(callback)
@@ -94,10 +89,8 @@ if args.clusters is not None:
     combined_cluster_map = wot.ot.transport_maps_by_time(
         cluster_transport_maps,
         cluster_weights_by_time)
-    combined_cluster_map.to_csv(
-        args.prefix + '_cluster_summary.txt' + ('.gz' if
-                                                args.compress else ''),
-        index_label="id",
-        sep='\t',
-        compression='gzip' if args.compress
-        else None)
+
+    wot.io.write_dataset(
+        wot.Dataset(combined_cluster_map.values, pd.DataFrame(index=combined_cluster_map.index),
+                    pd.DataFrame(index=combined_cluster_map.columns)),
+        args.prefix + '_cluster_summary', output_format=args.format)

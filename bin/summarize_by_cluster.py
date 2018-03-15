@@ -67,8 +67,7 @@ for f in os.listdir(input_dir):
                                          else None)
         cluster_transport_maps.append(cluster_transport_map)
 
-weights = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time,
-                             grouped_by_cluster, cluster_ids)
+weights = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time, grouped_by_cluster, cluster_ids)
 cluster_weights_by_time = weights['cluster_weights_by_time']
 combined_cluster_map = wot.ot.transport_maps_by_time(cluster_transport_maps,
                                                      cluster_weights_by_time)

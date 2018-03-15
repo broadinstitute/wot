@@ -8,6 +8,30 @@ import scipy.sparse
 import glob
 
 
+def list_transport_maps(input_dir):
+    transport_maps_inputs = []  # file, start, end
+    for path in glob.glob(input_dir):
+        if os.path.isfile(path):
+            file_info = wot.io.get_file_basename_and_extension(os.path.basename(path))
+            basename = file_info[0]
+            tokens = basename.split('_')
+            t1 = tokens[len(tokens) - 2]
+            t2 = tokens[len(tokens) - 1]
+
+            try:
+                t1 = float(t1)
+                t2 = float(t2)
+
+            except ValueError:
+                continue
+
+            transport_maps_inputs.append(
+                {'path': path, 't1': t1, 't2': t2})
+
+    transport_maps_inputs.sort(key=lambda x: x['t1'])  # sort by t1 (start time)
+    return transport_maps_inputs
+
+
 def read_transport_maps(input_dir, ids=None, time=None):
     transport_maps_inputs = []  # file, start, end
     for path in glob.glob(input_dir):
@@ -24,7 +48,7 @@ def read_transport_maps(input_dir, ids=None, time=None):
 
             except ValueError:
                 continue
-            transport_map = pd.read_table(path, index_col=0, )
+            transport_map = pd.read_table(path, index_col=0)
             if ids is not None and t1 == time:
                 # subset rows
                 transport_map = transport_map[transport_map.index.isin(ids)]
@@ -388,6 +412,7 @@ def get_file_basename_and_extension(name):
 
 
 def write_dataset(ds, path, output_format='txt'):
+    path = check_file_extension(path, output_format)
     if output_format == 'txt' or output_format == 'txt.gz':
         pd.DataFrame(ds.x, index=ds.row_meta.index, columns=ds.col_meta.index).to_csv(path,
                                                                                       index_label="id",
