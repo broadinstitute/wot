@@ -42,6 +42,7 @@ cell_sets = wot.io.read_gene_sets(args.cell_sets)
 transport_maps = wot.io.list_transport_maps(args.dir)
 
 for start_time in start_times:
+    print(start_time)
     start_time_index = None
     end_time_index = None
     for i in range(len(transport_maps)):
@@ -72,14 +73,21 @@ for start_time in start_times:
         cell_set_id = cell_set_ids[i]
         cluster_ids = cell_sets.row_meta.index[cell_sets.x[:, i] > 0]
         cell_ids = clusters.index.values[clusters['cluster'].isin(cluster_ids)]
-        cell_set_id_to_row_indices[cell_set_id] = np.where(tmap.index.isin(cell_ids))
-        cell_set_id_to_column_indices[cell_set_id] = np.where(np.isin(tmap.columns, cell_ids))
+        row_indices = np.where(tmap.index.isin(cell_ids))
+        cell_set_id_to_row_indices[cell_set_id] = row_indices
+        column_indices = np.where(np.isin(tmap.columns, cell_ids))
+        cell_set_id_to_column_indices[cell_set_id] = column_indices
     summary = pd.DataFrame(index=cell_set_ids, columns=cell_set_ids, data=0.0)
+
     for i in range(nsets):
         row_indices = cell_set_id_to_row_indices[cell_set_ids[i]]
+        if row_indices is None or len(row_indices) == 0:
+            continue
         tmap_r = tmap.values[row_indices]
         for j in range(nsets):
-            column_indices = cell_set_id_to_row_indices[cell_set_ids[j]]
+            column_indices = cell_set_id_to_column_indices[cell_set_ids[j]]
+            if column_indices is None or len(column_indices) == 0:
+                continue
             summary.iloc[i, j] += tmap_r[:, column_indices].sum()
 
     # tmap.to_csv(prefix + '_' + str(start_time) + '_' + str(end_time) + '_transition.txt', index_label='id', sep='\t',
