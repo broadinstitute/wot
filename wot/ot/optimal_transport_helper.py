@@ -54,7 +54,7 @@ class OptimalTransportHelper:
                             type=float)
         parser.add_argument('--lambda1',
                             help='Regularization parameter that controls the '
-                                 'fidelity of the constraints on p', type=float)
+                                 'fidelity of the constraints on p', type=float, default=1)
         parser.add_argument('--lambda2', default=1,
                             help='Regularization parameter that controls the '
                                  'fidelity '
