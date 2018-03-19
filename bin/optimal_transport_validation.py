@@ -100,7 +100,7 @@ def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, p
         + '\t' + point_cloud1_name
         + '\t' + point_cloud2_name
         + '\t' + str(args.epsilon)
-        + '\t' + str(args.lambda1)
+        + '\t' + str(args.l)
         + '\t' + str(args.power)
         + '\t' + str(args.beta_min)
         + '\t' + str(args.delta_min)

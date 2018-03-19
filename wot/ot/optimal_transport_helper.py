@@ -52,16 +52,16 @@ class OptimalTransportHelper:
                             help='The minimum fraction of cells at time t that are '
                                  'transported to time t + 1',
                             type=float)
-        parser.add_argument('--lambda1', default=1,
+        parser.add_argument('--lambda', default=1,
                             help='Regularization parameter that controls the '
                                  'fidelity '
-                                 'of the constraints on p',
-                            type=float)
-        parser.add_argument('--lambda2', default=1,
-                            help='Regularization parameter that controls the '
-                                 'fidelity '
-                                 'of the constraints on q',
-                            type=float)
+                                 'of the constraints on p and q',
+                            type=float, dest='l')
+        # parser.add_argument('--lambda2', default=1,
+        #                     help='Regularization parameter that controls the '
+        #                          'fidelity '
+        #                          'of the constraints on q',
+        #                     type=float)
         parser.add_argument('--scaling_iter', default=3000,
                             help='Number of scaling iterations', type=int)
         parser.add_argument('--min_growth_fit', type=float, default=0.9)
@@ -272,8 +272,8 @@ class OptimalTransportHelper:
                                                   max_transport_fraction=args.max_transport_fraction,
                                                   min_transport_fraction=args.min_transport_fraction,
                                                   min_growth_fit=args.min_growth_fit,
-                                                  l0_max=args.l0_max, lambda1=args.lambda1,
-                                                  lambda2=args.lambda2,
+                                                  l0_max=args.l0_max, lambda1=args.l,
+                                                  lambda2=args.l,
                                                   epsilon=args.epsilon,
                                                   scaling_iter=args.scaling_iter,
                                                   epsilon_adjust=args.epsilon_adjust,
