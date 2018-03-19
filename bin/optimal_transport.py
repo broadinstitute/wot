@@ -18,7 +18,7 @@ params_writer = None
 if args.solver is 'floating_epsilon':
     params_writer = open(args.prefix + '_params.txt', 'w')
     params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda' +
-                                                                                          '\n')
+                        '\n')
 
 cluster_transport_maps = []
 total_cluster_size = None
@@ -44,7 +44,7 @@ def callback(cb_args):
     if args.solver is 'floating_epsilon':
         params_writer.write(
             str(cb_args['t0']) + '\t' + str(cb_args['t1']) + '\t' + str(result['epsilon']) + '\t' + str(
-                result['lambda1'])  + '\n')
+                result['lambda1']) + '\n')
     transport_map = pd.DataFrame(result['transport'], index=cb_args['df0'].index, columns=cb_args['df1'].index)
     if args.clusters is not None:
         cluster_transport_map = wot.ot.transport_map_by_cluster(
@@ -56,7 +56,8 @@ def callback(cb_args):
             print('Summarized transport map by cluster')
 
         wot.io.write_dataset(
-            wot.Dataset(cluster_transport_map.values, pd.DataFrame(index=cluster_transport_map.index),
+            wot.Dataset(cluster_transport_map.values,
+                        pd.DataFrame(index=cluster_transport_map.index, data={'g': cb_args['g']}),
                         pd.DataFrame(index=cluster_transport_map.columns)),
             args.prefix + '_cluster_' + str(cb_args['t0']) + '_' + str(cb_args['t1']),
             output_format=args.format)

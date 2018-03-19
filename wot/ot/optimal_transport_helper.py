@@ -266,8 +266,9 @@ class OptimalTransportHelper:
                             t0) + ' to ' + str(
                             t1) + '...', end='')
                 cost_matrix = self.compute_cost_matrix(p0.x, p1.x)
+                growth_rate = p0.row_meta[cell_growth_rates.columns[0]].values
                 result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
-                                                  growth_rate=p0.row_meta[cell_growth_rates.columns[0]].values,
+                                                  growth_rate=growth_rate,
                                                   delta_days=delta_t,
                                                   max_transport_fraction=args.max_transport_fraction,
                                                   min_transport_fraction=args.min_transport_fraction,
@@ -288,4 +289,4 @@ class OptimalTransportHelper:
                     print('done')
                 name = (str(cv0) if cv0 is not None else 'full') + '_' + (str(cv1) if cv1 is not None else 'full')
                 callback({'t0': t0, 't1': t1, 'result': result, 'name': name, 'df0': p0.row_meta, 'df1': p1.row_meta,
-                          'P0': p0_full, 'P1': p1_full, 'P0.5': p0_5_full})
+                          'P0': p0_full, 'P1': p1_full, 'P0.5': p0_5_full, 'g': growth_rate ** delta_t})
