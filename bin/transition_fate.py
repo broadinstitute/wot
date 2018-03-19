@@ -119,8 +119,7 @@ for start_time in start_times:
         if column_indices is None or len(column_indices) == 0:
             continue
         cells_end[j] = len(column_indices)
-    print(cells_end)
-    print(end_time_ncells)
+
     cells_end /= end_time_ncells
     col_meta['cells_end'] = cells_end
     if start_time_g is not None:
