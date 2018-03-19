@@ -57,7 +57,7 @@ def callback(cb_args):
 
         wot.io.write_dataset(
             wot.Dataset(cluster_transport_map.values,
-                        pd.DataFrame(index=cluster_transport_map.index, data={'g': cb_args['g']}),
+                        pd.DataFrame(index=cluster_transport_map.index),
                         pd.DataFrame(index=cluster_transport_map.columns)),
             args.prefix + '_cluster_' + str(cb_args['t0']) + '_' + str(cb_args['t1']),
             output_format=args.format)
@@ -70,7 +70,13 @@ def callback(cb_args):
 
     filename = args.prefix + '_' + str(cb_args['t0']) + '_' + str(cb_args['t1'])
 
-    wot.io.write_dataset(wot.Dataset(result['transport'], cb_args['df0'], cb_args['df1']), filename,
+    row_meta = cb_args['df0'].copy()
+    row_meta.drop(['cell_growth_rate', 'day'], axis=1, inplace=True)
+    row_meta['g'] = cb_args['g']
+
+    col_meta = cb_args['df1'].copy()
+    col_meta.drop(['cell_growth_rate', 'day'], axis=1, inplace=True)
+    wot.io.write_dataset(wot.Dataset(result['transport'], row_meta, col_meta), filename,
                          output_format=args.format)
 
 
