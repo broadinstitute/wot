@@ -17,7 +17,7 @@ ot_helper = wot.ot.OptimalTransportHelper(args)
 params_writer = None
 if args.solver is 'floating_epsilon':
     params_writer = open(args.prefix + '_params.txt', 'w')
-    params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda' +
+    params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda1' + '\t' + 'lambda2' +
                         '\n')
 
 cluster_transport_maps = []
@@ -44,7 +44,8 @@ def callback(cb_args):
     if args.solver is 'floating_epsilon':
         params_writer.write(
             str(cb_args['t0']) + '\t' + str(cb_args['t1']) + '\t' + str(result['epsilon']) + '\t' + str(
-                result['lambda1']) + '\n')
+                result['lambda1']) + '\t' + str(
+                result['lambda2']) + '\n')
     transport_map = pd.DataFrame(result['transport'], index=cb_args['df0'].index, columns=cb_args['df1'].index)
     if args.clusters is not None:
         cluster_transport_map = wot.ot.transport_map_by_cluster(

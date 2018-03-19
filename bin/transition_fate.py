@@ -143,8 +143,6 @@ for start_time in start_times:
 
     summary /= tmap_sum
 
-    # print(row_meta.shape)
-    # print(col_meta.shape)
     # tmap.to_csv(prefix + '_' + str(start_time) + '_' + str(end_time) + '_transition.txt', index_label='id', sep='\t',
     #             doublequote=False, quoting=csv.QUOTE_NONE)
     # summary.to_csv(prefix + '_' + str(start_time) + '_' + str(end_time) + '_transition_summary.txt', index_label='id',
