@@ -55,11 +55,9 @@ class OptimalTransportHelper:
         parser.add_argument('--lambda1',
                             help='Regularization parameter that controls the '
                                  'fidelity of the constraints on p', type=float, default=1)
-        parser.add_argument('--lambda2', default=1,
+        parser.add_argument('--lambda2', default=50,
                             help='Regularization parameter that controls the '
-                                 'fidelity '
-                                 'of the constraints on q',
-                            type=float)
+                                 'fidelity of the constraints on q', type=float)
         parser.add_argument('--scaling_iter', default=3000,
                             help='Number of scaling iterations', type=int)
         parser.add_argument('--min_growth_fit', type=float, default=0.9)
