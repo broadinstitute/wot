@@ -6,9 +6,8 @@ import wot.io
 
 parser = argparse.ArgumentParser(
     description='Convert data formats')
-parser.add_argument('--file', help='File(s) to convert', required=True, action='append')
 parser.add_argument('--format', help='Output file format', default='loom')
-
+parser.add_argument('file', help='File(s) to convert', nargs='+')
 args = parser.parse_args()
 files = args.file
 
