@@ -100,7 +100,8 @@ def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, p
         + '\t' + point_cloud1_name
         + '\t' + point_cloud2_name
         + '\t' + str(args.epsilon)
-        + '\t' + str(args.l)
+        + '\t' + str(args.lambda1)
+        + '\t' + str(args.lambda2)
         + '\t' + str(args.power)
         + '\t' + str(args.beta_min)
         + '\t' + str(args.delta_min)
@@ -151,7 +152,8 @@ subsample_writer.write(
     + '\t' + 'pair0'
     + '\t' + 'pair1'
     + '\t' + 'epsilon'
-    + '\t' + 'lambda'
+    + '\t' + 'lambda1'
+    + '\t' + 'lambda2'
     + '\t' + 'power'
     + '\t' + 'beta_min'
     + '\t' + 'delta_min'
@@ -194,7 +196,7 @@ def transport_map_callback(cb_args):
                                  sep='\t',
                                  doublequote=False)
 
-        tm_sample = wot.ot.sample_from_transport_map(cb_args['P0'], cb_args['P1'], p0_p1_map, args.npairs,
+        tm_sample = wot.ot.sample_from_transport_map(cb_args['P0'].x, cb_args['P1'].x, p0_p1_map, args.npairs,
                                                      args.t_interpolate)
         pc0 = tm_sample['pc0']
         pc1 = tm_sample['pc1']
@@ -212,7 +214,7 @@ def transport_map_callback(cb_args):
             wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta, p0.col_meta),
                                  args.prefix + '_I_' + str(inferred_time) + '.txt')
 
-        random_sample = wot.ot.sample_randomly(cb_args['p0'], cb_args['p1'], p0_p1_map,
+        random_sample = wot.ot.sample_randomly(cb_args['P0'].x, cb_args['P1'].x, p0_p1_map,
                                                p0.row_meta[ot_helper.cell_growth_rates.columns[0]].values ** (
                                                        args.t_interpolate - t0), args.npairs)
         pc0 = random_sample['pc0']
