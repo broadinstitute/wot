@@ -138,7 +138,8 @@ ot_helper = wot.ot.OptimalTransportHelper(args)
 pair_names = None
 t_interpolate_s = str(args.t_interpolate)
 pair_names = [['P' + t_interpolate_s, 'R' + t_interpolate_s], ['P' + t_interpolate_s, 'I' + t_interpolate_s],
-              ['I' + t_interpolate_s, 'R' + t_interpolate_s]]
+              ['I' + t_interpolate_s, 'R' + t_interpolate_s], ['P0', 'P' + t_interpolate_s],
+              ['P1', 'P' + t_interpolate_s]]
 
 subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
 subsample_writer.write(
