@@ -207,9 +207,14 @@ class OptimalTransportHelper:
         for day_index in range(day_pairs.shape[0]):
             t0 = day_pairs.iloc[day_index, 0]
             t1 = day_pairs.iloc[day_index, 1]
-            t0_indices = day_to_indices[t0]
-            t1_indices = day_to_indices[t1]
-
+            t0_indices = day_to_indices.get(t0)
+            if t0_indices is None:
+                print('No data for time ' + str(t0))
+                continue
+            t1_indices = day_to_indices.get(t1)
+            if t1_indices is None:
+                print('No data for time ' + str(t1))
+                continue
             p0_full = wot.Dataset(ds.x[t0_indices], ds.row_meta.iloc[t0_indices], ds.col_meta)
             p1_full = wot.Dataset(ds.x[t1_indices], ds.row_meta.iloc[t1_indices], ds.col_meta)
             p0_5_full = None
