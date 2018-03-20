@@ -67,7 +67,8 @@ for start_time in start_times:
         ds = wot.io.read_dataset(transport_maps[i]['path'])
         if i == start_time_index:
             start_time_ncells = ds.x.shape[0]
-            start_time_g = ds.row_meta['g'].values
+            if ds.row_meta.get('g') is not None:
+                start_time_g = ds.row_meta['g'].values
         elif i == end_time_index:
             end_time_ncells = ds.x.shape[0]
         tmap_i = pd.DataFrame(index=ds.row_meta.index, columns=ds.col_meta.index, data=ds.x)
