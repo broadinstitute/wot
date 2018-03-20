@@ -194,7 +194,7 @@ def transport_map_callback(cb_args):
                                  sep='\t',
                                  doublequote=False)
 
-        tm_sample = wot.ot.sample_from_transport_map(cb_args['p0'], cb_args['p1'], p0_p1_map, args.npairs,
+        tm_sample = wot.ot.sample_from_transport_map(cb_args['P0'], cb_args['P1'], p0_p1_map, args.npairs,
                                                      args.t_interpolate)
         pc0 = tm_sample['pc0']
         pc1 = tm_sample['pc1']
