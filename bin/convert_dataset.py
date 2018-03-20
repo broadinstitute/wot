@@ -13,6 +13,5 @@ args = parser.parse_args()
 files = args.file
 
 for f in files:
-    ds = wot.io.read_dataset(f)
     name = wot.io.get_file_basename_and_extension(f)[0]
-    wot.io.write_dataset(ds, name, output_format=args.format)
+    wot.io.write_dataset(wot.io.read_dataset(f), name, output_format=args.format, txt_full=True)

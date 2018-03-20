@@ -180,10 +180,10 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
         row_meta = None
         for f in (
                 os.path.join(sp[0],
-                             basename_and_extension[0] + ".barcodes.tsv"),
+                             basename_and_extension[0] + '.barcodes.tsv'),
                 os.path.join(sp[0],
-                             basename_and_extension[0] + ".barcodes.txt"),
-                os.path.join(sp[0], "barcodes.tsv")):
+                             basename_and_extension[0] + '.barcodes.txt'),
+                os.path.join(sp[0], 'barcodes.tsv')):
             if os.path.isfile(f) or os.path.isfile(f + '.gz'):
                 data = np.genfromtxt(f
                                      if os.path.isfile(
@@ -194,10 +194,10 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
                 break
         col_meta = None
         for f in (os.path.join(sp[0], basename_and_extension[0] +
-                                      ".genes.tsv"),
+                                      '.genes.tsv'),
                   os.path.join(sp[0], basename_and_extension[0] +
-                                      ".genes.txt"),
-                  os.path.join(sp[0], "genes.tsv")):
+                                      '.genes.txt'),
+                  os.path.join(sp[0], 'genes.tsv')):
             if os.path.isfile(f) or os.path.isfile(f + '.gz'):
                 data = np.genfromtxt(f
                                      if os.path.isfile(
@@ -229,14 +229,14 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
         if not mmid.startswith('%%MatrixMarket'):
             raise ValueError('source is not in Matrix Market format')
         if not matrix.lower() == 'matrix':
-            raise ValueError("Problem reading file header: " + line)
+            raise ValueError('Problem reading file header: ' + line)
         # skip comments
         while line.startswith(b'%'):
             line = stream.readline()
 
         line = line.split()
         if not len(line) == 3:
-            raise ValueError("Header line not of length 3: " + line)
+            raise ValueError('Header line not of length 3: ' + line)
         rows, cols, entries = map(int, line)
 
         # x = np.zeros(shape=(cols, rows), dtype=np.float32)
@@ -279,7 +279,7 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             #     data = data.astype('float32')
             x = csr_matrix((data, group['indices'][()], group['indptr'][()]), shape=(N, M))
             col_meta = pd.DataFrame(index=group['genes'][()].astype(str),
-                                    data={"gene_names": group['gene_names'][()].astype(str)})
+                                    data={'gene_names': group['gene_names'][()].astype(str)})
             row_meta = pd.DataFrame(index=group['barcodes'][()].astype(str))
             f.close()
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
@@ -411,23 +411,47 @@ def get_file_basename_and_extension(name):
     return basename, ext
 
 
-def write_dataset(ds, path, output_format='txt'):
+def write_dataset(ds, path, output_format='txt', txt_full=False):
     path = check_file_extension(path, output_format)
     if output_format == 'txt' or output_format == 'txt.gz':
-        pd.DataFrame(ds.x, index=ds.row_meta.index, columns=ds.col_meta.index).to_csv(path,
-                                                                                      index_label="id",
-                                                                                      sep='\t',
-                                                                                      doublequote=False,
-                                                                                      compression='gzip' if output_format == 'txt.gz'
-                                                                                      else None)
+        if txt_full:
+            f = open(path, 'w')
+            # write columns ids
+            f.write('id\t')
+            f.write('\t'.join(ds.row_meta.columns))
+            if len(ds.row_meta.columns) > 0:
+                f.write('\t')
+            f.write('\t'.join(ds.col_meta.index.values))
+            f.write('\n')
+            spacer = ''.join(np.full(len(ds.row_meta.columns), '\t', dtype=object))
+            # column metadata fields + values
+            for field in ds.col_meta.columns:
+                f.write(field)
+                f.write(spacer)
+                for val in ds.col_meta[field].values:
+                    f.write('\t')
+                    f.write(str(val))
+
+                f.write('\n')
+
+            pd.DataFrame(index=ds.row_meta.index, data=np.hstack((ds.row_meta.values, ds.x))).to_csv(f, sep='\t',
+                                                                                                     header=False)
+            f.close()
+        else:
+            pd.DataFrame(ds.x, index=ds.row_meta.index, columns=ds.col_meta.index).to_csv(path,
+                                                                                          index_label='id',
+                                                                                          sep='\t',
+                                                                                          doublequote=False,
+                                                                                          compression='gzip' if output_format == 'txt.gz'
+                                                                                          else None)
     elif output_format == 'loom':
         f = h5py.File(path, 'w')
         x = ds.x
         is_sparse = scipy.sparse.isspmatrix(x)
-        dset = f.create_dataset("/matrix", shape=x.shape, chunks=(1000, 1000) if
+        dset = f.create_dataset('/matrix', shape=x.shape, chunks=(1000, 1000) if
         x.shape[0] >= 1000 and x.shape[1] >= 1000 else None,
                                 maxshape=(None, x.shape[1]),
-                                compression="gzip", compression_opts=9,
+                                compression='gzip', compression_opts=9,
                                 data=None if is_sparse else x)
         if is_sparse:
             # write in chunks of 1000
@@ -444,9 +468,9 @@ def write_dataset(ds, path, output_format='txt'):
         # f.create_group('/layers')
         # for key in ds.layers:
         #     x = ds.layers[key]
-        #     f.create_dataset("/layers/" + key, shape=x, chunks=(1000, 1000),
+        #     f.create_dataset('/layers/' + key, shape=x, chunks=(1000, 1000),
         #                      maxshape=(None, x.shape[1]),
-        #                      compression="gzip", compression_opts=9,
+        #                      compression='gzip', compression_opts=9,
         #                      data=x)
 
         f.create_group('/row_attrs')
