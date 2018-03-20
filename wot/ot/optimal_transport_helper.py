@@ -219,8 +219,12 @@ class OptimalTransportHelper:
 
             if self.t_interpolate is not None:
                 t0_5 = t0 + (t1 - t0) * self.t_interpolate
-                t0_5_indices = day_to_indices[t0_5]
-                p0_5_full = wot.Dataset(ds.x[t0_5_indices], ds.row_meta.iloc[t0_5_indices], ds.col_meta)
+                t0_5_indices = day_to_indices.get(t0_5)
+                if t0_5_indices is not None:
+                    p0_5_full = wot.Dataset(ds.x[t0_5_indices], ds.row_meta.iloc[t0_5_indices], ds.col_meta)
+                else:
+                    print('Unable to find time ' + str(t0_5) + ' - skipping.')
+                    continue
 
             if args.local_pca is not None:
                 import scipy.sparse
@@ -229,7 +233,9 @@ class OptimalTransportHelper:
                 matrices.append(p1_full.x if not scipy.sparse.isspmatrix(p1_full.x) else p1_full.x.toarray())
                 if p0_5_full is not None:
                     matrices.append(p0_5_full.x if not scipy.sparse.isspmatrix(p0_5_full.x) else p0_5_full.x.toarray())
+
                 x = np.vstack(matrices)
+
                 x = x - x.mean(axis=0)
                 pca = sklearn.decomposition.PCA(n_components=args.local_pca)
                 pca.fit(x.T)
@@ -237,7 +243,8 @@ class OptimalTransportHelper:
                 p0_full = wot.Dataset(x[0:len(t0_indices)],
                                       p0_full.row_meta,
                                       pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
-                p1_full = wot.Dataset(x[len(t0_indices):],
+
+                p1_full = wot.Dataset(x[len(t0_indices):len(t0_indices) + len(t1_indices)],
                                       p1_full.row_meta,
                                       pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 if p0_5_full is not None:
