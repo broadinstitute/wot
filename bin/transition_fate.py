@@ -70,7 +70,7 @@ for start_time in start_times:
             if ds.row_meta.get('g') is not None:
                 start_time_g = ds.row_meta['g'].values
         elif i == end_time_index:
-            end_time_ncells = ds.x.shape[0]
+            end_time_ncells = ds.x.shape[1]
         tmap_i = pd.DataFrame(index=ds.row_meta.index, columns=ds.col_meta.index, data=ds.x)
         if tmap is None:
             tmap = tmap_i
@@ -112,6 +112,7 @@ for start_time in start_times:
         cells_start[i] = len(row_indices)
         if start_time_g is not None:
             g[i] = start_time_g[row_indices].sum()
+    g /= start_time_g.sum()
     cells_start /= start_time_ncells
     row_meta['cells_start'] = cells_start
     cells_end = np.zeros(nsets)
