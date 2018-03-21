@@ -120,7 +120,7 @@ class OptimalTransportHelper:
             if args.verbose:
                 d = np.setdiff1d(cell_ids, ds.row_meta.index.values)
                 if len(d) > 0:
-                    print('In cell filter, but not in matrix: ' + str(d))
+                    print(str(len(d)) + ' cell ids in cell filter, but not in matrix: ' + str(', '.join(d)))
             prior = ds.x.shape[0]
             ds = wot.Dataset(ds.x[indices], ds.row_meta.iloc[indices], ds.col_meta)
             if args.verbose:
