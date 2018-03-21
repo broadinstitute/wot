@@ -100,7 +100,8 @@ class OptimalTransportHelper:
                                  'sinkhorn_epsilon, unregularized',
                             choices=['epsilon', 'sinkhorn_epsilon', 'unbalanced', 'unregularized'],
                             default='unbalanced')
-        parser.add_argument('--cell_filter', help='File with one cell id per line to include')
+        parser.add_argument('--cell_filter',
+                            help='File with one cell id per line to include or or a python regular expression of cell ids to include')
         parser.add_argument('--verbose', action='store_true',
                             help='Print progress information')
         return parser
@@ -115,14 +116,20 @@ class OptimalTransportHelper:
         # cells on rows, features on columns
         ds = wot.io.read_dataset(args.matrix)
         if args.cell_filter is not None:
-            cell_ids = np.loadtxt(args.cell_filter, delimiter='\n', dtype=str)
-            indices = np.isin(ds.row_meta.index.values, cell_ids)
+            prior = ds.x.shape[0]
+            if not os.path.isfile(args.cell_filter):
+                import re
+                expr = re.compile(args.cell_filter)
+                cell_ids = [elem for elem in ds.row_meta.index.values if expr.match(elem)]
+            else:
+                cell_ids = np.loadtxt(args.cell_filter, delimiter='\n', dtype=str, comments=None)
+            row_indices = np.isin(ds.row_meta.index.values, cell_ids)
             if args.verbose:
                 d = np.setdiff1d(cell_ids, ds.row_meta.index.values)
                 if len(d) > 0:
                     print(str(len(d)) + ' cell ids in cell filter, but not in matrix: ' + str(', '.join(d)))
-            prior = ds.x.shape[0]
-            ds = wot.Dataset(ds.x[indices], ds.row_meta.iloc[indices], ds.col_meta)
+
+            ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
             if args.verbose:
                 print('Keeping ' + str(ds.x.shape[0]) + '/' + str(prior) + ' cells')
 
