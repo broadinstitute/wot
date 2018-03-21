@@ -116,7 +116,11 @@ class OptimalTransportHelper:
         ds = wot.io.read_dataset(args.matrix)
         if args.cell_filter is not None:
             cell_ids = np.loadtxt(args.cell_filter, delimiter='\n', dtype=str)
-            indices = np.where(np.isin(ds.row_meta.index.values, cell_ids))
+            indices = np.isin(ds.row_meta.index.values, cell_ids)
+            if args.verbose:
+                d = np.setdiff1d(cell_ids, ds.row_meta.index.values)
+                if len(d) > 0:
+                    print('In cell filter, but not in matrix: ' + str(d))
             prior = ds.x.shape[0]
             ds = wot.Dataset(ds.x[indices], ds.row_meta.iloc[indices], ds.col_meta)
             if args.verbose:
