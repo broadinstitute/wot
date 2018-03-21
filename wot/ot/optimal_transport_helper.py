@@ -115,6 +115,7 @@ class OptimalTransportHelper:
 
         # cells on rows, features on columns
         ds = wot.io.read_dataset(args.matrix)
+
         if args.cell_filter is not None:
             prior = ds.x.shape[0]
             if not os.path.isfile(args.cell_filter):
@@ -122,12 +123,13 @@ class OptimalTransportHelper:
                 expr = re.compile(args.cell_filter)
                 cell_ids = [elem for elem in ds.row_meta.index.values if expr.match(elem)]
             else:
-                cell_ids = np.loadtxt(args.cell_filter, delimiter='\n', dtype=str, comments=None)
-            row_indices = np.isin(ds.row_meta.index.values, cell_ids)
-            if args.verbose:
-                d = np.setdiff1d(cell_ids, ds.row_meta.index.values)
-                if len(d) > 0:
-                    print(str(len(d)) + ' cell ids in cell filter, but not in matrix: ' + str(', '.join(d)))
+                cell_ids = pd.read_table(args.cell_filter, index_col=0, header=None).index.values
+
+            # row_indices = np.isin(ds.row_meta.index.values, cell_ids, assume_unique=True)
+            row_indices = ds.row_meta.index.isin(cell_ids)
+            nkeep = np.sum(row_indices)
+            if args.verbose and len(cell_ids) > nkeep:
+                print(str(len(cell_ids) - nkeep) + ' are in cell filter, but not in matrix')
 
             ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
             if args.verbose:
