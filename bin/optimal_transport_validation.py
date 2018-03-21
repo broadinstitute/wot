@@ -236,8 +236,8 @@ def transport_map_callback(cb_args):
         p0_5_cv = wot.Dataset(p0_5.x, p0_5.row_meta.copy(False).join(covariate_df), p0_5.col_meta)
         for i in range(len(unique_covariates)):
             cv = unique_covariates[i]
-            exp = p0_5_cv[p0_5_cv[covariate_df.columns[0]] == cv]
-            p = wot.Dataset(p0_5_cv.x[exp], p0_5.row_meta.iloc[exp], p0_5_cv.col_meta)
+            cv_filter = np.where(p0_5_cv.row_meta[covariate_df.columns[0]] == cv)[0]
+            p = wot.Dataset(p0_5_cv.x[cv_filter], p0_5.row_meta.iloc[cv_filter], p0_5_cv.col_meta)
             if p.x.shape[0] > 0:
                 name = 'P' + t_interpolate_s + '_' + str(cv)
                 point_clouds.append(
