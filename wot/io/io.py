@@ -391,6 +391,8 @@ def check_file_extension(name, format):
         expected = '.txt.gz'
     elif format == 'loom':
         expected = '.loom'
+    elif format == 'gct':
+        expected = '.gct'
     if expected is not None:
         if not str(name).lower().endswith(expected):
             name += expected
@@ -413,10 +415,15 @@ def get_file_basename_and_extension(name):
 
 def write_dataset(ds, path, output_format='txt', txt_full=False):
     path = check_file_extension(path, output_format)
-    if output_format == 'txt' or output_format == 'txt.gz':
-        if txt_full:
+    if output_format == 'txt' or output_format == 'txt.gz' or output_format == 'gct':
+        if txt_full or output_format == 'gct':
             f = open(path, 'w')
             # write columns ids
+
+            if output_format == 'gct':
+                f.write('#1.3\n')
+                f.write(str(ds.x.shape[0]) + '\t' + str(ds.x.shape[1]) + '\t' + str(len(ds.row_meta.columns)) +
+                        '\t' + str(len(ds.col_meta.columns)) + '\n')
             f.write('id\t')
             f.write('\t'.join(ds.row_meta.columns))
             if len(ds.row_meta.columns) > 0:
