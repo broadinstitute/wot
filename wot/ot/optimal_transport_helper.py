@@ -109,7 +109,9 @@ class OptimalTransportHelper:
     def __init__(self, args):
         eigenvals = None
         if args.diagonal is not None:
-            eigenvals = np.loadtxt(args.diagonal, delimiter='\n')
+            eigenvals = \
+            pd.read_table(args.diagonal, header=None, names=['eigenvals'], index_col=False, dtype=np.float64)[
+                'eigenvals'].values
         if eigenvals is not None and args.power is not None:
             eigenvals = np.power(eigenvals, args.power)
 
