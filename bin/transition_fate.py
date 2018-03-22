@@ -45,7 +45,7 @@ if args.cell_set_filter is not None:
         set_ids = [elem for elem in cell_sets.col_meta.index.values if expr.match(elem)]
     else:
         set_ids = pd.read_table(args.cell_set_filter, index_col=0, header=None).index.values
-    indices = np.isin(cell_sets.col_meta.index.values, set_ids)
+    indices = cell_sets.col_meta.index.isin(set_ids)
     cell_sets = wot.Dataset(cell_sets.x[:, indices], cell_sets.row_meta, cell_sets.col_meta.iloc[indices])
 for start_time in start_times:
     start_time_index = None
