@@ -3,9 +3,8 @@
 
 import argparse
 import numpy as np
-import wot.ot
+import os.path
 import wot.io
-import csv
 import pandas as pd
 
 parser = argparse.ArgumentParser(
@@ -23,14 +22,10 @@ parser.add_argument('--prefix',
                     help='Prefix for ouput file names.',
                     required=True)
 
-parser.add_argument('--clusters',
-                    help='Two column tab delimited file without header with '
-                         'cell id and '
-                         'cluster id',
-                    required=True)
-
+parser.add_argument('--cell_set_filter',
+                    help='A file with one cell set per line to include or a python regular expression of cell set ids to include')
 parser.add_argument('--cell_sets',
-                    help='Grouping of clusters into cell sets',
+                    help='Grouping of cells into cell sets in gmt or gmx format',
                     required=True)
 
 parser.add_argument('--format', help='Output file format', default='loom')
@@ -39,10 +34,19 @@ args = parser.parse_args()
 start_times = args.start_time
 end_time = args.end_time
 prefix = args.prefix
-clusters = pd.read_table(args.clusters, index_col=0, header=None, names=['cluster'], engine='python', sep=None)
 cell_sets = wot.io.read_gene_sets(args.cell_sets)
 transport_maps = wot.io.list_transport_maps(args.dir)
 
+if args.cell_set_filter is not None:
+    if not os.path.isfile(args.cell_set_filter):
+        import re
+
+        expr = re.compile(args.cell_set_filter)
+        set_ids = [elem for elem in cell_sets.col_meta.index.values if expr.match(elem)]
+    else:
+        set_ids = pd.read_table(args.cell_set_filter, index_col=0, header=None).index.values
+    indices = np.isin(cell_sets.col_meta.index.values, set_ids)
+    cell_sets = wot.Dataset(cell_sets.x[:, indices], cell_sets.row_meta, cell_sets.col_meta.iloc[indices])
 for start_time in start_times:
     start_time_index = None
     end_time_index = None
@@ -82,8 +86,7 @@ for start_time in start_times:
     cell_set_id_to_column_indices = {}
     for i in range(len(cell_set_ids)):
         cell_set_id = cell_set_ids[i]
-        cluster_ids = cell_sets.row_meta.index[cell_sets.x[:, i] > 0]
-        cell_ids = clusters.index.values[clusters['cluster'].isin(cluster_ids)]
+        cell_ids = cell_sets.row_meta.index[cell_sets.x[:, i] > 0]
         row_indices = np.where(tmap.index.isin(cell_ids))[0]
         cell_set_id_to_row_indices[cell_set_id] = row_indices
         column_indices = np.where(np.isin(tmap.columns, cell_ids))[0]
