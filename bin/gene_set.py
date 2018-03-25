@@ -15,6 +15,8 @@ parser.add_argument('--gene_sets',
 parser.add_argument('--prefix',
                     help='Output file name prefix',
                     required=True)
+parser.add_argument('--to_upper',
+                    help='Convert matrix ids to uppercase', action='store_true')
 parser.add_argument('--no_zscore', action='store_true',
                     help='Do not z-score genes')
 parser.add_argument('--verbose', action='store_true',
@@ -24,7 +26,8 @@ args = parser.parse_args()
 use_dask = False
 
 ds = wot.io.read_dataset(args.matrix, use_dask=use_dask)
-
+if args.to_upper:
+    ds.col_meta.index = ds.col_meta.index.str.upper()
 if args.verbose:
     print('Read dataset')
 gene_ids = ds.col_meta.index.values
@@ -40,6 +43,7 @@ result = wot.score_gene_sets(ds=ds, gs=gs, z_score_ds=not args.no_zscore)
 
 if use_dask:
     import dask
+
     result.x, result.row_meta, result.col_meta = dask.compute(result.x, result.row_meta, result.col_meta)
 
 output_format = 'txt'
