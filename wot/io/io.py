@@ -364,6 +364,8 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
             col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
+    elif ext == 'gct':
+        return wot.io.read_gct(path)
     else:
         with open(path) as fp:
             row_ids = []
@@ -452,9 +454,10 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
                     f.write(str(val))
 
                 f.write('\n')
-
-            pd.DataFrame(index=ds.row_meta.index, data=np.hstack((ds.row_meta.values, ds.x))).to_csv(f, sep='\t',
-                                                                                                     header=False)
+            # TODO write as sparse array
+            pd.DataFrame(index=ds.row_meta.index, data=np.hstack(
+                    (ds.row_meta.values, ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x))).to_csv(f, sep='\t',
+                                                                                                             header=False)
             f.close()
         else:
             pd.DataFrame(ds.x, index=ds.row_meta.index, columns=ds.col_meta.index).to_csv(path,

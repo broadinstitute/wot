@@ -33,6 +33,21 @@ class TestIO(unittest.TestCase):
             self.assertTrue(len(index) == 1)
             self.assertTrue(index[0] >= 0)
 
+    def test_mtx_to_gct(self):
+        ds = wot.io.read_dataset(
+            'inputs/io/filtered_gene_bc_matrices/hg19/matrix.mtx')
+
+        wot.io.write_dataset(ds, 'test.gct', 'gct')
+        ds2 = wot.io.read_dataset('test.gct')
+        np.testing.assert_array_equal(ds.x.toarray(),
+                                      ds2.x)
+        pd.testing.assert_frame_equal(
+            ds.row_meta,
+            ds2.row_meta)
+        pd.testing.assert_frame_equal(
+            ds.col_meta,
+            ds2.col_meta)
+
     def test_mtx_to_loom(self):
         ds = wot.io.read_dataset(
             'inputs/io/filtered_gene_bc_matrices/hg19/matrix.mtx')
@@ -41,8 +56,8 @@ class TestIO(unittest.TestCase):
         wot.io.write_dataset(ds, 'test.loom', 'loom')
         ds2 = wot.io.read_dataset('test.loom')
 
-        np.testing.assert_array_equal(ds.x.todense(),
-                                      ds2.x.todense())
+        np.testing.assert_array_equal(ds.x.toarray(),
+                                      ds2.x.toarray())
         pd.testing.assert_frame_equal(
             ds.row_meta,
             ds2.row_meta)

@@ -184,7 +184,7 @@ class TransitionFate:
         wot.io.write_dataset(
             wot.Dataset(summary, row_meta, col_meta),
             args.prefix + '_' + str(start_time) + '_' + str(args.end_time) + '_transition_summary',
-            output_format=args.format)
+            output_format=args.format, txt_full=True)
 
 
 TransitionFate.compute(parser.parse_args())
