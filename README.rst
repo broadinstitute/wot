@@ -63,7 +63,7 @@ Pass --help to any of the commands for a full description of all command line ar
 ========================
 File Formats
 ========================
-Expression matrix - tab delimitted text file with genes on the columns and cells on the rows.
+Expression matrix - tab delimitted text file with genes on the columns and cells on the rows, loom file, or mtx file.
 
 Example:
 id TAB gene_1 TAB gene_2 TAB gene_n...
@@ -98,17 +98,6 @@ cell_2 TAB 1
 cell_n TAB 2
 
 
-Clusters - Two column tab delimited file without header with cell id and cluster id. Used to summarize transport maps by cluster.
-
-Example:
-
-cell_1 TAB 1
-
-cell_2 TAB 1
-
-cell_n TAB 2
-
-
 Day pairs - Two column tab delimited file without header with pairs of days to compute transport maps for.
 
 Example:
@@ -120,3 +109,12 @@ Example:
 4 TAB 6
 
 
+Clusters - Two column tab delimited file without header with cell id and cluster id. Used to summarize transport maps by cluster.
+
+Example:
+
+cell_1 TAB 1
+
+cell_2 TAB 1
+
+cell_n TAB 2

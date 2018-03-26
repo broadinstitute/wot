@@ -110,8 +110,8 @@ class OptimalTransportHelper:
         eigenvals = None
         if args.diagonal is not None:
             eigenvals = \
-            pd.read_table(args.diagonal, header=None, names=['eigenvals'], index_col=False, dtype=np.float64)[
-                'eigenvals'].values
+                pd.read_table(args.diagonal, header=None, names=['eigenvals'], index_col=False, dtype=np.float64)[
+                    'eigenvals'].values
         if eigenvals is not None and args.power is not None:
             eigenvals = np.power(eigenvals, args.power)
 
@@ -165,11 +165,15 @@ class OptimalTransportHelper:
             cell_growth_rates = pd.DataFrame(index=gene_set_scores.index,
                                              data={'cell_growth_rate': g})
 
-        else:
+        elif args.cell_growth_rates is not None:
             cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col=0,
                                               header=None, names=['cell_growth_rate'],
                                               quoting=csv.QUOTE_NONE, engine='python',
                                               sep=None)
+        else:
+            cell_growth_rates = pd.DataFrame(index=ds.row_meta.index, data=1)
+            if args.verbose:
+                print('Using growth rate of 1')
         ds.row_meta = ds.row_meta.join(cell_growth_rates).join(days_data_frame)
         self.covariate_pairs = [[None, None]]
         self.covariate_df = None
