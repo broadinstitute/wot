@@ -328,17 +328,29 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             if values.dtype.kind == 'S':
                 values = values.astype(str)
             data[key] = values
-        col_meta = pd.DataFrame(data,
-                                index=pd.RangeIndex(start=0, stop=f[
-                                    h5_x].shape[1],
-                                                    step=1))
+        col_meta = pd.DataFrame(data, index=pd.RangeIndex(start=0, stop=f[h5_x].shape[1], step=1))
         if data.get('id') is not None:
             col_meta.set_index('id', inplace=True)
         if not use_dask:
             x = f[h5_x]
-            if row_indices is None:
-                x = x[()]
+            if x.attrs.get('sparse') and row_indices is None:
+                # read in blocks of 1000
+                chunk_start = 0
+                chunk_step = min(nrows, 1000)
+                chunk_stop = chunk_step
+                nchunks = int(np.ceil(max(1, nrows / chunk_step)))
+                sparse_arrays = []
+                for chunk in range(nchunks):
+                    chunk_stop = min(nrows, chunk_stop)
+                    subset = scipy.sparse.csr_matrix(x[chunk_start:chunk_stop])
+                    sparse_arrays.append(subset)
+                    chunk_start += chunk_step
+                    chunk_stop += chunk_step
+
+                x = scipy.sparse.vstack(sparse_arrays)
             else:
+                if row_indices is None:
+                    row_indices = ()
                 x = x[row_indices]
             f.close()
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
@@ -461,6 +473,7 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
                                 compression='gzip', compression_opts=9,
                                 data=None if is_sparse else x)
         if is_sparse:
+            dset.attrs['sparse'] = True
             # write in chunks of 1000
             start = 0
             step = min(x.shape[0], 1000)
