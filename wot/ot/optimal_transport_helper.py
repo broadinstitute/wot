@@ -171,7 +171,7 @@ class OptimalTransportHelper:
                                               quoting=csv.QUOTE_NONE, engine='python',
                                               sep=None)
         else:
-            cell_growth_rates = pd.DataFrame(index=ds.row_meta.index, data=1)
+            cell_growth_rates = pd.DataFrame(index=ds.row_meta.index.values, data=1)
             if args.verbose:
                 print('Using growth rate of 1')
         ds.row_meta = ds.row_meta.join(cell_growth_rates).join(days_data_frame)
