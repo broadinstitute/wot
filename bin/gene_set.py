@@ -21,6 +21,7 @@ parser.add_argument('--no_zscore', action='store_true',
                     help='Do not z-score genes')
 parser.add_argument('--verbose', action='store_true',
                     help='Print progress information')
+parser.add_argument('--format', help='Output file format', default='loom')
 
 args = parser.parse_args()
 use_dask = False
@@ -46,11 +47,7 @@ if use_dask:
 
     result.x, result.row_meta, result.col_meta = dask.compute(result.x, result.row_meta, result.col_meta)
 
-output_format = 'txt'
-path = wot.io.check_file_extension(args.prefix,
-                                   format=output_format)
 if args.verbose:
-    print('Computed gene set scores, writing output to ' + path)
+    print('Computed gene set scores')
 
-wot.io.write_dataset(ds=result, path=path,
-                     output_format=output_format)
+wot.io.write_dataset(ds=result, path=args.prefix, output_format=args.format)
