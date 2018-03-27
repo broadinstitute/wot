@@ -49,6 +49,8 @@ class TransitionFate:
                 indices = np.where(np.isin(tmap.columns, cell_ids))[0]
             else:
                 indices = np.where(tmap.index.isin(cell_ids))[0]
+            if len(indices) is 0:
+                raise Exception(cell_set_id + ' has zero members in dataset')
             cell_set_id_to_indices[cell_set_id] = indices
         return cell_set_id_to_indices
 
@@ -80,10 +82,13 @@ class TransitionFate:
             if transport_maps[i]['t2'] == end_time:
                 end_time_index = i
 
-        if start_time_index is None:
+        if start_time_index is None and end_time_index is None:
+            raise RuntimeError(
+                'Transport map for time ' + str(start_time) + ' and time ' + str(end_time) + ' not found.')
+        elif start_time_index is None:
             raise RuntimeError(
                 'Transport map for time ' + str(start_time) + ' not found.')
-        if end_time_index is None:
+        elif end_time_index is None:
             raise RuntimeError(
                 'Transport map for time ' + str(end_time) + ' not found.')
         tmap = None
@@ -92,10 +97,13 @@ class TransitionFate:
         end_time_ncells = None
         start_cell_sets = TransitionFate.read_cell_sets(args.start_cell_set_filter, args.start_cell_sets)
         end_cell_sets = TransitionFate.read_cell_sets(args.end_cell_set_filter, args.end_cell_sets)
-        if start_cell_sets.x.shape[1] == 0:
+        if start_cell_sets.x.shape[1] == 0 and end_cell_sets.x.shape[1] == 0:
+            print('No start or end cell sets')
+            exit(1)
+        elif start_cell_sets.x.shape[1] == 0:
             print('No start cell sets')
             exit(1)
-        if end_cell_sets.x.shape[1] == 0:
+        elif end_cell_sets.x.shape[1] == 0:
             print('No end cell sets')
             exit(1)
         for i in range(start_time_index, end_time_index + 1):
