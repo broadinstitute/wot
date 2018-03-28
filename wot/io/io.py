@@ -168,7 +168,7 @@ def read_gmx(path, feature_ids=None):
         return wot.Dataset(x, row_meta=row_meta, col_meta=col_meta)
 
 
-def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
+def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
                  h5_col_meta=None, use_dask=False, genome10x=None, row_filter=None):
     path = str(path)
     basename_and_extension = get_file_basename_and_extension(path)
@@ -361,8 +361,8 @@ def read_dataset(path, chunks=(200, 200), h5_x=None, h5_row_meta=None,
             import dask.dataframe as dd
             x = da.from_array(f[h5_x], chunks=chunks)
             # TODO load in chunks
-            row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
-            col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
+            # row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
+            # col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'gct':
         return wot.io.read_gct(path)
