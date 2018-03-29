@@ -427,7 +427,7 @@ def get_file_basename_and_extension(name):
     return basename, ext
 
 
-def write_dataset(ds, path, output_format='txt', txt_full=False):
+def write_dataset(ds, path, output_format='txt', txt_full=False, progress=None):
     path = check_file_extension(path, output_format)
     if output_format == 'txt' or output_format == 'txt.gz' or output_format == 'gct':
         if txt_full or output_format == 'gct':
@@ -456,8 +456,8 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
                 f.write('\n')
             # TODO write as sparse array
             pd.DataFrame(index=ds.row_meta.index, data=np.hstack(
-                    (ds.row_meta.values, ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x))).to_csv(f, sep='\t',
-                                                                                                             header=False)
+                (ds.row_meta.values, ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x))).to_csv(f, sep='\t',
+                                                                                                         header=False)
             f.close()
         else:
             pd.DataFrame(ds.x, index=ds.row_meta.index, columns=ds.col_meta.index).to_csv(path,
@@ -470,12 +470,29 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
         f = h5py.File(path, 'w')
         x = ds.x
         is_sparse = scipy.sparse.isspmatrix(x)
+        is_dask = str(type(x)) == "<class 'dask.array.core.Array'>"
+        save_in_chunks = is_sparse or is_dask
+
         dset = f.create_dataset('/matrix', shape=x.shape, chunks=(1000, 1000) if
         x.shape[0] >= 1000 and x.shape[1] >= 1000 else None,
                                 maxshape=(None, x.shape[1]),
                                 compression='gzip', compression_opts=9,
-                                data=None if is_sparse else x)
-        if is_sparse:
+                                data=None if save_in_chunks else x)
+        if is_dask:
+            chunks = tuple((c if i == 0 else (sum(c),))
+                           for i, c in enumerate(x.chunks))
+
+            x = x.rechunk(chunks)
+            xstart = 0
+            xend = 0
+            for xchunk in x.chunks[0]:
+                xend += xchunk
+                dset[slice(xstart, xend)] = x[slice(xstart, xend)].compute()
+                xstart = xend
+                if progress:
+                    progress(xstart)
+
+        elif is_sparse:
             dset.attrs['sparse'] = True
             # write in chunks of 1000
             start = 0
@@ -487,6 +504,8 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
                 dset[start:stop] = x[start:stop].toarray()
                 start += step
                 stop += step
+                if progress:
+                    progress(start)
 
         # f.create_group('/layers')
         # for key in ds.layers:
@@ -496,31 +515,28 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
         #                      compression='gzip', compression_opts=9,
         #                      data=x)
 
-        f.create_group('/row_attrs')
-        f.create_group('/col_attrs')
+        wot.io.save_loom_attrs(f, False, ds.row_meta)
+        wot.io.save_loom_attrs(f, True, ds.col_meta)
 
-        def save_metadata_array(path, array):
-            # convert object or unicode to string
-            if array.dtype.kind == 'U' or array.dtype.kind == 'O':
-                array = array.astype('S')
-            f[path] = array
-
-        if ds.row_meta is not None:
-            save_metadata_array('/row_attrs/' + ('id' if ds.row_meta.index.name is
-                                                         None else
-                                                 ds.row_meta.index.name),
-                                ds.row_meta.index.values)
-            for name in ds.row_meta.columns:
-                save_metadata_array('/row_attrs/' + name,
-                                    ds.row_meta[name].values)
-        if ds.col_meta is not None:
-            save_metadata_array('/col_attrs/' + ('id' if ds.col_meta.index.name is
-                                                         None else
-                                                 ds.col_meta.index.name), ds.col_meta.index.values)
-            for name in ds.col_meta.columns:
-                save_metadata_array('/col_attrs/' + name,
-                                    ds.col_meta[name].values)
         f.close()
 
     else:
         raise Exception('Unknown file output_format')
+
+
+def save_loom_attrs(f, is_columns, metadata):
+    attrs_path = '/col_attrs' if is_columns else '/row_attrs'
+    f.create_group(attrs_path)
+
+    def save_metadata_array(path, array):
+        # convert object or unicode to string
+        if array.dtype.kind == 'U' or array.dtype.kind == 'O':
+            array = array.astype('S')
+        f[path] = array
+
+    if metadata is not None:
+        save_metadata_array(attrs_path + '/' + ('id' if metadata.index.name is
+                                                        None else
+                                                metadata.index.name), metadata.index.values)
+        for name in metadata.columns:
+            save_metadata_array(attrs_path + '/' + name, metadata[name].values)
