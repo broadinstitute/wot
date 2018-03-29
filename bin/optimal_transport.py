@@ -9,7 +9,7 @@ import wot.io
 
 parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute transport maps between pairs of time points')
 parser.add_argument('--clusters', help='Two column file with cell id and cluster id')
-parser.add_argument('--format', help='Output file format', default='txt')
+parser.add_argument('--format', help='Output file format', default='loom')
 
 args = parser.parse_args()
 ot_helper = wot.ot.OptimalTransportHelper(args)
