@@ -6,6 +6,7 @@ import numpy as np
 import os.path
 import wot.io
 import pandas as pd
+import scipy.stats
 
 parser = argparse.ArgumentParser(
     description='Compute cell trajectories')
@@ -37,40 +38,15 @@ parser.add_argument('--format', help='Output file format', default='loom')
 class TransitionFate:
 
     @staticmethod
-    def get_set_id_to_indices(cell_set_ds, tmap, is_columns):
-
-        cell_set_ids = cell_set_ds.col_meta.index.values
-        cell_set_id_to_indices = {}
-
-        for i in range(len(cell_set_ids)):
-            cell_set_id = cell_set_ids[i]
-            cell_ids = cell_set_ds.row_meta.index[cell_set_ds.x[:, i] > 0]
-            if is_columns:
-                indices = np.where(np.isin(tmap.columns, cell_ids))[0]
-            else:
-                indices = np.where(tmap.index.isin(cell_ids))[0]
-            if len(indices) is 0:
-                raise Exception(cell_set_id + ' has zero members in dataset')
-            cell_set_id_to_indices[cell_set_id] = indices
-        return cell_set_id_to_indices
-
-    @staticmethod
     def read_cell_sets(cell_set_filter, path):
         cell_sets = wot.io.read_gene_sets(path)
-
         if cell_set_filter is not None:
-            if not os.path.isfile(cell_set_filter):
-                import re
-
-                expr = re.compile(cell_set_filter)
-                set_ids = [elem for elem in cell_sets.col_meta.index.values if expr.match(elem)]
-            else:
-                set_ids = pd.read_table(cell_set_filter, index_col=0, header=None).index.values
-        indices = cell_sets.col_meta.index.isin(set_ids)
-        return wot.Dataset(cell_sets.x[:, indices], cell_sets.row_meta, cell_sets.col_meta.iloc[indices])
+            return wot.ot.filter_sets(cell_sets, cell_set_filter)
+        else:
+            return cell_sets
 
     @staticmethod
-    def compute(args):
+    def compute_transport_map(args, store=False):
         start_time = args.start_time
         end_time = args.end_time
         transport_maps = wot.io.list_transport_maps(args.dir)
@@ -95,17 +71,7 @@ class TransitionFate:
         start_time_ncells = None
         start_time_g = None
         end_time_ncells = None
-        start_cell_sets = TransitionFate.read_cell_sets(args.start_cell_set_filter, args.start_cell_sets)
-        end_cell_sets = TransitionFate.read_cell_sets(args.end_cell_set_filter, args.end_cell_sets)
-        if start_cell_sets.x.shape[1] == 0 and end_cell_sets.x.shape[1] == 0:
-            print('No start or end cell sets')
-            exit(1)
-        elif start_cell_sets.x.shape[1] == 0:
-            print('No start cell sets')
-            exit(1)
-        elif end_cell_sets.x.shape[1] == 0:
-            print('No end cell sets')
-            exit(1)
+        tmaps = []
         for i in range(start_time_index, end_time_index + 1):
             ds = wot.io.read_dataset(transport_maps[i]['path'])
             if i == start_time_index:
@@ -119,7 +85,51 @@ class TransitionFate:
                 tmap = tmap_i
             else:
                 tmap = tmap.dot(tmap_i / np.sqrt(np.sum(tmap_i.values)))
+            if store:
+                tmaps.append(tmap)
 
+        return {'start_time_ncells': start_time_ncells,
+                'start_time_g': start_time_g,
+                'end_time_ncells': end_time_ncells,
+                'tmap': tmap,
+                'tmaps': tmaps}
+
+    @staticmethod
+    def get_set_id_to_indices(cell_set_ds, tmap, is_columns):
+        cell_set_ids = cell_set_ds.col_meta.index.values
+        cell_set_id_to_indices = {}
+
+        for i in range(len(cell_set_ids)):
+            cell_set_id = cell_set_ids[i]
+            cell_ids = cell_set_ds.row_meta.index[cell_set_ds.x[:, i] > 0]
+            if is_columns:
+                indices = np.where(np.isin(tmap.columns, cell_ids))[0]
+            else:
+                indices = np.where(tmap.index.isin(cell_ids))[0]
+            if len(indices) is 0:
+                raise Exception(cell_set_id + ' has zero members in dataset')
+            cell_set_id_to_indices[cell_set_id] = indices
+        return cell_set_id_to_indices
+
+    @staticmethod
+    def summarize_transport_map(args):
+        transport_results = TransitionFate.compute_transport_map(args)
+        tmap = transport_results['tmap']
+        start_time_ncells = transport_results['start_time_ncells']
+        start_time_g = transport_results['start_time_g']
+        end_time_ncells = transport_results['end_time_ncells']
+
+        start_cell_sets = TransitionFate.read_cell_sets(args.start_cell_set_filter, args.start_cell_sets)
+        end_cell_sets = TransitionFate.read_cell_sets(args.end_cell_set_filter, args.end_cell_sets)
+        if start_cell_sets.x.shape[1] == 0 and end_cell_sets.x.shape[1] == 0:
+            print('No start or end cell sets')
+            exit(1)
+        elif start_cell_sets.x.shape[1] == 0:
+            print('No start cell sets')
+            exit(1)
+        elif end_cell_sets.x.shape[1] == 0:
+            print('No end cell sets')
+            exit(1)
         cell_set_id_to_row_indices = TransitionFate.get_set_id_to_indices(start_cell_sets, tmap, False)
         cell_set_id_to_column_indices = TransitionFate.get_set_id_to_indices(end_cell_sets, tmap, True)
         summary = np.zeros(shape=(start_cell_sets.x.shape[1], end_cell_sets.x.shape[1]))
@@ -191,8 +201,8 @@ class TransitionFate:
 
         wot.io.write_dataset(
             wot.Dataset(summary, row_meta, col_meta),
-            args.prefix + '_' + str(start_time) + '_' + str(args.end_time) + '_transition_summary',
+            args.prefix + '_' + str(args.start_time) + '_' + str(args.end_time) + '_transition_summary',
             output_format=args.format, txt_full=True)
 
 
-TransitionFate.compute(parser.parse_args())
+TransitionFate.summarize_transport_map(parser.parse_args())

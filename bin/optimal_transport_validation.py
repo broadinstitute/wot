@@ -120,7 +120,9 @@ parser.add_argument('--npairs', type=int, default=10000)
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
 parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
 parser.add_argument('--save_transport', action='store_true', help='Save transport maps')
-
+parser.add_argument('--covariate',
+                    help='Two column tab delimited file without header with '
+                         'cell ids and covariate value')
 args = parser.parse_args()
 covariate_df = None
 unique_covariates = None
@@ -135,7 +137,7 @@ if args.covariate is not None:
     unique_covariates = list(pd.unique(covariate_df[covariate_df.columns[0]].values))
     # unique_covariates.append(None)
     covariate_pairs = list(itertools.product(unique_covariates, unique_covariates))
-ot_helper = wot.ot.OptimalTransportHelper(args)
+ot_helper = wot.ot.OptimalTransportHelper(args, covariate_df=covariate_df, covariate_pairs=covariate_pairs)
 pair_names = None
 t_interpolate_s = str(args.t_interpolate)
 pair_names = [['P' + t_interpolate_s, 'R' + t_interpolate_s], ['P' + t_interpolate_s, 'I' + t_interpolate_s],

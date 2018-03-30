@@ -92,9 +92,6 @@ class OptimalTransportHelper:
         parser.add_argument('--power', help='Diagonal scaling power', type=float)
         parser.add_argument('--local_pca', help='Convert day pairs matrix to PCA coordinates', type=int)
 
-        parser.add_argument('--covariate',
-                            help='Two column tab delimited file without header with '
-                                 'cell ids and covariate value')
         parser.add_argument('--solver',
                             help='Solver to use when computing transport maps. One of unbalanced, floating_epsilon, '
                                  'sinkhorn_epsilon, unregularized',
@@ -106,7 +103,7 @@ class OptimalTransportHelper:
                             help='Print progress information')
         return parser
 
-    def __init__(self, args):
+    def __init__(self, args, covariate_df=None, covariate_pairs=None):
         eigenvals = None
         if args.diagonal is not None:
             eigenvals = \
@@ -175,8 +172,15 @@ class OptimalTransportHelper:
             if args.verbose:
                 print('Using growth rate of 1')
         ds.row_meta = ds.row_meta.join(cell_growth_rates).join(days_data_frame)
-        self.covariate_pairs = [[None, None]]
-        self.covariate_df = None
+
+        if covariate_df is not None:
+            self.covariate_df = covariate_df
+            ds.row_meta.join(covariate_df)
+            self.covariate_pairs = covariate_pairs
+        else:
+            self.covariate_df = None
+            self.covariate_pairs = [[None, None]]
+
         day_to_indices = {}
         days = ds.row_meta[days_data_frame.columns[0]]
         for i in range(len(days)):
