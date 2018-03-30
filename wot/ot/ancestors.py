@@ -19,7 +19,7 @@ class Ancestors:
         return sns.factorplot(x="t", y="value", row="cell_set", col='name', data=df, kind="violin")
 
     @staticmethod
-    def from_cmd_line(cmd_line=None):
+    def from_cmd_line(cmd_line=None, save_image=True):
         parser = argparse.ArgumentParser(
             description='Compute cell ancestors')
         parser.add_argument('--dir',
@@ -84,7 +84,9 @@ class Ancestors:
                                genes=args.gene)
 
         g = Ancestors.plot(df)
-        g.savefig(args.prefix + '.png')
+        if save_image:
+            g.savefig(args.prefix + '.png')
+        return g
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, start_time_index, end_time_index, full_ds=None, gene_set_scores=None,
@@ -114,9 +116,16 @@ class Ancestors:
                 _gene_set_scores = tmap.row_meta.align(gene_set_scores, join='left', axis=0)[1]
             if t == end_time_index:
                 pvec_array = []
+                cell_sets_to_keep = []
                 for cell_set_index in range(n_cell_sets):
                     cell_ids = cell_set_ds.row_meta.index[cell_set_ds.x[:, cell_set_index] > 0]
-                    pvec_array.append(tmap.col_meta.index.isin(cell_ids))
+                    membership = tmap.col_meta.index.isin(cell_ids)
+                    if np.sum(membership) > 0:
+                        pvec_array.append(membership)
+                        cell_sets_to_keep.append(cell_set_index)
+                cell_set_ds = wot.Dataset(cell_set_ds.x[:, cell_sets_to_keep], cell_set_ds.row_meta,
+                                          cell_set_ds.col_meta.iloc[cell_sets_to_keep])
+                n_cell_sets = cell_set_ds.x.shape[1]
             new_pvec_array = []
             for cell_set_index in range(n_cell_sets):
                 v = pvec_array[cell_set_index]

@@ -175,7 +175,7 @@ class OptimalTransportHelper:
 
         if covariate_df is not None:
             self.covariate_df = covariate_df
-            ds.row_meta.join(covariate_df)
+            ds.row_meta = ds.row_meta.join(covariate_df)
             self.covariate_pairs = covariate_pairs
         else:
             self.covariate_df = None
@@ -279,9 +279,9 @@ class OptimalTransportHelper:
             delta_t = t1 - t0
             for covariate_pair in covariate_pairs:
                 cv0 = covariate_pair[0]
-                p0_expr = None if cv0 is None else p0_full.row_meta[p0_full.row_meta[covariate_df.columns[0]] == cv0]
+                p0_expr = None if cv0 is None else np.where(p0_full.row_meta[covariate_df.columns[0]] == cv0)[0]
                 cv1 = covariate_pair[1]
-                p1_expr = None if cv1 is None else p1_full.row_meta[p1_full.row_meta[covariate_df.columns[0]] == cv1]
+                p1_expr = None if cv1 is None else np.where(p1_full.row_meta[covariate_df.columns[0]] == cv1)[0]
 
                 if p0_expr is None:
                     p0 = wot.Dataset(p0_full.x, p0_full.row_meta, p0_full.col_meta)
