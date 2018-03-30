@@ -117,7 +117,7 @@ parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute point cloud d
 
 parser.add_argument('--resample_iter', help='Number of resample iterations to perform', type=int, default=4)
 parser.add_argument('--npairs', type=int, default=10000)
-parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float)
+parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float, required=True)
 parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
 parser.add_argument('--save_transport', action='store_true', help='Save transport maps')
 parser.add_argument('--covariate',
