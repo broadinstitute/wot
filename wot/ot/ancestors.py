@@ -104,8 +104,6 @@ class Ancestors:
 
         n_cell_sets = cell_set_ds.x.shape[1]
         pvec_array = None
-
-        columns = ['name', 'value', 'cell_set', 't']
         df_names = np.array([])
         df_cell_set_names = np.array([])
         df_times = np.array([])
@@ -145,6 +143,8 @@ class Ancestors:
                 entropy = np.exp(scipy.stats.entropy(v))
                 cell_ids = tmap.row_meta.index.values
                 n = int(entropy)
+                if verbose:
+                    print('Sampling ' + str(n) + ' cells')
                 sampled_indices = np.random.choice(len(cell_ids), n, p=v, replace=True)
 
                 if full_ds is not None:
