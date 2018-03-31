@@ -142,7 +142,7 @@ class Ancestors:
                 v /= v.sum()
                 entropy = np.exp(scipy.stats.entropy(v))
                 cell_ids = tmap.row_meta.index.values
-                n = int(entropy)
+                n = int(np.ceil(entropy))
                 if verbose:
                     print('Sampling ' + str(n) + ' cells')
                 sampled_indices = np.random.choice(len(cell_ids), n, p=v, replace=True)
@@ -151,7 +151,10 @@ class Ancestors:
                     values = ds.x[sampled_indices]
                     for gene_index in range(len(list_of_gene_indices)):
                         gene = list_of_gene_indices[gene_index]
-                        data_table.append([gene[0], values[:, gene[1]], cell_set_name, t])
+                        df_vals = np.concatenate((df_vals, np.array([values[:, gene[1]]])))
+                        df_names = np.concatenate((df_names, np.repeat(gene[0], n)))
+                        df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n)))
+                        df_times = np.concatenate((df_times, np.repeat(t1, n)))
 
                 if gene_set_scores is not None:
                     tmp_scores = _gene_set_scores.iloc[sampled_indices]
