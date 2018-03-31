@@ -35,7 +35,8 @@ class Ancestors:
                             help='Prefix for ouput file names.',
                             required=True)
         parser.add_argument('--matrix', help='Gene expression matrix')
-
+        parser.add_argument('--verbose', action='store_true',
+                            help='Print progress information')
         parser.add_argument('--gene', help='List of genes', action='append')
         parser.add_argument('--gene_sets', help='Gene sets')
 
@@ -81,7 +82,7 @@ class Ancestors:
         df = Ancestors.compute(cell_set_ds=cell_set_ds, transport_maps=transport_maps,
                                start_time_index=start_time_index,
                                end_time_index=end_time_index, full_ds=full_ds, gene_set_scores=gene_set_scores,
-                               genes=args.gene)
+                               genes=args.gene, verbose=args.verbose)
 
         g = Ancestors.plot(df)
         if save_image:
@@ -90,7 +91,7 @@ class Ancestors:
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, start_time_index, end_time_index, full_ds=None, gene_set_scores=None,
-                genes=None):
+                genes=None, verbose=False):
         list_of_gene_indices = []
 
         if genes is not None:
@@ -103,9 +104,16 @@ class Ancestors:
 
         n_cell_sets = cell_set_ds.x.shape[1]
         pvec_array = None
-        data_table = []
+
         columns = ['name', 'value', 'cell_set', 't']
+        df_names = np.array([])
+        df_cell_set_names = np.array([])
+        df_times = np.array([])
+        df_vals = np.array([])
         for t in range(end_time_index, start_time_index - 1, -1):
+            if verbose:
+                print('Reading transport map ' + transport_maps[t]['path'])
+            t1 = transport_maps[t]['t1']
             tmap = wot.io.read_dataset(transport_maps[t]['path'])
             # align ds and tmap
             if full_ds is not None:
@@ -117,6 +125,8 @@ class Ancestors:
             if t == end_time_index:
                 pvec_array = []
                 cell_sets_to_keep = []
+                if verbose:
+                    print('Initializing cell sets')
                 for cell_set_index in range(n_cell_sets):
                     cell_ids = cell_set_ds.row_meta.index[cell_set_ds.x[:, cell_set_index] > 0]
                     membership = tmap.col_meta.index.isin(cell_ids)
@@ -128,6 +138,7 @@ class Ancestors:
                 n_cell_sets = cell_set_ds.x.shape[1]
             new_pvec_array = []
             for cell_set_index in range(n_cell_sets):
+                cell_set_name = cell_set_ds.col_meta.index.values[cell_set_index]
                 v = pvec_array[cell_set_index]
                 v = tmap.x.dot(v)
                 v /= v.sum()
@@ -135,25 +146,30 @@ class Ancestors:
                 cell_ids = tmap.row_meta.index.values
                 n = int(entropy)
                 sampled_indices = np.random.choice(len(cell_ids), n, p=v, replace=True)
-                cell_set_name = cell_set_ds.col_meta.index.values[cell_set_index]
+
                 if full_ds is not None:
                     values = ds.x[sampled_indices]
                     for gene_index in range(len(list_of_gene_indices)):
                         gene = list_of_gene_indices[gene_index]
                         data_table.append([gene[0], values[:, gene[1]], cell_set_name, t])
+
                 if gene_set_scores is not None:
                     tmp_scores = _gene_set_scores.iloc[sampled_indices]
                     for gene_set_index in range(gene_set_scores.shape[1]):
                         vals = tmp_scores.iloc[:, gene_set_index].values
-                        for i in range(len(vals)):  # FIXME
-                            data_table.append(
-                                [gene_set_scores.columns[gene_set_index], vals[i],
-                                 cell_set_name,
-                                 t])
+                        gene_set_name = gene_set_scores.columns[gene_set_index]
+                        df_vals = np.concatenate((df_vals, vals))
+                        df_names = np.concatenate((df_names, np.repeat(gene_set_name, n)))
+                        df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n)))
+                        df_times = np.concatenate((df_times, np.repeat(t1, n)))
+
                 new_pvec_array.append(v)
             pvec_array = new_pvec_array
 
-        return pd.DataFrame(data_table, columns=columns)
+        return pd.DataFrame(data={'name': df_names,
+                                  'cell_set': df_cell_set_names,
+                                  'value': df_vals,
+                                  't': df_times})
 
 
 if __name__ == 'main':
