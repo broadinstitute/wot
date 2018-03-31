@@ -235,7 +235,7 @@ def transport_map_callback(cb_args):
 
     if covariate_df is not None:
         batch_names = []
-        p0_5_cv = wot.Dataset(p0_5.x, p0_5.row_meta.copy(False).join(covariate_df), p0_5.col_meta)
+        p0_5_cv = wot.Dataset(p0_5.x, p0_5.row_meta.copy(False), p0_5.col_meta)
         for i in range(len(unique_covariates)):
             cv = unique_covariates[i]
             cv_filter = np.where(p0_5_cv.row_meta[covariate_df.columns[0]] == cv)[0]

@@ -320,4 +320,4 @@ class OptimalTransportHelper:
                     print('done')
                 name = (str(cv0) if cv0 is not None else 'full') + '_' + (str(cv1) if cv1 is not None else 'full')
                 callback({'t0': t0, 't1': t1, 'result': result, 'name': name, 'df0': p0.row_meta, 'df1': p1.row_meta,
-                          'P0': p0_full, 'P1': p1_full, 'P0.5': p0_5_full, 'g': growth_rate ** delta_t})
+                          'P0': p0, 'P1': p1, 'P0.5': p0_5_full, 'g': growth_rate ** delta_t})
