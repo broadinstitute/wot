@@ -291,11 +291,18 @@ class OptimalTransportHelper:
                     p1 = wot.Dataset(p1_full.x, p1_full.row_meta, p1_full.col_meta)
                 else:
                     p1 = wot.Dataset(p1_full.x[p1_expr], p1_full.row_meta.iloc[p1_expr], p1_full.col_meta)
+
                 if args.verbose:
-                    print(
-                        'Computing transport map from ' + str(
-                            t0) + ' to ' + str(
-                            t1) + '...', end='')
+                    if covariate_df is not None:
+                        print(
+                            'Computing transport map from ' + str(
+                                t0) + ' ' + (str(cv0) if cv0 is not None else 'full') + ' to ' + str(
+                                t1) + ' ' + (str(cv1) if cv1 is not None else 'full') + '...', end='')
+                    else:
+                        print(
+                            'Computing transport map from ' + str(
+                                t0) + ' to ' + str(
+                                t1) + '...', end='')
                 cost_matrix = self.compute_cost_matrix(p0.x, p1.x)
                 growth_rate = p0.row_meta[cell_growth_rates.columns[0]].values
                 result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
@@ -318,6 +325,8 @@ class OptimalTransportHelper:
 
                 if args.verbose:
                     print('done')
-                name = (str(cv0) if cv0 is not None else 'full') + '_' + (str(cv1) if cv1 is not None else 'full')
-                callback({'t0': t0, 't1': t1, 'result': result, 'name': name, 'df0': p0.row_meta, 'df1': p1.row_meta,
-                          'P0': p0, 'P1': p1, 'P0.5': p0_5_full, 'g': growth_rate ** delta_t})
+
+                callback({'t0': t0, 't1': t1, 'result': result, 'df0': p0.row_meta, 'df1': p1.row_meta,
+                          'P0': p0, 'P1': p1, 'P0.5': p0_5_full, 'g': growth_rate ** delta_t,
+                          'P0_suffix': '_cv-' + str(cv0) if cv0 is not None else '',
+                          'P1_suffix': '_cv-' + str(cv1) if cv1 is not None else ''})

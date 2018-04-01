@@ -21,8 +21,8 @@ def point_cloud_s(p, q, interval_start, interval_end, interval_start_n,
     write_point_cloud_distance(point_cloud1=p['m'],
                                point_cloud2=q['m'],
                                weights1=p['weights'], weights2=q['weights'],
-                               point_cloud1_name=p['name'],
-                               point_cloud2_name=q['name'],
+                               point_cloud1_name=p['name'] + p['suffix'],
+                               point_cloud2_name=q['name'] + q['suffix'],
                                t0=p['t'],
                                t1=q['t'], interval_start=interval_start, interval_end=interval_end,
                                interval_start_n=interval_start_n, interval_middle_n=interval_middle_n,
@@ -53,9 +53,10 @@ def point_cloud_s(p, q, interval_start, interval_end, interval_start_n,
         p_indices_a, p_indices_b = wot.ot.split_in_two(p['m'].shape[0])
         q_indices_a, q_indices_b = wot.ot.split_in_two(q['m'].shape[0])
 
-        pairs = [{'p': p, 'indices': p_indices_a, 'suffix': '_A'}, {'p': p, 'indices': p_indices_b, 'suffix': '_B'},
-                 {'p': q, 'indices': q_indices_a, 'suffix': '_A'},
-                 {'p': q, 'indices': q_indices_b, 'suffix': '_B'}]
+        pairs = [{'p': p, 'indices': p_indices_a, 'suffix': '_split-A' + p['suffix']},
+                 {'p': p, 'indices': p_indices_b, 'suffix': '_split-B' + p['suffix']},
+                 {'p': q, 'indices': q_indices_a, 'suffix': '_split-A' + q['suffix']},
+                 {'p': q, 'indices': q_indices_b, 'suffix': '_split-B' + q['suffix']}]
 
         dist(pairs[0], pairs[1])
         dist(pairs[0], pairs[2])
@@ -115,7 +116,7 @@ def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, p
 
 parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute point cloud distances')
 
-parser.add_argument('--resample_iter', help='Number of resample iterations to perform', type=int, default=4)
+parser.add_argument('--resample_iter', help='Number of resample iterations to perform', type=int, default=2)
 parser.add_argument('--npairs', type=int, default=10000)
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float, required=True)
 parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
@@ -179,14 +180,12 @@ def transport_map_callback(cb_args):
     interval_middle_n = p0_5.x.shape[0]
     interval_end_n = p1.x.shape[0]
     point_clouds = list()
-
     point_clouds.append(
-        {'m': p0.x, 'weights': None, 'name': 'P0', 't': t0})
+        {'m': p0.x, 'weights': None, 'name': 'P0', 't': t0, 'suffix': cb_args['P0_suffix']})
     point_clouds.append(
-        {'m': p1.x, 'weights': None, 'name': 'P1', 't': t1})
+        {'m': p1.x, 'weights': None, 'name': 'P1', 't': t1, 'suffix': cb_args['P1_suffix']})
     point_clouds.append(
-        {'m': p0_5.x, 'weights': None, 'name': 'P' + t_interpolate_s,
-         't': inferred_time})
+        {'m': p0_5.x, 'weights': None, 'name': 'P' + t_interpolate_s, 't': inferred_time, 'suffix': ''})
 
     transport_result = cb_args['result']
     if transport_result is not None:
@@ -206,7 +205,7 @@ def transport_map_callback(cb_args):
         inferred = pc0 + args.t_interpolate * (pc1 - pc0)
         point_clouds.append(
             {'m': inferred, 'weights': p0_m1_subset_weights, 'name': 'I' + t_interpolate_s,
-             't': inferred_time})
+             't': inferred_time, 'suffix': cb_args['P0_suffix'] + cb_args['P1_suffix']})
 
         if args.save:
             inferred_row_meta = pd.DataFrame(
@@ -225,7 +224,7 @@ def transport_map_callback(cb_args):
         inferred = pc0 + args.t_interpolate * (pc1 - pc0)
         point_clouds.append(
             {'m': inferred, 'weights': p0_m1_subset_weights, 'name': 'R' + t_interpolate_s,
-             't': inferred_time})
+             't': inferred_time, 'suffix': ''})
         if args.save:
             inferred_row_meta = pd.DataFrame(
                 index=cb_args['df0'].iloc[random_sample['indices0']].index + ';' + cb_args['df1'].iloc[
@@ -241,10 +240,10 @@ def transport_map_callback(cb_args):
             cv_filter = np.where(p0_5_cv.row_meta[covariate_df.columns[0]] == cv)[0]
             p = wot.Dataset(p0_5_cv.x[cv_filter], p0_5.row_meta.iloc[cv_filter], p0_5_cv.col_meta)
             if p.x.shape[0] > 0:
-                name = 'P' + t_interpolate_s + '_' + str(cv)
+                name = 'P' + t_interpolate_s + '_cv-' + str(cv)
                 point_clouds.append(
                     {'m': p.x, 'weights': None,
-                     'name': name, 't': inferred_time})
+                     'name': name, 't': inferred_time, 'suffix': ''})
                 batch_names.append(name)
         for i in range(1, len(batch_names)):
             for j in range(i):
