@@ -15,21 +15,22 @@ class Ancestors:
     def plot(df):
         import seaborn as sns
         sns.set_style("whitegrid")
+        sns.set_style("ticks", {"xtick.major.size": 2})
         # ax = sns.violinplot(x="t", y="values", data=df)
-        return sns.factorplot(x="t", y="value", row="cell_set", col='name', data=df, kind="violin")
+        g = sns.factorplot(x="t", y="value", row="cell_set", col='name', data=df, kind='violin')
+        g.set_xticklabels(rotation=45)
+        return g
 
     @staticmethod
     def from_cmd_line(cmd_line=None, save_image=True):
         parser = argparse.ArgumentParser(
-            description='Compute cell ancestors')
+            description='Compute cell ancestors/descendants')
         parser.add_argument('--dir',
                             help='Directory of transport maps as produced by ot',
                             required=True)
-        parser.add_argument('--start_time',
-                            help='The start time',
-                            required=True, type=float)
-        parser.add_argument('--end_time',
-                            help='The end time',
+
+        parser.add_argument('--time',
+                            help='The time',
                             required=True, type=float)
         parser.add_argument('--prefix',
                             help='Prefix for ouput file names.',
@@ -39,6 +40,8 @@ class Ancestors:
                             help='Print progress information')
         parser.add_argument('--gene', help='List of genes', action='append')
         parser.add_argument('--gene_sets', help='Gene sets')
+        parser.add_argument('--gene_set_filter',
+                            help='A file with one gene set per line to include or a python regular expression of gene set ids to include')
 
         parser.add_argument('--cell_sets',
                             help='Grouping of cells into cell sets in gmt or gmx format',
@@ -48,14 +51,13 @@ class Ancestors:
 
         args = parser.parse_args(cmd_line)
 
-        start_time = args.start_time
-        end_time = args.end_time
+        time = args.time
 
         cell_set_ds = wot.io.read_gene_sets(args.cell_sets)
         if args.cell_set_filter is not None:
             cell_set_ds = wot.ot.filter_sets(cell_set_ds, args.cell_set_filter)
         transport_maps = wot.io.list_transport_maps(args.dir)
-
+        n_cell_sets = cell_set_ds.x.shape[1]
         full_ds = None
         if args.gene is not None:
             full_ds = wot.io.read_dataset(args.matrix)
@@ -64,24 +66,47 @@ class Ancestors:
         if args.gene_sets is not None:
             gene_set_scores = pd.read_table(args.gene_sets, index_col=0, quoting=csv.QUOTE_NONE, engine='python',
                                             sep=None)
+            if args.gene_set_filter is not None:
+                import os
+                if not os.path.isfile(args.gene_set_filter):
+                    import re
+                    expr = re.compile(args.gene_set_filter)
+                    set_ids = [elem for elem in gene_set_scores.columns if expr.match(elem)]
+                else:
+                    set_ids = pd.read_table(args.gene_set_filter, index_col=0, header=None).index.values
+
+                gene_set_scores = gene_set_scores[set_ids]
 
         start_time_index = None
+        time_index = None
         end_time_index = None
+        min_time = np.inf
+        max_time = -np.inf
+        start_time = None
+        end_time = None
         for t in range(len(transport_maps)):
-            if transport_maps[t]['t1'] == start_time:
+            if start_time is None and transport_maps[t]['t1'] < min_time:
+                min_time = transport_maps[t]['t1']
                 start_time_index = t
-            if transport_maps[t]['t2'] == end_time:
+            elif transport_maps[t]['t1'] == start_time:
+                start_time_index = t
+
+            if end_time is None and transport_maps[t]['t2'] > max_time:
+                max_time = transport_maps[t]['t2']
+                end_time_index = t
+            elif transport_maps[t]['t2'] == end_time:
                 end_time_index = t
 
-        if start_time_index is None:
+            if transport_maps[t]['t2'] == time:
+                time_index = t
+
+        if time_index is None or end_time_index is None or start_time_index is None:
             raise RuntimeError(
-                'Transport transport_map for time ' + str(start_time) + ' not found.')
-        if end_time_index is None:
-            raise RuntimeError(
-                'Transport transport_map for time ' + str(end_time) + ' not found.')
+                'Transport transport_map for time ' + str(time) + ' not found.')
+
         df = Ancestors.compute(cell_set_ds=cell_set_ds, transport_maps=transport_maps,
-                               start_time_index=start_time_index,
-                               end_time_index=end_time_index, full_ds=full_ds, gene_set_scores=gene_set_scores,
+                               t2_index=start_time_index, time_index=time_index, full_ds=full_ds,
+                               gene_set_scores=gene_set_scores,
                                genes=args.gene, verbose=args.verbose)
 
         g = Ancestors.plot(df)
@@ -90,8 +115,9 @@ class Ancestors:
         return g
 
     @staticmethod
-    def compute(cell_set_ds, transport_maps, start_time_index, end_time_index, full_ds=None, gene_set_scores=None,
-                genes=None, verbose=False):
+    def compute(cell_set_ds, transport_maps, time_index, t2_index, full_ds=None,
+                gene_set_scores=None,
+                genes=None, verbose=False, save_sampling=False):
         list_of_gene_indices = []
 
         if genes is not None:
@@ -102,25 +128,39 @@ class Ancestors:
             if len(list_of_gene_indices) == 0:
                 print('No genes found')
 
-        n_cell_sets = cell_set_ds.x.shape[1]
-        pvec_array = None
         df_names = np.array([])
         df_cell_set_names = np.array([])
         df_times = np.array([])
         df_vals = np.array([])
-        for t in range(end_time_index, start_time_index - 1, -1):
+        n_cell_sets = cell_set_ds.x.shape[1] if cell_set_ds is not None else 0
+        load_sampling = False
+        if save_sampling:
+            import h5py
+            saved_sampling_file = h5py.File('saved_sampling.h5', 'w')
+        elif load_sampling:
+            import h5py
+            saved_sampling_file = h5py.File('saved_sampling.h5', 'r')
+        for t in range(time_index, t2_index - 1, -1) if time_index > t2_index else range(time_index, t2_index + 1):
             if verbose:
                 print('Reading transport map ' + transport_maps[t]['path'])
             t1 = transport_maps[t]['t1']
-            tmap = wot.io.read_dataset(transport_maps[t]['path'])
+            if load_sampling:
+                f = h5py.File(transport_maps[t]['path'], 'r')
+                ids = f['/row_attrs/id'][()]
+                if ids.dtype.kind == 'S':
+                    ids = ids.astype(str)
+                tmap = wot.Dataset(None, pd.DataFrame(index=ids), None)
+                f.close()
+            else:
+                tmap = wot.io.read_dataset(transport_maps[t]['path'])
             # align ds and tmap
             if full_ds is not None:
-                order = full_ds.row_meta.index.get_indexer_for(full_ds.row_meta.index)
-                ds = wot.Dataset(full_ds.x[order], full_ds.row_meta.iloc[order], full_ds.col_meta)
+                ds_order = tmap.row_meta.index.get_indexer_for(full_ds.row_meta.index)
+                ds = wot.Dataset(full_ds.x[ds_order], full_ds.row_meta.iloc[ds_order], full_ds.col_meta)
             if gene_set_scores is not None:
                 # put gene set scores in same order as tmap
                 _gene_set_scores = tmap.row_meta.align(gene_set_scores, join='left', axis=0)[1]
-            if t == end_time_index:
+            if t == time_index:
                 pvec_array = []
                 cell_sets_to_keep = []
                 if verbose:
@@ -137,16 +177,20 @@ class Ancestors:
             new_pvec_array = []
             for cell_set_index in range(n_cell_sets):
                 cell_set_name = cell_set_ds.col_meta.index.values[cell_set_index]
-                v = pvec_array[cell_set_index]
-                v = tmap.x.dot(v)
-                v /= v.sum()
-                entropy = np.exp(scipy.stats.entropy(v))
-                cell_ids = tmap.row_meta.index.values
-                n = int(np.ceil(entropy))
-                if verbose:
-                    print('Sampling ' + str(n) + ' cells')
-                sampled_indices = np.random.choice(len(cell_ids), n, p=v, replace=True)
-
+                if not load_sampling:
+                    v = pvec_array[cell_set_index]
+                    v = tmap.x.dot(v)
+                    v /= v.sum()
+                    entropy = np.exp(scipy.stats.entropy(v))
+                    cell_ids = tmap.row_meta.index.values
+                    n = int(np.ceil(entropy))
+                    if verbose:
+                        print('Sampling ' + str(n) + ' cells')
+                    sampled_indices = np.random.choice(len(cell_ids), n, p=v, replace=True)
+                else:
+                    sampled_indices = saved_sampling_file[str(t1) + '_' + str(cell_set_name)][()]
+                if save_sampling:
+                    saved_sampling_file[str(t1) + '_' + str(cell_set_name)] = sampled_indices
                 if full_ds is not None:
                     values = ds.x[sampled_indices]
                     for gene_index in range(len(list_of_gene_indices)):
@@ -168,6 +212,9 @@ class Ancestors:
 
                 new_pvec_array.append(v)
             pvec_array = new_pvec_array
+
+            if save_sampling:
+                saved_sampling_file.close()
 
         return pd.DataFrame(data={'name': df_names,
                                   'cell_set': df_cell_set_names,
