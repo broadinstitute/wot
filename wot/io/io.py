@@ -169,7 +169,7 @@ def read_gmx(path, feature_ids=None):
 
 
 def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
-                 h5_col_meta=None, use_dask=False, genome10x=None, row_filter=None):
+                 h5_col_meta=None, use_dask=False, genome10x=None, row_filter=None, col_filter=None):
     path = str(path)
     basename_and_extension = get_file_basename_and_extension(path)
     ext = basename_and_extension[1]
@@ -287,53 +287,22 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
             h5_x = '/matrix'
             h5_row_meta = '/row_attrs'
             h5_col_meta = '/col_attrs'
-        g = f[h5_row_meta]
-        row_indices = None
-        if row_filter is not None:
-            for key in row_filter.keys():
-                values = g[key][()]
-                if values.dtype.kind == 'S':
-                    values = values.astype(str)
-                tmp = np.where(np.isin(values, row_filter[key]))[0]
-                if row_indices is not None:
-                    row_indices = np.intersect1d(tmp, row_indices)
-                else:
-                    row_indices = tmp
 
-            row_indices = list(row_indices)
-            if len(row_indices) is 0:
-                raise ValueError('No row indices passed filter')
-
-        data = {}
-        for key in g:
-            values = g[key]
-            if row_indices is None:
-                values = values[()]
-            else:
-                values = values[row_indices]
-            if values.dtype.kind == 'S':
-                values = values.astype(str)
-            data[key] = values
-
-        nrows = f[h5_x].shape[0] if row_indices is None else np.count_nonzero(row_indices)
-        row_meta = pd.DataFrame(data,
-                                index=pd.RangeIndex(start=0, stop=nrows,
-                                                    step=1))
-        if data.get('id') is not None:
+        row_attrs = read_h5_attrs(f, h5_row_meta, row_filter)
+        nrows = len(row_attrs[1]) if row_attrs[1] is not None else f[h5_x].shape[0]
+        row_meta = pd.DataFrame(row_attrs[0], index=pd.RangeIndex(start=0, stop=nrows, step=1))
+        if row_meta.get('id') is not None:
             row_meta.set_index('id', inplace=True)
-        g = f[h5_col_meta]
-        data = {}
-        for key in g:
-            values = g[key][()]
-            if values.dtype.kind == 'S':
-                values = values.astype(str)
-            data[key] = values
-        col_meta = pd.DataFrame(data, index=pd.RangeIndex(start=0, stop=f[h5_x].shape[1], step=1))
-        if data.get('id') is not None:
+
+        col_attrs = read_h5_attrs(f, h5_col_meta, col_filter)
+        ncols = len(col_attrs[1]) if col_attrs[1] is not None else f[h5_x].shape[1]
+        col_meta = pd.DataFrame(col_attrs[0], index=pd.RangeIndex(start=0, stop=ncols, step=1))
+        if col_meta.get('id') is not None:
             col_meta.set_index('id', inplace=True)
         if not use_dask:
             x = f[h5_x]
-            if x.attrs.get('sparse') and row_indices is None:
+
+            if x.attrs.get('sparse') and row_filter is None:
                 # read in blocks of 1000
                 chunk_start = 0
                 chunk_step = min(nrows, 1000)
@@ -349,14 +318,16 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
 
                 x = scipy.sparse.vstack(sparse_arrays)
             else:
-                if row_indices is None:
-                    row_indices = ()
-                x = x[row_indices]
+                if row_filter is None and col_filter is None:
+                    x = x[()]
+                elif row_filter is not None:
+                    x = x[row_attrs[1]]
+                else:
+                    x = x[:, col_attrs[1]]
             f.close()
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
         else:
-            if row_indices is not None:
-                print('Filter not implemented yet')
+
             import dask.array as da
             import dask.dataframe as dd
             x = da.from_array(f[h5_x], chunks=chunks)
@@ -395,6 +366,40 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
             return wot.Dataset(x=np.array(np_arrays),
                                row_meta=pd.DataFrame(index=row_ids),
                                col_meta=pd.DataFrame(index=column_ids))
+
+
+def read_h5_attrs(f, path, filter):
+    g = f[path]
+    indices = None
+    if filter is not None:
+        for key in filter.keys():
+            values = g[key][()]
+            if values.dtype.kind == 'S':
+                values = values.astype(str)
+
+            tmp = np.where(np.isin(np.char.lower(values), filter[key]))[0]
+            if indices is not None:
+                indices = np.intersect1d(tmp, indices)
+            else:
+                indices = tmp
+
+        if len(indices) is 0:
+            raise ValueError('No indices passed filter')
+        indices = list(indices)
+
+    data = {}
+
+    for key in g:
+        values = g[key]
+        if indices is None:
+            values = values[()]
+        else:
+            values = values[indices]
+        if values.dtype.kind == 'S':
+            values = values.astype(str)
+        data[key] = values
+
+    return data, indices
 
 
 def check_file_extension(name, format):
