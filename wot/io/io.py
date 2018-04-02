@@ -301,8 +301,7 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
             col_meta.set_index('id', inplace=True)
         if not use_dask:
             x = f[h5_x]
-
-            if x.attrs.get('sparse') and row_filter is None:
+            if x.attrs.get('sparse') and row_filter is None and col_filter is None:
                 # read in blocks of 1000
                 chunk_start = 0
                 chunk_step = min(nrows, 1000)
