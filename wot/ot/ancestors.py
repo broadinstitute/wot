@@ -22,13 +22,12 @@ class Ancestors:
         return g
 
     @staticmethod
-    def from_cmd_line(cmd_line=None, save_image=True):
+    def from_cmd_line(cmd_line=None):
         parser = argparse.ArgumentParser(
             description='Compute cell ancestors/descendants')
         parser.add_argument('--dir',
                             help='Directory of transport maps as produced by ot',
                             required=True)
-
         parser.add_argument('--time',
                             help='The time',
                             required=True, type=float)
@@ -57,10 +56,9 @@ class Ancestors:
         if args.cell_set_filter is not None:
             cell_set_ds = wot.ot.filter_sets(cell_set_ds, args.cell_set_filter)
         transport_maps = wot.io.list_transport_maps(args.dir)
-        n_cell_sets = cell_set_ds.x.shape[1]
         full_ds = None
         if args.gene is not None:
-            full_ds = wot.io.read_dataset(args.matrix)
+            full_ds = wot.io.read_dataset(args.matrix, col_filter={'id': np.char.lower(np.array(args.gene))})
 
         gene_set_scores = None
         if args.gene_sets is not None:
@@ -100,51 +98,30 @@ class Ancestors:
             if transport_maps[t]['t2'] == time:
                 time_index = t
 
-        if time_index is None or end_time_index is None or start_time_index is None:
+        if time_index is None:
             raise RuntimeError(
                 'Transport transport_map for time ' + str(time) + ' not found.')
 
-        df = Ancestors.compute(cell_set_ds=cell_set_ds, transport_maps=transport_maps,
-                               t2_index=start_time_index, time_index=time_index, full_ds=full_ds,
-                               gene_set_scores=gene_set_scores,
-                               genes=args.gene, verbose=args.verbose)
-
-        g = Ancestors.plot(df)
-        if save_image:
-            g.savefig(args.prefix + '.png')
-        return g
+        return {'cell_set_ds': cell_set_ds, 'transport_maps': transport_maps, 'time_index': time_index,
+                'full_ds': full_ds,
+                'gene_set_scores': gene_set_scores, 'verbose': args.verbose, 'args': args}
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, time_index, t2_index, full_ds=None,
-                gene_set_scores=None,
-                genes=None, verbose=False, save_sampling=False):
-        list_of_gene_indices = []
-
-        if genes is not None:
-            for gene in genes:
-                order = full_ds.col_meta.index.get_indexer_for([gene])
-                if order[0] != -1:
-                    list_of_gene_indices.append((gene, order[0]))
-            if len(list_of_gene_indices) == 0:
-                print('No genes found')
-
-        df_names = np.array([])
-        df_cell_set_names = np.array([])
-        df_times = np.array([])
-        df_vals = np.array([])
+                gene_set_scores=None, verbose=False, sampling_loader=None, save_sampling=None,
+                result={}):
+        df_names = np.array([]) if result.get('name') is None else result['name']
+        df_cell_set_names = np.array([]) if result.get('cell_set') is None else result['cell_set']
+        df_times = np.array([]) if result.get('value') is None else result['value']
+        df_vals = np.array([]) if result.get('t') is None else result['t']
         n_cell_sets = cell_set_ds.x.shape[1] if cell_set_ds is not None else 0
-        load_sampling = False
-        if save_sampling:
-            import h5py
-            saved_sampling_file = h5py.File('saved_sampling.h5', 'w')
-        elif load_sampling:
-            import h5py
-            saved_sampling_file = h5py.File('saved_sampling.h5', 'r')
+
         for t in range(time_index, t2_index - 1, -1) if time_index > t2_index else range(time_index, t2_index + 1):
             if verbose:
                 print('Reading transport map ' + transport_maps[t]['path'])
             t1 = transport_maps[t]['t1']
-            if load_sampling:
+            if sampling_loader is not None:
+                import h5py
                 f = h5py.File(transport_maps[t]['path'], 'r')
                 ids = f['/row_attrs/id'][()]
                 if ids.dtype.kind == 'S':
@@ -161,44 +138,47 @@ class Ancestors:
                 # put gene set scores in same order as tmap
                 _gene_set_scores = tmap.row_meta.align(gene_set_scores, join='left', axis=0)[1]
             if t == time_index:
-                pvec_array = []
-                cell_sets_to_keep = []
-                if verbose:
-                    print('Initializing cell sets')
-                for cell_set_index in range(n_cell_sets):
-                    cell_ids = cell_set_ds.row_meta.index[cell_set_ds.x[:, cell_set_index] > 0]
-                    membership = tmap.col_meta.index.isin(cell_ids)
-                    if np.sum(membership) > 0:
-                        pvec_array.append(membership)
-                        cell_sets_to_keep.append(cell_set_index)
-                cell_set_ds = wot.Dataset(cell_set_ds.x[:, cell_sets_to_keep], cell_set_ds.row_meta,
-                                          cell_set_ds.col_meta.iloc[cell_sets_to_keep])
+                if sampling_loader is None:
+                    pvec_array = []
+                    cell_sets_to_keep = []
+                    if verbose:
+                        print('Initializing cell sets')
+                    for cell_set_index in range(n_cell_sets):
+                        cell_ids = cell_set_ds.row_meta.index[cell_set_ds.x[:, cell_set_index] > 0]
+                        membership = tmap.col_meta.index.isin(cell_ids)
+
+                        if np.sum(membership) > 0:
+                            pvec_array.append(membership)
+                            cell_sets_to_keep.append(cell_set_index)
+
+                    cell_set_ds = wot.Dataset(cell_set_ds.x[:, cell_sets_to_keep], cell_set_ds.row_meta,
+                                              cell_set_ds.col_meta.iloc[cell_sets_to_keep])
                 n_cell_sets = cell_set_ds.x.shape[1]
             new_pvec_array = []
             for cell_set_index in range(n_cell_sets):
                 cell_set_name = cell_set_ds.col_meta.index.values[cell_set_index]
-                if not load_sampling:
+                if sampling_loader is None:
                     v = pvec_array[cell_set_index]
                     v = tmap.x.dot(v)
                     v /= v.sum()
                     entropy = np.exp(scipy.stats.entropy(v))
-                    cell_ids = tmap.row_meta.index.values
-                    n = int(np.ceil(entropy))
+
+                    n_choose = int(np.ceil(entropy))
                     if verbose:
-                        print('Sampling ' + str(n) + ' cells')
-                    sampled_indices = np.random.choice(len(cell_ids), n, p=v, replace=True)
+                        print('Sampling ' + str(n_choose) + ' cells')
+                    sampled_indices = np.random.choice(len(v), n_choose, p=v, replace=True)
                 else:
-                    sampled_indices = saved_sampling_file[str(t1) + '_' + str(cell_set_name)][()]
-                if save_sampling:
-                    saved_sampling_file[str(t1) + '_' + str(cell_set_name)] = sampled_indices
+                    sampled_indices = sampling_loader(t=t1, cell_set_name=cell_set_name)
+                if save_sampling is not None:
+                    save_sampling(t=t1, cell_set_name=cell_set_name, sampled_indices=sampled_indices)
                 if full_ds is not None:
                     values = ds.x[sampled_indices]
-                    for gene_index in range(len(list_of_gene_indices)):
-                        gene = list_of_gene_indices[gene_index]
-                        df_vals = np.concatenate((df_vals, values[:, gene[1]]))
-                        df_names = np.concatenate((df_names, np.repeat(gene[0], n)))
-                        df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n)))
-                        df_times = np.concatenate((df_times, np.repeat(t1, n)))
+                    for gene_index in range(ds.x.shape[1]):
+                        gene_name = ds.col_meta.index.values[gene_index]
+                        df_vals = np.concatenate((df_vals, values[:, gene_index]))
+                        df_names = np.concatenate((df_names, np.repeat(gene_name, n_choose)))
+                        df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n_choose)))
+                        df_times = np.concatenate((df_times, np.repeat(t1, n_choose)))
 
                 if gene_set_scores is not None:
                     tmp_scores = _gene_set_scores.iloc[sampled_indices]
@@ -206,21 +186,14 @@ class Ancestors:
                         vals = tmp_scores.iloc[:, gene_set_index].values
                         gene_set_name = gene_set_scores.columns[gene_set_index]
                         df_vals = np.concatenate((df_vals, vals))
-                        df_names = np.concatenate((df_names, np.repeat(gene_set_name, n)))
-                        df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n)))
-                        df_times = np.concatenate((df_times, np.repeat(t1, n)))
+                        df_names = np.concatenate((df_names, np.repeat(gene_set_name, n_choose)))
+                        df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n_choose)))
+                        df_times = np.concatenate((df_times, np.repeat(t1, n_choose)))
 
                 new_pvec_array.append(v)
             pvec_array = new_pvec_array
 
-            if save_sampling:
-                saved_sampling_file.close()
-
-        return pd.DataFrame(data={'name': df_names,
-                                  'cell_set': df_cell_set_names,
-                                  'value': df_vals,
-                                  't': df_times})
-
-
-if __name__ == 'main':
-    Ancestors.from_cmd_line()
+        return {'name': df_names,
+                'cell_set': df_cell_set_names,
+                'value': df_vals,
+                't': df_times}
