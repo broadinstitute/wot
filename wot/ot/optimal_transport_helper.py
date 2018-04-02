@@ -176,7 +176,7 @@ class OptimalTransportHelper:
         if covariate_df is not None:
             self.covariate_df = covariate_df
             ds.row_meta = ds.row_meta.join(covariate_df)
-            self.covariate_pairs = covariate_pairs
+            self.covariate_pairs = covariate_pairs + [None, None]
         else:
             self.covariate_df = None
             self.covariate_pairs = [[None, None]]
