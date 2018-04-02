@@ -139,11 +139,10 @@ if args.covariate is not None:
     # unique_covariates.append(None)
     covariate_pairs = list(itertools.product(unique_covariates, unique_covariates))
 ot_helper = wot.ot.OptimalTransportHelper(args, covariate_df=covariate_df, covariate_pairs=covariate_pairs)
-pair_names = None
 t_interpolate_s = str(args.t_interpolate)
-pair_names = [['P' + t_interpolate_s, 'R' + t_interpolate_s], ['P' + t_interpolate_s, 'I' + t_interpolate_s],
-              ['I' + t_interpolate_s, 'R' + t_interpolate_s], ['P0', 'P' + t_interpolate_s],
-              ['P1', 'P' + t_interpolate_s]]
+all_pair_names = [['P' + t_interpolate_s, 'R' + t_interpolate_s], ['P' + t_interpolate_s, 'I' + t_interpolate_s],
+                  ['I' + t_interpolate_s, 'R' + t_interpolate_s], ['P0', 'P' + t_interpolate_s],
+                  ['P1', 'P' + t_interpolate_s]]
 
 subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
 subsample_writer.write(
@@ -232,6 +231,7 @@ def transport_map_callback(cb_args):
             wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta, p0.col_meta),
                                  args.prefix + '_random_' + str(inferred_time) + '.txt')
 
+    pair_names = all_pair_names.copy()
     if covariate_df is not None:
         batch_names = []
         p0_5_cv = wot.Dataset(p0_5.x, p0_5.row_meta.copy(False), p0_5.col_meta)
@@ -245,6 +245,7 @@ def transport_map_callback(cb_args):
                     {'m': p.x, 'weights': None,
                      'name': name, 't': inferred_time, 'suffix': ''})
                 batch_names.append(name)
+
         for i in range(1, len(batch_names)):
             for j in range(i):
                 pair_names.append([batch_names[i], batch_names[j]])
