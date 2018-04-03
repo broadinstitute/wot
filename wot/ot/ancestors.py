@@ -187,12 +187,19 @@ class Ancestors:
                                 cell_sets_to_keep.append(cell_set_index)
 
                                 if back:
-                                    ds0_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids_in_set)
-                                    ds0 = wot.Dataset(unaligned_ds.x[ds0_order], unaligned_ds.row_meta.iloc[ds0_order],
-                                                      unaligned_ds.col_meta)
+                                    ds0 = None
+                                    gs0 = None
+                                    if unaligned_ds is not None:
+                                        ds0_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids_in_set)
+                                        ds0 = wot.Dataset(unaligned_ds.x[ds0_order],
+                                                          unaligned_ds.row_meta.iloc[ds0_order],
+                                                          unaligned_ds.col_meta)
+                                    if unaligned_gene_set_scores is not None:
+                                        gs0 = pd.DataFrame(index=cell_ids_in_set).align(unaligned_gene_set_scores,
+                                                                                        join='left', axis=0)[1]
                                     Ancestors.do_sampling(result=result, t=time, sampled_indices=None, ds=ds0,
                                                           cell_set_name=cell_set_ds.col_meta.index.values[
-                                                              cell_set_index], gene_set_scores=gene_set_scores)
+                                                              cell_set_index], gene_set_scores=gs0)
 
                         cell_set_ds = wot.Dataset(cell_set_ds.x[:, cell_sets_to_keep], cell_set_ds.row_meta,
                                                   cell_set_ds.col_meta.iloc[cell_sets_to_keep])
