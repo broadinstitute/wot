@@ -90,9 +90,9 @@ class Ancestors:
 
     @staticmethod
     def do_sampling(result, t, sampled_indices, cell_set_name, gene_set_scores=None, ds=None):
-        n = len(sampled_indices)
+
         if ds is not None:
-            values = ds.x[sampled_indices]
+            values = ds.x[sampled_indices] if sampled_indices is not None else ds.x
             for gene_index in range(ds.x.shape[1]):
                 gene_name = ds.col_meta.index.values[gene_index]
                 key = cell_set_name + gene_name
@@ -100,11 +100,12 @@ class Ancestors:
                 if key_data is None:
                     key_data = {'x': np.array([]), 'y': np.array([])}
                     result[key] = key_data
-                key_data['y'] = np.concatenate((key_data['y'], values[:, gene_index].T))
-                key_data['x'] = np.concatenate((key_data['x'], np.repeat(t, n)))
+                array = values[:, gene_index]
+                key_data['y'] = np.concatenate((key_data['y'], array))
+                key_data['x'] = np.concatenate((key_data['x'], np.repeat(t, len(array))))
 
         if gene_set_scores is not None:
-            tmp_scores = gene_set_scores.iloc[sampled_indices]
+            tmp_scores = gene_set_scores.iloc[sampled_indices] if sampled_indices is not None else gene_set_scores
             for gene_set_index in range(gene_set_scores.shape[1]):
                 gene_set_name = gene_set_scores.columns[gene_set_index]
                 key = cell_set_name + gene_set_name
@@ -112,8 +113,9 @@ class Ancestors:
                 if key_data is None:
                     key_data = {'x': np.array([]), 'y': np.array([])}
                     result[key] = key_data
-                key_data['y'] = np.concatenate((key_data['y'], tmp_scores.iloc[:, gene_set_index].values))
-                key_data['x'] = np.concatenate((key_data['x'], np.repeat(t, n)))
+                array = tmp_scores.iloc[:, gene_set_index].values
+                key_data['y'] = np.concatenate((key_data['y'], array))
+                key_data['x'] = np.concatenate((key_data['x'], np.repeat(t, len(array))))
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, time, unaligned_ds=None, unaligned_gene_set_scores=None, verbose=False,
@@ -129,8 +131,8 @@ class Ancestors:
 
         result = {}
         n_cell_sets = cell_set_ds.x.shape[1]
-        ranges = [{'backward': False, 'range': range(t1_index, len(transport_maps))},
-                  {'backward': True, 'range': range(t2_index, - 1, -1)}]
+        ranges = [{'backward': True, 'range': range(t2_index, - 1, -1)},
+                  {'backward': False, 'range': range(t1_index, len(transport_maps))}]
         for r in ranges:
             back = r['backward']
             for transport_index in r['range']:
@@ -183,8 +185,12 @@ class Ancestors:
                             if np.sum(membership) > 0:
                                 pvec_array.append(membership)
                                 cell_sets_to_keep.append(cell_set_index)
-                                if not back:
-                                    Ancestors.do_sampling(result=result, t=time, sampled_indices=membership, ds=ds,
+
+                                if back:
+                                    ds0_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids_in_set)
+                                    ds0 = wot.Dataset(unaligned_ds.x[ds0_order], unaligned_ds.row_meta.iloc[ds0_order],
+                                                      unaligned_ds.col_meta)
+                                    Ancestors.do_sampling(result=result, t=time, sampled_indices=None, ds=ds0,
                                                           cell_set_name=cell_set_ds.col_meta.index.values[
                                                               cell_set_index], gene_set_scores=gene_set_scores)
 
