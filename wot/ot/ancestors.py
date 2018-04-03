@@ -75,133 +75,149 @@ class Ancestors:
 
                 gene_set_scores = gene_set_scores[set_ids]
 
-        start_time_index = None
-        time_index = None
-        end_time_index = None
-        min_time = np.inf
-        max_time = -np.inf
-        start_time = None
-        end_time = None
         for t in range(len(transport_maps)):
-            if start_time is None and transport_maps[t]['t1'] < min_time:
-                min_time = transport_maps[t]['t1']
-                start_time_index = t
-            elif transport_maps[t]['t1'] == start_time:
-                start_time_index = t
-
-            if end_time is None and transport_maps[t]['t2'] > max_time:
-                max_time = transport_maps[t]['t2']
-                end_time_index = t
-            elif transport_maps[t]['t2'] == end_time:
-                end_time_index = t
-
             if transport_maps[t]['t2'] == time:
                 time_index = t
+                break
 
         if time_index is None:
             raise RuntimeError(
                 'Transport transport_map for time ' + str(time) + ' not found.')
 
-        return {'cell_set_ds': cell_set_ds, 'transport_maps': transport_maps, 'time_index': time_index,
+        return {'cell_set_ds': cell_set_ds, 'transport_maps': transport_maps, 'time': time,
                 'full_ds': full_ds,
                 'gene_set_scores': gene_set_scores, 'verbose': args.verbose, 'args': args}
 
     @staticmethod
-    def compute(cell_set_ds, transport_maps, time_index, t2_index, full_ds=None,
-                gene_set_scores=None, verbose=False, sampling_loader=None, save_sampling=None):
+    def do_sampling(result, t, sampled_indices, cell_set_name, gene_set_scores=None, ds=None):
+        n = len(sampled_indices)
+        if ds is not None:
+            values = ds.x[sampled_indices]
+            for gene_index in range(ds.x.shape[1]):
+                gene_name = ds.col_meta.index.values[gene_index]
+                key = cell_set_name + gene_name
+                key_data = result.get(key)
+                if key_data is None:
+                    key_data = {'x': np.array([]), 'y': np.array([])}
+                    result[key] = key_data
+                key_data['y'] = np.concatenate((key_data['y'], values[:, gene_index].T))
+                key_data['x'] = np.concatenate((key_data['x'], np.repeat(t, n)))
+
+        if gene_set_scores is not None:
+            tmp_scores = gene_set_scores.iloc[sampled_indices]
+            for gene_set_index in range(gene_set_scores.shape[1]):
+                gene_set_name = gene_set_scores.columns[gene_set_index]
+                key = cell_set_name + gene_set_name
+                key_data = result.get(key)
+                if key_data is None:
+                    key_data = {'x': np.array([]), 'y': np.array([])}
+                    result[key] = key_data
+                key_data['y'] = np.concatenate((key_data['y'], tmp_scores.iloc[:, gene_set_index].values))
+                key_data['x'] = np.concatenate((key_data['x'], np.repeat(t, n)))
+
+    @staticmethod
+    def compute(cell_set_ds, transport_maps, time, unaligned_ds=None, unaligned_gene_set_scores=None, verbose=False,
+                sampling_loader=None, save_sampling=None):
+
+        t2_index = None
+        t1_index = None
+        for transport_index in range(len(transport_maps)):
+            if transport_maps[transport_index]['t1'] == time:
+                t1_index = transport_index
+            if transport_maps[transport_index]['t2'] == time:
+                t2_index = transport_index
 
         result = {}
         n_cell_sets = cell_set_ds.x.shape[1]
-        for t in range(time_index, t2_index - 1, -1) if time_index > t2_index else range(time_index, t2_index + 1):
-            t1 = transport_maps[t]['t1']
-            if sampling_loader is not None:
-                import h5py
-                f = h5py.File(transport_maps[t]['path'], 'r')
-                ids = f['/row_attrs/id'][()]
-                if ids.dtype.kind == 'S':
-                    ids = ids.astype(str)
-                tmap = wot.Dataset(None, pd.DataFrame(index=ids), None)
-                f.close()
-            else:
-                tmap = transport_maps[t].get('ds')
-                if tmap is None:
-                    if verbose:
-                        print('Reading transport map ' + transport_maps[t]['path'])
-                    tmap = wot.io.read_dataset(transport_maps[t]['path'])
-                    transport_maps[t]['ds'] = tmap
-
-            # align ds and tmap
-            if full_ds is not None:
-                ds_order = tmap.row_meta.index.get_indexer_for(full_ds.row_meta.index)
-                ds = wot.Dataset(full_ds.x[ds_order], full_ds.row_meta.iloc[ds_order], full_ds.col_meta)
-            if gene_set_scores is not None:
-                # put gene set scores in same order as tmap
-                _gene_set_scores = tmap.row_meta.align(gene_set_scores, join='left', axis=0)[1]
-            if t == time_index:
-                if sampling_loader is None:
-                    pvec_array = []
-                    cell_sets_to_keep = []
-                    if verbose:
-                        print('Initializing cell sets')
-                    for cell_set_index in range(n_cell_sets):
-                        cell_ids = cell_set_ds.row_meta.index[cell_set_ds.x[:, cell_set_index] > 0]
-                        membership = tmap.col_meta.index.isin(cell_ids)
-
-                        if np.sum(membership) > 0:
-                            pvec_array.append(membership)
-                            cell_sets_to_keep.append(cell_set_index)
-
-                    cell_set_ds = wot.Dataset(cell_set_ds.x[:, cell_sets_to_keep], cell_set_ds.row_meta,
-                                              cell_set_ds.col_meta.iloc[cell_sets_to_keep])
-                n_cell_sets = cell_set_ds.x.shape[1]
-            new_pvec_array = []
-            for cell_set_index in range(n_cell_sets):
-                cell_set_name = cell_set_ds.col_meta.index.values[cell_set_index]
-                if sampling_loader is None:
-                    v = pvec_array[cell_set_index]
-                    v = tmap.x.dot(v)
-                    v /= v.sum()
-                    entropy = np.exp(scipy.stats.entropy(v))
-
-                    n_choose = int(np.ceil(entropy))
-                    if verbose:
-                        print('Sampling ' + str(n_choose) + ' cells')
-                    sampled_indices = np.random.choice(len(v), n_choose, p=v, replace=True)
+        ranges = [{'backward': False, 'range': range(t1_index, len(transport_maps))},
+                  {'backward': True, 'range': range(t2_index, - 1, -1)}]
+        for r in ranges:
+            back = r['backward']
+            for transport_index in r['range']:
+                tmap_dict = transport_maps[transport_index]
+                t = tmap_dict['t1'] if back else tmap_dict['t2']
+                t_index = t2_index if back else t1_index
+                if sampling_loader is not None:
+                    import h5py
+                    f = h5py.File(tmap_dict['path'], 'r')
+                    ids = f['/row_attrs/id'][()]
+                    if ids.dtype.kind == 'S':
+                        ids = ids.astype(str)
+                    tmap = wot.Dataset(None, pd.DataFrame(index=ids), None)
+                    f.close()
                 else:
-                    sampled_indices = sampling_loader(t=t1, cell_set_name=cell_set_name)
-                if save_sampling is not None:
-                    save_sampling(t=t1, cell_set_name=cell_set_name, sampled_indices=sampled_indices)
-                if full_ds is not None:
-                    values = ds.x[sampled_indices]
-                    for gene_index in range(ds.x.shape[1]):
-                        gene_name = ds.col_meta.index.values[gene_index]
-                        key = cell_set_name + gene_name
-                        key_data = result.get(key)
-                        if key_data is None:
-                            key_data = {'x': np.array([]), 'y': np.array([])}
-                            result[key] = key_data
-                        key_data['y'] = np.concatenate((key_data['y'], values[:, gene_index].T))
-                        key_data['x'] = np.concatenate((key_data['x'], np.repeat(t1, n_choose)))
-                        # df_names = np.concatenate((df_names, np.repeat(gene_name, n_choose)))
-                        # df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n_choose)))
+                    tmap = tmap_dict.get('ds')
+                    if tmap is None:
+                        if verbose:
+                            print('Reading transport map ' + tmap_dict['path'])
+                        tmap = wot.io.read_dataset(tmap_dict['path'])
+                        tmap_dict['ds'] = tmap
 
-                if gene_set_scores is not None:
-                    tmp_scores = _gene_set_scores.iloc[sampled_indices]
-                    for gene_set_index in range(gene_set_scores.shape[1]):
-                        gene_set_name = gene_set_scores.columns[gene_set_index]
-                        key = cell_set_name + gene_set_name
-                        key_data = result.get(key)
-                        if key_data is None:
-                            key_data = {'x': np.array([]), 'y': np.array([])}
-                            result[key] = key_data
-                        key_data['y'] = np.concatenate((key_data['y'], tmp_scores.iloc[:, gene_set_index].values))
-                        key_data['x'] = np.concatenate((key_data['x'], np.repeat(t1, n_choose)))
+                # align ds and tmap
+                ds = None
+                if unaligned_ds is not None:
+                    if back:
+                        ds_order = tmap.row_meta.index.get_indexer_for(unaligned_ds.row_meta.index)
+                        ds = wot.Dataset(unaligned_ds.x[ds_order], unaligned_ds.row_meta.iloc[ds_order],
+                                         unaligned_ds.col_meta)
+                    else:
+                        ds_order = tmap.col_meta.index.get_indexer_for(unaligned_ds.row_meta.index)
+                        ds = wot.Dataset(unaligned_ds.x[ds_order], unaligned_ds.row_meta.iloc[ds_order],
+                                         unaligned_ds.col_meta)
+                gene_set_scores = None
+                # align gene set scores and tmap
+                if unaligned_gene_set_scores is not None:
+                    if back:
+                        gene_set_scores = tmap.row_meta.align(unaligned_gene_set_scores, join='left', axis=0)[1]
+                    else:
+                        gene_set_scores = tmap.col_meta.align(unaligned_gene_set_scores, join='left', axis=0)[1]
+                if transport_index == t_index:
+                    if sampling_loader is None:
+                        pvec_array = []
+                        cell_sets_to_keep = []
+                        for cell_set_index in range(n_cell_sets):
+                            cell_ids_in_set = cell_set_ds.row_meta.index[cell_set_ds.x[:, cell_set_index] > 0]
+                            membership = tmap.col_meta.index.isin(
+                                cell_ids_in_set) if back else tmap.row_meta.index.isin(cell_ids_in_set)
 
-                        # df_vals = np.concatenate((df_vals, vals))
-                        # df_names = np.concatenate((df_names, np.repeat(gene_set_name, n_choose)))
-                        # df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n_choose)))
+                            if np.sum(membership) > 0:
+                                pvec_array.append(membership)
+                                cell_sets_to_keep.append(cell_set_index)
+                                if not back:
+                                    Ancestors.do_sampling(result=result, t=time, sampled_indices=membership, ds=ds,
+                                                          cell_set_name=cell_set_ds.col_meta.index.values[
+                                                              cell_set_index], gene_set_scores=gene_set_scores)
 
-                new_pvec_array.append(v)
-            pvec_array = new_pvec_array
+                        cell_set_ds = wot.Dataset(cell_set_ds.x[:, cell_sets_to_keep], cell_set_ds.row_meta,
+                                                  cell_set_ds.col_meta.iloc[cell_sets_to_keep])
+                    n_cell_sets = cell_set_ds.x.shape[1]
+
+                    if verbose:
+                        print('Initializing ' + str(n_cell_sets) + ' cell sets')
+                    if n_cell_sets is 0:
+                        raise Exception('No cell sets')
+                new_pvec_array = []
+                for cell_set_index in range(n_cell_sets):
+                    if sampling_loader is None:
+                        v = pvec_array[cell_set_index]
+                        if back:
+                            v = tmap.x.dot(v)
+                        else:
+                            v = v.dot(tmap.x)
+                        v /= v.sum()
+                        entropy = np.exp(scipy.stats.entropy(v))
+                        n_choose = int(np.ceil(entropy))
+                        if verbose:
+                            print('Sampling ' + str(n_choose) + ' cells')
+                        sampled_indices = np.random.choice(len(v), n_choose, p=v, replace=True)
+                    # else:
+                    #     sampled_indices = sampling_loader(t=t1, cell_set_name=cell_set_name)
+                    # if save_sampling is not None:
+                    #     save_sampling(t=t1, cell_set_name=cell_set_name, sampled_indices=sampled_indices)
+                    Ancestors.do_sampling(result=result, t=t, sampled_indices=sampled_indices, ds=ds,
+                                          cell_set_name=cell_set_ds.col_meta.index.values[cell_set_index],
+                                          gene_set_scores=gene_set_scores)
+                    new_pvec_array.append(v)
+                pvec_array = new_pvec_array
 
         return result
