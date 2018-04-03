@@ -112,13 +112,11 @@ class Ancestors:
                 result={}):
         df_names = np.array([]) if result.get('name') is None else result['name']
         df_cell_set_names = np.array([]) if result.get('cell_set') is None else result['cell_set']
-        df_times = np.array([]) if result.get('value') is None else result['value']
-        df_vals = np.array([]) if result.get('t') is None else result['t']
+        df_vals = np.array([]) if result.get('value') is None else result['value']
+        df_times = np.array([]) if result.get('t') is None else result['t']
         n_cell_sets = cell_set_ds.x.shape[1] if cell_set_ds is not None else 0
 
         for t in range(time_index, t2_index - 1, -1) if time_index > t2_index else range(time_index, t2_index + 1):
-            if verbose:
-                print('Reading transport map ' + transport_maps[t]['path'])
             t1 = transport_maps[t]['t1']
             if sampling_loader is not None:
                 import h5py
@@ -129,7 +127,13 @@ class Ancestors:
                 tmap = wot.Dataset(None, pd.DataFrame(index=ids), None)
                 f.close()
             else:
-                tmap = wot.io.read_dataset(transport_maps[t]['path'])
+                tmap = transport_maps[t].get('ds')
+                if tmap is None:
+                    if verbose:
+                        print('Reading transport map ' + transport_maps[t]['path'])
+                    tmap = wot.io.read_dataset(transport_maps[t]['path'])
+                    transport_maps[t]['ds'] = tmap
+
             # align ds and tmap
             if full_ds is not None:
                 ds_order = tmap.row_meta.index.get_indexer_for(full_ds.row_meta.index)
