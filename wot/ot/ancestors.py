@@ -108,14 +108,10 @@ class Ancestors:
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, time_index, t2_index, full_ds=None,
-                gene_set_scores=None, verbose=False, sampling_loader=None, save_sampling=None,
-                result={}):
-        df_names = np.array([]) if result.get('name') is None else result['name']
-        df_cell_set_names = np.array([]) if result.get('cell_set') is None else result['cell_set']
-        df_vals = np.array([]) if result.get('value') is None else result['value']
-        df_times = np.array([]) if result.get('t') is None else result['t']
-        n_cell_sets = cell_set_ds.x.shape[1] if cell_set_ds is not None else 0
+                gene_set_scores=None, verbose=False, sampling_loader=None, save_sampling=None):
 
+        result = {}
+        n_cell_sets = cell_set_ds.x.shape[1]
         for t in range(time_index, t2_index - 1, -1) if time_index > t2_index else range(time_index, t2_index + 1):
             t1 = transport_maps[t]['t1']
             if sampling_loader is not None:
@@ -179,25 +175,33 @@ class Ancestors:
                     values = ds.x[sampled_indices]
                     for gene_index in range(ds.x.shape[1]):
                         gene_name = ds.col_meta.index.values[gene_index]
-                        df_vals = np.concatenate((df_vals, values[:, gene_index]))
-                        df_names = np.concatenate((df_names, np.repeat(gene_name, n_choose)))
-                        df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n_choose)))
-                        df_times = np.concatenate((df_times, np.repeat(t1, n_choose)))
+                        key = cell_set_name + gene_name
+                        key_data = result.get(key)
+                        if key_data is None:
+                            key_data = {'x': np.array([]), 'y': np.array([])}
+                            result[key] = key_data
+                        key_data['y'] = np.concatenate((key_data['y'], values[:, gene_index].T))
+                        key_data['x'] = np.concatenate((key_data['x'], np.repeat(t1, n_choose)))
+                        # df_names = np.concatenate((df_names, np.repeat(gene_name, n_choose)))
+                        # df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n_choose)))
 
                 if gene_set_scores is not None:
                     tmp_scores = _gene_set_scores.iloc[sampled_indices]
                     for gene_set_index in range(gene_set_scores.shape[1]):
-                        vals = tmp_scores.iloc[:, gene_set_index].values
                         gene_set_name = gene_set_scores.columns[gene_set_index]
-                        df_vals = np.concatenate((df_vals, vals))
-                        df_names = np.concatenate((df_names, np.repeat(gene_set_name, n_choose)))
-                        df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n_choose)))
-                        df_times = np.concatenate((df_times, np.repeat(t1, n_choose)))
+                        key = cell_set_name + gene_set_name
+                        key_data = result.get(key)
+                        if key_data is None:
+                            key_data = {'x': np.array([]), 'y': np.array([])}
+                            result[key] = key_data
+                        key_data['y'] = np.concatenate((key_data['y'], tmp_scores.iloc[:, gene_set_index].values))
+                        key_data['x'] = np.concatenate((key_data['x'], np.repeat(t1, n_choose)))
+
+                        # df_vals = np.concatenate((df_vals, vals))
+                        # df_names = np.concatenate((df_names, np.repeat(gene_set_name, n_choose)))
+                        # df_cell_set_names = np.concatenate((df_cell_set_names, np.repeat(cell_set_name, n_choose)))
 
                 new_pvec_array.append(v)
             pvec_array = new_pvec_array
 
-        return {'name': df_names,
-                'cell_set': df_cell_set_names,
-                'value': df_vals,
-                't': df_times}
+        return result
