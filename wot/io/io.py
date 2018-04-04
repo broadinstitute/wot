@@ -229,14 +229,15 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
             h5_col_meta = '/col_attrs'
 
         row_attrs = read_h5_attrs(f, h5_row_meta, row_filter)
-        nrows = len(row_attrs[1]) if row_attrs[1] is not None else f[h5_x].shape[0]
-        row_meta = pd.DataFrame(row_attrs[0], index=pd.RangeIndex(start=0, stop=nrows, step=1))
+        nrows = len(row_attrs['indices']) if row_attrs['indices'] is not None else f[h5_x].shape[0]
+        row_meta = pd.DataFrame(row_attrs['attrs'], index=pd.RangeIndex(start=0, stop=nrows, step=1))
         if row_meta.get('id') is not None:
             row_meta.set_index('id', inplace=True)
 
         col_attrs = read_h5_attrs(f, h5_col_meta, col_filter)
-        ncols = len(col_attrs[1]) if col_attrs[1] is not None else f[h5_x].shape[1]
-        col_meta = pd.DataFrame(col_attrs[0], index=pd.RangeIndex(start=0, stop=ncols, step=1))
+        ncols = len(col_attrs['indices']) if col_attrs['indices'] is not None else f[h5_x].shape[1]
+
+        col_meta = pd.DataFrame(col_attrs['attrs'], index=pd.RangeIndex(start=0, stop=ncols, step=1))
         if col_meta.get('id') is not None:
             col_meta.set_index('id', inplace=True)
         if not use_dask:
@@ -260,19 +261,18 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
             else:
                 if row_filter is None and col_filter is None:
                     x = x[()]
-                elif row_filter is not None:
-                    x = x[row_attrs[1]]
                 elif row_filter is not None and col_filter is not None:
-                    x = x[row_attrs[1]]
-                    x = x[:, col_attrs[1]]
+                    x = x[row_attrs['indices']]
+                    x = x[:, col_attrs['indices']]
+                elif row_filter is not None:
+                    x = x[row_attrs['indices']]
                 else:
-                    x = x[:, col_attrs[1]]
+                    x = x[:, col_attrs['indices']]
             f.close()
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
         else:
 
             import dask.array as da
-            import dask.dataframe as dd
             x = da.from_array(f[h5_x], chunks=chunks)
             # TODO load in chunks
             # row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
@@ -343,7 +343,7 @@ def read_h5_attrs(f, path, filter):
             values = values.astype(str)
         data[key] = values
 
-    return data, indices
+    return {'attrs': data, 'indices': indices}
 
 
 def check_file_extension(name, format):
