@@ -185,12 +185,8 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
                              basename_and_extension[0] + '.barcodes.txt'),
                 os.path.join(sp[0], 'barcodes.tsv')):
             if os.path.isfile(f) or os.path.isfile(f + '.gz'):
-                data = np.genfromtxt(f
-                                     if os.path.isfile(
-                    f) else f + '.gz', dtype=str)
-                if len(data.shape) > 1:
-                    data = data[:, 0]  # TODO add other columns to df
-                row_meta = pd.DataFrame(index=data)
+                row_meta = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
+                                         header=None)
                 break
         col_meta = None
         for f in (os.path.join(sp[0], basename_and_extension[0] +
@@ -199,72 +195,16 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
                                       '.genes.txt'),
                   os.path.join(sp[0], 'genes.tsv')):
             if os.path.isfile(f) or os.path.isfile(f + '.gz'):
-                data = np.genfromtxt(f
-                                     if os.path.isfile(
-                    f) else f + '.gz', dtype=str)
-                index = data
-                df_data = {}
-                if len(data.shape) > 1:
-                    index = data[:, 0]  # TODO add other columns to df
-                    df_data = {'symbol': data[:, 1]}
-
-                col_meta = pd.DataFrame(index=index, data=df_data)
+                col_meta = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
+                                         header=None)
                 break
 
-        if path.endswith('.gz'):
-            import gzip
-            stream = gzip.open(path, 'rb')
-        elif path.endswith('.bz2'):
-            import bz2
-            stream = bz2.BZ2File(path, 'rb')
-        else:
-            stream = open(path, 'rb')
-        from numpy.compat import asstr
-        # % % MatrixMarket matrix coordinate real general
-        # %
-        # 32738 2700 2286884
-        line = stream.readline()
-        mmid, matrix, format, field, symmetry = \
-            [asstr(part.strip()) for part in line.split()]
-        if not mmid.startswith('%%MatrixMarket'):
-            raise ValueError('source is not in Matrix Market format')
-        if not matrix.lower() == 'matrix':
-            raise ValueError('Problem reading file header: ' + line)
-        # skip comments
-        while line.startswith(b'%'):
-            line = stream.readline()
-
-        line = line.split()
-        if not len(line) == 3:
-            raise ValueError('Header line not of length 3: ' + line)
-        rows, cols, entries = map(int, line)
-
-        # x = np.zeros(shape=(cols, rows), dtype=np.float32)
-        V = np.zeros(entries)
-        entry_number = 0
-        I = np.zeros(entries, dtype='intc')
-        J = np.zeros(entries, dtype='intc')
-        while line:
-            line = stream.readline()
-            if not line or line.startswith(b'%'):
-                continue
-
-            l = line.split()
-            i, j = map(int, l[:2])
-            i, j = i - 1, j - 1
-            aij = float(l[2])
-            V[entry_number] = aij
-            I[entry_number] = j
-            J[entry_number] = i
-            entry_number += 1
-        x = scipy.sparse.coo_matrix((V, (I, J)), shape=(cols, rows)).tocsr()
-        stream.close()
+        import scipy.io
+        x = scipy.io.mmread(path)
         if col_meta is None:
             col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1))
         if row_meta is None:
-            row_meta = pd.DataFrame(
-                index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
-
+            row_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom':
         f = h5py.File(path, 'r')
@@ -301,6 +241,7 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
             col_meta.set_index('id', inplace=True)
         if not use_dask:
             x = f[h5_x]
+            import scipy
             if x.attrs.get('sparse') and row_filter is None and col_filter is None:
                 # read in blocks of 1000
                 chunk_start = 0
@@ -373,21 +314,22 @@ def read_h5_attrs(f, path, filter):
     if filter is not None:
         for key in filter.keys():
             values = g[key][()]
+            f = filter[key]
             if values.dtype.kind == 'S':
                 values = values.astype(str)
-
-            tmp = np.where(np.isin(np.char.lower(values), filter[key]))[0]
+            _indices = []
+            for i in range(len(values)):
+                if f(values[i]):
+                    _indices.append(i)
             if indices is not None:
-                indices = np.intersect1d(tmp, indices)
+                indices = np.intersect1d(_indices, indices, assume_unique=True)
             else:
-                indices = tmp
+                indices = _indices
 
         if len(indices) is 0:
             raise ValueError('No indices passed filter')
-        indices = list(indices)
 
     data = {}
-
     for key in g:
         values = g[key]
         if indices is None:
@@ -464,12 +406,13 @@ def write_dataset(ds, path, output_format='txt', txt_full=False, progress=None):
                                                                                                          header=False)
             f.close()
         else:
-            pd.DataFrame(ds.x, index=ds.row_meta.index, columns=ds.col_meta.index).to_csv(path,
-                                                                                          index_label='id',
-                                                                                          sep='\t',
-                                                                                          doublequote=False,
-                                                                                          compression='gzip' if output_format == 'txt.gz'
-                                                                                          else None)
+            pd.DataFrame(ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x, index=ds.row_meta.index,
+                         columns=ds.col_meta.index).to_csv(path,
+                                                           index_label='id',
+                                                           sep='\t',
+                                                           doublequote=False,
+                                                           compression='gzip' if output_format == 'txt.gz'
+                                                           else None)
     elif output_format == 'loom':
         f = h5py.File(path, 'w')
         x = ds.x
