@@ -262,6 +262,9 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
                     x = x[()]
                 elif row_filter is not None:
                     x = x[row_attrs[1]]
+                elif row_filter is not None and col_filter is not None:
+                    x = x[row_attrs[1]]
+                    x = x[:, col_attrs[1]]
                 else:
                     x = x[:, col_attrs[1]]
             f.close()
