@@ -89,33 +89,64 @@ class Ancestors:
                 'gene_set_scores': gene_set_scores, 'verbose': args.verbose, 'args': args}
 
     @staticmethod
-    def do_sampling(result, t, sampled_indices, cell_set_name, gene_set_scores=None, ds=None):
+    def do_sampling(result, t, sampled_indices, cell_set_name, gene_set_scores=None, ds=None, color=None):
 
         if ds is not None:
             values = ds.x[sampled_indices] if sampled_indices is not None else ds.x
             for gene_index in range(ds.x.shape[1]):
                 gene_name = ds.col_meta.index.values[gene_index]
                 key = cell_set_name + gene_name
-                key_data = result.get(key)
-                if key_data is None:
-                    key_data = {'x': np.array([]), 'y': np.array([])}
-                    result[key] = key_data
+                # #key_data = result.get(key)
+                # if key_data is None:
+                #     key_data = {'x': np.array([]), 'y': np.array([])}
+                #     result[key] = key_data
                 array = values[:, gene_index]
-                key_data['y'] = np.concatenate((key_data['y'], array))
-                key_data['x'] = np.concatenate((key_data['x'], np.repeat(t, len(array))))
+                trace = {
+                    "name": t,
+                    "type": 'box',
+                    "boxpoints": True,
+                    "line": {
+                        "color": 'black'
+                    },
+                    "fillcolor": color,
+                    "opacity": 0.7,
+                    "y": array.tolist(),
+                    "box": {
+                        "visible": True
+                    },
+                    "points": True
+                }
+                result.append(trace)
 
         if gene_set_scores is not None:
             tmp_scores = gene_set_scores.iloc[sampled_indices] if sampled_indices is not None else gene_set_scores
             for gene_set_index in range(gene_set_scores.shape[1]):
                 gene_set_name = gene_set_scores.columns[gene_set_index]
                 key = cell_set_name + gene_set_name
-                key_data = result.get(key)
-                if key_data is None:
-                    key_data = {'x': np.array([]), 'y': np.array([])}
-                    result[key] = key_data
+                # key_data = result.get(key)
+                # if key_data is None:
+                #     key_data = {'x': np.array([]), 'y': np.array([])}
+                #     result[key] = key_data
                 array = tmp_scores.iloc[:, gene_set_index].values
-                key_data['y'] = np.concatenate((key_data['y'], array))
-                key_data['x'] = np.concatenate((key_data['x'], np.repeat(t, len(array))))
+                trace = {
+                    "name": t,
+                    "type": 'violin',
+                    "boxpoints": False,
+                    "line": {
+                        "color": 'black'
+                    },
+                    "fillcolor": color,
+                    "opacity": 0.7,
+                    "y": array.tolist(),
+                    "box": {
+                        "visible": False
+                    },
+                    "meanline": {
+                        "visible": True
+                    },
+                    "points": False
+                }
+                result.append(trace)
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, time, unaligned_ds=None, unaligned_gene_set_scores=None, verbose=False,
@@ -129,12 +160,14 @@ class Ancestors:
             if transport_maps[transport_index]['t2'] == time:
                 t2_index = transport_index
 
-        result = {}
+        traces = []
+        pvecs = []
         n_cell_sets = cell_set_ds.x.shape[1]
         ranges = [{'backward': True, 'range': range(t2_index, - 1, -1)},
                   {'backward': False, 'range': range(t1_index, len(transport_maps))}]
         for r in ranges:
             back = r['backward']
+            color = '#2c7bb6' if back else '#d7191c'
             for transport_index in r['range']:
                 tmap_dict = transport_maps[transport_index]
                 t = tmap_dict['t1'] if back else tmap_dict['t2']
@@ -197,9 +230,9 @@ class Ancestors:
                                     if unaligned_gene_set_scores is not None:
                                         gs0 = pd.DataFrame(index=cell_ids_in_set).align(unaligned_gene_set_scores,
                                                                                         join='left', axis=0)[1]
-                                    Ancestors.do_sampling(result=result, t=time, sampled_indices=None, ds=ds0,
+                                    Ancestors.do_sampling(result=traces, t=time, sampled_indices=None, ds=ds0,
                                                           cell_set_name=cell_set_ds.col_meta.index.values[
-                                                              cell_set_index], gene_set_scores=gs0)
+                                                              cell_set_index], gene_set_scores=gs0, color='#ffffbf')
 
                         cell_set_ds = wot.Dataset(cell_set_ds.x[:, cell_sets_to_keep], cell_set_ds.row_meta,
                                                   cell_set_ds.col_meta.iloc[cell_sets_to_keep])
@@ -219,6 +252,7 @@ class Ancestors:
                             v = v.dot(tmap.x)
                         v /= v.sum()
                         entropy = np.exp(scipy.stats.entropy(v))
+                        pvecs.append({'v': v, 'entropy': entropy, 't': t})
                         n_choose = int(np.ceil(entropy))
                         if verbose:
                             print('Sampling ' + str(n_choose) + ' cells')
@@ -227,10 +261,10 @@ class Ancestors:
                     #     sampled_indices = sampling_loader(t=t1, cell_set_name=cell_set_name)
                     # if save_sampling is not None:
                     #     save_sampling(t=t1, cell_set_name=cell_set_name, sampled_indices=sampled_indices)
-                    Ancestors.do_sampling(result=result, t=t, sampled_indices=sampled_indices, ds=ds,
+                    Ancestors.do_sampling(result=traces, t=t, sampled_indices=sampled_indices, ds=ds,
                                           cell_set_name=cell_set_ds.col_meta.index.values[cell_set_index],
-                                          gene_set_scores=gene_set_scores)
+                                          gene_set_scores=gene_set_scores, color=color)
                     new_pvec_array.append(v)
                 pvec_array = new_pvec_array
 
-        return result
+        return {'traces': traces, 'pvecs': pvecs}
