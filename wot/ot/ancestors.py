@@ -58,7 +58,9 @@ class Ancestors:
         transport_maps = wot.io.list_transport_maps(args.dir)
         full_ds = None
         if args.gene is not None:
-            full_ds = wot.io.read_dataset(args.matrix, col_filter={'id': np.char.lower(np.array(args.gene))})
+            genes = set(np.char.lower(np.array(args.gene)))
+
+            full_ds = wot.io.read_dataset(args.matrix, col_filter={'id': lambda x: x.lower() in genes})
 
         gene_set_scores = None
         if args.gene_sets is not None:
@@ -90,9 +92,9 @@ class Ancestors:
 
     @staticmethod
     def do_sampling(result, t, sampled_indices, cell_set_name, gene_set_scores=None, ds=None, color=None):
-
         if ds is not None:
             values = ds.x[sampled_indices] if sampled_indices is not None else ds.x
+            values = values.toarray() if scipy.sparse.isspmatrix(values) else values
             for gene_index in range(ds.x.shape[1]):
                 gene_name = ds.col_meta.index.values[gene_index]
                 key = cell_set_name + gene_name
