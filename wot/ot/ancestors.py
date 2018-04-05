@@ -154,6 +154,7 @@ class Ancestors:
     def compute(cell_set_ds, transport_maps, time, unaligned_ds=None, unaligned_gene_set_scores=None, verbose=False,
                 sampling_loader=None, save_sampling=None):
 
+        print(time)
         t2_index = None
         t1_index = None
         for transport_index in range(len(transport_maps)):
@@ -165,8 +166,11 @@ class Ancestors:
         traces = []
         pvecs = []
         n_cell_sets = cell_set_ds.x.shape[1]
-        ranges = [{'backward': True, 'range': range(t2_index, - 1, -1)},
-                  {'backward': False, 'range': range(t1_index, len(transport_maps))}]
+        ranges = []
+        if t2_index is not None:
+            ranges.append({'backward': True, 'range': range(t2_index, - 1, -1)})
+        if t1_index is not None:
+            ranges.append({'backward': False, 'range': range(t1_index, len(transport_maps))})
         for r in ranges:
             back = r['backward']
             color = '#2c7bb6' if back else '#d7191c'
