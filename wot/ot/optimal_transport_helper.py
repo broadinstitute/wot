@@ -184,6 +184,7 @@ class OptimalTransportHelper:
 
         day_to_indices = {}
         days = ds.row_meta[days_data_frame.columns[0]]
+
         for i in range(len(days)):
             val = days[i]
             indices = day_to_indices.get(val)
@@ -201,9 +202,12 @@ class OptimalTransportHelper:
                     indices = indices[0:args.ncells]
                     day_to_indices[day] = indices
 
+        if day_pairs.shape[0] is 0:
+            print('No day pairs found')
+            exit(1)
         if args.verbose:
-            print('Computing ' + str(day_pairs.shape[0]) + ' transport map' + 's' if
-                  day_pairs.shape[0] > 1 else '')
+            print('Computing ' + str(day_pairs.shape[0]) + ' transport map' + ('s' if
+                                                                               day_pairs.shape[0] > 1 else ''))
         self.day_pairs = day_pairs
         self.day_to_indices = day_to_indices
         self.cell_growth_rates = cell_growth_rates
@@ -297,6 +301,13 @@ class OptimalTransportHelper:
                     p1 = wot.Dataset(p1_full.x[p1_expr], p1_full.row_meta.iloc[p1_expr], p1_full.col_meta)
 
                 if args.verbose:
+                    print('Computing cost matrix...', end='')
+
+                cost_matrix = self.compute_cost_matrix(p0.x, p1.x)
+                if args.verbose:
+                    print('done')
+
+                if args.verbose:
                     if covariate_df is not None:
                         print(
                             'Computing transport map from ' + str(
@@ -307,7 +318,6 @@ class OptimalTransportHelper:
                             'Computing transport map from ' + str(
                                 t0) + ' to ' + str(
                                 t1) + '...', end='')
-                cost_matrix = self.compute_cost_matrix(p0.x, p1.x)
                 growth_rate = p0.row_meta[cell_growth_rates.columns[0]].values
                 result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
                                                   growth_rate=growth_rate,
