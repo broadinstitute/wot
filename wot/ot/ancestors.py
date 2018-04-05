@@ -154,7 +154,6 @@ class Ancestors:
     def compute(cell_set_ds, transport_maps, time, unaligned_ds=None, unaligned_gene_set_scores=None, verbose=False,
                 sampling_loader=None, save_sampling=None):
 
-        print(time)
         t2_index = None
         t1_index = None
         for transport_index in range(len(transport_maps)):
