@@ -201,6 +201,7 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
 
         import scipy.io
         x = scipy.io.mmread(path)
+        x = scipy.sparse.csr_matrix(x.T)
         if col_meta is None:
             print('No genes file found.')
             col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1))

@@ -127,6 +127,7 @@ parser.add_argument('--covariate',
 args = parser.parse_args()
 covariate_df = None
 unique_covariates = None
+covariate_pairs = None
 if args.covariate is not None:
     covariate_df = pd.read_table(args.covariate, index_col=0,
                                  header=None, names=['covariate'],
@@ -232,29 +233,41 @@ def transport_map_callback(cb_args):
                                  args.prefix + '_random_' + str(inferred_time) + '.txt')
 
     pair_names = all_pair_names.copy()
-    if covariate_df is not None:
-        batch_names = []
-        p0_5_cv = wot.Dataset(p0_5.x, p0_5.row_meta.copy(False), p0_5.col_meta)
-        for i in range(len(unique_covariates)):
-            cv = unique_covariates[i]
-            cv_filter = np.where(p0_5_cv.row_meta[covariate_df.columns[0]] == cv)[0]
-            p = wot.Dataset(p0_5_cv.x[cv_filter], p0_5.row_meta.iloc[cv_filter], p0_5_cv.col_meta)
-            if p.x.shape[0] > 0:
-                name = 'P' + t_interpolate_s + '_cv-' + str(cv)
-                point_clouds.append(
-                    {'m': p.x, 'weights': None,
-                     'name': name, 't': inferred_time, 'suffix': ''})
-                batch_names.append(name)
-
-        for i in range(1, len(batch_names)):
-            for j in range(i):
-                pair_names.append([batch_names[i], batch_names[j]])
 
     def get_cloud(cloud_name):
         for i in range(len(point_clouds)):
             if point_clouds[i]['name'] == cloud_name:
                 return point_clouds[i]
         raise ValueError(cloud_name + ' not found')
+
+    if covariate_df is not None:
+        batch_names = []
+        p0_5_copy = wot.Dataset(p0_5.x, p0_5.row_meta.copy(False), p0_5.col_meta)
+        r_05_copy = get_cloud('R' + t_interpolate_s)
+
+        for i in range(len(unique_covariates)):
+            cv = unique_covariates[i]
+            p0_5_cv_filter = np.where(p0_5_copy.row_meta[covariate_df.columns[0]] == cv)[0]
+            p0_5_cv = wot.Dataset(p0_5_copy.x[p0_5_cv_filter], p0_5.row_meta.iloc[p0_5_cv_filter], p0_5_copy.col_meta)
+            if p0_5_cv.x.shape[0] > 0:
+                name = 'P' + t_interpolate_s + '_cv-' + str(cv)
+                point_clouds.append(
+                    {'m': p0_5_cv.x, 'weights': None,
+                     'name': name, 't': inferred_time, 'suffix': ''})
+                batch_names.append(name)
+
+            r0_5_cv_filter = np.where(r_05_copy.row_meta[covariate_df.columns[0]] == cv)[0]
+            r0_5_cv = wot.Dataset(r_05_copy.x[r0_5_cv_filter], p0_5.row_meta.iloc[r0_5_cv_filter], r_05_copy.col_meta)
+            if r0_5_cv.x.shape[0] > 0:
+                name = 'R' + t_interpolate_s + '_cv-' + str(cv)
+                point_clouds.append(
+                    {'m': r0_5_cv.x, 'weights': r_05_copy['weights'][r0_5_cv_filter],
+                     'name': name, 't': inferred_time, 'suffix': ''})
+                batch_names.append(name)
+
+        for i in range(1, len(batch_names)):
+            for j in range(i):
+                pair_names.append([batch_names[i], batch_names[j]])
 
     for pair in pair_names:
         point_cloud_s(get_cloud(pair[0]), get_cloud(pair[1]), t0, t1,
