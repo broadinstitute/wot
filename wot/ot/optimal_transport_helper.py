@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import csv
+import scipy
 import sklearn.metrics
 import sklearn.decomposition
 import argparse
@@ -213,7 +214,10 @@ class OptimalTransportHelper:
         if self.eigenvals is not None:
             a = a.dot(self.eigenvals)
             b = b.dot(self.eigenvals)
-        cost_matrix = sklearn.metrics.pairwise.pairwise_distances(a, b, metric='sqeuclidean')
+
+        cost_matrix = sklearn.metrics.pairwise.pairwise_distances(a.toarray() if scipy.sparse.isspmatrix(a) else a,
+                                                                  b.toarray() if scipy.sparse.isspmatrix(b) else b,
+                                                                  metric='sqeuclidean')
         cost_matrix = cost_matrix / np.median(cost_matrix)
         return cost_matrix
 
