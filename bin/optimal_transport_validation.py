@@ -224,7 +224,7 @@ def transport_map_callback(cb_args):
         inferred = pc0 + args.t_interpolate * (pc1 - pc0)
         point_clouds.append(
             {'m': inferred, 'weights': p0_m1_subset_weights, 'name': 'R' + t_interpolate_s,
-             't': inferred_time, 'suffix': ''})
+             't': inferred_time, 'suffix': cb_args['P0_suffix'] + cb_args['P1_suffix']})
         if args.save:
             inferred_row_meta = pd.DataFrame(
                 index=cb_args['df0'].iloc[random_sample['indices0']].index + ';' + cb_args['df1'].iloc[
@@ -243,7 +243,6 @@ def transport_map_callback(cb_args):
     if covariate_df is not None:
         batch_names = []
         p0_5_copy = wot.Dataset(p0_5.x, p0_5.row_meta.copy(False), p0_5.col_meta)
-        r_05_copy = get_cloud('R' + t_interpolate_s)
 
         for i in range(len(unique_covariates)):
             cv = unique_covariates[i]
@@ -253,15 +252,6 @@ def transport_map_callback(cb_args):
                 name = 'P' + t_interpolate_s + '_cv-' + str(cv)
                 point_clouds.append(
                     {'m': p0_5_cv.x, 'weights': None,
-                     'name': name, 't': inferred_time, 'suffix': ''})
-                batch_names.append(name)
-
-            r0_5_cv_filter = np.where(r_05_copy.row_meta[covariate_df.columns[0]] == cv)[0]
-            r0_5_cv = wot.Dataset(r_05_copy.x[r0_5_cv_filter], p0_5.row_meta.iloc[r0_5_cv_filter], r_05_copy.col_meta)
-            if r0_5_cv.x.shape[0] > 0:
-                name = 'R' + t_interpolate_s + '_cv-' + str(cv)
-                point_clouds.append(
-                    {'m': r0_5_cv.x, 'weights': r_05_copy['weights'][r0_5_cv_filter],
                      'name': name, 't': inferred_time, 'suffix': ''})
                 batch_names.append(name)
 
