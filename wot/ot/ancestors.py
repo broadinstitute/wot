@@ -166,6 +166,7 @@ class Ancestors:
         pvecs = []
         n_cell_sets = cell_set_ds.x.shape[1]
         ranges = []
+        t0_loaded = False
         if t2_index is not None:
             ranges.append({'backward': True, 'range': range(t2_index, - 1, -1)})
         if t1_index is not None:
@@ -224,7 +225,8 @@ class Ancestors:
                                 pvec_array.append(membership)
                                 cell_sets_to_keep.append(cell_set_index)
 
-                                if back:
+                                if not t0_loaded:
+                                    t0_loaded = True
                                     ds0 = None
                                     gs0 = None
                                     if unaligned_ds is not None:
