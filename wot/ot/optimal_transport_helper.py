@@ -189,15 +189,16 @@ class OptimalTransportHelper:
             self.covariate_pairs = [[None, None]]
 
         day_to_indices = {}
-        days = ds.row_meta[days_data_frame.columns[0]]
+        days = ds.row_meta[days_data_frame.columns[0]].values
 
         for i in range(len(days)):
             val = days[i]
-            indices = day_to_indices.get(val)
-            if indices is None:
-                indices = []
-                day_to_indices[val] = indices
-            indices.append(i)
+            if val is not None:
+                indices = day_to_indices.get(val)
+                if indices is None:
+                    indices = []
+                    day_to_indices[val] = indices
+                indices.append(i)
 
         self.ds = ds
         if args.ncells is not None:
