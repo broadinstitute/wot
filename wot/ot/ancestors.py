@@ -97,15 +97,14 @@ class Ancestors:
                 values = ds.x[sampled_indices] if sampled_indices is not None else ds.x
                 values = values.toarray() if scipy.sparse.isspmatrix(values) else values
                 for column_index in range(ds.x.shape[1]):
-                    gene_name = ds.col_meta.index.values[column_index]
-                    key = cell_set_name + gene_name
                     # #key_data = result.get(key)
                     # if key_data is None:
                     #     key_data = {'x': np.array([]), 'y': np.array([])}
                     #     result[key] = key_data
                     array = values[:, column_index]
+                    # cell_set_name + ' ' + str(ds.col_meta.index.values[column_index]) + ' ' +
                     trace = {
-                        "name": t,
+                        "name": str(t),
                         "type": 'violin',
                         "boxpoints": False,
                         "line": {
@@ -170,17 +169,18 @@ class Ancestors:
                             tmap_dict['ds'] = tmap
 
                 # align ds and tmap
-                datasets = None
+                datasets = []
                 if unaligned_datasets is not None:
-                    datasets = []
                     for unaligned_ds in unaligned_datasets:
                         if back:
-                            ds_order = tmap.row_meta.index.get_indexer_for(unaligned_ds.row_meta.index)
+                            ds_order = unaligned_ds.row_meta.index.get_indexer_for(tmap.row_meta.index.values)
                         else:
-                            ds_order = tmap.col_meta.index.get_indexer_for(unaligned_ds.row_meta.index)
+                            ds_order = unaligned_ds.row_meta.index.get_indexer_for(tmap.col_meta.index.values)
+
                         ds_order = ds_order[ds_order != -1]
                         ds = wot.Dataset(unaligned_ds.x[ds_order], unaligned_ds.row_meta.iloc[ds_order],
                                          unaligned_ds.col_meta)
+
                         datasets.append(ds)
 
                 if transport_index == t_index:
@@ -208,7 +208,8 @@ class Ancestors:
                                                               unaligned_ds.row_meta.iloc[ds0_order],
                                                               unaligned_ds.col_meta)
                                             datasets0.append(ds0)
-                                        Ancestors.do_sampling(result=traces, t=time, sampled_indices=None, datasets=datasets0,
+                                        Ancestors.do_sampling(result=traces, t=time, sampled_indices=None,
+                                                              datasets=datasets0,
                                                               cell_set_name=cell_set_ds.col_meta.index.values[
                                                                   cell_set_index], color='#ffffbf')
 
@@ -222,6 +223,7 @@ class Ancestors:
                         raise Exception('No cell sets')
                 new_pvec_array = []
                 for cell_set_index in range(n_cell_sets):
+                    sampled_indices = None
                     if sampling_loader is None:
                         v = pvec_array[cell_set_index]
                         if back:
