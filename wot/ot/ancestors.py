@@ -91,9 +91,10 @@ class Ancestors:
                 'gene_set_scores': gene_set_scores, 'verbose': args.verbose, 'args': args}
 
     @staticmethod
-    def do_sampling(result, t, sampled_indices, cell_set_name, datasets=None, color=None):
+    def do_sampling(result, t, sampled_indices, cell_set_name, datasets=None, summaries=None, color=None):
         if datasets is not None:
-            for ds in datasets:
+            for ds_index in range(len(datasets)):
+                ds = datasets[ds_index]
                 values = ds.x[sampled_indices] if sampled_indices is not None else ds.x
                 values = values.toarray() if scipy.sparse.isspmatrix(values) else values
                 for column_index in range(ds.x.shape[1]):
@@ -102,29 +103,39 @@ class Ancestors:
                     #     key_data = {'x': np.array([]), 'y': np.array([])}
                     #     result[key] = key_data
                     array = values[:, column_index]
-                    # cell_set_name + ' ' + str(ds.col_meta.index.values[column_index]) + ' ' +
-                    trace = {
-                        "name": str(t),
-                        "type": 'violin',
-                        "boxpoints": False,
-                        "line": {
-                            "color": 'black'
-                        },
-                        "fillcolor": color,
-                        "opacity": 0.7,
-                        "y": array.tolist(),
-                        "box": {
-                            "visible": False
-                        },
-                        "meanline": {
-                            "visible": True
-                        },
-                        "points": False
-                    }
+                    if summaries[ds_index]:
+                        trace = {
+                            "name": cell_set_name + ' ' + str(ds.col_meta.index.values[column_index]),
+                            "mode": "lines",
+                            "type": 'scatter',
+                            "y": float(np.mean(array)),
+                            "std": float(np.std(array)),
+                            "x": t
+                        }
+                    else:
+                        trace = {
+                            "group": cell_set_name + ' ' + str(ds.col_meta.index.values[column_index]),
+                            "name": str(t),
+                            "type": 'violin',
+                            "boxpoints": False,
+                            "line": {
+                                "color": 'black'
+                            },
+                            "fillcolor": color,
+                            "opacity": 0.7,
+                            "y": array.tolist(),
+                            "box": {
+                                "visible": False
+                            },
+                            "meanline": {
+                                "visible": True
+                            },
+                            "points": False
+                        }
                     result.append(trace)
 
     @staticmethod
-    def compute(cell_set_ds, transport_maps, time, unaligned_datasets=[], verbose=False,
+    def compute(cell_set_ds, transport_maps, time, unaligned_datasets=[], summaries=[], verbose=False,
                 sampling_loader=None, cache=False, ncells=1000):
 
         t2_index = None
@@ -170,8 +181,10 @@ class Ancestors:
 
                 # align ds and tmap
                 datasets = []
+
                 if unaligned_datasets is not None:
-                    for unaligned_ds in unaligned_datasets:
+                    for ds_index in range(len(unaligned_datasets)):
+                        unaligned_ds = unaligned_datasets[ds_index]
                         if back:
                             ds_order = unaligned_ds.row_meta.index.get_indexer_for(tmap.row_meta.index.values)
                         else:
@@ -199,9 +212,11 @@ class Ancestors:
                                 if not t0_loaded:
                                     t0_loaded = True
 
-                                    if unaligned_datasets is not None and len(unaligned_datasets) > 0:
+                                    if unaligned_datasets is not None:
                                         datasets0 = []
-                                        for unaligned_ds in unaligned_datasets:
+
+                                        for ds_index in range(len(unaligned_datasets)):
+                                            unaligned_ds = unaligned_datasets[ds_index]
                                             ds0_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids_in_set)
                                             ds0_order = ds0_order[ds0_order != -1]
                                             ds0 = wot.Dataset(unaligned_ds.x[ds0_order],
@@ -209,7 +224,7 @@ class Ancestors:
                                                               unaligned_ds.col_meta)
                                             datasets0.append(ds0)
                                         Ancestors.do_sampling(result=traces, t=time, sampled_indices=None,
-                                                              datasets=datasets0,
+                                                              datasets=datasets0, summaries=summaries,
                                                               cell_set_name=cell_set_ds.col_meta.index.values[
                                                                   cell_set_index], color='#ffffbf')
 
@@ -244,6 +259,7 @@ class Ancestors:
                     # if save_sampling is not None:
                     #     save_sampling(t=t1, cell_set_name=cell_set_name, sampled_indices=sampled_indices)
                     Ancestors.do_sampling(result=traces, t=t, sampled_indices=sampled_indices, datasets=datasets,
+                                          summaries=summaries,
                                           cell_set_name=cell_set_ds.col_meta.index.values[cell_set_index], color=color)
                     new_pvec_array.append(v)
                 pvec_array = new_pvec_array
