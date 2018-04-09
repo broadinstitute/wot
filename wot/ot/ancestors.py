@@ -125,7 +125,7 @@ class Ancestors:
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, time, unaligned_datasets=[], verbose=False,
-                sampling_loader=None, save_sampling=None, cache=False):
+                sampling_loader=None, cache=False, ncells=1000):
 
         t2_index = None
         t1_index = None
@@ -231,10 +231,11 @@ class Ancestors:
                         else:
                             v = v.dot(tmap.x)
                         v /= v.sum()
+
                         entropy = np.exp(scipy.stats.entropy(v))
                         pvecs.append({'v': v, 'entropy': entropy, 't': t,
                                       'cell_ids': tmap.row_meta.index.values if back else tmap.col_meta.index.values})
-                        n_choose = int(np.ceil(entropy))
+                        n_choose = ncells if ncells is not None else int(np.ceil(entropy))
                         if verbose:
                             print('Sampling ' + str(n_choose) + ' cells')
                         sampled_indices = np.random.choice(len(v), n_choose, p=v, replace=True)
