@@ -151,17 +151,23 @@ class OptimalTransportHelper:
         self.eigenvals = np.diag(eigenvals) if eigenvals is not None else None
 
         if args.gene_set_scores is not None:
-            gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0,
-                                            quoting=csv.QUOTE_NONE, engine='python',
-                                            sep=None)
-            apoptosis = gene_set_scores['Apoptosis']
-            proliferation = gene_set_scores['Cell.cycle']
-            g = wot.ot.compute_growth_scores(proliferation.values, apoptosis.values, beta_max=args.beta_max,
+            ext = wot.io.get_file_basename_and_extension(args.gene_set_scores)[1]
+            if ext == 'loom' or ext == 'gct':
+                gene_set_scores_ds = wot.io.read_dataset(args.gene_set_scores)
+                apoptosis = gene_set_scores_ds[:, np.where(gene_set_scores_ds.col_meta.columns == 'Apoptosis')[0]]
+                proliferation = gene_set_scores_ds[:, np.where(gene_set_scores_ds.col_meta.columns == 'Cell.cycle')[0]]
+                gene_set_scores_ids = gene_set_scores_ds.row_meta.index
+            else:
+                gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0, quoting=csv.QUOTE_NONE,
+                                                engine='python', sep=None)
+                apoptosis = gene_set_scores['Apoptosis'].values
+                proliferation = gene_set_scores['Cell.cycle'].values
+                gene_set_scores_ids = gene_set_scores.index
+            g = wot.ot.compute_growth_scores(proliferation, apoptosis, beta_max=args.beta_max,
                                              beta_center=args.beta_center,
                                              delta_max=args.delta_max, delta_min=args.delta_min,
                                              beta_min=args.beta_min)
-            cell_growth_rates = pd.DataFrame(index=gene_set_scores.index,
-                                             data={'cell_growth_rate': g})
+            cell_growth_rates = pd.DataFrame(index=gene_set_scores_ids, data={'cell_growth_rate': g})
 
         elif args.cell_growth_rates is not None:
             cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col=0,

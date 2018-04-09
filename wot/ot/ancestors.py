@@ -91,68 +91,42 @@ class Ancestors:
                 'gene_set_scores': gene_set_scores, 'verbose': args.verbose, 'args': args}
 
     @staticmethod
-    def do_sampling(result, t, sampled_indices, cell_set_name, gene_set_scores=None, ds=None, color=None):
-        if ds is not None:
-            values = ds.x[sampled_indices] if sampled_indices is not None else ds.x
-            values = values.toarray() if scipy.sparse.isspmatrix(values) else values
-            for gene_index in range(ds.x.shape[1]):
-                gene_name = ds.col_meta.index.values[gene_index]
-                key = cell_set_name + gene_name
-                # #key_data = result.get(key)
-                # if key_data is None:
-                #     key_data = {'x': np.array([]), 'y': np.array([])}
-                #     result[key] = key_data
-                array = values[:, gene_index]
-                trace = {
-                    "name": t,
-                    "type": 'box',
-                    "boxpoints": True,
-                    "line": {
-                        "color": 'black'
-                    },
-                    "fillcolor": color,
-                    "opacity": 0.7,
-                    "y": array.tolist(),
-                    "box": {
-                        "visible": True
-                    },
-                    "points": True
-                }
-                result.append(trace)
-
-        if gene_set_scores is not None:
-            tmp_scores = gene_set_scores.iloc[sampled_indices] if sampled_indices is not None else gene_set_scores
-            for gene_set_index in range(gene_set_scores.shape[1]):
-                gene_set_name = gene_set_scores.columns[gene_set_index]
-                key = cell_set_name + gene_set_name
-                # key_data = result.get(key)
-                # if key_data is None:
-                #     key_data = {'x': np.array([]), 'y': np.array([])}
-                #     result[key] = key_data
-                array = tmp_scores.iloc[:, gene_set_index].values
-                trace = {
-                    "name": t,
-                    "type": 'violin',
-                    "boxpoints": False,
-                    "line": {
-                        "color": 'black'
-                    },
-                    "fillcolor": color,
-                    "opacity": 0.7,
-                    "y": array.tolist(),
-                    "box": {
-                        "visible": False
-                    },
-                    "meanline": {
-                        "visible": True
-                    },
-                    "points": False
-                }
-                result.append(trace)
+    def do_sampling(result, t, sampled_indices, cell_set_name, datasets=None, color=None):
+        if datasets is not None:
+            for ds in datasets:
+                values = ds.x[sampled_indices] if sampled_indices is not None else ds.x
+                values = values.toarray() if scipy.sparse.isspmatrix(values) else values
+                for column_index in range(ds.x.shape[1]):
+                    gene_name = ds.col_meta.index.values[column_index]
+                    key = cell_set_name + gene_name
+                    # #key_data = result.get(key)
+                    # if key_data is None:
+                    #     key_data = {'x': np.array([]), 'y': np.array([])}
+                    #     result[key] = key_data
+                    array = values[:, column_index]
+                    trace = {
+                        "name": t,
+                        "type": 'violin',
+                        "boxpoints": False,
+                        "line": {
+                            "color": 'black'
+                        },
+                        "fillcolor": color,
+                        "opacity": 0.7,
+                        "y": array.tolist(),
+                        "box": {
+                            "visible": False
+                        },
+                        "meanline": {
+                            "visible": True
+                        },
+                        "points": False
+                    }
+                    result.append(trace)
 
     @staticmethod
-    def compute(cell_set_ds, transport_maps, time, unaligned_ds=None, unaligned_gene_set_scores=None, verbose=False,
-                sampling_loader=None, save_sampling=None):
+    def compute(cell_set_ds, transport_maps, time, unaligned_datasets=[], verbose=False,
+                sampling_loader=None, save_sampling=None, cache=False):
 
         t2_index = None
         t1_index = None
@@ -192,26 +166,23 @@ class Ancestors:
                         if verbose:
                             print('Reading transport map ' + tmap_dict['path'])
                         tmap = wot.io.read_dataset(tmap_dict['path'])
-                        tmap_dict['ds'] = tmap
+                        if cache:
+                            tmap_dict['ds'] = tmap
 
                 # align ds and tmap
-                ds = None
-                if unaligned_ds is not None:
-                    if back:
-                        ds_order = tmap.row_meta.index.get_indexer_for(unaligned_ds.row_meta.index)
+                datasets = None
+                if unaligned_datasets is not None:
+                    datasets = []
+                    for unaligned_ds in unaligned_datasets:
+                        if back:
+                            ds_order = tmap.row_meta.index.get_indexer_for(unaligned_ds.row_meta.index)
+                        else:
+                            ds_order = tmap.col_meta.index.get_indexer_for(unaligned_ds.row_meta.index)
+                        ds_order = ds_order[ds_order != -1]
                         ds = wot.Dataset(unaligned_ds.x[ds_order], unaligned_ds.row_meta.iloc[ds_order],
                                          unaligned_ds.col_meta)
-                    else:
-                        ds_order = tmap.col_meta.index.get_indexer_for(unaligned_ds.row_meta.index)
-                        ds = wot.Dataset(unaligned_ds.x[ds_order], unaligned_ds.row_meta.iloc[ds_order],
-                                         unaligned_ds.col_meta)
-                gene_set_scores = None
-                # align gene set scores and tmap
-                if unaligned_gene_set_scores is not None:
-                    if back:
-                        gene_set_scores = tmap.row_meta.align(unaligned_gene_set_scores, join='left', axis=0)[1]
-                    else:
-                        gene_set_scores = tmap.col_meta.align(unaligned_gene_set_scores, join='left', axis=0)[1]
+                        datasets.append(ds)
+
                 if transport_index == t_index:
                     if sampling_loader is None:
                         pvec_array = []
@@ -227,19 +198,19 @@ class Ancestors:
 
                                 if not t0_loaded:
                                     t0_loaded = True
-                                    ds0 = None
-                                    gs0 = None
-                                    if unaligned_ds is not None:
-                                        ds0_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids_in_set)
-                                        ds0 = wot.Dataset(unaligned_ds.x[ds0_order],
-                                                          unaligned_ds.row_meta.iloc[ds0_order],
-                                                          unaligned_ds.col_meta)
-                                    if unaligned_gene_set_scores is not None:
-                                        gs0 = pd.DataFrame(index=cell_ids_in_set).align(unaligned_gene_set_scores,
-                                                                                        join='left', axis=0)[1]
-                                    Ancestors.do_sampling(result=traces, t=time, sampled_indices=None, ds=ds0,
-                                                          cell_set_name=cell_set_ds.col_meta.index.values[
-                                                              cell_set_index], gene_set_scores=gs0, color='#ffffbf')
+
+                                    if unaligned_datasets is not None and len(unaligned_datasets) > 0:
+                                        datasets0 = []
+                                        for unaligned_ds in unaligned_datasets:
+                                            ds0_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids_in_set)
+                                            ds0_order = ds0_order[ds0_order != -1]
+                                            ds0 = wot.Dataset(unaligned_ds.x[ds0_order],
+                                                              unaligned_ds.row_meta.iloc[ds0_order],
+                                                              unaligned_ds.col_meta)
+                                            datasets0.append(ds0)
+                                        Ancestors.do_sampling(result=traces, t=time, sampled_indices=None, datasets=datasets0,
+                                                              cell_set_name=cell_set_ds.col_meta.index.values[
+                                                                  cell_set_index], color='#ffffbf')
 
                         cell_set_ds = wot.Dataset(cell_set_ds.x[:, cell_sets_to_keep], cell_set_ds.row_meta,
                                                   cell_set_ds.col_meta.iloc[cell_sets_to_keep])
@@ -259,7 +230,8 @@ class Ancestors:
                             v = v.dot(tmap.x)
                         v /= v.sum()
                         entropy = np.exp(scipy.stats.entropy(v))
-                        pvecs.append({'v': v, 'entropy': entropy, 't': t})
+                        pvecs.append({'v': v, 'entropy': entropy, 't': t,
+                                      'cell_ids': tmap.row_meta.index.values if back else tmap.col_meta.index.values})
                         n_choose = int(np.ceil(entropy))
                         if verbose:
                             print('Sampling ' + str(n_choose) + ' cells')
@@ -268,9 +240,8 @@ class Ancestors:
                     #     sampled_indices = sampling_loader(t=t1, cell_set_name=cell_set_name)
                     # if save_sampling is not None:
                     #     save_sampling(t=t1, cell_set_name=cell_set_name, sampled_indices=sampled_indices)
-                    Ancestors.do_sampling(result=traces, t=t, sampled_indices=sampled_indices, ds=ds,
-                                          cell_set_name=cell_set_ds.col_meta.index.values[cell_set_index],
-                                          gene_set_scores=gene_set_scores, color=color)
+                    Ancestors.do_sampling(result=traces, t=t, sampled_indices=sampled_indices, datasets=datasets,
+                                          cell_set_name=cell_set_ds.col_meta.index.values[cell_set_index], color=color)
                     new_pvec_array.append(v)
                 pvec_array = new_pvec_array
 

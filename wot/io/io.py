@@ -468,8 +468,8 @@ def write_dataset(ds, path, output_format='txt', txt_full=False, progress=None):
         #                      compression='gzip', compression_opts=9,
         #                      data=x)
 
-        wot.io.save_loom_attrs(f, False, ds.row_meta)
-        wot.io.save_loom_attrs(f, True, ds.col_meta)
+        wot.io.save_loom_attrs(f, False, ds.row_meta, ds.x.shape[0])
+        wot.io.save_loom_attrs(f, True, ds.col_meta, ds.x.shape[1])
 
         f.close()
 
@@ -477,7 +477,7 @@ def write_dataset(ds, path, output_format='txt', txt_full=False, progress=None):
         raise Exception('Unknown file output_format')
 
 
-def save_loom_attrs(f, is_columns, metadata):
+def save_loom_attrs(f, is_columns, metadata, length):
     attrs_path = '/col_attrs' if is_columns else '/row_attrs'
     f.create_group(attrs_path)
 
@@ -489,7 +489,9 @@ def save_loom_attrs(f, is_columns, metadata):
 
     if metadata is not None:
         save_metadata_array(attrs_path + '/' + ('id' if metadata.index.name is
-                                                        None else
-                                                metadata.index.name), metadata.index.values)
+                                                        None or metadata.index.name is 0 else
+                                                str(metadata.index.name)), metadata.index.values)
         for name in metadata.columns:
-            save_metadata_array(attrs_path + '/' + name, metadata[name].values)
+            save_metadata_array(attrs_path + '/' + str(name), metadata[name].values)
+    else:
+        save_metadata_array(attrs_path + '/id', np.array(range(1, length + 1)).astype('S'))
