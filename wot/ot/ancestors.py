@@ -108,8 +108,8 @@ class Ancestors:
                             "name": cell_set_name + ' ' + str(ds.col_meta.index.values[column_index]),
                             "mode": "lines",
                             "type": 'scatter',
-                            "y": float(np.mean(array)),
-                            "std": float(np.std(array)),
+                            "y": np.mean(array),
+                            "std": np.std(array),
                             "x": t
                         }
                     else:
