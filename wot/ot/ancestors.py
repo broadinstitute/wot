@@ -114,8 +114,8 @@ class Ancestors:
                         }
                     else:
                         trace = {
-                            "group": cell_set_name + ' ' + str(ds.col_meta.index.values[column_index]),
-                            "name": str(t),
+                            "set_name": cell_set_name + ' ' + str(ds.col_meta.index.values[column_index]),
+                            "name": t,
                             "type": 'violin',
                             "boxpoints": False,
                             "line": {
@@ -173,21 +173,18 @@ class Ancestors:
                 else:
                     path = tmap_dict['path']
                     tmap = None
-                    import os
-                    cache_key = os.path.basename(path)
+
                     if cache is not None:
-                        cached = cache.get(cache_key)
+
+                        cached = cache.get(path)
                         if cached is not None:
-                            tmap = wot.Dataset(cached['x'], cached['row_meta'], cached['col_meta'])
+                            tmap = cached
                     if tmap is None:
                         if verbose:
                             print('Reading transport map ' + path)
                         tmap = wot.io.read_dataset(tmap_dict['path'])
                         if cache is not None:
-                            if verbose:
-                                print('Caching ' + path)
-                            cache.set(cache_key,
-                                      {'x': tmap.x, 'col_meta': tmap.col_meta, 'row_meta': tmap.row_meta})
+                            cache.set(path, tmap)
 
                 # align ds and tmap
                 datasets = []
