@@ -261,8 +261,9 @@ class Ancestors:
                         entropy = np.exp(scipy.stats.entropy(v))
                         pvecs.append({'v': v, 'entropy': entropy, 't': t,
                                       'cell_ids': tmap.row_meta.index.values if back else tmap.col_meta.index.values})
-                        n_choose = int(np.ceil(entropy))
-                        n_choose = min(ncells, n_choose)
+                        # n_choose = int(np.ceil(entropy))
+                        # n_choose = min(ncells, n_choose)
+                        n_choose = ncells
                         if verbose:
                             print('Sampling ' + str(n_choose) + ' cells')
                         sampled_indices = np.random.choice(len(v), n_choose, p=v, replace=True)
