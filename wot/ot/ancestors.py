@@ -136,7 +136,7 @@ class Ancestors:
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, time, unaligned_datasets=[], summaries=[], verbose=False,
-                sampling_loader=None, cache=None, ncells=1000):
+                sampling_loader=None, cache=None, ncells=1000, start=None, end=None):
 
         t2_index = None
         t1_index = None
@@ -152,9 +152,13 @@ class Ancestors:
         ranges = []
         t0_loaded = False
         if t2_index is not None:
-            ranges.append({'backward': True, 'range': range(t2_index, - 1, -1)})
+            if start is None:
+                start = -1
+            ranges.append({'backward': True, 'range': range(t2_index, - 1, start)})
         if t1_index is not None:
-            ranges.append({'backward': False, 'range': range(t1_index, len(transport_maps))})
+            if end is None:
+                end = len(transport_maps)
+            ranges.append({'backward': False, 'range': range(t1_index, end)})
         for r in ranges:
             back = r['backward']
             color = '#2c7bb6' if back else '#d7191c'
