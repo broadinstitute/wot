@@ -179,7 +179,6 @@ class Ancestors:
                     tmap = None
 
                     if cache is not None:
-
                         cached = cache.get(path)
                         if cached is not None:
                             tmap = cached
