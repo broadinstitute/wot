@@ -173,8 +173,12 @@ class Ancestors:
                 else:
                     path = tmap_dict['path']
                     tmap = None
+                    import os
+                    cache_key = os.path.basename(path)
                     if cache is not None:
-                        tmap = cache.get(path)
+                        cached = cache.get(cache_key)
+                        if cached is not None:
+                            tmap = wot.Dataset(cached['x'], cached['row_meta'], cached['col_meta'])
                     if tmap is None:
                         if verbose:
                             print('Reading transport map ' + path)
@@ -182,7 +186,8 @@ class Ancestors:
                         if cache is not None:
                             if verbose:
                                 print('Caching ' + path)
-                            cache.set(path, tmap)
+                            cache.set(cache_key,
+                                      {'x': tmap.x, 'col_meta': tmap.col_meta, 'row_meta': tmap.row_meta})
 
                 # align ds and tmap
                 datasets = []
