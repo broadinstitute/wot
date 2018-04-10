@@ -136,7 +136,7 @@ class Ancestors:
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, time, unaligned_datasets=[], summaries=[], verbose=False,
-                sampling_loader=None, cache=False, ncells=1000):
+                sampling_loader=None, cache=None, ncells=1000):
 
         t2_index = None
         t1_index = None
@@ -171,13 +171,18 @@ class Ancestors:
                     tmap = wot.Dataset(None, pd.DataFrame(index=ids), None)
                     f.close()
                 else:
-                    tmap = tmap_dict.get('ds')
+                    path = tmap_dict['path']
+                    tmap = None
+                    if cache is not None:
+                        tmap = cache.get(path)
                     if tmap is None:
                         if verbose:
-                            print('Reading transport map ' + tmap_dict['path'])
+                            print('Reading transport map ' + path)
                         tmap = wot.io.read_dataset(tmap_dict['path'])
-                        if cache:
-                            tmap_dict['ds'] = tmap
+                        if cache is not None:
+                            if verbose:
+                                print('Caching ' + path)
+                            cache.set(path, tmap)
 
                 # align ds and tmap
                 datasets = []
@@ -250,7 +255,8 @@ class Ancestors:
                         entropy = np.exp(scipy.stats.entropy(v))
                         pvecs.append({'v': v, 'entropy': entropy, 't': t,
                                       'cell_ids': tmap.row_meta.index.values if back else tmap.col_meta.index.values})
-                        n_choose = ncells if ncells is not None else int(np.ceil(entropy))
+                        n_choose = int(np.ceil(entropy))
+                        n_choose = min(ncells, n_choose)
                         if verbose:
                             print('Sampling ' + str(n_choose) + ' cells')
                         sampled_indices = np.random.choice(len(v), n_choose, p=v, replace=True)
