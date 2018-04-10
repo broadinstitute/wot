@@ -136,7 +136,7 @@ class Ancestors:
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, time, unaligned_datasets=[], summaries=[], verbose=False,
-                sampling_loader=None, cache=None, ncells=1000, start=None, end=None):
+                sampling_loader=None, cache_getter=None, cache_setter=None, ncells=1000, start=None, end=None):
 
         t2_index = None
         t1_index = None
@@ -178,16 +178,16 @@ class Ancestors:
                     path = tmap_dict['path']
                     tmap = None
 
-                    if cache is not None:
-                        cached = cache.get(path)
+                    if cache_getter is not None:
+                        cached = cache_getter(path)
                         if cached is not None:
                             tmap = cached
                     if tmap is None:
                         if verbose:
                             print('Reading transport map ' + path)
                         tmap = wot.io.read_dataset(tmap_dict['path'])
-                        if cache is not None:
-                            cache.set(path, tmap)
+                        if cache_setter is not None:
+                            cache_setter(path, tmap)
 
                 # align ds and tmap
                 datasets = []
