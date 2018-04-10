@@ -176,18 +176,19 @@ class Ancestors:
                     f.close()
                 else:
                     path = tmap_dict['path']
-                    tmap = None
+                    tmap = tmap_dict.get('ds')
 
-                    if cache_getter is not None:
-                        cached = cache_getter(path)
-                        if cached is not None:
-                            tmap = cached
+                    # if cache_getter is not None:
+                    #     cached = cache_getter(path)
+                    #     if cached is not None:
+                    #         tmap = cached
                     if tmap is None:
                         if verbose:
                             print('Reading transport map ' + path)
                         tmap = wot.io.read_dataset(tmap_dict['path'])
-                        if cache_setter is not None:
-                            cache_setter(path, tmap)
+                        tmap_dict['ds'] = tmap
+                        # if cache_setter is not None:
+                        #     cache_setter(path, tmap)
 
                 # align ds and tmap
                 datasets = []
