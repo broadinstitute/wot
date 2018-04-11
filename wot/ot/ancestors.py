@@ -104,12 +104,15 @@ class Ancestors:
                     #     result[key] = key_data
                     array = values[:, column_index]
                     if summaries[ds_index]:
+                        count = 100 * (np.count_nonzero(array) / len(array))
                         trace = {
                             "name": cell_set_name + ' ' + str(ds.col_meta.index.values[column_index]),
-                            "mode": "lines",
+                            "mode": "lines+markers",
+                            "showlegend": True,
                             "type": 'scatter',
                             "y": np.mean(array),
-                            "std": np.std(array),
+                            "size": count,
+                            "text": "{:.1f}".format(count) + ' %',
                             "x": t
                         }
                     else:
