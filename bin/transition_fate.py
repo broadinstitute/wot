@@ -3,10 +3,10 @@
 
 import argparse
 import numpy as np
-import os.path
+import wot.ot
 import wot.io
 import pandas as pd
-import scipy.stats
+
 
 parser = argparse.ArgumentParser(
     description='Compute cell trajectories')
@@ -120,6 +120,7 @@ class TransitionFate:
         end_time_ncells = transport_results['end_time_ncells']
 
         start_cell_sets = TransitionFate.read_cell_sets(args.start_cell_set_filter, args.start_cell_sets)
+        print(start_cell_sets)
         end_cell_sets = TransitionFate.read_cell_sets(args.end_cell_set_filter, args.end_cell_sets)
         if start_cell_sets.x.shape[1] == 0 and end_cell_sets.x.shape[1] == 0:
             print('No start or end cell sets')
