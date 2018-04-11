@@ -107,8 +107,9 @@ class TransitionFate:
             else:
                 indices = np.where(tmap.index.isin(cell_ids))[0]
             if len(indices) is 0:
-                raise Exception(cell_set_id + ' has zero members in dataset')
-            cell_set_id_to_indices[cell_set_id] = indices
+                print(cell_set_id + ' has zero members in dataset')
+            else:
+                cell_set_id_to_indices[cell_set_id] = indices
         return cell_set_id_to_indices
 
     @staticmethod
