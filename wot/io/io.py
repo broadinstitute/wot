@@ -203,10 +203,10 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
         x = scipy.io.mmread(path)
         x = scipy.sparse.csr_matrix(x.T)
         if col_meta is None:
-            print('No genes file found.')
+            print(basename_and_extension[0] + '.genes.txt not found')
             col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1))
         if row_meta is None:
-            print('No barcodes file found.')
+            print(basename_and_extension[0] + '.barcodes.txt not found')
             row_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom':
