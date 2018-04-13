@@ -286,7 +286,9 @@ class OptimalTransportHelper:
                                       p1_full.row_meta,
                                       pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 if p0_5_full is not None: # change here
-                    U = np.vstack(matrices) * pca.components * np.diag(1/pca.singular_values_)
+                    print(np.vstack(matrices).shape)
+                    print(pca.components_.shape)
+                    U = np.vstack(matrices).T * pca.components_.T * np.diag(1/pca.singular_values_)
                     p0_5_full = U.T * p0_5_full
 #                    p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):],
 #                                            p0_5_full.row_meta,
