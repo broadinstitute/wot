@@ -6,7 +6,7 @@ import ot as pot
 
 
 def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
-                       epsilon0=None, extra_iter=1000,growthIters=3):
+                       epsilon0=None, extra_iter=1000,growth_iters=3):
     """
     Compute the optimal transport with stabilized numerics.
     Args:
@@ -19,7 +19,7 @@ def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, 
         g: growth value for input cells
     """
 
-    for i in range(growthIters):
+    for i in range(growth_iters):
         if i == 0:
             rowSums = g
         else:
@@ -139,13 +139,13 @@ def optimal_transport(cost_matrix, growth_rate, p=None, q=None, solver=None,
                       lambda2=1., min_transport_fraction=0.05,
                       max_transport_fraction=0.4, min_growth_fit=0.9,
                       l0_max=100, scaling_iter=250, epsilon_adjust=1.1,
-                      lambda_adjust=1.5, numItermax=100, epsilon0=100.0, numInnerItermax=10, tau=1000.0, stopThr=1e-06,growthIters=3):
+                      lambda_adjust=1.5, numItermax=100, epsilon0=100.0, numInnerItermax=10, tau=1000.0, stopThr=1e-06,growth_iters=3):
     if solver == 'unbalanced':
 
         g = growth_rate ** delta_days
         transport = transport_stable_learnGrowth(C=cost_matrix, lambda1=lambda1, lambda2=lambda2, epsilon=epsilon,
                                        scaling_iter=scaling_iter, g=g, numInnerItermax=numInnerItermax, tau=tau,
-                                       epsilon0=epsilon0,growthIters=growthIters)
+                                       epsilon0=epsilon0,growth_iters=growth_iters)
         return {'transport': transport}
     elif solver == 'floating_epsilon':
         return optimal_transport_with_entropy(cost_matrix, growth_rate, p=p, q=q,
