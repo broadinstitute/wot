@@ -139,7 +139,7 @@ class Ancestors:
 
     @staticmethod
     def compute(cell_set_ds, transport_maps, time, unaligned_datasets=[], summaries=[], verbose=False,
-                sampling_loader=None, cache_getter=None, cache_setter=None, ncells=1000, start=None, end=None):
+                sampling_loader=None, ncells=1000, start=None, end=None):
 
         t2_index = None
         t1_index = None
@@ -157,10 +157,12 @@ class Ancestors:
         if t2_index is not None:
             if start is None:
                 start = -1
+            start = max(-1, start)
             ranges.append({'backward': True, 'range': range(t2_index, - 1, start)})
         if t1_index is not None:
             if end is None:
                 end = len(transport_maps)
+            end = min(len(transport_maps), end)
             ranges.append({'backward': False, 'range': range(t1_index, end)})
         for r in ranges:
             back = r['backward']
