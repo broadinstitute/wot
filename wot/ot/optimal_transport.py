@@ -5,6 +5,31 @@ import scipy.stats
 import ot as pot
 
 
+def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
+                       epsilon0=None, extra_iter=1000,growthIters=3):
+    """
+    Compute the optimal transport with stabilized numerics.
+    Args:
+
+        C: cost matrix to transport cell i to cell j
+        lambda1: regularization parameter for marginal constraint for p.
+        lambda2: regularization parameter for marginal constraint for q.
+        epsilon: entropy parameter
+        scaling_iter: number of scaling iterations
+        g: growth value for input cells
+    """
+
+    for i in range(growthIters):
+        if i == 0:
+            rowSums = g
+        else:
+            rowSums = Tmap.sum(axis=1) / Tmap.shape[1]
+        print(rowSums.shape)
+        Tmap = transport_stablev2(C, lambda1, lambda2, epsilon,
+                                       scaling_iter, rowSums, numInnerItermax=numInnerItermax, tau=tau,
+                                       epsilon0=epsilon0)
+    return Tmap
+
 def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
                        epsilon0=None, extra_iter=1000):
     """
@@ -114,13 +139,13 @@ def optimal_transport(cost_matrix, growth_rate, p=None, q=None, solver=None,
                       lambda2=1., min_transport_fraction=0.05,
                       max_transport_fraction=0.4, min_growth_fit=0.9,
                       l0_max=100, scaling_iter=250, epsilon_adjust=1.1,
-                      lambda_adjust=1.5, numItermax=100, epsilon0=100.0, numInnerItermax=10, tau=1000.0, stopThr=1e-06):
+                      lambda_adjust=1.5, numItermax=100, epsilon0=100.0, numInnerItermax=10, tau=1000.0, stopThr=1e-06,growthIters=3):
     if solver == 'unbalanced':
 
         g = growth_rate ** delta_days
-        transport = transport_stablev2(C=cost_matrix, lambda1=lambda1, lambda2=lambda2, epsilon=epsilon,
+        transport = transport_stable_learnGrowth(C=cost_matrix, lambda1=lambda1, lambda2=lambda2, epsilon=epsilon,
                                        scaling_iter=scaling_iter, g=g, numInnerItermax=numInnerItermax, tau=tau,
-                                       epsilon0=epsilon0)
+                                       epsilon0=epsilon0,growthIters=growthIters)
         return {'transport': transport}
     elif solver == 'floating_epsilon':
         return optimal_transport_with_entropy(cost_matrix, growth_rate, p=p, q=q,

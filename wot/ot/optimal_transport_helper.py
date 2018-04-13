@@ -269,8 +269,8 @@ class OptimalTransportHelper:
                 matrices = list()
                 matrices.append(p0_full.x if not scipy.sparse.isspmatrix(p0_full.x) else p0_full.x.toarray())
                 matrices.append(p1_full.x if not scipy.sparse.isspmatrix(p1_full.x) else p1_full.x.toarray())
-                if p0_5_full is not None:
-                    matrices.append(p0_5_full.x if not scipy.sparse.isspmatrix(p0_5_full.x) else p0_5_full.x.toarray())
+        #        if p0_5_full is not None:
+        #            matrices.append(p0_5_full.x if not scipy.sparse.isspmatrix(p0_5_full.x) else p0_5_full.x.toarray())
 
                 x = np.vstack(matrices)
 
@@ -285,10 +285,12 @@ class OptimalTransportHelper:
                 p1_full = wot.Dataset(x[len(t0_indices):len(t0_indices) + len(t1_indices)],
                                       p1_full.row_meta,
                                       pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
-                if p0_5_full is not None:
-                    p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):],
-                                            p0_5_full.row_meta,
-                                            pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
+                if p0_5_full is not None: # change here
+                    U = np.vstack(matrices) * pca.components * np.diag(1/pca.singular_values_)
+                    p0_5_full = U.T * p0_5_full
+#                    p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):],
+#                                            p0_5_full.row_meta,
+#                                            pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 self.eigenvals = np.diag(pca.singular_values_)
 
             delta_t = t1 - t0
