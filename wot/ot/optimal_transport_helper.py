@@ -289,7 +289,7 @@ class OptimalTransportHelper:
                     U = np.vstack(matrices).T.dot(pca.components_.T).dot(np.diag(1/pca.singular_values_))
                     print(U.shape)
                     print(p0_5_full.x.shape)
-                    p0_5_full = wot.Dataset(U.T.dot(p0_5_full.x.T).T, p0_5_full.row_meta,
+                    p0_5_full = wot.Dataset(np.diag(1/pca.singular_values_).dot(U.T.dot(p0_5_full.x.T)).T, p0_5_full.row_meta,
                                     pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
 #                    p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):],
 #                                            p0_5_full.row_meta,
