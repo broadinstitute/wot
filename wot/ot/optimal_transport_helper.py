@@ -286,10 +286,10 @@ class OptimalTransportHelper:
                                       p1_full.row_meta,
                                       pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 if p0_5_full is not None: # change here
-                    print(np.vstack(matrices).shape)
-                    print(pca.components_.shape)
-                    U = np.vstack(matrices).T * pca.components_.T * np.diag(1/pca.singular_values_)
-                    p0_5_full = U.T * p0_5_full
+                    U = np.vstack(matrices).T.dot(pca.components_.T).dot(np.diag(1/pca.singular_values_))
+                    print(U.shape)
+                    print(p0_5_full.x.shape)
+                    p0_5_full.x = U.T.dot(p0_5_full.x.T).T
 #                    p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):],
 #                                            p0_5_full.row_meta,
 #                                            pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
