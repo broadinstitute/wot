@@ -269,8 +269,8 @@ class OptimalTransportHelper:
                 matrices = list()
                 matrices.append(p0_full.x if not scipy.sparse.isspmatrix(p0_full.x) else p0_full.x.toarray())
                 matrices.append(p1_full.x if not scipy.sparse.isspmatrix(p1_full.x) else p1_full.x.toarray())
-        #        if p0_5_full is not None:
-        #            matrices.append(p0_5_full.x if not scipy.sparse.isspmatrix(p0_5_full.x) else p0_5_full.x.toarray())
+                if p0_5_full is not None:
+                    matrices.append(p0_5_full.x if not scipy.sparse.isspmatrix(p0_5_full.x) else p0_5_full.x.toarray())
 
                 x = np.vstack(matrices)
 
@@ -286,14 +286,14 @@ class OptimalTransportHelper:
                                       p1_full.row_meta,
                                       pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 if p0_5_full is not None: # change here
-                    U = np.vstack(matrices).T.dot(pca.components_.T).dot(np.diag(1/pca.singular_values_))
-                    print(U.shape)
-                    print(p0_5_full.x.shape)
-                    p0_5_full = wot.Dataset(np.diag(1/pca.singular_values_).dot(U.T.dot(p0_5_full.x.T)).T, p0_5_full.row_meta,
-                                    pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
-#                    p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):],
-#                                            p0_5_full.row_meta,
-#                                            pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
+#                    U = np.vstack(matrices).T.dot(pca.components_.T).dot(np.diag(1/pca.singular_values_))
+#                    print(U.shape)
+#                    print(p0_5_full.x.shape)
+#                    p0_5_full = wot.Dataset(np.diag(1/pca.singular_values_).dot(U.T.dot(p0_5_full.x.T)).T, p0_5_full.row_meta,
+#                                    pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
+                    p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):],
+                                            p0_5_full.row_meta,
+                                            pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 self.eigenvals = np.diag(pca.singular_values_)
 
             delta_t = t1 - t0
