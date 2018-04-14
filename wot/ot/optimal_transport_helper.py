@@ -82,6 +82,8 @@ class OptimalTransportHelper:
         parser.add_argument('--delta_max', type=float, default=1.7, help='Growth function parameter')
         parser.add_argument('--beta_center', type=float, default=0.25, help='Growth function parameter')
 
+        parser.add_argument('--growth_iters', type=int, default=3, help='Number of growth iterations')
+
         growth_rate_group = parser.add_mutually_exclusive_group(required=False)
         growth_rate_group.add_argument('--gene_set_scores', help='File containing "Cell.cycle" and "Apoptosis" scores')
 
@@ -347,7 +349,7 @@ class OptimalTransportHelper:
                                                   epsilon0=args.epsilon0,
                                                   numInnerItermax=args.numInnerItermax, tau=args.tau,
                                                   stopThr=args.stopThr,
-                                                  solver=args.solver)
+                                                  solver=args.solver, growth_iters=args.growth_iters)
 
                 if args.verbose:
                     print('done')
