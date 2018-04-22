@@ -180,12 +180,14 @@ def transport_map_callback(cb_args):
     interval_middle_n = p0_5.x.shape[0]
     interval_end_n = p1.x.shape[0]
     point_clouds = list()
+
     point_clouds.append(
         {'m': p0.x, 'weights': None, 'name': 'P0', 't': t0, 'suffix': cb_args['P0_suffix']})
     point_clouds.append(
         {'m': p1.x, 'weights': None, 'name': 'P1', 't': t1, 'suffix': cb_args['P1_suffix']})
     point_clouds.append(
-        {'m': p0_5.x, 'weights': None, 'name': 'P' + t_interpolate_s, 't': inferred_time, 'suffix': ''})
+        {'m': p0_5.x, 'weights': None, 'name': 'P' + t_interpolate_s, 't': inferred_time,
+         'suffix': ''})  # p0_5 is full
 
     transport_result = cb_args['result']
     if transport_result is not None:
@@ -215,6 +217,7 @@ def transport_map_callback(cb_args):
             wot.io.write_dataset(wot.Dataset(inferred, inferred_row_meta, p0.col_meta),
                                  args.prefix + '_I_' + str(inferred_time) + '.txt')
 
+        # random sample
         random_sample = wot.ot.sample_randomly(cb_args['P0'].x, cb_args['P1'].x, p0_p1_map,
                                                p0.row_meta[ot_helper.cell_growth_rates.columns[0]].values ** (
                                                        args.t_interpolate - t0), args.npairs)
@@ -243,7 +246,7 @@ def transport_map_callback(cb_args):
     if covariate_df is not None:
         batch_names = []
         p0_5_copy = wot.Dataset(p0_5.x, p0_5.row_meta.copy(False), p0_5.col_meta)
-
+        # add covariates for P0.5
         for i in range(len(unique_covariates)):
             cv = unique_covariates[i]
             p0_5_cv_filter = np.where(p0_5_copy.row_meta[covariate_df.columns[0]] == cv)[0]
@@ -255,7 +258,9 @@ def transport_map_callback(cb_args):
                      'name': name, 't': inferred_time, 'suffix': ''})
                 batch_names.append(name)
 
-        for i in range(1, len(batch_names)):
+        for i in range(len(batch_names)):
+            pair_names.append(['I' + t_interpolate_s, batch_names[i]])
+        for i in range(1, len(batch_names)):  # batch splits
             for j in range(i):
                 pair_names.append([batch_names[i], batch_names[j]])
 
