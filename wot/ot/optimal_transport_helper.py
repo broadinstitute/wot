@@ -151,7 +151,9 @@ class OptimalTransportHelper:
                                         dtype={'day': np.float64})
 
         self.eigenvals = np.diag(eigenvals) if eigenvals is not None else None
-
+        if day_pairs.shape[0] is 0:
+            print('No day pairs found')
+            exit(1)
         if args.gene_set_scores is not None:
             ext = wot.io.get_file_basename_and_extension(args.gene_set_scores)[1]
             if ext == 'loom' or ext == 'gct':
@@ -189,39 +191,61 @@ class OptimalTransportHelper:
         else:
             self.covariate_df = None
             self.covariate_pairs = [[None, None]]
-
-        day_to_indices = {}
-        days = ds.row_meta[days_data_frame.columns[0]].values
-
-        for i in range(len(days)):
-            val = days[i]
-            if val is not None:
-                indices = day_to_indices.get(val)
-                if indices is None:
-                    indices = []
-                    day_to_indices[val] = indices
-                indices.append(i)
-
-        self.ds = ds
-        if args.ncells is not None:
-            for day in day_to_indices:
-                indices = day_to_indices[day]
-                if len(indices) > args.ncells:
-                    np.random.shuffle(indices)
-                    indices = indices[0:args.ncells]
-                    day_to_indices[day] = indices
-
-        if day_pairs.shape[0] is 0:
-            print('No day pairs found')
-            exit(1)
-        if args.verbose:
-            print('Computing ' + str(day_pairs.shape[0]) + ' transport map' + ('s' if
-                                                                               day_pairs.shape[0] > 1 else ''))
         self.day_pairs = day_pairs
-        self.day_to_indices = day_to_indices
+
         self.cell_growth_rates = cell_growth_rates
         self.args = args
         self.t_interpolate = vars(args).get('t_interpolate')
+        day_to_indices = {}
+
+        self.ds = ds
+
+        if args.ncells is not None:
+            unique_cvs = set()
+            if covariate_pairs is None:
+                unique_cvs.add(None)
+            else:
+                for cv_pair in covariate_pairs:
+                    unique_cvs.add(cv_pair[0])
+                    unique_cvs.add(cv_pair[1])
+            unique_days = set()
+            for day_index in range(day_pairs.shape[0]):
+                t0 = day_pairs.iloc[day_index, 0]
+                t1 = day_pairs.iloc[day_index, 1]
+                unique_days.add(t0)
+                unique_days.add(t1)
+                if self.t_interpolate is not None:
+                    t0_5 = t0 + (t1 - t0) * self.t_interpolate
+                    unique_days.add(t0_5)
+            for day in unique_days:
+                index_list = []
+                day_query = ds.row_meta[days_data_frame.columns[0]] == day
+                for cv in unique_cvs:
+                    if cv is None:
+                        indices = np.where(day_query)[0]
+                    else:
+                        indices = np.where(day_query & (ds.row_meta[covariate_df.columns[0]] == cv))[0]
+                    if len(indices) > args.ncells:
+                        np.random.shuffle(indices)
+                        indices = indices[0:args.ncells]
+                    index_list.append(indices)
+                day_to_indices[day] = np.concatenate(index_list)
+
+        else:
+            days = ds.row_meta[days_data_frame.columns[0]].values
+            for i in range(len(days)):
+                val = days[i]
+                if val is not None:
+                    indices = day_to_indices.get(val)
+                    if indices is None:
+                        indices = []
+                        day_to_indices[val] = indices
+                    indices.append(i)
+
+        if args.verbose:
+            print('Computing ' + str(day_pairs.shape[0]) + ' transport map' + ('s' if
+                                                                               day_pairs.shape[0] > 1 else ''))
+        self.day_to_indices = day_to_indices
 
     def compute_cost_matrix(self, a, b):
         if self.eigenvals is not None:
@@ -275,8 +299,8 @@ class OptimalTransportHelper:
                 #                    matrices.append(p0_5_full.x if not scipy.sparse.isspmatrix(p0_5_full.x) else p0_5_full.x.toarray())
 
                 x = np.vstack(matrices)
-                MeanShift = x.mean(axis=0)
-                x = x - MeanShift
+                mean_shift = x.mean(axis=0)
+                x = x - mean_shift
                 pca = sklearn.decomposition.PCA(n_components=args.local_pca)
                 pca.fit(x.T)
                 x = pca.components_.T
@@ -289,7 +313,7 @@ class OptimalTransportHelper:
                                       pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 if p0_5_full is not None:  # compute PCA only on local coordinates
                     U = np.vstack(matrices).T.dot(pca.components_.T).dot(np.diag(1 / pca.singular_values_))
-                    y = p0_5_full.x - MeanShift
+                    y = p0_5_full.x - mean_shift
                     p0_5_full = wot.Dataset(np.diag(1 / pca.singular_values_).dot(U.T.dot(y.T)).T, p0_5_full.row_meta,
                                             pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 #                    p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):],

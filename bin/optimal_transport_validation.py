@@ -100,17 +100,12 @@ def write_point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, p
         + '\t' + str(wot.ot.point_cloud_distance(point_cloud1, point_cloud2, weights1, weights2, ot_helper.eigenvals))
         + '\t' + point_cloud1_name
         + '\t' + point_cloud2_name
-        + '\t' + str(args.epsilon)
-        + '\t' + str(args.lambda1)
-        + '\t' + str(args.lambda2)
-        + '\t' + str(args.power)
-        + '\t' + str(args.beta_min)
-        + '\t' + str(args.delta_min)
-        + '\t' + str(args.beta_max)
         + '\t' + str(interval_start_n)
         + '\t' + str(interval_middle_n)
-        + '\t' + str(interval_end_n)
-        + '\n')
+        + '\t' + str(interval_end_n))
+    for param in parameters_to_write:
+        subsample_writer.write('\t' + str(args_dict[param]))
+    subsample_writer.write('\n')
     subsample_writer.flush()
 
 
@@ -121,10 +116,14 @@ parser.add_argument('--npairs', type=int, default=10000)
 parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float, required=True)
 parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
 parser.add_argument('--save_transport', action='store_true', help='Save transport maps')
+parser.add_argument('--output_param', action='append', help='Parameters to save in output file',
+                    default=['epsilon', 'lambda1', 'lambda2', 'beta_min', 'delta_min', 'beta_max', 'ncells'])
 parser.add_argument('--covariate',
                     help='Two column tab delimited file without header with '
                          'cell ids and covariate value')
 args = parser.parse_args()
+args_dict = vars(args)
+parameters_to_write = args.output_param
 covariate_df = None
 unique_covariates = None
 covariate_pairs = None
@@ -145,7 +144,7 @@ all_pair_names = [['P' + t_interpolate_s, 'R' + t_interpolate_s], ['P' + t_inter
                   ['I' + t_interpolate_s, 'R' + t_interpolate_s], ['P0', 'P' + t_interpolate_s],
                   ['P1', 'P' + t_interpolate_s]]
 
-subsample_writer = open(args.prefix + '_subsample_summary.txt', 'w')
+subsample_writer = open(args.prefix + '_validation_summary.txt', 'w')
 subsample_writer.write(
     'interval_start'
     + '\t' + 'interval_end'
@@ -154,17 +153,12 @@ subsample_writer.write(
     + '\t' + 'distance'
     + '\t' + 'pair0'
     + '\t' + 'pair1'
-    + '\t' + 'epsilon'
-    + '\t' + 'lambda1'
-    + '\t' + 'lambda2'
-    + '\t' + 'power'
-    + '\t' + 'beta_min'
-    + '\t' + 'delta_min'
-    + '\t' + 'beta_max'
     + '\t' + 'interval_start_n'
     + '\t' + 'interval_middle_n'
-    + '\t' + 'interval_end_n'
-    + '\n')
+    + '\t' + 'interval_end_n')
+for param in parameters_to_write:
+    subsample_writer.write('\t' + param)
+subsample_writer.write('\n')
 
 
 def transport_map_callback(cb_args):
