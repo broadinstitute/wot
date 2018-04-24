@@ -264,18 +264,17 @@ class Ancestors:
                         v /= v.sum()
 
                         entropy = np.exp(scipy.stats.entropy(v))
-                        pvecs.append({'v': v, 'entropy': entropy, 't': t,
-                                      'cell_ids': tmap.row_meta.index.values if back else tmap.col_meta.index.values})
+                        pvecs.append(
+                            {'cell_set': cell_set_ds.col_meta.index.values[cell_set_index], 'v': v, 'entropy': entropy,
+                             'normalized_entropy': entropy / len(v), 't': t,
+                             'cell_ids': tmap.row_meta.index.values if back else tmap.col_meta.index.values})
                         # n_choose = int(np.ceil(entropy))
                         # n_choose = min(ncells, n_choose)
                         n_choose = ncells
                         if verbose:
                             print('Sampling ' + str(n_choose) + ' cells')
                         sampled_indices = np.random.choice(len(v), n_choose, p=v, replace=True)
-                    # else:
-                    #     sampled_indices = sampling_loader(t=t1, cell_set_name=cell_set_name)
-                    # if save_sampling is not None:
-                    #     save_sampling(t=t1, cell_set_name=cell_set_name, sampled_indices=sampled_indices)
+
                     Ancestors.do_sampling(result=traces, t=t, sampled_indices=sampled_indices, datasets=datasets,
                                           summaries=summaries,
                                           cell_set_name=cell_set_ds.col_meta.index.values[cell_set_index], color=color)
