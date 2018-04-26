@@ -31,7 +31,7 @@ class TrajectorySampler:
         return fx
 
     @staticmethod
-    def kernel_smooth(xi, yi, stop, start=0, steps=1000, sigma=0.5):
+    def kernel_smooth(xi, yi, stop, start=0, steps=1000, sigma=0.7):
         xlist = np.linspace(start, stop, steps)
         fhat = np.zeros(len(xlist))
         for i in range(len(xlist)):
