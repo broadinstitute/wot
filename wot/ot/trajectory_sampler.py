@@ -22,6 +22,24 @@ class TrajectorySampler:
         return g
 
     @staticmethod
+    def interpolate(x, xi, yi, sigma):
+        diff = (x - xi)
+        diff *= -diff
+        sigma2 = 2 * np.power(sigma, 2)
+        wi = np.exp(diff / sigma2)
+        fx = np.sum(yi * wi) / np.sum(wi)
+        return fx
+
+    @staticmethod
+    def kernel_smooth(xi, yi, stop, start=0, steps=1000, sigma=0.5):
+        xlist = np.linspace(start, stop, steps)
+        fhat = np.zeros(len(xlist))
+        for i in range(len(xlist)):
+            fhat[i] = TrajectorySampler.interpolate(xlist[i], xi, yi, sigma)
+
+        return xlist, fhat
+
+    @staticmethod
     def do_sampling(result, t, sampled_indices, cell_set_name, datasets=None, summaries=None, color=None):
         if datasets is not None:
             for ds_index in range(len(datasets)):
