@@ -42,6 +42,7 @@ class OptimalTransportHelper:
         parser.add_argument('--prefix',
                             help='Prefix for ouput file names', required=True)
         parser.add_argument('--ncells', help='Number of cells to sample from each timepoint', type=int)
+        parser.add_argument('--ncounts', help='sample ncounts from each cell', type=int)
 
         parser.add_argument('--max_transport_fraction',
                             default=0.4,
@@ -136,6 +137,17 @@ class OptimalTransportHelper:
             ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
             if args.verbose:
                 print('Keeping ' + str(ds.x.shape[0]) + '/' + str(prior) + ' cells')
+
+        if args.ncounts is not None:
+            for i in range(ds.x.shape[0]):
+                p = ds.x[i]
+                if scipy.sparse.isspmatrix(p):
+                    p = p.toarray()
+                p = p.astype('float64')
+                counts_p = p.sum()
+                if counts_p > args.ncounts:
+                    p /= counts_p
+                    ds.x[i] = np.random.multinomial(args.ncounts, p, size=1)[0]
 
         if not os.path.isfile(args.day_pairs):
             day_pairs = pd.read_table(io.StringIO(args.day_pairs), header=None, names=['t0', 't1'],
