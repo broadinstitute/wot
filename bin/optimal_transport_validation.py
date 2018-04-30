@@ -251,12 +251,16 @@ def transport_map_callback(cb_args):
                     {'m': p0_5_cv.x, 'weights': None,
                      'name': name, 't': inferred_time, 'suffix': ''})
                 batch_names.append(name)
-
+        pair_names_i = []
+        pair_names_r = []
         for i in range(len(batch_names)):
-            pair_names.append(['I' + t_interpolate_s, batch_names[i]])
+            pair_names_i.append(['I' + t_interpolate_s, batch_names[i]])
+            pair_names_r.append(['R' + t_interpolate_s, batch_names[i]])
         for i in range(1, len(batch_names)):  # batch splits
             for j in range(i):
-                pair_names.append([batch_names[i], batch_names[j]])
+                pair_names_i.append([batch_names[i], batch_names[j]])
+                pair_names_r.append([batch_names[i], batch_names[j]])
+        pair_names = pair_names + pair_names_i + pair_names_r
 
     for pair in pair_names:
         point_cloud_s(get_cloud(pair[0]), get_cloud(pair[1]), t0, t1,
