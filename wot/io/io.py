@@ -169,7 +169,8 @@ def read_gmx(path, feature_ids=None):
 
 
 def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
-                 h5_col_meta=None, use_dask=False, genome10x=None, row_filter=None, col_filter=None):
+                 h5_col_meta=None, use_dask=False, genome10x=None, row_filter=None, col_filter=None,
+                 force_sparse=False):
     path = str(path)
     basename_and_extension = get_file_basename_and_extension(path)
     ext = basename_and_extension[1]
@@ -246,7 +247,8 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
         if not use_dask:
             x = f[h5_x]
             import scipy
-            if x.attrs.get('sparse') and row_filter is None and col_filter is None:
+            is_sparse = x.attrs.get('sparse')
+            if (is_sparse or force_sparse) and (row_filter is None and col_filter is None):
                 # read in blocks of 1000
                 chunk_start = 0
                 chunk_step = min(nrows, 1000)
@@ -271,6 +273,9 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
                     x = x[row_attrs['indices']]
                 else:
                     x = x[:, col_attrs['indices']]
+
+                if (is_sparse or force_sparse) and not scipy.sparse.issparse(x):
+                    x = scipy.sparse.csr_matrix(x)
             f.close()
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
         else:
