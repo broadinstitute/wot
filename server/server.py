@@ -266,16 +266,17 @@ def trajectory():
         xsmooth, ysmooth = wot.ot.TrajectorySampler.kernel_smooth(x, trace['y'], stop=x[len(x) - 1])
         trace['x'] = xsmooth.tolist()
         trace['y'] = ysmooth.tolist()
-        trace['size'] = trace['size'].tolist()
-        trace['text'] = trace['text'].tolist()
-        trace['showlegend'] = True
-        trace['sizemode'] = 'area'
-        trace['sizemin'] = 4
-        trace['marker'] = {'size': trace['size'], 'sizeref': (2 * 100) / (4 * 4), 'size_min': 4}
-
+        trace['mode'] = 'lines'
         del trace['size']
+        del trace['text']
+        # trace['size'] = trace['size'].tolist()
+        # trace['text'] = trace['text'].tolist()
+        trace['showlegend'] = True
+        # trace['sizemode'] = 'area'
+        # trace['sizemin'] = 4
+        # trace['marker'] = {'size': trace['size'], 'sizeref': (2 * 100) / (4 * 4), 'size_min': 4}
 
-    print(list(gene_name_to_trace.values()))
+
     return flask.jsonify(
         {'line_traces': cell_scores_line_traces, 'force': cell_set_name_to_traces, 'violins': violin_name_to_traces,
          'scatters': list(gene_name_to_trace.values())})

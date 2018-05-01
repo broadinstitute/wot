@@ -633,7 +633,6 @@ var fetchData = function (cellSets, genes, geneSets, isSerum) {
     var scatters = result.scatters;
     var force = result.force;
     // also separate median
-    var lineTraces = [];
     for (var key in violins) {
       var traces = violins[key];
       traces.forEach(function (trace) {
