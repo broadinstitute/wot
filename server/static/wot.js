@@ -11,7 +11,6 @@ var createModuleOptions = function (options) {
 
     options.push('</optgroup>');
   });
-
 };
 $('#cell_set_creator').on('click', function () {
   $('#customCellSet').
@@ -90,7 +89,18 @@ function autocompleteFilter (results, term) {
 }
 
 var $customTime = $('#custom_time');
-
+$.ajax('/list_times/').done(function(results){
+    var html = [];
+    html.push('<option>All</option>');
+    results.forEach(function(t){
+        html.push('<option>');
+        html.push(t);
+        html.push('</option>');
+    });
+    $customTime.html(html.join(''));
+    $customTime.selectpicker('refresh');
+    $customTime.selectpicker('render');
+});
 var $customType = $('[name=custom_type]');
 var $quantileValue = $('#quantile-value');
 var $customCellSetSelector = $('#custom_cell_set');
