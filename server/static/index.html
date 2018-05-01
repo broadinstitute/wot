@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/css/bootstrap-select.min.css">
+    <link rel="stylesheet" href="/static/jquery-ui-1.12.1.custom/jquery-ui.min.css">
+    <link rel="stylesheet" href="/static/jquery-ui-1.12.1.custom/jquery-ui.theme.min.css">
+
+
+    <title>Optimal Transport</title>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <form class="form form-inline" id="ancestor_form">
+            <div class="form-group">
+                <label>Predefined Cell Sets</label>
+                <select id="cell_set" multiple class="selectpicker" data-live-search="true" data-actions-box="true">
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Custom Cell Sets</label>
+                <select id="custom_cell_set" multiple class="selectpicker" data-live-search="true"
+                        data-actions-box="true">
+                </select>
+            </div>
+            <div class="form-group">
+                <button id="cell_set_creator" type="button" class="btn btn-default">Create Set...</button>
+            </div>
+            <div class="form-group">
+                <label>Gene Sets</label>
+                <select id="gene_set" multiple class="selectpicker" data-live-search="true" data-actions-box="true">
+
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Genes</label>
+                <input type="text" id="gene" class="form-control">
+            </div>
+            <div class="form-group">
+                <label># Cells</label>
+                <input type="text" id="ncells" class="form-control" value="1000">
+            </div>
+
+            <button id="go" type="submit" class="btn btn-default">Go</button>
+        </form>
+    </div>
+
+
+    <div class="row">
+        <ul id="violin"></ul>
+    </div>
+    <div class="row">
+        <div style="display:none;" id="loading">Loading...</div>
+    </div>
+</div>
+</div>
+
+
+<div style="display:none;" title="Custom Cell Set" id="customCellSet">
+    <div class="form-group">
+        <label>Custom Cell Set Time</label>
+        <select id="custom_time" class="selectpicker" data-live-search="true" data-actions-box="true">
+            <option>All</option>
+            <option>0</option>
+            <option>0.5</option>
+            <option>1</option>
+            <option>1.5</option>
+            <option>2</option>
+            <option>2.5</option>
+            <option>3</option>
+            <option>3.5</option>
+            <option>4</option>
+            <option>4.5</option>
+            <option>5</option>
+            <option>5.5</option>
+            <option>6</option>
+            <option>6.5</option>
+            <option>7</option>
+            <option>7.5</option>
+            <option>8</option>
+            <option>8.25</option>
+            <option>8.5</option>
+            <option>8.75</option>
+            <option>9</option>
+            <option>9.5</option>
+            <option>10</option>
+            <option>10.5</option>
+            <option>11</option>
+            <option>11.5</option>
+            <option>12</option>
+            <option>12.5</option>
+            <option>13</option>
+            <option>13.5</option>
+            <option>14</option>
+            <option>14.5</option>
+            <option>15</option>
+            <option>15.5</option>
+            <option>16</option>
+            <option>16.5</option>
+            <option>17</option>
+            <option>17.5</option>
+            <option>18</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Type</label>
+        <div class="radio">
+            <label>
+                <input type="radio" name="custom_type" value="serum" checked>
+                Serum
+            </label>
+        </div>
+        <div class="radio">
+            <label>
+                <input type="radio" name="custom_type" value="2i">
+                2i
+            </label>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Distribution</label>
+        <select id="custom_gene_set" class="selectpicker" data-live-search="true" data-actions-box="true">
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Quantile</label>
+        <input id="quantile-value" value="95" type="text">
+    </div>
+    <div class="form-group">
+        <button id="create" type="submit" class="btn btn-default">Create</button>
+    </div>
+    <div class="row">
+        <div id="filter_summary"></div>
+    </div>
+    <div class="row">
+        <div id="histogram"></div>
+    </div>
+    <div class="row">
+        <div id="force"></div>
+    </div>
+
+
+</div>
+
+<script
+        src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+        integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+        crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/js/bootstrap-select.min.js"></script>
+<script src="/static/jquery-ui-1.12.1.custom/jquery-ui.min.js"></script>
+<script src="plotly.min.js"></script>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="wot.js"></script>
+
+</body>
+</html>
