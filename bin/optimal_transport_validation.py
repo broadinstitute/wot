@@ -117,7 +117,8 @@ parser.add_argument('--t_interpolate', help='Interpolation fraction between two 
 parser.add_argument('--save', action='store_true', help='Save interpolated point clouds')
 parser.add_argument('--save_transport', action='store_true', help='Save transport maps')
 parser.add_argument('--output_param', action='append', help='Parameters to save in output file',
-                    default=['epsilon', 'lambda1', 'lambda2', 'beta_min', 'delta_min', 'beta_max', 'ncells', 'ncounts'])
+                    default=['epsilon', 'lambda1', 'lambda2', 'beta_min', 'delta_min', 'delta_max', 'beta_max',
+                             'ncells', 'ncounts'])
 parser.add_argument('--covariate',
                     help='Two column tab delimited file without header with '
                          'cell ids and covariate value')
