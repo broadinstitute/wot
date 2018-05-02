@@ -23,6 +23,11 @@ def score_gene_sets(ds, gs, z_score_ds=True, use_dask=False):
     if z_score_ds:
         ds_x = ds_x.toarray() if scipy.sparse.isspmatrix(ds_x) else ds_x
         std = np.std(ds_x, axis=0)
+        if not use_dask:
+            gene_indices = (std > 0)  # keep genes that have std > 0
+            gs_x = gs_x[gene_indices]
+            ds_x = ds_x[:, gene_indices]
+            std = std[gene_indices]
         mean = np.mean(ds_x, axis=0)
         ds_x = (ds_x - mean) / std
         ds_x[ds_x < -5] = -5
