@@ -117,6 +117,7 @@ class TrajectorySampler:
         for r in ranges:
             back = r['backward']
             color = '#2c7bb6' if back else '#d7191c'
+            init = True
             for transport_index in r['range']:
                 tmap_dict = transport_maps[transport_index]
                 t = tmap_dict['t1'] if back else tmap_dict['t2']
@@ -139,7 +140,8 @@ class TrajectorySampler:
                     #         tmap = cached
                     if tmap is None:
                         if verbose:
-                            print('Reading transport map ' + path)
+                            import os
+                            print('Reading transport map ' + os.path.basename(path))
                         tmap = wot.io.read_dataset(tmap_dict['path'])
                         tmap_dict['ds'] = tmap
                         # if cache_setter is not None:
@@ -162,46 +164,51 @@ class TrajectorySampler:
 
                         datasets.append(ds)
 
-                if transport_index == t_index:
-                    if sampling_loader is None:
-                        pvec_array = []
-                        cell_sets_to_keep = []
-                        for cell_set_index in range(n_cell_sets):
-                            cell_ids_in_set = cell_set_ds.row_meta.index[cell_set_ds.x[:, cell_set_index] > 0]
-                            membership = tmap.col_meta.index.isin(
-                                cell_ids_in_set) if back else tmap.row_meta.index.isin(cell_ids_in_set)
+                if init and transport_index == t_index:
+                    init = False
+                    pvec_array = []
+                    cell_sets_to_keep = []
+                    for cell_set_index in range(n_cell_sets):
+                        cell_ids_in_set = cell_set_ds.row_meta.index[cell_set_ds.x[:, cell_set_index] > 0]
+                        membership = tmap.col_meta.index.isin(
+                            cell_ids_in_set) if back else tmap.row_meta.index.isin(cell_ids_in_set)
 
-                            if np.sum(membership) > 0:
-                                pvec_array.append(membership)
-                                cell_sets_to_keep.append(cell_set_index)
+                        if np.sum(membership) > 0:
+                            membership = membership.astype(np.float)
+                            membership /= membership.sum()
+                            pvec_array.append(membership)
+                            cell_sets_to_keep.append(cell_set_index)
+                            if back:
+                                entropy = np.exp(scipy.stats.entropy(membership))
+                                pvecs.append(
+                                    {'cell_set': cell_set_ds.col_meta.index.values[cell_set_index], 'v': membership,
+                                     'entropy': entropy,
+                                     'normalized_entropy': entropy / len(membership), 't': time,
+                                     'cell_ids': tmap.col_meta.index.values if back else tmap.row_meta.index.values})
 
-                                if not t0_loaded:
-                                    t0_loaded = True
+                            if not t0_loaded:
 
-                                    if unaligned_datasets is not None:
-                                        datasets0 = []
+                                if unaligned_datasets is not None:
+                                    datasets0 = []
 
-                                        for ds_index in range(len(unaligned_datasets)):
-                                            unaligned_ds = unaligned_datasets[ds_index]
-                                            ds0_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids_in_set)
-                                            ds0_order = ds0_order[ds0_order != -1]
-                                            ds0 = wot.Dataset(unaligned_ds.x[ds0_order],
-                                                              unaligned_ds.row_meta.iloc[ds0_order],
-                                                              unaligned_ds.col_meta)
-                                            datasets0.append(ds0)
-                                        TrajectorySampler.do_sampling(result=traces, t=time, sampled_indices=None,
-                                                                      datasets=datasets0, summaries=summaries,
-                                                                      cell_set_name=cell_set_ds.col_meta.index.values[
-                                                                          cell_set_index], color='#ffffbf')
+                                    for ds_index in range(len(unaligned_datasets)):
+                                        unaligned_ds = unaligned_datasets[ds_index]
+                                        ds0_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids_in_set)
+                                        ds0_order = ds0_order[ds0_order != -1]
+                                        ds0 = wot.Dataset(unaligned_ds.x[ds0_order],
+                                                          unaligned_ds.row_meta.iloc[ds0_order],
+                                                          unaligned_ds.col_meta)
+                                        datasets0.append(ds0)
+                                    TrajectorySampler.do_sampling(result=traces, t=time, sampled_indices=None,
+                                                                  datasets=datasets0, summaries=summaries,
+                                                                  cell_set_name=cell_set_ds.col_meta.index.values[
+                                                                      cell_set_index], color='#ffffbf')
 
-                        cell_set_ds = wot.Dataset(cell_set_ds.x[:, cell_sets_to_keep], cell_set_ds.row_meta,
-                                                  cell_set_ds.col_meta.iloc[cell_sets_to_keep])
+                    t0_loaded = True
+                    cell_set_ds = wot.Dataset(cell_set_ds.x[:, cell_sets_to_keep], cell_set_ds.row_meta,
+                                              cell_set_ds.col_meta.iloc[cell_sets_to_keep])
                     n_cell_sets = cell_set_ds.x.shape[1]
 
-                    if verbose:
-                        print('Initializing ' + str(n_cell_sets) + ' cell sets')
-                    if n_cell_sets is 0:
-                        raise Exception('No cell sets')
                 new_pvec_array = []
                 for cell_set_index in range(n_cell_sets):
                     sampled_indices = None
@@ -221,8 +228,6 @@ class TrajectorySampler:
                         # n_choose = int(np.ceil(entropy))
                         # n_choose = min(ncells, n_choose)
                         n_choose = ncells
-                        if verbose:
-                            print('Sampling ' + str(n_choose) + ' cells')
                         sampled_indices = np.random.choice(len(v), n_choose, p=v, replace=True)
 
                     TrajectorySampler.do_sampling(result=traces, t=t, sampled_indices=sampled_indices,
