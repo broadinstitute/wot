@@ -133,12 +133,13 @@ def read_gmx(path, feature_ids=None):
         ncols = len(ids)
         ids[len(ids) - 1] = ids[len(ids) - 1].rstrip()
         descriptions[len(ids) - 1] = descriptions[len(ids) - 1].rstrip()
-        row_id_to_index = {}
+        row_id_lc_to_index = {}
+        row_id_lc_to_row_id = {}
         x = None
         array_of_arrays = None
         if feature_ids is not None:
             for i in range(len(feature_ids)):
-                row_id_to_index[feature_ids[i]] = i
+                row_id_lc_to_index[feature_ids[i].lower()] = i
             x = np.zeros(shape=(len(feature_ids), ncols), dtype=np.int8)
         else:
             array_of_arrays = []
@@ -147,19 +148,21 @@ def read_gmx(path, feature_ids=None):
             for j in range(ncols):
                 value = tokens[j].strip()
                 if value != '':
-                    row_index = row_id_to_index.get(value)
+                    value_lc = value.lower()
+                    row_index = row_id_lc_to_index.get(value_lc)
                     if feature_ids is None:
                         if row_index is None:
-                            row_index = len(row_id_to_index)
-                            row_id_to_index[value] = row_index
+                            row_id_lc_to_row_id[value_lc] = value
+                            row_index = len(row_id_lc_to_index)
+                            row_id_lc_to_index[value_lc] = row_index
                             array_of_arrays.append(np.zeros(shape=(ncols,), dtype=np.int8))
                         array_of_arrays[row_index][j] = 1
                     elif row_index is not None:
                         x[row_index, j] = 1
         if feature_ids is None:
-            feature_ids = np.empty(len(row_id_to_index), dtype='object')
-            for rid in row_id_to_index:
-                feature_ids[row_id_to_index[rid]] = rid
+            feature_ids = np.empty(len(row_id_lc_to_index), dtype='object')
+            for rid_lc in row_id_lc_to_index:
+                feature_ids[row_id_lc_to_index[rid_lc]] = row_id_lc_to_row_id[rid_lc]
         if array_of_arrays is not None:
             x = np.array(array_of_arrays)
         row_meta = pd.DataFrame(index=feature_ids)
@@ -212,25 +215,25 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom':
         f = h5py.File(path, 'r')
-        if genome10x is not None or f.get('/mm10') is not None:
-            genome10x = '/mm10' if genome10x is None else genome10x
-            group = f['/' + genome10x]
-
-            from scipy.sparse import csr_matrix
-            M, N = group['shape'][()]
-            data = group['data'][()]
-            # if data.dtype == np.dtype('int32'):
-            #     data = data.astype('float32')
-            x = csr_matrix((data, group['indices'][()], group['indptr'][()]), shape=(N, M))
-            col_meta = pd.DataFrame(index=group['genes'][()].astype(str),
-                                    data={'gene_names': group['gene_names'][()].astype(str)})
-            row_meta = pd.DataFrame(index=group['barcodes'][()].astype(str))
-            f.close()
-            return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
         if ext == 'loom':
             h5_x = '/matrix'
             h5_row_meta = '/row_attrs'
             h5_col_meta = '/col_attrs'
+        else:
+            if genome10x is None:
+                keys = list(f.keys())
+                if len(keys) > 0:
+                    genome10x = keys[0]
+            group = f['/' + genome10x]
+            from scipy.sparse import csr_matrix
+            M, N = group['shape'][()]
+            data = group['data'][()]
+            x = csr_matrix((data, group['indices'][()], group['indptr'][()]), shape=(N, M))
+            col_meta = pd.DataFrame(index=group['gene_names'][()].astype(str),
+                                    data={'ensembl': group['genes'][()].astype(str)})
+            row_meta = pd.DataFrame(index=group['barcodes'][()].astype(str))
+            f.close()
+            return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
 
         row_attrs = read_h5_attrs(f, h5_row_meta, row_filter)
         nrows = len(row_attrs['indices']) if row_attrs['indices'] is not None else f[h5_x].shape[0]
@@ -384,7 +387,7 @@ def get_file_basename_and_extension(name):
     return basename, ext
 
 
-def write_dataset(ds, path, output_format='txt', txt_full=False, progress=None):
+def write_dataset(ds, path, output_format='txt', txt_full=False):
     path = check_file_extension(path, output_format)
     if output_format == 'txt' or output_format == 'txt.gz' or output_format == 'gct':
         if txt_full or output_format == 'gct':
@@ -414,16 +417,18 @@ def write_dataset(ds, path, output_format='txt', txt_full=False, progress=None):
             # TODO write as sparse array
             pd.DataFrame(index=ds.row_meta.index, data=np.hstack(
                 (ds.row_meta.values, ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x))).to_csv(f, sep='\t',
-                                                                                                         header=False)
+                                                                                                         header=False,
+                                                                                                         quoting=csv.QUOTE_NONE)
             f.close()
         else:
+            import csv
             pd.DataFrame(ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x, index=ds.row_meta.index,
                          columns=ds.col_meta.index).to_csv(path,
                                                            index_label='id',
                                                            sep='\t',
                                                            doublequote=False,
                                                            compression='gzip' if output_format == 'txt.gz'
-                                                           else None)
+                                                           else None, quoting=csv.QUOTE_NONE)
     elif output_format == 'loom':
         f = h5py.File(path, 'w')
         x = ds.x
@@ -447,8 +452,7 @@ def write_dataset(ds, path, output_format='txt', txt_full=False, progress=None):
                 xend += xchunk
                 dset[slice(xstart, xend)] = x[slice(xstart, xend)].compute()
                 xstart = xend
-                if progress:
-                    progress(xstart)
+
 
         elif is_sparse:
             dset.attrs['sparse'] = True
@@ -462,8 +466,6 @@ def write_dataset(ds, path, output_format='txt', txt_full=False, progress=None):
                 dset[start:stop] = x[start:stop].toarray()
                 start += step
                 stop += step
-                if progress:
-                    progress(start)
 
         # f.create_group('/layers')
         # for key in ds.layers:
