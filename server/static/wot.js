@@ -682,10 +682,11 @@ var fetchData = function (cellSets, genes, geneSets, isSerum) {
 
       Plotly.newPlot($div.find('.plot')[0], ancestry_divergence_traces, {
           title: '', yaxis: {
-            range: [0, 1], autorange: false, 'zeroline': false
+            range: [0, 1], autorange: false, 'zeroline': false,
+            title: 'Divergence'
           },
           showlegend: true
-        }, {
+        }, {xaxis: {title: 'Time'}}, {
           modeBarButtonsToRemove: ['toImage'],
           modeBarButtonsToAdd: [
             {
