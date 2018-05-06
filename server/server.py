@@ -236,13 +236,12 @@ def trajectory():
             traces2 = cell_set_name_to_force_layout_traces[cell_sets[j]['name']]
             for k in range(len(traces1)):
                 d = ancestry_divergence(traces1[k]['v'], traces2[k]['v'])
-                print(d)
                 x.append(traces1[k]['t'])
                 y.append(d)
 
-            ancestry_divergence_traces.append(
-                {'x': x, 'y': y, 'name': cell_sets[i]['name'] + ' vs. ' + cell_sets[j]['name'], 'mode': 'lines',
-                 'type': 'scatter'})
+        ancestry_divergence_traces.append(
+            {'x': x, 'y': y, 'name': cell_sets[i]['name'] + ' vs. ' + cell_sets[j]['name'], 'mode': 'lines',
+             'type': 'scatter'})
     for i in range(len(cell_sets)):
         traces = cell_set_name_to_force_layout_traces[cell_sets[i]['name']]
         for t in traces:
