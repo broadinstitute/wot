@@ -89,17 +89,17 @@ function autocompleteFilter (results, term) {
 }
 
 var $customTime = $('#custom_time');
-$.ajax('/list_times/').done(function(results){
-    var html = [];
-    html.push('<option>All</option>');
-    results.forEach(function(t){
-        html.push('<option>');
-        html.push(t);
-        html.push('</option>');
-    });
-    $customTime.html(html.join(''));
-    $customTime.selectpicker('refresh');
-    $customTime.selectpicker('render');
+$.ajax('/list_times/').done(function (results) {
+  var html = [];
+  html.push('<option>All</option>');
+  results.forEach(function (t) {
+    html.push('<option>');
+    html.push(t);
+    html.push('</option>');
+  });
+  $customTime.html(html.join(''));
+  $customTime.selectpicker('refresh');
+  $customTime.selectpicker('render');
 });
 var $customType = $('[name=custom_type]');
 var $quantileValue = $('#quantile-value');
@@ -338,11 +338,17 @@ var updateCustomCellSetsPlot = function () {
     Plotly.newPlot('histogram', traces, {margin: {t: 0, b: 15}});
     var forceLayoutTraces = [
       {
-        hoverinfo: 'none', showlegend: false, marker: {symbol: 'square', size: 1, color: 'rgb(50,50,50)'},
-        mode: 'markers', type: 'scattergl', name: 'All Cells', x: forceLayoutX, y: forceLayoutY
+        hoverinfo: 'none',
+        showlegend: false,
+        marker: {symbol: 'square', size: 2, color: 'rgb(217,217,217)', opacity: 0.5},
+        mode: 'markers',
+        type: 'scattergl',
+        name: 'All Cells',
+        x: forceLayoutX,
+        y: forceLayoutY
       },
       {
-        hoverinfo: 'none', showlegend: false, marker: {size: 3, color: '#1b9e77'},
+        hoverinfo: 'none', showlegend: false, marker: {size: 3, color: '#1b9e77', symbol: 'square'},
         mode: 'markers', type: 'scattergl', name: 'Selected Cells', x: selectedForceLayoutX, y: selectedForceLayoutY
       }];
     $('#force').empty();
@@ -567,7 +573,7 @@ var createForceLayoutTrajectory = function (force, key, isSerum) {
   var elem = $div.find('.plot')[0];
 
   var backgroundTrace = {
-    hoverinfo: 'none', showlegend: false, marker: {symbol: 'dot', size: 1, color: 'rgba(50,50,50,0.3)'},
+    hoverinfo: 'none', showlegend: false, marker: {symbol: 'square', size: 2, color: 'rgb(217,217,217)', opacity: 0.5},
     mode: 'markers', type: 'scattergl', name: 'All Cells', x: forceLayoutX, y: forceLayoutY
   };
 
@@ -640,7 +646,8 @@ var fetchData = function (cellSets, genes, geneSets, isSerum) {
   return $.ajax({url: '/trajectory/', method: 'POST', data: url}).done(function (result) {
 
     var violins = result.violins;
-    var scatters = result.scatters;
+    var scatters = result.gene_traces;
+    var ancestry_divergence_traces = result.ancestry_divergence_traces;
     var force = result.force;
     // also separate median
     for (var key in violins) {
@@ -666,6 +673,30 @@ var fetchData = function (cellSets, genes, geneSets, isSerum) {
             }
           }]
       });
+    }
+    if (ancestry_divergence_traces && ancestry_divergence_traces.length > 0) {
+      var $div = $('<li><h4>' + (isSerum ? 'Serum' : '2i') +
+        '</h4><div class="plot"></div></li>'
+      );
+      $div.appendTo($violin);
+
+      Plotly.newPlot($div.find('.plot')[0], ancestry_divergence_traces, {
+          title: '', yaxis: {
+            range: [0, 1], autorange: false, 'zeroline': false
+          },
+          showlegend: true
+        }, {
+          modeBarButtonsToRemove: ['toImage'],
+          modeBarButtonsToAdd: [
+            {
+              name: 'Save Image',
+              icon: Plotly.Icons.camera,
+              click: function (gd) {
+                Plotly.downloadImage(gd, {format: 'svg', width: $(gd).width(), height: $(gd).height()});
+              }
+            }]
+        }
+      );
     }
     if (result.line_traces && result.line_traces.length > 0) {
       var $div = $('<li><h4>' + (isSerum ? 'Serum' : '2i') +

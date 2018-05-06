@@ -60,6 +60,11 @@ if __name__ == "__main__":
     app.run()
 
 
+@app.route("/list_times/", methods=['GET'])
+def list_times():
+    return flask.jsonify(server_config['times'])
+
+
 @app.route("/list_genes/", methods=['GET'])
 def list_genes():
     f = h5py.File(gene_matrix_path, 'r')
@@ -169,7 +174,6 @@ def trajectory():
             datasets.append(wot.io.read_dataset(gene_matrix_path, col_filter={'id': lambda x: x.lower() in genes},
                                                 row_filter=None))
             summaries.append('mean')
-
     for key in cell_score_key_to_ids:
         path = name_to_cell_scores[key]
         ids = cell_score_key_to_ids[key]
@@ -195,30 +199,54 @@ def trajectory():
         for trace in result_dict['traces']:
             trace_data.append(trace)
 
-    cell_set_name_to_traces = {}
+    cell_set_name_to_force_layout_traces = {}
 
     for result_dict in results:  # each cell set
 
         for p in result_dict['pvecs']:
             cell_set = p['cell_set']
-            traces = cell_set_name_to_traces.get(cell_set)
+            traces = cell_set_name_to_force_layout_traces.get(cell_set)
             if traces is None:
                 traces = []
-                cell_set_name_to_traces[cell_set] = traces
+                cell_set_name_to_force_layout_traces[cell_set] = traces
 
             t = p['t']
             v = p['v']
             cell_ids = p['cell_ids']
             joined = coords.join(pd.DataFrame(index=cell_ids, data={'v': v}), how='right')
             df_sum = joined.groupby(['px', 'py']).sum()
-            traces.append({'t': t, 'x': df_sum.index.get_level_values(0).tolist(),
+            traces.append({'v': v, 't': t, 'x': df_sum.index.get_level_values(0).tolist(),
                            'y': df_sum.index.get_level_values(1).tolist(),
                            'marker': {'color': df_sum['v'].values.tolist()}})
 
-    for name in cell_set_name_to_traces:
-        traces = cell_set_name_to_traces[name]
+    for name in cell_set_name_to_force_layout_traces:
+        traces = cell_set_name_to_force_layout_traces[name]
         traces.sort(key=lambda x: x['t'])
 
+    def ancestry_divergence(ancestor_dist1, ancestor_dist2):
+        return 1.0 - 0.5 * np.sum(np.abs(ancestor_dist1 - ancestor_dist2))
+
+    ancestry_divergence_traces = []
+
+    for i in range(len(cell_sets)):
+        traces1 = cell_set_name_to_force_layout_traces[cell_sets[i]['name']]
+        x = []
+        y = []
+        for j in range(i):
+            traces2 = cell_set_name_to_force_layout_traces[cell_sets[j]['name']]
+            for k in range(len(traces1)):
+                d = ancestry_divergence(traces1[k]['v'], traces2[k]['v'])
+                print(d)
+                x.append(traces1[k]['t'])
+                y.append(d)
+
+            ancestry_divergence_traces.append(
+                {'x': x, 'y': y, 'name': cell_sets[i]['name'] + ' vs. ' + cell_sets[j]['name'], 'mode': 'lines',
+                 'type': 'scatter'})
+    for i in range(len(cell_sets)):
+        traces = cell_set_name_to_force_layout_traces[cell_sets[i]['name']]
+        for t in traces:
+            del t['v']
     # group scatter plots by name
     gene_name_to_trace = {}
     violin_name_to_traces = {}
@@ -276,7 +304,9 @@ def trajectory():
         # trace['sizemin'] = 4
         # trace['marker'] = {'size': trace['size'], 'sizeref': (2 * 100) / (4 * 4), 'size_min': 4}
 
-
+    #
     return flask.jsonify(
-        {'line_traces': cell_scores_line_traces, 'force': cell_set_name_to_traces, 'violins': violin_name_to_traces,
-         'scatters': list(gene_name_to_trace.values())})
+        {'ancestry_divergence_traces': ancestry_divergence_traces, 'line_traces': cell_scores_line_traces,
+         'force': cell_set_name_to_force_layout_traces,
+         'violins': violin_name_to_traces,
+         'gene_traces': list(gene_name_to_trace.values())})

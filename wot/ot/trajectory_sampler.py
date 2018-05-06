@@ -181,7 +181,8 @@ class TrajectorySampler:
                             if back:
                                 entropy = np.exp(scipy.stats.entropy(membership))
                                 pvecs.append(
-                                    {'cell_set': cell_set_ds.col_meta.index.values[cell_set_index], 'v': membership,
+                                    {'cell_set': cell_set_ds.col_meta.index.values[cell_set_index],
+                                     'v': membership,
                                      'entropy': entropy,
                                      'normalized_entropy': entropy / len(membership), 't': time,
                                      'cell_ids': tmap.col_meta.index.values if back else tmap.row_meta.index.values})
@@ -218,11 +219,13 @@ class TrajectorySampler:
                             v = tmap.x.dot(v)
                         else:
                             v = v.dot(tmap.x)
+
                         v /= v.sum()
 
                         entropy = np.exp(scipy.stats.entropy(v))
                         pvecs.append(
-                            {'cell_set': cell_set_ds.col_meta.index.values[cell_set_index], 'v': v, 'entropy': entropy,
+                            {'cell_set': cell_set_ds.col_meta.index.values[cell_set_index], 'v': v,
+                             'entropy': entropy,
                              'normalized_entropy': entropy / len(v), 't': t,
                              'cell_ids': tmap.row_meta.index.values if back else tmap.col_meta.index.values})
                         # n_choose = int(np.ceil(entropy))
