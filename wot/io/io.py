@@ -467,7 +467,10 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
                 start += step
                 stop += step
 
-        # f.create_group('/layers')
+
+        f.create_group('/layers')
+        f.create_group('/row_graphs')
+        f.create_group('/col_graphs')
         # for key in ds.layers:
         #     x = ds.layers[key]
         #     f.create_dataset('/layers/' + key, shape=x, chunks=(1000, 1000),
