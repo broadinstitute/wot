@@ -28,10 +28,10 @@ Suggested tools include [Seurat](https://satijalab.org/seurat/) or [Scanpy](http
 
 ## <a name="file_formats"></a> File Formats
 * Expression matrix
-    * Market Exchange Format (MEX) (e.g from Cell Ranger)
-    * HDF5 Gene-Barcode Matrix Format (e.g from Cell Ranger)
-    * Loom File
-    * Tab-delimitted Text file
+    * [Market Exchange Format (MEX)](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/matrices)
+    * [HDF5 Gene-Barcode Matrix](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices)
+    * [Loom](http://linnarssonlab.org/loompy/format/index.html)
+    * Tab-delimited Text
     
     Example:
     ```
