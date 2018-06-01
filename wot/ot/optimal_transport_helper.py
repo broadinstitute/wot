@@ -27,8 +27,7 @@ class OptimalTransportHelper:
                                  'cell ids and days', required=True)
         parser.add_argument('--day_pairs',
                             help='Two column tab delimited file without header with '
-                                 'pairs of days to compute transport maps for',
-                            required=True)
+                                 'pairs of days to compute transport maps for')
 
         parser.add_argument('--gene_filter',
                             help='File with one gene id per line to use for computing cost matrices')
@@ -137,18 +136,25 @@ class OptimalTransportHelper:
                     p /= counts_p
                     ds.x[i] = np.random.multinomial(args.ncounts, p, size=1)[0]
 
-        if not os.path.isfile(args.day_pairs):
-            day_pairs = pd.read_table(io.StringIO(args.day_pairs), header=None, names=['t0', 't1'],
-                                      index_col=False, lineterminator=';', sep=',', dtype=np.float64)
-        else:
-            day_pairs = pd.read_table(args.day_pairs, header=None, names=['t0', 't1'],
-                                      index_col=False, quoting=csv.QUOTE_NONE,
-                                      engine='python', sep=None, dtype=np.float64)
-
         days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
-                                        names=['day'], quoting=csv.QUOTE_NONE,
-                                        engine='python', sep=None,
+                                        names=['day'], engine='python', sep=None,
                                         dtype={'day': np.float64})
+        if args.day_pairs is not None:
+            if not os.path.isfile(args.day_pairs):
+                day_pairs = pd.read_table(io.StringIO(args.day_pairs), header=None, names=['t0', 't1'],
+                                          index_col=False, lineterminator=';', sep=',', dtype=np.float64)
+            else:
+                day_pairs = pd.read_table(args.day_pairs, header=None, names=['t0', 't1'],
+                                          index_col=False, engine='python', sep=None, dtype=np.float64)
+        else:
+            unique_days = list(set(days_data_frame['day'].values))
+            unique_days.sort()
+            pairs = []
+            for i in range(len(unique_days) - 1):
+                d1 = unique_days[i]
+                d2 = unique_days[i + 1]
+                pairs.append([d1, d2])
+            day_pairs = pd.DataFrame(data=pairs, columns=['t0', 't1'])
 
         self.eigenvals = np.diag(eigenvals) if eigenvals is not None else None
         if day_pairs.shape[0] is 0:
