@@ -2,10 +2,11 @@ import numpy as np
 from wot.grn import SparseOptimization
 from scipy.stats import entropy
 import numexpr as ne
-from gslrandom import PyRNG, multinomial
 from sklearn.cluster import SpectralClustering
 from itertools import combinations
 
+
+# from gslrandom import PyRNG, multinomial
 
 def dum(x):
     return x
@@ -96,15 +97,15 @@ def get_expression_pairs(Pairs, Lineage, Xg, Xr, TP, lag, differences=True):
     return Xgs, Xrs
 
 
-def initialize_modules(Xg, N, threads=1, nn=150):
-    XG = np.vstack(Xg)
-    XG = XG[np.random.choice(range(XG.shape[0]), XG.shape[0] / 20, replace=False)]
+def initialize_modules(XG, N, threads=1, nn=150):
+    subset = np.random.choice(list(range(XG.shape[0])), int(XG.shape[0] / 20), replace=False)
+    XG = XG[subset]
     SC = SpectralClustering(n_clusters=N, n_neighbors=nn, affinity='nearest_neighbors', n_jobs=threads)
     labels = SC.fit_predict(XG.T)
     U = np.zeros((N, XG.shape[1]))
     for i, c in enumerate(set(labels)):
         U[i, np.where(labels == c)[0]] = 1. / (labels == c).sum() ** .5
-    return U
+    return U, subset
 
 
 def update_regulation(Lineage, Xg, Xr, TP, lag, Z=[], U=[], num_modules=50, lda_z1=100., lda_z2=100., lda_u=10.,
@@ -169,14 +170,15 @@ def main(argsv):
     parser.add_argument('--matrix',
                         help='Gene expression file with cells on '
                              'rows and features on columns', required=True)
-
     parser.add_argument('--cell_days',
                         help='Two column tab delimited file without header with '
                              'cell ids and days', required=True)
+    parser.add_argument('--time_lag',
+                        help='Time lag', type=float, default=4.0)
+    parser.add_argument('--nmodules', help='Number of gene expression modules', type=int, default=50)
+
     parser.add_argument('--U',
                         help='Initialization matrix')
-    parser.add_argument('--time_lag',
-                        help='Time lag', required=True, type=float, default=4)
 
     parser.add_argument('--cell_filter',
                         help='File with one cell id per line to include or or a python regular expression of cell ids to include')
@@ -184,6 +186,7 @@ def main(argsv):
     parser.add_argument('--out',
                         help='Prefix for ouput file names', required=True)
     args = parser.parse_args(argsv)
+    N = args.nmodules
     days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
                                     names=['day'],
                                     engine='python', sep=None,
@@ -194,7 +197,11 @@ def main(argsv):
 
     tf_ids = pd.read_table(args.tf, index_col=0, header=None).index.values
     tf_column_indices = ds.col_meta.index.isin(tf_ids)
-    non_tf_column_indices = not tf_column_indices
+    if tf_column_indices.sum() == 0:
+        print('No transcription factors found')
+        exit(1)
+
+    non_tf_column_indices = ~tf_column_indices
     transport_maps = wot.io.list_transport_maps(args.dir)
     if len(transport_maps) == 0:
         print('No transport maps found in ' + args.dir)
@@ -204,8 +211,13 @@ def main(argsv):
         transport_map_times.add(tmap['t1'])
         transport_map_times.add(tmap['t2'])
     Lineage = []  # list of transport maps
+    time_to_tmap_ids = {}
     for tmap_dict in transport_maps:
         tmap = wot.io.read_dataset(tmap_dict['path'])
+        if time_to_tmap_ids.get(tmap_dict['t1']) is None:
+            time_to_tmap_ids[tmap_dict['t1']] = tmap.row_meta.index.values
+        if time_to_tmap_ids.get(tmap_dict['t2']) is None:
+            time_to_tmap_ids[tmap_dict['t2']] = tmap.col_meta.index.values
         Lineage.append(tmap.x)
     TimeLag = 4
     threads = os.cpu_count()
@@ -216,21 +228,25 @@ def main(argsv):
 
     Xg = []  # list of non-tf expression
     Xr = []  # list of tf expression
-    # TOD check transport map and matrix are aligned
-    for t in TP:
-        day_query = ds.row_meta[days_data_frame.columns[0]] == t
-        row_indices = np.where(day_query)[0]
-        d = ds.x[row_indices]
-        Xg.append(d[:, non_tf_column_indices])
-        Xr.append(d[:, tf_column_indices])
 
-    N = 50
+    for t in TP:
+        day_indices = np.where(ds.row_meta[days_data_frame.columns[0]] == t)[0]
+        ds_t = wot.Dataset(ds.x[day_indices], ds.row_meta.iloc[day_indices], ds.col_meta)
+        # align transport map and matrix
+        tmap_ids = time_to_tmap_ids[t]
+        aligned_order = ds_t.row_meta.index.get_indexer_for(tmap_ids)
+        ds_t = wot.Dataset(ds.x[aligned_order], ds.row_meta.iloc[aligned_order], ds.col_meta)
+        Xg.append(ds_t.x[:, non_tf_column_indices])
+        Xr.append(ds_t.x[:, tf_column_indices])
+
     if args.U is None:
-        U = initialize_modules(Xg, N, threads=40)
+        # rows are modules, columns are gene ids
+        U = initialize_modules(ds.x[:, non_tf_column_indices], N, threads=threads)
         np.save(args.out + '_U.initialization.npy', U)
 
     else:
-        U = np.load(args.U)
+        U = wot.io.read_dataset(args.U).x
+        # TODO ensure in same order as ds
     Uinv = np.linalg.pinv(U)
     Z = []
     XU = []
@@ -272,7 +288,7 @@ def main(argsv):
                                                inner_iters=1,
                                                k=k, b=b, y0=y0, x0=x0, differences=differences, frequent_fa=False,
                                                num_modules=N, epoch_block_size=500,
-                                               savepath=args.out)
+                                               savepath=None)
     np.save(args.out + '_Z.npy', Z)
     np.save(args.out + '_kbyx.npy', (k, b, y0, x0))
 

@@ -10,20 +10,20 @@ import csv
 
 
 def filter_ds_from_command_line(ds, args):
-    if args.gene_filter is not None:
+    params = vars(args)
+    if params.get('gene_filter') is not None:
         prior = ds.x.shape[1]
         gene_ids = pd.read_table(args.gene_filter, index_col=0, header=None).index.values
         column_indices = ds.col_meta.index.isin(gene_ids)
         nkeep = np.sum(column_indices)
-        if args.verbose and len(gene_ids) > nkeep:
+        if params.get('verbose') and len(gene_ids) > nkeep:
             print(str(len(gene_ids) - nkeep) + ' are in gene filter, but not in matrix')
 
         ds = wot.Dataset(ds.x[:, column_indices], ds.row_meta, ds.col_meta.iloc[column_indices])
-        if args.verbose:
+        if params.get('verbose'):
             print('Keeping ' + str(ds.x.shape[1]) + '/' + str(prior) + ' genes')
 
-
-    if args.cell_filter is not None:
+    if params.get('cell_filter') is not None:
         prior = ds.x.shape[0]
         if not os.path.isfile(args.cell_filter):
             import re
@@ -35,13 +35,14 @@ def filter_ds_from_command_line(ds, args):
         # row_indices = np.isin(ds.row_meta.index.values, cell_ids, assume_unique=True)
         row_indices = ds.row_meta.index.isin(cell_ids)
         nkeep = np.sum(row_indices)
-        if args.verbose and len(cell_ids) > nkeep:
+        if params.get('verbose') and len(cell_ids) > nkeep:
             print(str(len(cell_ids) - nkeep) + ' are in cell filter, but not in matrix')
 
         ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
-        if args.verbose:
+        if params.get('verbose'):
             print('Keeping ' + str(ds.x.shape[0]) + '/' + str(prior) + ' cells')
     return ds
+
 
 def list_transport_maps(input_dir):
     transport_maps_inputs = []  # file, start, end
