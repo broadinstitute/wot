@@ -19,6 +19,7 @@ def dumg(x):
 def compose_transports(Lineage, TP, lag):
     ComposedLineage = []
     for i in range(len(Lineage)):
+
         if len(Lineage[i]) > 0:
             j = i + 1
             while (j < len(TP)) and (TP[j] > TP[j - 1]) and (TP[j] < TP[i] + lag):
@@ -173,20 +174,27 @@ def main(argsv):
     parser.add_argument('--cell_days',
                         help='Two column tab delimited file without header with '
                              'cell ids and days', required=True)
-    parser.add_argument('--time_lag',
-                        help='Time lag', type=float, default=4.0)
+    parser.add_argument('--time_lag', help='Time lag', type=float)
     parser.add_argument('--nmodules', help='Number of gene expression modules', type=int, default=50)
 
-    parser.add_argument('--U',
-                        help='Initialization matrix')
+    parser.add_argument('--U', help='Gene module initialization matrix')
 
     parser.add_argument('--cell_filter',
                         help='File with one cell id per line to include or or a python regular expression of cell ids to include')
+
+    parser.add_argument('--epochs',
+                        help='Number of epochs', type=int, default=10000)
 
     parser.add_argument('--out',
                         help='Prefix for ouput file names', required=True)
     args = parser.parse_args(argsv)
     N = args.nmodules
+    epochs = args.epochs
+    TimeLag = args.time_lag
+    transport_maps = wot.io.list_transport_maps(args.dir)
+    if len(transport_maps) == 0:
+        print('No transport maps found in ' + args.dir)
+        exit(1)
     days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
                                     names=['day'],
                                     engine='python', sep=None,
@@ -202,10 +210,10 @@ def main(argsv):
         exit(1)
 
     non_tf_column_indices = ~tf_column_indices
-    transport_maps = wot.io.list_transport_maps(args.dir)
-    if len(transport_maps) == 0:
-        print('No transport maps found in ' + args.dir)
+    if non_tf_column_indices.sum() == 0:
+        print('No non-transcription factors found')
         exit(1)
+
     transport_map_times = set()
     for tmap in transport_maps:
         transport_map_times.add(tmap['t1'])
@@ -219,7 +227,7 @@ def main(argsv):
         if time_to_tmap_ids.get(tmap_dict['t2']) is None:
             time_to_tmap_ids[tmap_dict['t2']] = tmap.col_meta.index.values
         Lineage.append(tmap.x)
-    TimeLag = 4
+
     threads = os.cpu_count()
 
     TP = np.array(list(transport_map_times))  # array of timepoints
@@ -228,7 +236,6 @@ def main(argsv):
 
     Xg = []  # list of non-tf expression
     Xr = []  # list of tf expression
-
     for t in TP:
         day_indices = np.where(ds.row_meta[days_data_frame.columns[0]] == t)[0]
         ds_t = wot.Dataset(ds.x[day_indices], ds.row_meta.iloc[day_indices], ds.col_meta)
@@ -241,7 +248,7 @@ def main(argsv):
 
     if args.U is None:
         # rows are modules, columns are gene ids
-        U = initialize_modules(ds.x[:, non_tf_column_indices], N, threads=threads)
+        U, subset = initialize_modules(ds.x[:, non_tf_column_indices], N, threads=threads)
         np.save(args.out + '_U.initialization.npy', U)
 
     else:
@@ -284,7 +291,7 @@ def main(argsv):
     # for sparse model: lda_z1=3,lda_z2=1.5,lda_u=0.25
     # currently using: lda_z1=2,lda_z2=0.5,lda_u=1.5
     Z, U, Xh, k, b, y0, x0 = update_regulation(ComposedLineage, Xg, Xr, TP, TimeLag, Z=Z, U=U, lda_z1=2, lda_z2=0.5,
-                                               lda_u=1.5, epochs=10000, sample_fraction=5e-6, threads=threads,
+                                               lda_u=1.5, epochs=epochs, sample_fraction=5e-6, threads=threads,
                                                inner_iters=1,
                                                k=k, b=b, y0=y0, x0=x0, differences=differences, frequent_fa=False,
                                                num_modules=N, epoch_block_size=500,

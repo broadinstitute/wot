@@ -113,28 +113,6 @@ class TrajectorySampler:
             traces = cell_set_name_to_force_layout_traces[key]
             for t in traces:
                 del t['v']
-        # separate chart for each dataset. Within each dataset, group by name
-
-        # else:
-        #     violin_traces = violin_name_to_traces.get(trace['set_name'])
-        #     if violin_traces is None:
-        #         violin_traces = []
-        #         violin_name_to_traces[trace['set_name']] = violin_traces
-        #     trace['showlegend'] = False
-        #     trace['bandwidth'] = ncells ** (-1. / (1 + 4))
-        #     violin_traces.append(trace)
-
-        # cell_scores_line_traces = []
-        # for key in violin_name_to_traces:
-        #     traces = violin_name_to_traces[key]
-        #     traces.sort(key=lambda x: x['name'])
-        #     x = []
-        #     y = []
-        #     for trace in traces:
-        #         x.append(trace['name'])
-        #         y.append(trace['median'])
-        #     xsmooth, ysmooth = wot.ot.TrajectorySampler.kernel_smooth(x, y, stop=x[len(x) - 1])
-        #     cell_scores_line_traces.append({'name': key, 'x': xsmooth.tolist(), 'y': ysmooth.tolist(), 'mode': 'lines'})
 
         return {'ancestry_divergence_traces': ancestry_divergence_traces,
                 'dataset_name_to_traces': dataset_name_to_traces,
@@ -225,9 +203,8 @@ class TrajectorySampler:
                     result.append(trace)
 
     @staticmethod
-    def sample_all_timepoints(transport_maps, time_to_cell_sets, ncells=1000, datasets=None, dataset_names=None,
+    def sample_all_timepoints(transport_maps, time_to_cell_sets, datasets=None, dataset_names=None,
                               smooth=False, cache_transport_maps=False):
-        dataset_summaries = list(map(lambda x: 'mean', datasets))
         results = []
         cell_set_names = []
         for t in time_to_cell_sets:
@@ -239,8 +216,7 @@ class TrajectorySampler:
                 cell_sets=cell_sets,
                 transport_maps=transport_maps,
                 time=t, unaligned_datasets=datasets, dataset_names=dataset_names,
-                summaries=dataset_summaries,
-                ncells=ncells, cache_transport_maps=cache_transport_maps)
+                cache_transport_maps=cache_transport_maps)
             results.append(result)
 
         trace_fields = ['x', 'y']
@@ -305,8 +281,8 @@ class TrajectorySampler:
                 'cell_set_names': cell_set_names}
 
     @staticmethod
-    def sample_for_one_timepoint(cell_sets, transport_maps, time, unaligned_datasets=[], dataset_names=[], summaries=[],
-                                 ncells=1000, start=None, end=None, cache_transport_maps=False):
+    def sample_for_one_timepoint(cell_sets, transport_maps, time, unaligned_datasets=[], dataset_names=[],
+                                 start=None, end=None, cache_transport_maps=False):
         """
 
         Args:

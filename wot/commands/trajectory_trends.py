@@ -9,7 +9,8 @@ import os
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(description='Sample from transport maps')
+    parser = argparse.ArgumentParser(
+        description='Generate mean expression profiles given a starting cell cet and transport maps.')
     parser.add_argument('--dir',
                         help='Directory of transport maps', required=True)
     parser.add_argument('--cell_sets',
@@ -39,28 +40,28 @@ def main(argv):
     dataset_names = []
     dataset_names.append(wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0])
     ds = wot.io.read_dataset(args.matrix)
-    ds.x = ds.x.expm1()  # FIXME
     nfeatures = ds.x.shape[1]
     datasets.append(ds)
 
     sampled_results = wot.ot.TrajectorySampler.sample_all_timepoints(transport_maps=transport_maps,
                                                                      time_to_cell_sets=time_to_cell_sets,
-                                                                     ncells=1000, datasets=datasets,
+                                                                     datasets=datasets,
                                                                      dataset_names=dataset_names)
 
     dataset_name_to_traces = sampled_results['dataset_name_to_traces']
     transport_map_times = list(transport_map_times)
     transport_map_times.sort()
-
     ds_shape = (len(transport_map_times), nsets * nfeatures)
     for ds_name in dataset_name_to_traces:
         # for each cell set, output a matrix with time on rows and features on columns. Values in matrix are mean expression
-        f = h5py.File(ds_name + '_sample.loom', 'w')
+        f = h5py.File(ds_name + '_trajectory_trends.loom', 'w')
         f.create_group('/layers')
         f.create_group('/row_graphs')
         f.create_group('/col_graphs')
         f.create_dataset('/row_attrs/id', data=transport_map_times)
         cids = []
+        features = []
+        cell_set_names = []
 
         dset = f.create_dataset('/matrix', shape=ds_shape,
                                 chunks=(1000, 1000) if ds_shape[0] >= 1000 and ds_shape[1] >= 1000 else None,
@@ -72,11 +73,17 @@ def main(argv):
         for i in range(len(traces)):
             trace = traces[i]
             y = trace['y']  # across time
-            trace_name = trace['name']
+            trace_name = trace['name']  # cell_set_name_feature
             # cell_set_name = np.string_(trace['cell_set_name'])
-            trace_name = trace_name[trace_name.rfind('_') + 1:]
+            sep = trace_name.rfind('_')
+            feature = trace_name[sep + 1:]
+            cell_set_name = trace_name[0:sep]
+            cell_set_names.append(cell_set_name)
+            features.append(feature)
             dset[:, i] = y
             cids.append(np.string_(trace_name))
 
         f.create_dataset('/col_attrs/id', data=cids)
+        f.create_dataset('/col_attrs/feature', data=features)
+        f.create_dataset('/col_attrs/cell_set', data=cell_set_names)
         f.close()
