@@ -6,13 +6,51 @@ import numpy as np
 import os
 import scipy.sparse
 import glob
+import csv
 
+
+def filter_ds_from_command_line(ds, args):
+    if args.gene_filter is not None:
+        prior = ds.x.shape[1]
+        gene_ids = pd.read_table(args.gene_filter, index_col=0, header=None).index.values
+        column_indices = ds.col_meta.index.isin(gene_ids)
+        nkeep = np.sum(column_indices)
+        if args.verbose and len(gene_ids) > nkeep:
+            print(str(len(gene_ids) - nkeep) + ' are in gene filter, but not in matrix')
+
+        ds = wot.Dataset(ds.x[:, column_indices], ds.row_meta, ds.col_meta.iloc[column_indices])
+        if args.verbose:
+            print('Keeping ' + str(ds.x.shape[1]) + '/' + str(prior) + ' genes')
+
+
+    if args.cell_filter is not None:
+        prior = ds.x.shape[0]
+        if not os.path.isfile(args.cell_filter):
+            import re
+            expr = re.compile(args.cell_filter)
+            cell_ids = [elem for elem in ds.row_meta.index.values if expr.match(elem)]
+        else:
+            cell_ids = pd.read_table(args.cell_filter, index_col=0, header=None).index.values
+
+        # row_indices = np.isin(ds.row_meta.index.values, cell_ids, assume_unique=True)
+        row_indices = ds.row_meta.index.isin(cell_ids)
+        nkeep = np.sum(row_indices)
+        if args.verbose and len(cell_ids) > nkeep:
+            print(str(len(cell_ids) - nkeep) + ' are in cell filter, but not in matrix')
+
+        ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
+        if args.verbose:
+            print('Keeping ' + str(ds.x.shape[0]) + '/' + str(prior) + ' cells')
+    return ds
 
 def list_transport_maps(input_dir):
     transport_maps_inputs = []  # file, start, end
-    for path in glob.glob(input_dir):
+    is_pattern = not os.path.isdir(input_dir)
+    files = os.listdir(input_dir) if not is_pattern else glob.glob(input_dir)
+    for path in files:
+        path = os.path.join(os.path.dirname(input_dir), path) if not is_pattern else path
         if os.path.isfile(path):
-            file_info = wot.io.get_file_basename_and_extension(os.path.basename(path))
+            file_info = wot.io.get_filename_and_extension(os.path.basename(path))
             basename = file_info[0]
             tokens = basename.split('_')
             t1 = tokens[len(tokens) - 2]
@@ -34,9 +72,14 @@ def list_transport_maps(input_dir):
 
 def read_transport_maps(input_dir, ids=None, time=None):
     transport_maps_inputs = []  # file, start, end
-    for path in glob.glob(input_dir):
+    is_pattern = not os.path.isdir(input_dir)
+
+    files = os.listdir(input_dir) if not is_pattern else glob.glob(input_dir)
+
+    for path in files:
+        path = os.path.join(os.path.dirname(input_dir), path) if not is_pattern else path
         if os.path.isfile(path):
-            file_info = wot.io.get_file_basename_and_extension(os.path.basename(path))
+            file_info = wot.io.get_filename_and_extension(os.path.basename(path))
             basename = file_info[0]
             tokens = basename.split('_')
             t1 = tokens[len(tokens) - 2]
@@ -48,15 +91,17 @@ def read_transport_maps(input_dir, ids=None, time=None):
 
             except ValueError:
                 continue
-            transport_map = pd.read_table(path, index_col=0)
+            ds = wot.io.read_dataset(path)
             if ids is not None and t1 == time:
                 # subset rows
-                transport_map = transport_map[transport_map.index.isin(ids)]
+                indices = ds.row_meta.index.isin(ids)
+                ds = wot.Dataset(ds.x[indices], ds.row_meta.iloc[indices], ds.col_meta)
             if ids is not None and t2 == time:
                 # subset columns
-                transport_map = transport_map[ids]
+                indices = ds.col_meta.index.isin(ids)
+                ds = wot.Dataset(ds.x[:, indices], ds.row_meta, ds.col_meta.iloc[indices])
             transport_maps_inputs.append(
-                {'transport_map': transport_map, 't1': t1, 't2': t2})
+                {'transport_map': ds, 't1': t1, 't2': t2})
 
     transport_maps_inputs.sort(key=lambda x: x['t1'])  # sort by t1 (start time)
     return transport_maps_inputs
@@ -64,14 +109,58 @@ def read_transport_maps(input_dir, ids=None, time=None):
 
 def read_gene_sets(path, feature_ids=None):
     path = str(path)
-    basename_and_extension = get_file_basename_and_extension(path)
+    basename_and_extension = get_filename_and_extension(path)
     ext = basename_and_extension[1]
     if ext == 'gmt':
         return read_gmt(path, feature_ids)
     elif ext == 'gmx':
         return read_gmx(path, feature_ids)
+    elif ext == 'txt' or ext == 'grp':
+        return read_grp(path, feature_ids)
     else:
         raise ValueError('Unknown file format')
+
+
+def read_grp(path, feature_ids=None):
+    with open(path) as fp:
+        row_id_to_index = {}
+        if feature_ids is not None:
+            for i in range(len(feature_ids)):
+                row_id_to_index[feature_ids[i]] = i
+            row_ids = feature_ids
+        else:
+            row_ids = []
+
+        set_ids = []
+        members = [set_ids]
+        set_descriptions = ['']
+        set_names = [wot.io.get_filename_and_extension(os.path.basename(path))[0]]
+        for line in fp:
+            if line == '' or line[0] == '#':
+                continue
+
+            id = line.strip()
+            if id != '':
+                row_index = row_id_to_index.get(id)
+                if feature_ids is None:
+                    set_ids.append(id)
+                    if row_index is None:
+                        row_index = len(row_id_to_index)
+                        row_id_to_index[id] = row_index
+                        row_ids.append(id)
+                elif row_index is not None:
+                    set_ids.append(id)
+
+        x = np.zeros(shape=(len(row_ids), len(set_names)), dtype=np.int8)
+        for j in range(len(members)):
+            ids = members[j]
+            for id in ids:
+                row_index = row_id_to_index.get(id)
+                x[row_index, j] = 1
+
+        row_meta = pd.DataFrame(index=row_ids)
+        col_meta = pd.DataFrame(data={'description': set_descriptions}, index=set_names)
+        return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
 
 
 def read_gmt(path, feature_ids=None):
@@ -171,11 +260,10 @@ def read_gmx(path, feature_ids=None):
         return wot.Dataset(x, row_meta=row_meta, col_meta=col_meta)
 
 
-def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
-                 h5_col_meta=None, use_dask=False, genome10x=None, row_filter=None, col_filter=None,
+def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_filter=None, col_filter=None,
                  force_sparse=False):
     path = str(path)
-    basename_and_extension = get_file_basename_and_extension(path)
+    basename_and_extension = get_filename_and_extension(path)
     ext = basename_and_extension[1]
 
     if ext == 'mtx':
@@ -212,6 +300,7 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
         if row_meta is None:
             print(basename_and_extension[0] + '.barcodes.txt not found')
             row_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
+
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom':
         f = h5py.File(path, 'r')
@@ -233,6 +322,7 @@ def read_dataset(path, chunks=(500, 500), h5_x=None, h5_row_meta=None,
                                     data={'ensembl': group['genes'][()].astype(str)})
             row_meta = pd.DataFrame(index=group['barcodes'][()].astype(str))
             f.close()
+
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
 
         row_attrs = read_h5_attrs(f, h5_row_meta, row_filter)
@@ -373,14 +463,14 @@ def check_file_extension(name, format):
     return name
 
 
-def get_file_basename_and_extension(name):
+def get_filename_and_extension(name):
     dot_index = name.rfind('.')
     ext = ''
     basename = name
     if dot_index != -1:
         ext = name[dot_index + 1:]
         if ext == 'gz':
-            return get_file_basename_and_extension(name[0:dot_index])
+            return get_filename_and_extension(name[0:dot_index])
 
     if dot_index != -1:
         basename = name[0:dot_index]
@@ -421,7 +511,7 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
                                                                                                          quoting=csv.QUOTE_NONE)
             f.close()
         else:
-            import csv
+
             pd.DataFrame(ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x, index=ds.row_meta.index,
                          columns=ds.col_meta.index).to_csv(path,
                                                            index_label='id',
@@ -466,7 +556,6 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
                 dset[start:stop] = x[start:stop].toarray()
                 start += step
                 stop += step
-
 
         f.create_group('/layers')
         f.create_group('/row_graphs')

@@ -79,18 +79,14 @@ def sample_randomly(exp1, exp2, tm, g, npairs):
             'weights': weights}
 
 
-def filter_sets(cell_sets, cell_set_filter):
+def get_ids(expr):
     import os.path
-    import wot
-    if not os.path.isfile(cell_set_filter):
-        import re
-        expr = re.compile(cell_set_filter)
-        set_ids = [elem for elem in cell_sets.col_meta.index.values if expr.match(elem)]
+    if not os.path.isfile(expr):
+        set_ids = expr.split(',')
+        return list(map(lambda x: x.strip(), set_ids))
     else:
         import pd
-        set_ids = pd.read_table(cell_set_filter, index_col=0, header=None).index.values
-    indices = cell_sets.col_meta.index.isin(set_ids)
-    return wot.Dataset(cell_sets.x[:, indices], cell_sets.row_meta, cell_sets.col_meta.iloc[indices])
+        return list(pd.read_table(expr, index_col=0, header=None).index.values)
 
 
 def sample_uniformly(exp1, exp2, tm, npairs):

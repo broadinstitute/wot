@@ -22,7 +22,7 @@ pip install -e .
 ```
 
 ## <a name="prepare-expression-matrix"></a> Prepare Expression Matrix
-Apply a standard pre-processing workflow for scRNA-seq data. For example, normalize and scale your data, and detect variable genes.
+Apply a pre-processing workflow to normalize and scale your data, and detect variable genes.
 Suggested tools include [Seurat](https://satijalab.org/seurat/) or [Scanpy](http://scanpy.readthedocs.io/en/latest/).
 
 
@@ -60,24 +60,29 @@ Suggested tools include [Seurat](https://satijalab.org/seurat/) or [Scanpy](http
     4 TAB 6
     ```
 ## <a name="gene_set_scores"></a> Compute apoptosis and cell cycle scores to estimate growth rates (optional)
-Input a normalized gene expression matrix with all genes to compute an apoptosis and cell cycle score for each cell.
-
-Example:
-
-```
-wot gene_set --matrix my_expression_matrix.loom
-```
-
-## <a name="optimal_transport"></a> Optimal Transport
-Required Inputs
+Required Options
 
 Description | Flag
 --- | --- |
-**Normalized gene expression matrix of variable genes.** | --matrix
+**Normalized gene expression matrix with ALL GENES to compute an apoptosis and cell cycle score for each cell.** | --matrix
+**Base name for output file** | --prefix
+
+
+```
+wot gene_set_scores --matrix my_expression_matrix.loom
+```
+
+## <a name="optimal_transport"></a> Optimal Transport
+Required Options
+
+Description | Flag
+--- | --- |
+**Normalized gene expression matrix of VARIABLE GENES.** | --matrix
 **Assigns days to cells** | --cell_days
 **Pairs of days to compute transport maps for** | --day_pairs
+**Base name for output files** | --prefix
 
-Optional Important Inputs
+Optional Common Options
 
 Description | Flag
 --- | --- |

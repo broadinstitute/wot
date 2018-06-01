@@ -9,7 +9,7 @@ def trajectory(transport_maps, time, ids=None, normalize=False):
 
         Args:
             transport_maps (list): A sorted list of dictionaries
-            containing 'transport_map' (DataFrame), 't1', and 't2'. The
+            containing 'transport_map' (wot.Dataset), 't1', and 't2'. The
             ids (list): A list of ids to compute the trajectory for.
             time (float): The time at which the ids were measured.
             normalize (bool) Whether to normalize total mass to one at each
@@ -28,7 +28,7 @@ def trajectory(transport_maps, time, ids=None, normalize=False):
         raise RuntimeError(
             'Transport transport_map for time ' + str(time) + ' not found.')
 
-    # data frames have t1 on rows, t2 on columns
+    # transport maps have t1 on rows, t2 on columns
     transport_maps_by_start_time = list(map(lambda x: x['transport_map'], transport_maps))
     # if t=9, t_start_time_index=t9_t10
 
@@ -39,7 +39,6 @@ def trajectory(transport_maps, time, ids=None, normalize=False):
                 transport_maps_by_start_time[t_start_time_index].index.isin(
                     ids)]
 
-    # transport maps have t1 on rows, t2 on columns
 
     # ancestors, go backwards in time
     # t[i−2,i] = t[i−2,i−1]t[i−1,i]

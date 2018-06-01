@@ -16,10 +16,10 @@ class OptimalTransportHelper:
     @staticmethod
     def create_base_parser(description):
         parser = argparse.ArgumentParser(
-            description=description)
+            description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
         parser.add_argument('--matrix',
-                            help='Gene expression tab delimited file with cells on '
+                            help='Gene expression file with cells on '
                                  'rows and features on columns', required=True)
 
         parser.add_argument('--cell_days',
@@ -30,6 +30,14 @@ class OptimalTransportHelper:
                                  'pairs of days to compute transport maps for',
                             required=True)
 
+        parser.add_argument('--gene_filter',
+                            help='File with one gene id per line to use for computing cost matrices')
+        parser.add_argument('--cell_filter',
+                            help='File with one cell id per line to include or or a python regular expression of cell ids to include')
+
+        parser.add_argument('--out',
+                            help='Prefix for ouput file names', required=True)
+
         parser.add_argument('--epsilon', type=float, default=0.05,
                             help='Controls the entropy of the transport map. An '
                                  'extremely large entropy parameter will give a '
@@ -39,8 +47,7 @@ class OptimalTransportHelper:
                                  'deterministic transport map (but could also '
                                  'lead to '
                                  'numerical instability in the algorithm')
-        parser.add_argument('--prefix',
-                            help='Prefix for ouput file names', required=True)
+
         parser.add_argument('--ncells', help='Number of cells to sample from each timepoint', type=int)
         parser.add_argument('--ncounts', help='sample ncounts from each cell', type=int)
 
@@ -101,8 +108,7 @@ class OptimalTransportHelper:
                                  'sinkhorn_epsilon, unregularized',
                             choices=['epsilon', 'sinkhorn_epsilon', 'unbalanced', 'unregularized'],
                             default='unbalanced')
-        parser.add_argument('--cell_filter',
-                            help='File with one cell id per line to include or or a python regular expression of cell ids to include')
+
         parser.add_argument('--verbose', action='store_true',
                             help='Print progress information')
         return parser
@@ -118,25 +124,7 @@ class OptimalTransportHelper:
 
         # cells on rows, features on columns
         ds = wot.io.read_dataset(args.matrix)
-
-        if args.cell_filter is not None:
-            prior = ds.x.shape[0]
-            if not os.path.isfile(args.cell_filter):
-                import re
-                expr = re.compile(args.cell_filter)
-                cell_ids = [elem for elem in ds.row_meta.index.values if expr.match(elem)]
-            else:
-                cell_ids = pd.read_table(args.cell_filter, index_col=0, header=None).index.values
-
-            # row_indices = np.isin(ds.row_meta.index.values, cell_ids, assume_unique=True)
-            row_indices = ds.row_meta.index.isin(cell_ids)
-            nkeep = np.sum(row_indices)
-            if args.verbose and len(cell_ids) > nkeep:
-                print(str(len(cell_ids) - nkeep) + ' are in cell filter, but not in matrix')
-
-            ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
-            if args.verbose:
-                print('Keeping ' + str(ds.x.shape[0]) + '/' + str(prior) + ' cells')
+        ds = wot.io.filter_ds_from_command_line(ds, args)
 
         if args.ncounts is not None:
             for i in range(ds.x.shape[0]):
@@ -167,7 +155,7 @@ class OptimalTransportHelper:
             print('No day pairs found')
             exit(1)
         if args.gene_set_scores is not None:
-            ext = wot.io.get_file_basename_and_extension(args.gene_set_scores)[1]
+            ext = wot.io.get_filename_and_extension(args.gene_set_scores)[1]
             if ext == 'loom' or ext == 'gct':
                 gene_set_scores_ds = wot.io.read_dataset(args.gene_set_scores)
                 apoptosis = gene_set_scores_ds[:, np.where(gene_set_scores_ds.col_meta.columns == 'Apoptosis')[0]]

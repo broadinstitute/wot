@@ -24,6 +24,9 @@ def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, 
             rowSums = g
         else:
             rowSums = Tmap.sum(axis=1) / Tmap.shape[1]
+
+        np.save(str(lambda1) + '.npy', rowSums)
+        # np.save(str(lambda2) + '.npy', g.sum(axis=0) / g.shape[0])
         Tmap = transport_stablev2(C, lambda1, lambda2, epsilon,
                                   scaling_iter, rowSums, numInnerItermax=numInnerItermax, tau=tau,
                                   epsilon0=epsilon0)

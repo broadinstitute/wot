@@ -10,6 +10,10 @@ requirements = [
     'scikit-learn >=0.19', 'pandas >= 0.18', 'POT>=0.4.0'
 ]
 
+extras_require = {
+    'GRN': ["'gslrandom>=0.1.4'"],
+}
+
 setup_requirements = [
     # put setup requirements (distutils extensions, etc.) here
 ]
@@ -30,27 +34,30 @@ setup(
     author_email='wot@broadinstitute.org',
     url='https://github.com/broadinstitute/wot',
     packages=find_packages(include=['wot']),
-    entry_points={
-    },
     include_package_data=True,
     install_requires=requirements,
     license="BSD license",
     zip_safe=False,
     keywords='wot',
+
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
         'License :: OSI Approved :: BSD License',
-        'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Natural Language :: English',
+        'Topic :: Scientific/Engineering :: Bio-Informatics'
     ],
     test_suite='tests',
     tests_require=test_requirements,
     setup_requires=setup_requirements,
+    python_requires='~=3.0',
+    entry_points={
+        'console_scripts': [
+            'wot=wot.__main__:main',
+        ]
+    }
 )
