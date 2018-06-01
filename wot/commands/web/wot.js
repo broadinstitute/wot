@@ -6,6 +6,46 @@ var $cellSet = $('#cell_sets');
 var $features = $('#features');
 
 
+var interpolate = function (x, xi, yi, sigma) {
+    var n = xi.length;
+    var diff = new Float64Array(n);
+
+    for (var i = 0; i < n; i++) {
+        var val = x - xi[i];
+        val *= -val;
+        diff[i] = val;
+    }
+    var sigma2 = 2 * Math.pow(sigma, 2);
+    var wi = new Float64Array(n);
+    var wiSum = 0;
+    for (var i = 0; i < n; i++) {
+        var val = Math.exp(diff[i] / sigma2);
+        wi[i] = val;
+        wiSum += val;
+    }
+    var fx = 0;
+    for (var i = 0; i < n; i++) {
+        fx += yi[i] * wi[i];
+    }
+    return fx / wiSum;
+};
+
+var kernelSmooth = function (xi, yi, stop, start, steps, sigma) {
+    var xlist = new Float64Array(steps);
+    var stepSize = (stop - start) / (steps - 1);
+    for (var i = 0; i < steps; i++) {
+        xlist[i] = start;
+        start += stepSize;
+    }
+    var fhat = new Float64Array(xlist.length);
+    for (var i = 0, length = xlist.length; i < length; i++) {
+        fhat[i] = interpolate(xlist[i], xi, yi, sigma);
+    }
+    return [xlist, fhat]
+
+};
+
+
 var createForceLayoutPlotObject = function () {
     var layout =
         {
@@ -290,14 +330,14 @@ $features
 });
 
 var showTrajectoryPlots = function (result) {
-    var ancestry_divergence_traces = result.ancestry_divergence_traces;
+    var ancestryDivergenceTraces = result.ancestry_divergence_traces;
     var force = result.force;
-    var dataset_name_to_traces = result.dataset_name_to_traces;
-    if (ancestry_divergence_traces && ancestry_divergence_traces.length > 0) {
+    var datasetNameToTraces = result.dataset_name_to_traces;
+    if (ancestryDivergenceTraces && ancestryDivergenceTraces.length > 0) {
         var $div = $('<li style="list-style: none;"><h4>Ancestry Divergence</h4><div class="plot"></div></li>');
         $div.appendTo($trajectoryEl);
 
-        Plotly.newPlot($div.find('.plot')[0], ancestry_divergence_traces, {
+        Plotly.newPlot($div.find('.plot')[0], ancestryDivergenceTraces, {
                 title: '',
                 showlegend: true,
                 yaxis: {
@@ -310,11 +350,18 @@ var showTrajectoryPlots = function (result) {
             }
         );
     }
-    if (dataset_name_to_traces) {
-        for (var key in dataset_name_to_traces) {
+    if (datasetNameToTraces) {
+        for (var key in datasetNameToTraces) {
             var $div = $('<li style="list-style: none;"><h4>Trajectory Trends</h4><div class="plot"></div></li>');
             $div.appendTo($trajectoryEl);
-            Plotly.newPlot($div.find('.plot')[0], dataset_name_to_traces[key],
+            var traces = datasetNameToTraces[key];
+            traces.forEach(function (trace) {
+                var smoothed = kernelSmooth(trace.x, trace.y, trace.x[trace.x.length - 1], 0, 1000, 0.7);
+                trace.x = smoothed[0];
+                trace.y = smoothed[1];
+            });
+
+            Plotly.newPlot($div.find('.plot')[0], traces,
                 {
                     title: '',
                     xaxis: {title: 'Time'},
@@ -361,7 +408,6 @@ var fetchTrajectoryData = function () {
         });
         data.ncustom_cell_sets = ncustom_cell_sets;
         data.cell_set = selectedCellSets;
-        console.log(data);
         $.ajax({url: '/trajectory/', data: data, method: 'POST'}).done(function (results) {
             showTrajectoryPlots(results);
             $('#trajectory_loading').hide();
@@ -654,6 +700,6 @@ $('#export_set').on('click', function () {
     }
     if (text.length > 0) {
         var blob = new Blob([text.join('')], {type: "text/plain;charset=utf-8"});
-        window.saveAs(blob, 'custom_cell_sets.gmt');
+        saveAs(blob, 'custom_cell_sets.gmt');
     }
 });

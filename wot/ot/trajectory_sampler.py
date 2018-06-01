@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import argparse
 import numpy as np
 import wot.ot
 import wot.io
-import csv
 import pandas as pd
 import scipy.stats
 import os
@@ -40,19 +38,19 @@ class TrajectorySampler:
         return {'time_to_cell_sets': time_to_cell_sets, 'cell_set_group_to_names': cell_set_group_to_names}
 
     @staticmethod
-    def trajectory_plot(transport_maps, time_to_cell_sets, ncells=1000, coords=None,
+    def trajectory_plot(transport_maps, time_to_cell_sets, coords=None,
                         datasets=None, dataset_names=None, cache_transport_maps=False, smooth=False):
 
         cell_set_name_to_force_layout_traces = {}
         sampled_results = TrajectorySampler.sample_all_timepoints(transport_maps=transport_maps,
                                                                   time_to_cell_sets=time_to_cell_sets,
-                                                                  ncells=ncells, datasets=datasets,
+                                                                  datasets=datasets,
                                                                   dataset_names=dataset_names,
                                                                   cache_transport_maps=cache_transport_maps,
                                                                   smooth=smooth)
         cell_set_names = sampled_results['cell_set_names']
         results = sampled_results['results']
-        dataset_name_to_traces = sampled_results['dataset_name_to_traces']
+
         for result_dict in results:  # each cell set
             highs = []
             lows = []
@@ -114,6 +112,7 @@ class TrajectorySampler:
             for t in traces:
                 del t['v']
 
+        dataset_name_to_traces = sampled_results['dataset_name_to_traces']
         return {'ancestry_divergence_traces': ancestry_divergence_traces,
                 'dataset_name_to_traces': dataset_name_to_traces,
                 'force': cell_set_name_to_force_layout_traces}
@@ -265,8 +264,8 @@ class TrajectorySampler:
                 if smooth:
                     x = trace['x']
                     xsmooth, ysmooth = wot.ot.TrajectorySampler.kernel_smooth(x, trace['y'], stop=x[len(x) - 1])
-                    trace['x'] = xsmooth.tolist()
-                    trace['y'] = ysmooth.tolist()
+                    trace['x'] = xsmooth
+                    trace['y'] = ysmooth
 
                 trace['mode'] = 'lines'
 

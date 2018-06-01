@@ -141,14 +141,14 @@ def main(argsv):
         feature_ids = flask.request.form.getlist('feature[]')  # list of ids
         cell_set_ids = set(flask.request.form.getlist('cell_set[]'))  # list of ids
         ncustom_cell_sets = int(flask.request.form.get('ncustom_cell_sets', '0'))
-
+        print(flask.request.form)
         filtered_time_to_cell_sets = {}
         if ncustom_cell_sets > 0:
             for i in range(ncustom_cell_sets):
-                cell_ids = flask.request.form.getlist('cell_set_ids' + str(i))
-                if len(cell_ids) == 0:
-                    raise ValueError('No cell ids specified for custom cell set ' + str(i))
                 cell_set_name = flask.request.form.get('cell_set_name' + str(i))
+                cell_ids = flask.request.form.getlist('cell_set_ids' + str(i) + '[]')
+                if len(cell_ids) == 0:
+                    raise ValueError('No cell ids specified for custom cell set ' + cell_set_name)
 
                 tokens = cell_set_name.split('_')
                 t = float(tokens[len(tokens) - 1])
@@ -181,11 +181,17 @@ def main(argsv):
                         wot.Dataset(ds.x[:, column_indices], ds.row_meta, ds.col_meta.iloc[column_indices]))
                     filtered_dataset_names.append(dataset_names[i])
 
-        data = wot.ot.TrajectorySampler.trajectory_plot(transport_maps=transport_maps, ncells=1000, coords=coords,
+        data = wot.ot.TrajectorySampler.trajectory_plot(transport_maps=transport_maps, coords=coords,
                                                         time_to_cell_sets=filtered_time_to_cell_sets,
                                                         datasets=filtered_datasets,
                                                         dataset_names=filtered_dataset_names, cache_transport_maps=True,
                                                         smooth=True)
+        dataset_name_to_traces = data['dataset_name_to_traces']
+        for name in dataset_name_to_traces:
+            traces = dataset_name_to_traces[name]
+            for trace in traces:
+                trace['x'] = trace['x'].tolist()
+                trace['y'] = trace['y'].tolist()
         return flask.jsonify(data)
 
     app.run()
