@@ -34,8 +34,7 @@ class OptimalTransportHelper:
         parser.add_argument('--cell_filter',
                             help='File with one cell id per line to include or or a python regular expression of cell ids to include')
 
-        parser.add_argument('--out',
-                            help='Prefix for ouput file names', required=True)
+        parser.add_argument('--out', help='Prefix for ouput file names')
 
         parser.add_argument('--epsilon', type=float, default=0.05,
                             help='Controls the entropy of the transport map. An '
@@ -120,6 +119,9 @@ class OptimalTransportHelper:
                     'eigenvals'].values
         if eigenvals is not None and args.power is not None:
             eigenvals = np.power(eigenvals, args.power)
+
+        if args.out is None:
+            args.out = wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0] + '_ot'
 
         # cells on rows, features on columns
         ds = wot.io.read_dataset(args.matrix)

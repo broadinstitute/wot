@@ -68,15 +68,16 @@ var createForceLayoutPlotObject = function () {
                 showticklabels: false
             },
             title: '',
-            width: 500,
-            height: 420,
+            width: 700,
+            height: 440,
             margin: {
                 l: 0,
-                r: 0,
                 b: 0,
+                r: 300,
+                t: 15,
                 pad: 0
             },
-            autosize: false
+            autosize: true
         };
 
     var backgroundTrace = {
@@ -120,7 +121,7 @@ var createForceLayoutTrajectory = function (force, key) {
 
 
     var elem = $div.find('.plot')[0];
-
+    var forceLayoutInfo = createForceLayoutPlotObject();
     var backgroundTrace = forceLayoutInfo.backgroundTrace;
 
     var index = 0;
@@ -188,16 +189,19 @@ var createForceLayoutTrajectory = function (force, key) {
     });
     showFrame();
 };
-var forceLayoutInfo;
+var cellForceLayoutInfo = null;
+var featureForceLayoutInfo = null;
 $.ajax('/cell_info/').done(function (result) {
     cellInfo = result;
     for (var i = 0, length = cellInfo.id.length; i < length; i++) {
         cellIdToIndex[cellInfo.id[i]] = i;
     }
-    forceLayoutInfo = createForceLayoutPlotObject();
+    cellForceLayoutInfo = createForceLayoutPlotObject();
+
+    featureForceLayoutInfo = createForceLayoutPlotObject();
     Plotly.react('trajectory_set_vis', {
-        data: [forceLayoutInfo.backgroundTrace],
-        layout: forceLayoutInfo.layout
+        data: [cellForceLayoutInfo.backgroundTrace],
+        layout: cellForceLayoutInfo.layout
     });
 
 
@@ -234,8 +238,8 @@ $cellSet.on('change', function () {
     var selectedSets = $cellSet.val();
     if (selectedSets == null || selectedSets.length === 0) {
         Plotly.react('trajectory_set_vis', {
-            data: [forceLayoutInfo.backgroundTrace],
-            layout: forceLayoutInfo.layout
+            data: [cellForceLayoutInfo.backgroundTrace],
+            layout: cellForceLayoutInfo.layout
         });
         return;
     }
@@ -268,9 +272,10 @@ $cellSet.on('change', function () {
 
 
         }
+
         Plotly.react('trajectory_set_vis', {
-            data: [forceLayoutInfo.backgroundTrace].concat(traces),
-            layout: forceLayoutInfo.layout
+            data: [cellForceLayoutInfo.backgroundTrace].concat(traces),
+            layout: cellForceLayoutInfo.layout
         });
     });
 
@@ -340,6 +345,8 @@ var showTrajectoryPlots = function (result) {
         Plotly.newPlot($div.find('.plot')[0], ancestryDivergenceTraces, {
                 title: '',
                 showlegend: true,
+                autosize: true,
+                margin: {t: 15},
                 yaxis: {
                     range: [-0.05, 1.05], autorange: false, 'zeroline': false,
                     title: 'Divergence'
@@ -364,9 +371,11 @@ var showTrajectoryPlots = function (result) {
             Plotly.newPlot($div.find('.plot')[0], traces,
                 {
                     title: '',
+                    autosize: true,
                     xaxis: {title: 'Time'},
                     yaxis: {title: 'Value', autorange: true, 'zeroline': false},
-                    showlegend: true
+                    showlegend: true,
+                    margin: {t: 15}
                 });
         }
 
@@ -462,7 +471,7 @@ var createSets = function () {
     $cellSet.selectpicker('render');
 };
 
-
+var enterQuantile = true;
 var showFeature = function () {
     if (featureResult == null) {
         return;
@@ -476,19 +485,20 @@ var showFeature = function () {
             return value !== 0;
         });
     }
-    var quantileValue = null;
+    var filterValue = null;
     var f = function () {
         return true;
     };
     if (selectedQuantile != null && !isNaN(selectedQuantile)) {
-        quantileValue = d3.quantile(sortedValues, selectedQuantile);
+
+        filterValue = enterQuantile ? d3.quantile(sortedValues, selectedQuantile / 100.0) : selectedQuantile;
         if ($('#filter_op').val() == 'gt') {
             f = function (d) {
-                return d > quantileValue;
+                return d > filterValue;
             };
         } else {
             f = function (d) {
-                return d < quantileValue;
+                return d < filterValue;
             };
         }
     }
@@ -523,11 +533,10 @@ var showFeature = function () {
         return (a === b ? 0 : (a < b ? -1 : 1));
     });
     var html = [];
-    if (quantileValue != null) {
+    if (filterValue != null) {
         var percentFormatter = d3.format('.1f');
         var groupedThousands = d3.format(',');
-
-        html.push('<h4>Cell Selection Summary</h4><table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Time</th><th># Cells Selected</th><th>% Cells Selected</th></tr>');
+        html.push('<h4>Cell Selection Summary <small> ' + ($('#filter_op').val() === 'gt' ? 'Greater then' : 'Less then') + ' ' + d3.format('.2f')(filterValue) + '</small></h4><table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Time</th><th># Cells Selected</th><th>% Cells Selected</th></tr>');
         var totalPass = 0;
         var total = 0;
         for (var i = 0; i < times.length; i++) {
@@ -570,12 +579,12 @@ var showFeature = function () {
             type: 'histogram',
             marker: {color: 'LightGrey', opacity: 0.7}
         }], {
-        shapes: quantileValue == null ? null : [{
+        shapes: filterValue == null ? null : [{
             type: 'line',
             xref: 'x',
             yref: 'paper',
-            x0: quantileValue,
-            x1: quantileValue,
+            x0: filterValue,
+            x1: filterValue,
             y0: 0,
             y1: 1,
             line: {
@@ -586,8 +595,9 @@ var showFeature = function () {
     });
     if (updateForceLayout) {
         updateForceLayout = false;
+
         Plotly.react('force_layout_vis', {
-            data: [forceLayoutInfo.backgroundTrace, {
+            data: [featureForceLayoutInfo.backgroundTrace, {
                 mode: 'markers',
                 type: 'scattergl',
                 hoverinfo: 'none',
@@ -603,7 +613,7 @@ var showFeature = function () {
                 x: forceLayoutX,
                 y: forceLayoutY
             }],
-            layout: forceLayoutInfo.layout
+            layout: featureForceLayoutInfo.layout
         });
     }
 
@@ -642,6 +652,24 @@ $setFeature.on('keydown', function (event) {
         response(autocompleteFilter(request.term));
     }
 });
+var $filterValue = $('#filter_quantile');
+
+$('#enter-quantile').on('click', function (e) {
+    e.preventDefault();
+    enterQuantile = true;
+    $filterValue.prop('placeholder', 'Enter a quantile');
+    $('#enter-value').show();
+    $(this).hide();
+    showFeature();
+});
+$('#enter-value').on('click', function (e) {
+    e.preventDefault();
+    enterQuantile = false;
+    $filterValue.prop('placeholder', 'Enter a number');
+    $('#enter-quantile').show();
+    $(this).hide();
+    showFeature();
+});
 
 $('#set_form').on('submit', function (e) {
     e.preventDefault();
@@ -670,11 +698,11 @@ function debounce(func, wait, immediate) {
         if (callNow) func.apply(context, args);
     };
 };
-$('#filter_quantile').on('keyup', debounce(function (e) {
+$filterValue.on('keyup', debounce(function (e) {
     if (e.which === 13) {
         e.preventDefault();
     }
-    selectedQuantile = parseFloat($(this).val().trim()) / 100;
+    selectedQuantile = parseFloat($(this).val().trim());
     showFeature();
 }, 500));
 

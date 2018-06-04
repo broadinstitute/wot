@@ -17,7 +17,7 @@
     <script type="text/javascript" src="js/bootstrap-select.min.js"></script>
     <script type="text/javascript" src="js/jquery-ui.min.js"></script>
     <script type="text/javascript" src="js/d3.v5.min.js"></script>
-    <script type="text/javascript" src="js/FileSaver.js"></script>
+    <script type="text/javascript" src="js/FileSaver.min.js"></script>
 
 </head>
 <body>
@@ -92,8 +92,10 @@
                             </select>
                             <input placeholder="Enter quantile" class="form-control input-sm" id="filter_quantile"
                                    type="text" style="width:150px;display:inline-block;">
+                            <span class="help-block"><a style="display:none;" id="enter-quantile" href="#">Enter a quantile instead</a><a
+                                    id="enter-value" href="#">Enter a value instead</a></span>
                         </div>
-                        <button id="create_set" type="button" class="btn btn-default btn-sm">Create Cell Set</button>
+                        <button id="create_set" type="button" class="btn btn-default btn-sm">Create Cell Sets</button>
                         <hr/>
                         <button id="export_set" type="button" class="btn btn-default btn-sm">Export Custom Cell Sets
                         </button>

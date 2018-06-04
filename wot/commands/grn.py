@@ -186,8 +186,10 @@ def main(argsv):
                         help='Number of epochs', type=int, default=10000)
 
     parser.add_argument('--out',
-                        help='Prefix for ouput file names', required=True)
+                        help='Prefix for ouput file names')
     args = parser.parse_args(argsv)
+    if args.out is None:
+        args.out = wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0] + '_grn'
     N = args.nmodules
     epochs = args.epochs
     TimeLag = args.time_lag

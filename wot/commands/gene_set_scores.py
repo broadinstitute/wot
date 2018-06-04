@@ -3,6 +3,7 @@
 
 import argparse
 import wot.io
+import os
 
 
 def compute(matrix, gene_sets, no_zscore, out, format, use_dask=False):
@@ -25,9 +26,7 @@ def main(argv):
                         help='Gene expression matrix', required=True)
     parser.add_argument('--gene_sets',
                         help='Gene sets in gmx or gmt format. If not specified gene sets for apoptosis and cell cycle are used')
-    parser.add_argument('--out',
-                        help='Output file name prefix',
-                        required=True)
+    parser.add_argument('--out', help='Output file name prefix')
     parser.add_argument('--no_zscore', action='store_true',
                         help='Do not z-score genes')
     parser.add_argument('--verbose', action='store_true',
@@ -36,6 +35,9 @@ def main(argv):
     parser.add_argument('--format', help='Output file format', default='loom')
 
     args = parser.parse_args(argv)
+    if args.out is None:
+        args.out = wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0] + '_scores'
+
     use_dask = False
     # use_dask = args.dask is not None
     # if use_dask:
@@ -49,7 +51,6 @@ def main(argv):
 
     gene_sets = args.gene_sets
     if gene_sets is None:
-        import os
         import sys
         gene_sets = os.path.join(os.path.dirname(sys.argv[0]), 'resources', 'growth_scores_gene_sets.gmt')
     compute(matrix=args.matrix, gene_sets=gene_sets, no_zscore=args.no_zscore, out=args.out,
