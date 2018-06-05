@@ -7,11 +7,11 @@ import wot.io
 import wot.ot
 import numpy as np
 import pandas as pd
-import flask
 import sys
 
 
 def main(argsv):
+    import flask
     parser = argparse.ArgumentParser(description='Visualize cell set trajectories')
     parser.add_argument('--dir',
                         help='Directory of transport maps as produced by ot',
