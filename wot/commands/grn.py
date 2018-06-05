@@ -4,6 +4,7 @@ from scipy.stats import entropy
 import numexpr as ne
 from sklearn.cluster import SpectralClustering
 from itertools import combinations
+from gslrandom import PyRNG, multinomial
 
 
 def dum(x):
@@ -157,7 +158,6 @@ def main(argsv):
     import wot.io
     import pandas as pd
     import os
-    from gslrandom import PyRNG, multinomial
     parser = argparse.ArgumentParser(
         description='Gene Regulatory Networks')
 
