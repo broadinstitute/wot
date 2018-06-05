@@ -174,7 +174,7 @@ def main(argsv):
     parser.add_argument('--cell_days',
                         help='Two column tab delimited file without header with '
                              'cell ids and days', required=True)
-    parser.add_argument('--time_lag', help='Time lag', type=float)
+    parser.add_argument('--time_lag', help='Time lag', type=float, required=True)
     parser.add_argument('--nmodules', help='Number of gene expression modules', type=int, default=50)
 
     parser.add_argument('--U', help='Gene module initialization matrix')
