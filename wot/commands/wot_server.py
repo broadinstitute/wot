@@ -12,32 +12,36 @@ import sys
 
 def main(argsv):
     import flask
-    parser = argparse.ArgumentParser(description='Visualize cell set trajectories')
+    parser = argparse.ArgumentParser(description='Run wot server')
     parser.add_argument('--dir',
-                        help='Directory of transport maps as produced by ot',
-                        required=True)
+                        help='Directory of transport maps as produced by ot')
     parser.add_argument('--cell_days',
                         help='Two column tab delimited file without header with cell ids and days', required=True)
     parser.add_argument('--cell_sets',
-                        help='One or more gmt or gmx files containing cell sets. Each set id should end with _time (e.g. my_set_9)',
-                        required=True, action='append')
+                        help='One or more gmt or gmx files containing cell sets. Each set id should end with _time (e.g. my_cell_set_9)',
+                        action='append')
     parser.add_argument('--cell_filter',
                         help='File with one cell id per line to include or or a python regular expression of cell ids to include')
     parser.add_argument('--coords',
                         help='Three column tab delimited file with header fields id, x, and y that contains 2-d cell coordinates',
                         required=True)
-
+    parser.add_argument('--cell_meta',
+                        help='Extra metadata to join with metadata in coords and cell_days')
     parser.add_argument('--matrix',
                         help='One or more matrices with cells on rows and features, such as genes or pathways on columns',
                         action='append')
 
     args = parser.parse_args(argsv)
-    cell_set_info = wot.ot.TrajectorySampler.create_time_to_cell_sets(args.cell_sets)
-    cell_set_group_to_names = cell_set_info['cell_set_group_to_names']
-    time_to_cell_sets = cell_set_info['time_to_cell_sets']
+    if args.cell_sets is not None:
+        cell_set_info = wot.ot.TrajectorySampler.create_time_to_cell_sets(args.cell_sets)
+        cell_set_group_to_names = cell_set_info['cell_set_group_to_names']
+        time_to_cell_sets = cell_set_info['time_to_cell_sets']
+    else:
+        cell_set_group_to_names = {}
+        time_to_cell_sets = {}
 
-    days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None, names=['day'], engine='python', sep=None,
-                                    dtype={'day': np.float64})
+    days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None, names=['t'], engine='python', sep=None,
+                                    dtype={'t': np.float64})
 
     coords = pd.read_csv(args.coords, index_col='id', engine='python', sep=None)
     nx = 400
@@ -46,14 +50,19 @@ def main(argsv):
     xmax = np.max(coords['x'])
     ymin = np.min(coords['y'])
     ymax = np.max(coords['y'])
-    coords['px'] = np.floor(np.interp(coords['x'].values, [xmin, xmax], [0, nx])).astype(int)
-    coords['py'] = np.floor(np.interp(coords['y'].values, [ymin, ymax], [0, ny])).astype(int)
-    coords = coords.drop(['x', 'y'], axis=1)
+    coords['x'] = np.floor(np.interp(coords['x'].values, [xmin, xmax], [0, nx])).astype(int)
+    coords['y'] = np.floor(np.interp(coords['y'].values, [ymin, ymax], [0, ny])).astype(int)
+    # coords = coords.drop(['x', 'y'], axis=1)
     coords = coords.join(days_data_frame)
-    coords[np.isnan(coords['day'].values)] = -1
-    transport_maps = wot.io.list_transport_maps(args.dir)
-    if len(transport_maps) == 0:
-        raise ValueError('No transport maps found')
+    coords[np.isnan(coords['t'].values)] = -1
+    if args.cell_meta is not None:
+        coords = coords.join(pd.read_csv(args.cell_meta, index_col='id', engine='python', sep=None))
+    if args.dir is not None:
+        transport_maps = wot.io.list_transport_maps(args.dir)
+        if len(transport_maps) == 0:
+            raise ValueError('No transport maps found')
+    else:
+        transport_maps = []
     transport_map_times = set()
     for tmap in transport_maps:
         transport_map_times.add(tmap['t1'])
@@ -88,9 +97,10 @@ def main(argsv):
 
     @app.route("/cell_info/", methods=['GET'])
     def get_coords():
-        return flask.jsonify(
-            {'id': coords.index.values.tolist(), 'x': coords['px'].values.tolist(),
-             'y': coords['py'].values.tolist(), 't': coords['day'].values.tolist()})
+        json = {'id': coords.index.values.tolist()}
+        for column_name in coords:
+            json[column_name] = coords[column_name].values.tolist()
+        return flask.jsonify(json)
 
     @app.route("/list_times/", methods=['GET'])
     def list_times():
@@ -124,7 +134,6 @@ def main(argsv):
     @app.route("/cell_set_members/", methods=['GET'])
     def cell_set_members():
         cell_set_ids = set(flask.request.args.getlist('cell_set[]'))  # list of ids
-        print(cell_set_ids)
         filtered_cell_sets = []
         for t in time_to_cell_sets:
             cell_sets = time_to_cell_sets[t]

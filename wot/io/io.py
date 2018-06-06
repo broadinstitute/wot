@@ -49,7 +49,7 @@ def list_transport_maps(input_dir):
     is_pattern = not os.path.isdir(input_dir)
     files = os.listdir(input_dir) if not is_pattern else glob.glob(input_dir)
     for path in files:
-        path = os.path.join(os.path.dirname(input_dir), path) if not is_pattern else path
+        path = os.path.join(input_dir, path) if not is_pattern else path
         if os.path.isfile(path):
             file_info = wot.io.get_filename_and_extension(os.path.basename(path))
             basename = file_info[0]
@@ -448,15 +448,17 @@ def read_h5_attrs(f, path, filter):
     return {'attrs': data, 'indices': indices}
 
 
-def check_file_extension(name, format):
+def check_file_extension(name, output_format):
     expected = None
-    if format == 'txt':
+    if output_format == 'csv':
+        expected = '.csv'
+    elif output_format == 'txt':
         expected = '.txt'
-    elif format == 'txt.gz':
+    elif output_format == 'txt.gz':
         expected = '.txt.gz'
-    elif format == 'loom':
+    elif output_format == 'loom':
         expected = '.loom'
-    elif format == 'gct':
+    elif output_format == 'gct':
         expected = '.gct'
     if expected is not None:
         if not str(name).lower().endswith(expected):

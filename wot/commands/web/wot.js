@@ -1,10 +1,11 @@
 var $trajectoryEl = $('#trajectory_vis');
 var cellInfo; // id, x, y, t
+var cellInfoHeaderNames;
 var cellIdToIndex = {};
 var featureIds;
 var $cellSet = $('#cell_sets');
 var $features = $('#features');
-
+var $force_layout_group_by = $('#force_layout_group_by');
 
 var interpolate = function (x, xi, yi, sigma) {
     var n = xi.length;
@@ -46,6 +47,72 @@ var kernelSmooth = function (xi, yi, stop, start, steps, sigma) {
 };
 
 
+var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
+    var $controls = $('<div style="display: inline;"><button class="btn btn-default btn-sm" name="play">Play</button>  <select style="width:auto;" class="form-control input-sm" data-name="time"></select></div>');
+    var index = 0;
+    var times = [];
+    times.push('All');
+    for (var i = 0; i < traces.length; i++) {
+        times.push(traces[i].t);
+    }
+    var $time = $controls.find('[data-name=time]');
+    $time.html(times.map(function (value, timeIndex) {
+        return '<option value="' + timeIndex + '">' + value + '</option>';
+    }).join(''));
+
+    function showFrame() {
+        if (index > traces.length) {
+            index = 0; // reset
+        }
+        var concatTraces;
+        var t;
+        if (index === 0) {
+            traces[0].marker.showscale = true;
+            for (var i = 1; i < traces.length; i++) {
+                traces[i].marker.showscale = false;
+            }
+            concatTraces = traces; // all
+        } else {
+            traces[index - 1].marker.showscale = true;
+            concatTraces = [traces[index - 1]]
+        }
+        $time.val(index);
+
+        Plotly.newPlot(elem, {
+            data: [backgroundTrace].concat(concatTraces),
+            layout: layout
+        });
+    }
+
+    function nextTick() {
+        if ($playBtn.text() === 'Pause') {
+            index++;
+            showFrame();
+            setTimeout(nextTick, 500);
+        }
+    }
+
+    var $playBtn = $controls.find('[name=play]');
+    $playBtn.on('click', function () {
+        if ($playBtn.text() === 'Play') {
+            $playBtn.text('Pause');
+            nextTick();
+        } else {
+            $playBtn.text('Play');
+        }
+
+    });
+
+
+    $time.val('All');
+    $time.on('change', function (e) {
+        index = parseInt($time.val());
+        $playBtn.text('Play');
+        showFrame();
+    });
+    showFrame();
+    return $controls;
+};
 var createForceLayoutPlotObject = function () {
     var layout =
         {
@@ -99,7 +166,6 @@ var createForceLayoutTrajectory = function (force, key) {
     var $div = $('<li style="list-style: none;"><h4>' + key +
         ' Trajectory</h4><div class="plot"></div><div data-name="controls"></div></li>'
     );
-
     traces.forEach(function (trace) {
         trace.mode = 'markers';
         trace.type = 'scattergl';
@@ -114,84 +180,29 @@ var createForceLayoutTrajectory = function (force, key) {
             color: trace.marker.color
         };
     });
-    var $controls = $div.find('[data-name=controls]');
-    $('<button class="btn btn-default btn-sm" name="play">Play</button>  <select style="width:auto;" class="form-control input-sm" data-name="time"></select>').appendTo($controls);
-    $controls.after($div.find('.plot'));
-    $div.appendTo($trajectoryEl);
 
 
     var elem = $div.find('.plot')[0];
     var forceLayoutInfo = createForceLayoutPlotObject();
     var backgroundTrace = forceLayoutInfo.backgroundTrace;
+    var $controls = createPlotAnimation(backgroundTrace, traces, elem, forceLayoutInfo.layout);
+    $controls.appendTo($div.find('[data-name=controls]'));
 
-    var index = 0;
-    var times = [];
-    times.push('All');
-    for (var i = 0; i < traces.length; i++) {
-        times.push(traces[i].t);
-    }
-    var $time = $controls.find('[data-name=time]');
-    $time.html(times.map(function (value, timeIndex) {
-        return '<option value="' + timeIndex + '">' + value + '</option>';
-    }).join(''));
-
-    function showFrame() {
-        if (index > traces.length) {
-            index = 0; // reset
-        }
-        var concatTraces;
-        var t;
-        if (index === 0) {
-            traces[0].marker.showscale = true;
-            for (var i = 1; i < traces.length; i++) {
-                traces[i].marker.showscale = false;
-            }
-            concatTraces = traces; // all
-        } else {
-            traces[index - 1].marker.showscale = true;
-            concatTraces = [traces[index - 1]]
-        }
-
-        $time.val(index);
-
-        Plotly.react(elem, {
-            data: [backgroundTrace].concat(concatTraces),
-            layout: forceLayoutInfo.layout
-        });
-
-    }
-
-    function nextTick() {
-        if ($playBtn.text() === 'Pause') {
-            index++;
-            showFrame();
-            setTimeout(nextTick, 500);
-        }
-    }
-
-    var $playBtn = $controls.find('[name=play]');
-    $playBtn.on('click', function () {
-        if ($playBtn.text() === 'Play') {
-            $playBtn.text('Pause');
-            nextTick();
-        } else {
-            $playBtn.text('Play');
-        }
-
-    });
-
-
-    $time.val('All');
-    $time.on('change', function (e) {
-        index = parseInt($time.val());
-        $playBtn.text('Play');
-        showFrame();
-    });
-    showFrame();
 };
 var cellForceLayoutInfo = null;
 var featureForceLayoutInfo = null;
 $.ajax('/cell_info/').done(function (result) {
+    cellInfoHeaderNames = [];
+    for (var key in result) {
+        if (key !== 'id' && key !== 'x' && key !== 'y') {
+            cellInfoHeaderNames.push(key);
+        }
+    }
+    $force_layout_group_by.html(cellInfoHeaderNames.map(function (value) {
+        return '<option value="' + value + '">' + value + '</option>'
+    }).join(''));
+    $force_layout_group_by.selectpicker('refresh');
+    $force_layout_group_by.selectpicker('render');
     cellInfo = result;
     for (var i = 0, length = cellInfo.id.length; i < length; i++) {
         cellIdToIndex[cellInfo.id[i]] = i;
@@ -199,7 +210,7 @@ $.ajax('/cell_info/').done(function (result) {
     cellForceLayoutInfo = createForceLayoutPlotObject();
 
     featureForceLayoutInfo = createForceLayoutPlotObject();
-    Plotly.react('trajectory_set_vis', {
+    Plotly.newPlot('trajectory_set_vis', {
         data: [cellForceLayoutInfo.backgroundTrace],
         layout: cellForceLayoutInfo.layout
     });
@@ -237,7 +248,7 @@ $.ajax('/list_cell_sets/').done(function (result) {
 $cellSet.on('change', function () {
     var selectedSets = $cellSet.val();
     if (selectedSets == null || selectedSets.length === 0) {
-        Plotly.react('trajectory_set_vis', {
+        Plotly.newPlot('trajectory_set_vis', {
             data: [cellForceLayoutInfo.backgroundTrace],
             layout: cellForceLayoutInfo.layout
         });
@@ -273,7 +284,7 @@ $cellSet.on('change', function () {
 
         }
 
-        Plotly.react('trajectory_set_vis', {
+        Plotly.newPlot('trajectory_set_vis', {
             data: [cellForceLayoutInfo.backgroundTrace].concat(traces),
             layout: cellForceLayoutInfo.layout
         });
@@ -438,13 +449,13 @@ $('#trajectory_submit').on('click', function (e) {
 var setSelectedFeature = null;
 var $setFeature = $('#set_features');
 var featureResult;
-var selectedQuantile = null;
+var userFilterValue = null;
 var excludeZeros = false;
 var timeToCellIds = {}; // time -> {ids:[], ntotal:Number}
 var customCellSetNameToIds = {};
 var $filterOp = $('#filter_op');
 var filterOp = $filterOp.val();
-var updateForceLayout = true;
+var enterQuantile = true; // enter a quantile or value
 var createSets = function () {
     var selectedTimes = [];
     $('.time').filter(':checked').each(function () {
@@ -452,7 +463,7 @@ var createSets = function () {
     });
 
     selectedTimes.forEach(function (t) {
-        var name = setSelectedFeature + '_' + filterOp + '_' + selectedQuantile + '_' + t;
+        var name = setSelectedFeature + '_' + filterOp + '_' + userFilterValue + '_' + t;
         customCellSetNameToIds[name] = timeToCellIds[t].ids;
     });
     var options = [];
@@ -471,7 +482,7 @@ var createSets = function () {
     $cellSet.selectpicker('render');
 };
 
-var enterQuantile = true;
+var featureForceLayoutData = null;
 var showFeature = function () {
     if (featureResult == null) {
         return;
@@ -489,9 +500,9 @@ var showFeature = function () {
     var f = function () {
         return true;
     };
-    if (selectedQuantile != null && !isNaN(selectedQuantile)) {
+    if (userFilterValue != null && !isNaN(userFilterValue)) {
 
-        filterValue = enterQuantile ? d3.quantile(sortedValues, selectedQuantile / 100.0) : selectedQuantile;
+        filterValue = enterQuantile ? d3.quantile(sortedValues, userFilterValue / 100.0) : userFilterValue;
         if ($('#filter_op').val() == 'gt') {
             f = function (d) {
                 return d > filterValue;
@@ -511,7 +522,7 @@ var showFeature = function () {
     var times = [];
     for (var idIndex = 0, length = featureResult.ids.length; idIndex < length; idIndex++) {
         var index = cellIdToIndex[featureResult.ids[idIndex]];
-        if (index != null) {
+        if (index != null && index !== -1) {
             var t = cellInfo.t[index];
             var obj = timeToCellIds[t];
             if (obj == null) {
@@ -523,7 +534,7 @@ var showFeature = function () {
                 obj.ids.push(cellInfo.id[index]);
             }
             obj.ntotal++;
-            if (updateForceLayout) {
+            if (featureForceLayoutData == null) {
                 forceLayoutX.push(cellInfo.x[index]);
                 forceLayoutY.push(cellInfo.y[index]);
             }
@@ -593,10 +604,8 @@ var showFeature = function () {
             }
         }]
     });
-    if (updateForceLayout) {
-        updateForceLayout = false;
-
-        Plotly.react('force_layout_vis', {
+    if (featureForceLayoutData == null) {
+        featureForceLayoutData = {
             data: [featureForceLayoutInfo.backgroundTrace, {
                 mode: 'markers',
                 type: 'scattergl',
@@ -611,14 +620,86 @@ var showFeature = function () {
                     size: 2
                 },
                 x: forceLayoutX,
-                y: forceLayoutY
+                y: forceLayoutY,
+                ids: featureResult.ids
             }],
             layout: featureForceLayoutInfo.layout
-        });
+        };
+        var $controls = $('#force_layout_vis_controls');
+        var groupBy = ['t']; //$force_layout_group_by.val();
+        if (groupBy != null && groupBy.length > 0) {
+            featureForceLayoutData.groupedTraces = groupTraces(featureForceLayoutData, groupBy);
+            $controls.show().html(createPlotAnimation(featureForceLayoutData.data[0], featureForceLayoutData.groupedTraces, 'force_layout_vis', featureForceLayoutInfo.layout));
+        } else {
+            $controls.hide();
+            Plotly.newPlot('force_layout_vis', featureForceLayoutData);
+        }
+
     }
-
-
 };
+
+var groupTraces = function (plotData, groupingFields) {
+    var traceToTile = plotData.data[1];
+    var ids = traceToTile.ids;
+    if (ids.length !== traceToTile.x.length) {
+        throw new Error('Length of ids not equal to coordinates');
+    }
+    var nfields = groupingFields.length;
+    var traceNameToTrace = {};
+    for (var i = 0, n = ids.length; i < n; i++) {
+        var index = cellIdToIndex[ids[i]];
+        var keyArray = [];
+        for (var fieldIndex = 0; fieldIndex < nfields; fieldIndex++) {
+            var field = groupingFields[fieldIndex];
+            var value = cellInfo[field][index];
+            keyArray.push(value);
+        }
+        var key = keyArray.join(', ');
+        var trace = traceNameToTrace[key];
+        if (trace == null) {
+            trace = {
+                x: [],
+                y: [],
+                keyArray: keyArray,
+                t: key,
+                mode: 'markers',
+                type: 'scattergl',
+                hoverinfo: 'none',
+                showlegend: false,
+                marker: {
+                    cmin: traceToTile.marker.cmin,
+                    cmax: traceToTile.marker.cmax,
+                    color: [],
+                    showscale: true,
+                    colorscale: 'Hot',
+                    size: 2
+                }
+            };
+            traceNameToTrace[key] = trace;
+        }
+        trace.x.push(traceToTile.x[i]);
+        trace.y.push(traceToTile.y[i]);
+        trace.marker.color.push(traceToTile.marker.color[i]);
+    }
+    var traces = [];
+    for (var key in traceNameToTrace) {
+        traces.push(traceNameToTrace[key]);
+    }
+    traces.sort(function (t1, t2) {
+        for (var i = 0; i < t1.keyArray.length; i++) {
+            var a = t1.keyArray[i];
+            var b = t2.keyArray[i];
+            var val = (a === b ? 0 : (a < b ? -1 : 1));
+            if (val !== 0) {
+                return val;
+            }
+        }
+        return 0;
+
+    });
+    return traces;
+};
+
 var fetchFeatureData = function () {
     var text = $setFeature.val().trim();
     if (text !== '') {
@@ -626,7 +707,7 @@ var fetchFeatureData = function () {
             setSelectedFeature = text;
             $('#set_loading').show();
             $.ajax({url: '/feature_value/', data: {feature: text}}).done(function (result) {
-                updateForceLayout = true;
+                featureForceLayoutData = null;
                 featureResult = result;
                 showFeature();
                 $('#set_loading').hide();
@@ -702,7 +783,7 @@ $filterValue.on('keyup', debounce(function (e) {
     if (e.which === 13) {
         e.preventDefault();
     }
-    selectedQuantile = parseFloat($(this).val().trim());
+    userFilterValue = parseFloat($(this).val().trim());
     showFeature();
 }, 500));
 

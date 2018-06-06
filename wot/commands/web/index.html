@@ -43,7 +43,7 @@
                             <label for="cell_sets">Cell Sets</label>
                             <select data-actions-box="true"
                                     data-selected-text-format="count"
-                                    data-live-search="true" class="form-control selectpicker"
+                                    data-live-search="true" class="form-control input-sm selectpicker"
                                     id="cell_sets"
                                     multiple></select>
                         </div>
@@ -107,7 +107,15 @@
                             class="fa fa-spinner fa-spin fa-3x"></i><span
                             style="padding-left:4px;vertical-align:middle;font-weight:bold;">Loading...</span></div>
                     <h2 id="set_title"></h2>
-                    <div id="force_layout_vis" style="display:inline-block;vertical-align:top;"></div>
+                    <div style="display:inline-block;vertical-align:top;">
+                        <!--<div><label style="display:block;" for="force_layout_group_by">Animate By</label>-->
+                            <!--<select id="force_layout_group_by" style="width:auto;display:inline-block;"-->
+                                    <!--data-width="fit" class="form-control input-sm selectpicker" multiple>-->
+                            <!--</select></div>-->
+                        <!--<hr/>-->
+                        <div id="force_layout_vis_controls"></div>
+                        <div id="force_layout_vis" style="display:inline-block;vertical-align:top;"></div>
+                    </div>
                     <div id="histogram_vis" style="width:500px;display:inline-block;vertical-align:top;"></div>
                     <div id="table_vis" style="max-width:400px;display:inline-block;vertical-align:top;"></div>
                 </div>
