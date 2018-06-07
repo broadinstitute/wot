@@ -18,7 +18,6 @@ def dumg(x):
 def compose_transports(Lineage, TP, lag):
     ComposedLineage = []
     for i in range(len(Lineage)):
-
         if len(Lineage[i]) > 0:
             j = i + 1
             while (j < len(TP)) and (TP[j] > TP[j - 1]) and (TP[j] < TP[i] + lag):
@@ -230,24 +229,32 @@ def main(argsv):
         exit(1)
     print(str(non_tf_sum) + ' non-transcription factors')
 
-    transport_map_times = set()
-    for tmap in transport_maps:
-        transport_map_times.add(tmap['t1'])
-        transport_map_times.add(tmap['t2'])
-    Lineage = []  # list of transport maps
     time_to_tmap_ids = {}
-    for tmap_dict in transport_maps:
+    time_to_tmap = {}
+    TP = []
+    for i in range(len(transport_maps)):
+        tmap_dict = transport_maps[i]
         tmap = wot.io.read_dataset(tmap_dict['path'])
         if time_to_tmap_ids.get(tmap_dict['t1']) is None:
             time_to_tmap_ids[tmap_dict['t1']] = tmap.row_meta.index.values
         if time_to_tmap_ids.get(tmap_dict['t2']) is None:
             time_to_tmap_ids[tmap_dict['t2']] = tmap.col_meta.index.values
-        Lineage.append(tmap.x)
+        time_to_tmap[tmap_dict['t2']] = tmap.x
+        if i == 0:
+            TP.append(tmap_dict['t1'])
+        TP.append(tmap_dict['t2'])
+
+    Lineage = []  # list of transport maps
+
+    for i, tp in zip(range(1, len(TP)), TP[1:]):
+        if TP[i] < TP[i - 1]:
+            l = []
+        else:
+            l = time_to_tmap[tp]
+        Lineage.append(l)
 
     threads = os.cpu_count()
 
-    TP = np.array(list(transport_map_times))  # array of timepoints
-    TP.sort()
     differences = False
 
     Xg = []  # list of non-tf expression
