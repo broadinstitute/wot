@@ -6,6 +6,7 @@ var featureIds;
 var $cellSet = $('#cell_sets');
 var $features = $('#features');
 var $force_layout_group_by = $('#force_layout_group_by');
+var forceLayoutColorScale = ['rgb(217,217,217)', 'rgb(255,0,0)'];
 
 var interpolate = function (x, xi, yi, sigma) {
     var n = xi.length;
@@ -113,7 +114,7 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
     showFrame();
     return $controls;
 };
-var createForceLayoutPlotObject = function () {
+var createForceLayoutPlotObject = function (showLegend) {
     var layout =
         {
             xaxis: {
@@ -135,12 +136,12 @@ var createForceLayoutPlotObject = function () {
                 showticklabels: false
             },
             title: '',
-            width: 700,
-            height: 440,
+            width: showLegend ? 1100 : 840, // leave room for legend
+            height: 840,
             margin: {
                 l: 0,
                 b: 0,
-                r: 300,
+                r: showLegend ? 300 : 0,
                 t: 15,
                 pad: 0
             },
@@ -175,7 +176,7 @@ var createForceLayoutTrajectory = function (force, key) {
             cmax: trace.marker.cmax,
             cmin: trace.marker.cmin,
             showscale: true,
-            colorscale: 'Hot',
+            colorscale: forceLayoutColorScale,
             size: 2,
             color: trace.marker.color
         };
@@ -183,7 +184,7 @@ var createForceLayoutTrajectory = function (force, key) {
 
 
     var elem = $div.find('.plot')[0];
-    var forceLayoutInfo = createForceLayoutPlotObject();
+    var forceLayoutInfo = createForceLayoutPlotObject(false);
     var backgroundTrace = forceLayoutInfo.backgroundTrace;
     var $controls = createPlotAnimation(backgroundTrace, traces, elem, forceLayoutInfo.layout);
     $controls.appendTo($div.find('[data-name=controls]'));
@@ -207,9 +208,9 @@ $.ajax('/cell_info/').done(function (result) {
     for (var i = 0, length = cellInfo.id.length; i < length; i++) {
         cellIdToIndex[cellInfo.id[i]] = i;
     }
-    cellForceLayoutInfo = createForceLayoutPlotObject();
+    cellForceLayoutInfo = createForceLayoutPlotObject(true);
 
-    featureForceLayoutInfo = createForceLayoutPlotObject();
+    featureForceLayoutInfo = createForceLayoutPlotObject(false);
     Plotly.newPlot('trajectory_set_vis', {
         data: [cellForceLayoutInfo.backgroundTrace],
         layout: cellForceLayoutInfo.layout
@@ -616,7 +617,7 @@ var showFeature = function () {
                     cmax: sortedValues[sortedValues.length - 1],
                     color: featureResult.values,
                     showscale: true,
-                    colorscale: 'Hot',
+                    colorscale: forceLayoutColorScale,
                     size: 2
                 },
                 x: forceLayoutX,
@@ -671,7 +672,7 @@ var groupTraces = function (plotData, groupingFields) {
                     cmax: traceToTile.marker.cmax,
                     color: [],
                     showscale: true,
-                    colorscale: 'Hot',
+                    colorscale: forceLayoutColorScale,
                     size: 2
                 }
             };

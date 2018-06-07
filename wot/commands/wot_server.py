@@ -44,8 +44,8 @@ def main(argsv):
                                     dtype={'t': np.float64})
 
     coords = pd.read_csv(args.coords, index_col='id', engine='python', sep=None)
-    nx = 400
-    ny = 400
+    nx = 800
+    ny = 800
     xmin = np.min(coords['x'])
     xmax = np.max(coords['x'])
     ymin = np.min(coords['y'])
