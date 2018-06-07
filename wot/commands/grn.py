@@ -4,6 +4,7 @@ from scipy.stats import entropy
 import numexpr as ne
 from sklearn.cluster import SpectralClustering
 from itertools import combinations
+import scipy
 
 
 def dum(x):
@@ -183,6 +184,7 @@ def main(argsv):
 
     parser.add_argument('--epochs',
                         help='Number of epochs', type=int, default=10000)
+    parser.add_argument('--expm1', help='Take exponential minus one of input matrix', action='store_true')
 
     parser.add_argument('--out',
                         help='Prefix for ouput file names')
@@ -201,6 +203,10 @@ def main(argsv):
                                     engine='python', sep=None,
                                     dtype={'day': np.float64})
     ds = wot.io.read_dataset(args.matrix)
+    if scipy.sparse.isspmatrix(ds.x):
+        ds.x = ds.x.toarray()
+    if args.expm1:
+        ds.x = np.expm1(ds.x)
     ds = wot.io.filter_ds_from_command_line(ds, args)
     ds.row_meta = ds.row_meta.join(days_data_frame)
 
