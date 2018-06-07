@@ -253,6 +253,7 @@ def main(argsv):
         # align transport map and matrix
         tmap_ids = time_to_tmap_ids[t]
         aligned_order = ds_t.row_meta.index.get_indexer_for(tmap_ids)
+        aligned_order = aligned_order[aligned_order != -1]
         ds_t = wot.Dataset(ds.x[aligned_order], ds.row_meta.iloc[aligned_order], ds.col_meta)
         Xg.append(ds_t.x[:, non_tf_column_indices])
         Xr.append(ds_t.x[:, tf_column_indices])
