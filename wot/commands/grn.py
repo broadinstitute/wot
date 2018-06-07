@@ -4,7 +4,6 @@ from scipy.stats import entropy
 import numexpr as ne
 from sklearn.cluster import SpectralClustering
 from itertools import combinations
-from gslrandom import PyRNG, multinomial
 
 
 def dum(x):
@@ -38,6 +37,7 @@ def compose_transports(Lineage, TP, lag):
 
 
 def coupling_sampler(Lineage, nf=1e-3, s=1, threads=1, nmin=10):
+    from gslrandom import PyRNG, multinomial
     Pairs = [[] for _ in range(s)]
     for lineage in Lineage:
         if len(lineage) > 0:
