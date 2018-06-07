@@ -184,6 +184,8 @@ def main(argsv):
 
     parser.add_argument('--epochs',
                         help='Number of epochs', type=int, default=10000)
+    parser.add_argument('--percentile',
+                        help='Threshold matrix values at specified percentile (99.5 recommended)', type=float)
     parser.add_argument('--expm1', help='Take exponential minus one of input matrix', action='store_true')
 
     parser.add_argument('--out',
@@ -208,6 +210,9 @@ def main(argsv):
     if args.expm1:
         ds.x = np.expm1(ds.x)
     ds = wot.io.filter_ds_from_command_line(ds, args)
+    if args.percentile is not None:
+        p = np.percentile(ds.x, args.percentile)
+        ds.x[ds.x > p] = p
     ds.row_meta = ds.row_meta.join(days_data_frame)
 
     tf_ids = pd.read_table(args.tf, index_col=0, header=None).index.values
@@ -259,9 +264,10 @@ def main(argsv):
         Xr.append(ds_t.x[:, tf_column_indices])
 
     if args.U is None:
-        # rows are modules, columns are gene ids
+        # rows are modules, columns are genes
         U, subset = initialize_modules(ds.x[:, non_tf_column_indices], N, threads=threads)
         np.save(args.out + '_U.initialization.npy', U)
+        print('Initialized modules')
 
     else:
         U = wot.io.read_dataset(args.U).x
