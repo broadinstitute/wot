@@ -212,14 +212,18 @@ def main(argsv):
 
     tf_ids = pd.read_table(args.tf, index_col=0, header=None).index.values
     tf_column_indices = ds.col_meta.index.isin(tf_ids)
-    if tf_column_indices.sum() == 0:
+    ntf_sum = tf_column_indices.sum()
+    if ntf_sum == 0:
         print('No transcription factors found')
         exit(1)
+    print(str(ntf_sum) + ' transcription factors')
 
     non_tf_column_indices = ~tf_column_indices
-    if non_tf_column_indices.sum() == 0:
+    non_tf_sum = non_tf_column_indices.sum()
+    if non_tf_sum == 0:
         print('No non-transcription factors found')
         exit(1)
+    print(str(non_tf_sum) + ' non-transcription factors')
 
     transport_map_times = set()
     for tmap in transport_maps:
