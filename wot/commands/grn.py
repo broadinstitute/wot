@@ -177,7 +177,6 @@ def main(argsv):
     parser.add_argument('--nmodules', help='Number of gene expression modules', type=int, default=50)
 
     parser.add_argument('--U', help='Gene module initialization matrix')
-
     parser.add_argument('--cell_filter',
                         help='File with one cell id per line to include or or a python regular expression of cell ids to include')
 
@@ -239,6 +238,9 @@ def main(argsv):
             time_to_tmap_ids[tmap_dict['t1']] = tmap.row_meta.index.values
         if time_to_tmap_ids.get(tmap_dict['t2']) is None:
             time_to_tmap_ids[tmap_dict['t2']] = tmap.col_meta.index.values
+
+        if time_to_tmap.get(tmap_dict['t2']) is not None:
+            raise ValueError('Duplicate time')
         time_to_tmap[tmap_dict['t2']] = tmap.x
         if i == 0:
             TP.append(tmap_dict['t1'])
@@ -259,26 +261,32 @@ def main(argsv):
 
     Xg = []  # list of non-tf expression
     Xr = []  # list of tf expression
+    row_indices = []
     for t in TP:
         day_indices = np.where(ds.row_meta[days_data_frame.columns[0]] == t)[0]
         ds_t = wot.Dataset(ds.x[day_indices], ds.row_meta.iloc[day_indices], ds.col_meta)
         # align transport map and matrix
         tmap_ids = time_to_tmap_ids[t]
         aligned_order = ds_t.row_meta.index.get_indexer_for(tmap_ids)
-        aligned_order = aligned_order[aligned_order != -1]
+        if (aligned_order == -1).sum() > 0:
+            raise ValueError('Missing ids')
+
+        row_indices.append(aligned_order)
         ds_t = wot.Dataset(ds.x[aligned_order], ds.row_meta.iloc[aligned_order], ds.col_meta)
         Xg.append(ds_t.x[:, non_tf_column_indices])
         Xr.append(ds_t.x[:, tf_column_indices])
 
+    ds.x = ds.x[np.concatenate(row_indices)]
     if args.U is None:
         # rows are modules, columns are genes
         U, subset = initialize_modules(ds.x[:, non_tf_column_indices], N, threads=threads)
-        np.save(args.out + '_U.initialization.npy', U)
         print('Initialized modules')
 
     else:
         U = wot.io.read_dataset(args.U).x
         # TODO ensure in same order as ds
+
+    assert len(TP) - 1 == len(Lineage)
     Uinv = np.linalg.pinv(U)
     Z = []
     XU = []
