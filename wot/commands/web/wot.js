@@ -521,6 +521,7 @@ var showFeature = function () {
 
     var values = [];
     var times = [];
+
     for (var idIndex = 0, length = featureResult.ids.length; idIndex < length; idIndex++) {
         var index = cellIdToIndex[featureResult.ids[idIndex]];
         if (index != null && index !== -1) {
@@ -539,6 +540,8 @@ var showFeature = function () {
                 forceLayoutX.push(cellInfo.x[index]);
                 forceLayoutY.push(cellInfo.y[index]);
             }
+        } else {
+            console.log(featureResult.ids[idIndex] + ' missing')
         }
     }
     times.sort(function (a, b) {
