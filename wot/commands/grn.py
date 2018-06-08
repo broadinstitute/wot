@@ -51,7 +51,7 @@ def coupling_sampler(Lineage, nf=1e-3, s=1, threads=1, nmin=10):
             l_tile = np.tile(l, (s, 1))
             rngs = [PyRNG(np.random.randint(2 ** 16)) for _ in range(threads)]
             P = multinomial(rngs, n, l_tile, P)
-            # Too slow: P = np.random.multinomial(n,l,size=s)
+            # P = np.random.multinomial(n, l, size=s)
             for i in range(s):
                 pairs = np.nonzero(P[i].reshape(lineage.shape))
                 Pairs[i].append(pairs)
@@ -97,15 +97,15 @@ def get_expression_pairs(Pairs, Lineage, Xg, Xr, TP, lag, differences=True):
     return Xgs, Xrs
 
 
-def initialize_modules(XG, N, threads=1, nn=150):
-    subset = np.random.choice(list(range(XG.shape[0])), int(XG.shape[0] / 20), replace=False)
-    XG = XG[subset]
+def initialize_modules(Xg, N, threads=1, nn=150):
+    XG = np.vstack(Xg)
+    XG = XG[np.random.choice(range(XG.shape[0]), int(XG.shape[0] / 20), replace=False)]
     SC = SpectralClustering(n_clusters=N, n_neighbors=nn, affinity='nearest_neighbors', n_jobs=threads)
     labels = SC.fit_predict(XG.T)
     U = np.zeros((N, XG.shape[1]))
     for i, c in enumerate(set(labels)):
         U[i, np.where(labels == c)[0]] = 1. / (labels == c).sum() ** .5
-    return U, subset
+    return U
 
 
 def update_regulation(Lineage, Xg, Xr, TP, lag, Z=[], U=[], num_modules=50, lda_z1=100., lda_z2=100., lda_u=10.,
@@ -231,6 +231,14 @@ def main(argsv):
     time_to_tmap_ids = {}
     time_to_tmap = {}
     TP = []
+    Lineage = []  # list of transport maps
+    threads = os.cpu_count()
+
+    differences = False
+
+    Xg = []  # list of non-tf expression
+    Xr = []  # list of tf expression
+
     for i in range(len(transport_maps)):
         tmap_dict = transport_maps[i]
         tmap = wot.io.read_dataset(tmap_dict['path'])
@@ -246,8 +254,6 @@ def main(argsv):
             TP.append(tmap_dict['t1'])
         TP.append(tmap_dict['t2'])
 
-    Lineage = []  # list of transport maps
-
     for i, tp in zip(range(1, len(TP)), TP[1:]):
         if TP[i] < TP[i - 1]:
             l = []
@@ -255,13 +261,6 @@ def main(argsv):
             l = time_to_tmap[tp]
         Lineage.append(l)
 
-    threads = os.cpu_count()
-
-    differences = False
-
-    Xg = []  # list of non-tf expression
-    Xr = []  # list of tf expression
-    row_indices = []
     for t in TP:
         day_indices = np.where(ds.row_meta[days_data_frame.columns[0]] == t)[0]
         ds_t = wot.Dataset(ds.x[day_indices], ds.row_meta.iloc[day_indices], ds.col_meta)
@@ -271,15 +270,13 @@ def main(argsv):
         if (aligned_order == -1).sum() > 0:
             raise ValueError('Missing ids')
 
-        row_indices.append(aligned_order)
         ds_t = wot.Dataset(ds.x[aligned_order], ds.row_meta.iloc[aligned_order], ds.col_meta)
         Xg.append(ds_t.x[:, non_tf_column_indices])
         Xr.append(ds_t.x[:, tf_column_indices])
 
-    ds.x = ds.x[np.concatenate(row_indices)]
     if args.U is None:
         # rows are modules, columns are genes
-        U, subset = initialize_modules(ds.x[:, non_tf_column_indices], N, threads=threads)
+        U = initialize_modules(Xg, N, threads=threads)
         print('Initialized modules')
 
     else:
@@ -319,16 +316,16 @@ def main(argsv):
     # Xr = [x/(np.average(x,axis=0) + 0.01) for x in Xr]
 
     ComposedLineage = compose_transports(Lineage, TP, TimeLag)
+    print('ComposedLineage ' + str(len(ComposedLineage)))
 
     # for original model: lda_z1=1.5,lda_z2=0.25,lda_u=1.5
     # for sparse model: lda_z1=3,lda_z2=1.5,lda_u=0.25
     # currently using: lda_z1=2,lda_z2=0.5,lda_u=1.5
     Z, U, Xh, k, b, y0, x0 = update_regulation(ComposedLineage, Xg, Xr, TP, TimeLag, Z=Z, U=U, lda_z1=2, lda_z2=0.5,
-                                               lda_u=1.5, epochs=epochs, sample_fraction=5e-6, threads=threads,
-                                               inner_iters=1,
+                                               lda_u=1.5, epochs=10000, sample_fraction=5e-6, threads=40, inner_iters=1,
                                                k=k, b=b, y0=y0, x0=x0, differences=differences, frequent_fa=False,
                                                num_modules=N, epoch_block_size=500,
-                                               savepath=None)
+                                               savepath='LineageRegulators_Combined/intermediateResults')
     np.save(args.out + '_Z.npy', Z)
     np.save(args.out + '_kbyx.npy', (k, b, y0, x0))
 
