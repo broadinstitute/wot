@@ -5,7 +5,7 @@ var cellIdToIndex = {};
 var featureIds;
 var $cellSet = $('#cell_sets');
 var $features = $('#features');
-var $force_layout_group_by = $('#force_layout_group_by');
+
 var forceLayoutColorScale = ['rgb(217,217,217)', 'rgb(255,0,0)'];
 
 var interpolate = function (x, xi, yi, sigma) {
@@ -49,38 +49,40 @@ var kernelSmooth = function (xi, yi, stop, start, steps, sigma) {
 
 
 var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
-    var $controls = $('<div style="display: inline;"><button class="btn btn-default btn-sm" name="play">Play</button>  <select style="width:auto;" class="form-control input-sm" data-name="time"></select></div>');
+    var $controls = $('<div style="display: inline;"><button class="btn btn-default btn-sm" name="play">Play</button>  <select style="width:auto;" class="form-control input-sm" data-name="group"></select></div>');
     var index = 0;
-    var times = [];
-    times.push('All');
+    var groups = [];
+    groups.push('All');
     for (var i = 0; i < traces.length; i++) {
-        times.push(traces[i].t);
+        groups.push(traces[i].key);
     }
-    var $time = $controls.find('[data-name=time]');
-    $time.html(times.map(function (value, timeIndex) {
-        return '<option value="' + timeIndex + '">' + value + '</option>';
+    var $group = $controls.find('[data-name=group]');
+    $group.html(groups.map(function (value, groupIndex) {
+        return '<option value="' + groupIndex + '">' + value + '</option>';
     }).join(''));
 
     function showFrame() {
         if (index > traces.length) {
             index = 0; // reset
         }
-        var concatTraces;
+        var concatTraces = [];
         var t;
-        if (index === 0) {
-            traces[0].marker.showscale = true;
-            for (var i = 1; i < traces.length; i++) {
-                traces[i].marker.showscale = false;
+        if (traces.length > 0) {
+            if (index === 0) {
+                traces[0].marker.showscale = true;
+                for (var i = 1; i < traces.length; i++) {
+                    traces[i].marker.showscale = false;
+                }
+                concatTraces = traces; // all
+            } else {
+                traces[index - 1].marker.showscale = true;
+                concatTraces = [traces[index - 1]]
             }
-            concatTraces = traces; // all
-        } else {
-            traces[index - 1].marker.showscale = true;
-            concatTraces = [traces[index - 1]]
         }
-        $time.val(index);
+        $group.val(index);
 
         Plotly.newPlot(elem, {
-            data: [backgroundTrace].concat(concatTraces),
+            data: backgroundTrace != null ? [backgroundTrace].concat(concatTraces) : concatTraces,
             layout: layout
         });
     }
@@ -105,14 +107,14 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
     });
 
 
-    $time.val('All');
-    $time.on('change', function (e) {
-        index = parseInt($time.val());
+    $group.val('All');
+    $group.on('change', function (e) {
+        index = parseInt($(this).val());
         $playBtn.text('Play');
         showFrame();
     });
     showFrame();
-    return $controls;
+    return traces.length > 1 ? $controls : $('<div></div>');
 };
 var createForceLayoutPlotObject = function (showLegend) {
     var layout =
@@ -149,7 +151,7 @@ var createForceLayoutPlotObject = function (showLegend) {
         };
 
     var backgroundTrace = {
-        hoverinfo: 'none',
+        hoverinfo: 'skip',
         showlegend: false,
         marker: {size: 2, color: 'rgb(217,217,217)', opacity: 0.5},
         mode: 'markers',
@@ -172,10 +174,13 @@ var createForceLayoutTrajectory = function (force, key) {
         trace.type = 'scattergl';
         trace.hoverinfo = 'none';
         trace.showlegend = false;
+        trace.key = trace.t;
         trace.marker = {
             cmax: trace.marker.cmax,
             cmin: trace.marker.cmin,
+            autocolorscale: false,
             showscale: true,
+            cauto: false,
             colorscale: forceLayoutColorScale,
             size: 2,
             color: trace.marker.color
@@ -192,18 +197,20 @@ var createForceLayoutTrajectory = function (force, key) {
 };
 var cellForceLayoutInfo = null;
 var featureForceLayoutInfo = null;
-$.ajax('/cell_info/').done(function (result) {
-    cellInfoHeaderNames = [];
+var $groupBy = $('#force_layout_group_by');
+$.ajax('/info/').done(function (json) {
+    cellInfoHeaderNames = []
+    var result = json.cell;
     for (var key in result) {
         if (key !== 'id' && key !== 'x' && key !== 'y') {
             cellInfoHeaderNames.push(key);
         }
     }
-    $force_layout_group_by.html(cellInfoHeaderNames.map(function (value) {
+    $groupBy.html(cellInfoHeaderNames.map(function (value) {
         return '<option value="' + value + '">' + value + '</option>'
     }).join(''));
-    $force_layout_group_by.selectpicker('refresh');
-    $force_layout_group_by.selectpicker('render');
+    $groupBy.selectpicker('refresh');
+    $groupBy.selectpicker('render');
     cellInfo = result;
     for (var i = 0, length = cellInfo.id.length; i < length; i++) {
         cellIdToIndex[cellInfo.id[i]] = i;
@@ -215,13 +222,16 @@ $.ajax('/cell_info/').done(function (result) {
         data: [cellForceLayoutInfo.backgroundTrace],
         layout: cellForceLayoutInfo.layout
     });
+    featureIds = json.features;
+    if (json.transport_map_times.length === 0) {
+        $('a[href="#sets_el"]').tab('show');
+        $('#trajectory_li').hide();
 
+    }
+    showFeature();
 
 });
-$.ajax('/list_features/').done(function (results) {
-    featureIds = results;
 
-});
 $('body').find('.selectpicker').selectpicker({
     iconBase: 'fa',
     tickIcon: 'fa-check',
@@ -451,30 +461,43 @@ var setSelectedFeature = null;
 var $setFeature = $('#set_features');
 var featureResult;
 var userFilterValue = null;
-var excludeZeros = false;
-var timeToCellIds = {}; // time -> {ids:[], ntotal:Number}
 var customCellSetNameToIds = {};
 var $filterOp = $('#filter_op');
 var filterOp = $filterOp.val();
 var enterQuantile = true; // enter a quantile or value
+var featurePlotTraces;
 var createSets = function () {
-    var selectedTimes = [];
-    $('.time').filter(':checked').each(function () {
-        selectedTimes.push($(this).prop('name'))
+    var selectedGroups = [];
+    $('.wot-group').filter(':checked').each(function () {
+        selectedGroups.push($(this).prop('name'))
     });
 
-    selectedTimes.forEach(function (t) {
-        var name = setSelectedFeature + '_' + filterOp + '_' + userFilterValue + '_' + t;
-        customCellSetNameToIds[name] = timeToCellIds[t].ids;
+    selectedGroups.forEach(function (key) {
+
+        var trace = null;
+        for (var i = 0; i < featurePlotTraces.length; i++) {
+            if (featurePlotTraces[i].key === key) {
+                trace = featurePlotTraces[i];
+                break;
+            }
+        }
+        if (trace == null) {
+            throw new Error();
+        }
+        var setName = setSelectedFeature + '_' + filterOp + '_' + userFilterValue + '_' + key;
+        customCellSetNameToIds[setName] = trace.ids;
     });
     var options = [];
     options.push('<optgroup label="Custom Sets">');
+    var count = 0;
     for (var name in customCellSetNameToIds) {
         options.push('<option value="' + name + '">');
         options.push(name);
         options.push('</option>');
+        count++;
     }
     options.push('</optgroup>');
+    $('#ncustom_sets').html(count + ' custom cell set' + (count > 1 ? 's' : ''));
     var html = $cellSet.html();
     var val = $cellSet.val();
     $cellSet.html(options.join('') + cellSetHtml);
@@ -483,226 +506,171 @@ var createSets = function () {
     $cellSet.selectpicker('render');
 };
 
-var featureForceLayoutData = null;
+
 var showFeature = function () {
-    if (featureResult == null) {
-        return;
-    }
-
-    var sortedValues = featureResult.values.slice(0).sort(function (a, b) {
-        return (a === b ? 0 : (a < b ? -1 : 1));
-    });
-    if (excludeZeros) {
-        sortedValues = sortedValues.filter(function (value) {
-            return value !== 0;
-        });
-    }
-    var filterValue = null;
-    var f = function () {
-        return true;
-    };
-    if (userFilterValue != null && !isNaN(userFilterValue)) {
-
-        filterValue = enterQuantile ? d3.quantile(sortedValues, userFilterValue / 100.0) : userFilterValue;
-        if ($('#filter_op').val() == 'gt') {
-            f = function (d) {
-                return d > filterValue;
-            };
-        } else {
-            f = function (d) {
-                return d < filterValue;
-            };
-        }
-    }
-    timeToCellIds = {};
-
-    var forceLayoutX = [];
-    var forceLayoutY = [];
-
-    var values = [];
-    var times = [];
-
-    for (var idIndex = 0, length = featureResult.ids.length; idIndex < length; idIndex++) {
-        var index = cellIdToIndex[featureResult.ids[idIndex]];
-        if (index != null && index !== -1) {
-            var t = cellInfo.t[index];
-            var obj = timeToCellIds[t];
-            if (obj == null) {
-                times.push(t);
-                obj = {ids: [], ntotal: 0};
-                timeToCellIds[t] = obj;
-            }
-            if (f(featureResult.values[idIndex])) {
-                obj.ids.push(cellInfo.id[index]);
-            }
-            obj.ntotal++;
-            if (featureForceLayoutData == null) {
-                forceLayoutX.push(cellInfo.x[index]);
-                forceLayoutY.push(cellInfo.y[index]);
-            }
-        } else {
-            console.log(featureResult.ids[idIndex] + ' missing')
-        }
-    }
-    times.sort(function (a, b) {
-        return (a === b ? 0 : (a < b ? -1 : 1));
-    });
+    var traces = [];
     var html = [];
-    if (filterValue != null) {
+    if (featureResult != null) {
+
+        var filterValue = null;
+        var f = function () {
+            return true;
+        };
+        if (userFilterValue != null && !isNaN(userFilterValue)) {
+            filterValue = enterQuantile ? d3.quantile(featureResult.sortedValues, userFilterValue / 100.0) : userFilterValue;
+            if ($('#filter_op').val() == 'gt') {
+                f = function (d) {
+                    return d > filterValue;
+                };
+            } else {
+                f = function (d) {
+                    return d < filterValue;
+                };
+            }
+        }
+        var nfields = groupBy.length;
+        var traceNameToTrace = {};
+        var colorScale = d3.scaleLinear()
+            .domain(featureResult.featureRange)
+            .range(forceLayoutColorScale);
+        for (var i = 0, length = featureResult.ids.length; i < length; i++) {
+            var id = featureResult.ids[i];
+            var keyArray = [];
+            for (var fieldIndex = 0; fieldIndex < nfields; fieldIndex++) {
+                var field = groupBy[fieldIndex];
+                keyArray.push(cellInfo[field][index]);
+            }
+            var key = keyArray.join(', ');
+            var trace = traceNameToTrace[key];
+            if (trace == null) {
+                trace = {
+                    x: [],
+                    y: [],
+                    ids: [],
+                    nids: 0,
+                    keyArray: keyArray,
+                    key: key,
+                    mode: 'markers',
+                    type: 'scattergl',
+                    hoverinfo: 'text',
+                    showlegend: false,
+                    marker: {
+                        cmin: featureResult.featureRange[0],
+                        cmax: featureResult.featureRange[1],
+                        // autocolorscale: false,
+                        color: [],
+                        showscale: true,
+                        size: 2
+                    }
+                };
+                traceNameToTrace[key] = trace;
+            }
+            var value = featureResult.values[i];
+            trace.nids++;
+            if (f(value)) {
+                var index = cellIdToIndex[id];
+                trace.x.push(cellInfo.x[index]);
+                trace.y.push(cellInfo.y[index]);
+                trace.ids.push(id);
+                trace.marker.color.push(value);
+            }
+        }
+
+        for (var key in traceNameToTrace) {
+            traces.push(traceNameToTrace[key]);
+        }
+        traces.sort(function (t1, t2) {
+            for (var i = 0; i < t1.keyArray.length; i++) {
+                var a = t1.keyArray[i];
+                var b = t2.keyArray[i];
+                var val = (a === b ? 0 : (a < b ? -1 : 1));
+                if (val !== 0) {
+                    return val;
+                }
+            }
+            return 0;
+
+        });
+
         var percentFormatter = d3.format('.1f');
         var groupedThousands = d3.format(',');
-        html.push('<h4>Cell Selection Summary <small> ' + ($('#filter_op').val() === 'gt' ? 'Greater then' : 'Less then') + ' ' + d3.format('.2f')(filterValue) + '</small></h4><table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Time</th><th># Cells Selected</th><th>% Cells Selected</th></tr>');
+        if (filterValue != null) {
+            html.push('<h4>Cell Selection Summary <small> ' + ($('#filter_op').val() === 'gt' ? 'Greater then' : 'Less then') + ' ' + d3.format('.2f')(filterValue) + '</small></h4>');
+        }
+
+        html.push('<table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Group</th><th># Cells Selected</th><th>% Cells Selected</th></tr>');
         var totalPass = 0;
         var total = 0;
-        for (var i = 0; i < times.length; i++) {
-            var t = times[i];
+        for (var i = 0; i < traces.length; i++) {
+            var trace = traces[i];
+            totalPass += trace.ids.length;
+            total += trace.nids;
+        }
+
+        for (var i = 0; i < traces.length; i++) {
+            var trace = traces[i];
             html.push('<tr>');
-            var obj = timeToCellIds[t];
-            html.push('<td><input class="time" name="' + t + '" type="checkbox" ' + (obj.ids.length === 0 ? 'disabled' : 'checked') + '>');
+            html.push('<td><input class="wot-group" name="' + trace.key + '" type="checkbox" ' + (trace.ids.length === 0 ? 'disabled' : 'checked') + '>');
             html.push('<td>');
-            html.push(t);
+            html.push(trace.key);
             html.push('</td>');
             html.push('<td>');
-            html.push(groupedThousands(obj.ids.length) + '/' + groupedThousands(obj.ntotal));
+            html.push(groupedThousands(trace.ids.length) + '/' + groupedThousands(trace.nids));
             html.push('</td>');
             html.push('<td>');
-            html.push(percentFormatter(100 * (obj.ids.length / obj.ntotal)));
+            html.push(percentFormatter(100 * (trace.ids.length / trace.nids)));
             html.push('</td>');
             html.push('</tr>');
-            totalPass += obj.ids.length;
-            total += obj.ntotal;
         }
-        html.push('<td></td>');
-        html.push('<td>All</td>');
-        html.push('<td>');
-        html.push(groupedThousands(totalPass) + '/' + groupedThousands(total));
-        html.push('</td>');
-        html.push('<td>');
-        html.push(percentFormatter(100 * (totalPass / total)));
-        html.push('</td>');
-        html.push('</tr>');
+        if (traces.length > 1) {
+            html.push('<td></td>');
+            html.push('<td>All</td>');
+            html.push('<td>');
+            html.push(groupedThousands(totalPass) + '/' + groupedThousands(total));
+            html.push('</td>');
+            html.push('<td>');
+            html.push(percentFormatter(100 * (totalPass / total)));
+            html.push('</td>');
+            html.push('</tr>');
+        }
         html.push('</table>');
-
 
     }
     $('#table_vis').html(html.join(''));
 
-    Plotly.react('histogram_vis', [
-        {
-            name: 'All Cells',
-            x: featureResult.values,
-            type: 'histogram',
-            marker: {color: 'LightGrey', opacity: 0.7}
-        }], {
-        shapes: filterValue == null ? null : [{
-            type: 'line',
-            xref: 'x',
-            yref: 'paper',
-            x0: filterValue,
-            x1: filterValue,
-            y0: 0,
-            y1: 1,
-            line: {
-                color: 'rgb(0, 0, 0)',
-                width: 2
-            }
-        }]
-    });
-    if (featureForceLayoutData == null) {
-        featureForceLayoutData = {
-            data: [featureForceLayoutInfo.backgroundTrace, {
-                mode: 'markers',
-                type: 'scattergl',
-                hoverinfo: 'none',
-                showlegend: false,
-                marker: {
-                    cmin: sortedValues[0],
-                    cmax: sortedValues[sortedValues.length - 1],
-                    color: featureResult.values,
-                    showscale: true,
-                    colorscale: forceLayoutColorScale,
-                    size: 2
-                },
-                x: forceLayoutX,
-                y: forceLayoutY,
-                ids: featureResult.ids
-            }],
-            layout: featureForceLayoutInfo.layout
-        };
-        var $controls = $('#force_layout_vis_controls');
-        var groupBy = ['t']; //$force_layout_group_by.val();
-        if (groupBy != null && groupBy.length > 0) {
-            featureForceLayoutData.groupedTraces = groupTraces(featureForceLayoutData, groupBy);
-            $controls.show().html(createPlotAnimation(featureForceLayoutData.data[0], featureForceLayoutData.groupedTraces, 'force_layout_vis', featureForceLayoutInfo.layout));
-        } else {
-            $controls.hide();
-            Plotly.newPlot('force_layout_vis', featureForceLayoutData);
-        }
-
-    }
+    var $controls = $('#force_layout_vis_controls');
+    featurePlotTraces = traces;
+    $controls.html(createPlotAnimation(featureForceLayoutInfo.backgroundTrace, featurePlotTraces, 'force_layout_vis', featureForceLayoutInfo.layout));
+    enableCreateSet();
 };
 
-var groupTraces = function (plotData, groupingFields) {
-    var traceToTile = plotData.data[1];
-    var ids = traceToTile.ids;
-    if (ids.length !== traceToTile.x.length) {
-        throw new Error('Length of ids not equal to coordinates');
-    }
-    var nfields = groupingFields.length;
-    var traceNameToTrace = {};
-    for (var i = 0, n = ids.length; i < n; i++) {
-        var index = cellIdToIndex[ids[i]];
-        var keyArray = [];
-        for (var fieldIndex = 0; fieldIndex < nfields; fieldIndex++) {
-            var field = groupingFields[fieldIndex];
-            var value = cellInfo[field][index];
-            keyArray.push(value);
-        }
-        var key = keyArray.join(', ');
-        var trace = traceNameToTrace[key];
-        if (trace == null) {
-            trace = {
-                x: [],
-                y: [],
-                keyArray: keyArray,
-                t: key,
-                mode: 'markers',
-                type: 'scattergl',
-                hoverinfo: 'none',
-                showlegend: false,
-                marker: {
-                    cmin: traceToTile.marker.cmin,
-                    cmax: traceToTile.marker.cmax,
-                    color: [],
-                    showscale: true,
-                    colorscale: forceLayoutColorScale,
-                    size: 2
-                }
-            };
-            traceNameToTrace[key] = trace;
-        }
-        trace.x.push(traceToTile.x[i]);
-        trace.y.push(traceToTile.y[i]);
-        trace.marker.color.push(traceToTile.marker.color[i]);
-    }
-    var traces = [];
-    for (var key in traceNameToTrace) {
-        traces.push(traceNameToTrace[key]);
-    }
-    traces.sort(function (t1, t2) {
-        for (var i = 0; i < t1.keyArray.length; i++) {
-            var a = t1.keyArray[i];
-            var b = t2.keyArray[i];
-            var val = (a === b ? 0 : (a < b ? -1 : 1));
-            if (val !== 0) {
-                return val;
-            }
-        }
-        return 0;
+var showFeatureOld = function () {
 
-    });
-    return traces;
+
+
+    // Plotly.react('histogram_vis', [
+    //     {
+    //         name: 'All Cells',
+    //         x: featureResult.values,
+    //         type: 'histogram',
+    //         marker: {color: 'LightGrey', opacity: 0.7}
+    //     }], {
+    //     shapes: filterValue == null ? null : [{
+    //         type: 'line',
+    //         xref: 'x',
+    //         yref: 'paper',
+    //         x0: filterValue,
+    //         x1: filterValue,
+    //         y0: 0,
+    //         y1: 1,
+    //         line: {
+    //             color: 'rgb(0, 0, 0)',
+    //             width: 2
+    //         }
+    //     }]
+    // });
 };
+var groupBy = [];
 
 var fetchFeatureData = function () {
     var text = $setFeature.val().trim();
@@ -711,8 +679,12 @@ var fetchFeatureData = function () {
             setSelectedFeature = text;
             $('#set_loading').show();
             $.ajax({url: '/feature_value/', data: {feature: text}}).done(function (result) {
-                featureForceLayoutData = null;
                 featureResult = result;
+                var sortedValues = featureResult.values.slice(0).sort(function (a, b) {
+                    return (a === b ? 0 : (a < b ? -1 : 1));
+                });
+                featureResult.featureRange = [sortedValues[0], sortedValues[sortedValues.length - 1]];
+                featureResult.sortedValues = sortedValues;
                 showFeature();
                 $('#set_loading').hide();
             });
@@ -765,8 +737,14 @@ $('#set_submit').on('click', function (e) {
     fetchFeatureData();
 });
 
-$('#create_set').on('click', function (e) {
+var $createSet = $('#create_set');
+$createSet.on('click', function (e) {
     createSets();
+});
+
+$groupBy.on('change', function (e) {
+    groupBy = $(this).val();
+    showFeature();
 });
 
 function debounce(func, wait, immediate) {
@@ -796,9 +774,18 @@ $filterOp.on('change', function (e) {
     showFeature();
 });
 
+function enableCreateSet() {
+    $createSet.prop('disabled', $('.wot-group').filter(':checked').length === 0);
+}
+
 $('#table_vis').on('click', 'input[name=select_all]', function (e) {
     var selected = $(this).prop('checked');
-    $('#table_vis').find('.time').prop('checked', selected);
+    $('#table_vis').find('.wot-group').prop('checked', selected);
+    enableCreateSet();
+});
+
+$('#table_vis').on('click', '.wot-group', function (e) {
+    enableCreateSet();
 });
 
 $('#export_set').on('click', function () {

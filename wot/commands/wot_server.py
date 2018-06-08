@@ -15,18 +15,14 @@ def main(argsv):
     parser = argparse.ArgumentParser(description='Run wot server')
     parser.add_argument('--dir',
                         help='Directory of transport maps as produced by ot')
-    parser.add_argument('--cell_days',
-                        help='Two column tab delimited file without header with cell ids and days', required=True)
     parser.add_argument('--cell_sets',
                         help='One or more gmt or gmx files containing cell sets. Each set id should end with _time (e.g. my_cell_set_9)',
                         action='append')
     parser.add_argument('--cell_filter',
                         help='File with one cell id per line to include or or a python regular expression of cell ids to include')
-    parser.add_argument('--coords',
-                        help='Three column tab delimited file with header fields id, x, and y that contains 2-d cell coordinates',
-                        required=True)
     parser.add_argument('--cell_meta',
-                        help='Extra metadata to join with metadata in coords and cell_days')
+                        help='Should have headers "id", "x", "y", "day", and any additional metadata fields',
+                        action='append', required=True)
     parser.add_argument('--matrix',
                         help='One or more matrices with cells on rows and features, such as genes or pathways on columns',
                         action='append')
@@ -39,24 +35,26 @@ def main(argsv):
     else:
         cell_set_group_to_names = {}
         time_to_cell_sets = {}
+    cell_metadata = None
+    if args.cell_meta is not None:
+        for f in args.cell_meta:
+            df = pd.read_table(f, engine='python', sep=None, index_col='id')
+            if cell_metadata is None:
+                cell_metadata = df
+            else:
+                cell_metadata = cell_metadata.join(df)
 
-    days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None, names=['t'], engine='python', sep=None,
-                                    dtype={'t': np.float64})
-
-    coords = pd.read_csv(args.coords, index_col='id', engine='python', sep=None)
     nx = 800
     ny = 800
-    xmin = np.min(coords['x'])
-    xmax = np.max(coords['x'])
-    ymin = np.min(coords['y'])
-    ymax = np.max(coords['y'])
-    coords['x'] = np.floor(np.interp(coords['x'].values, [xmin, xmax], [0, nx])).astype(int)
-    coords['y'] = np.floor(np.interp(coords['y'].values, [ymin, ymax], [0, ny])).astype(int)
+    xmin = np.min(cell_metadata['x'])
+    xmax = np.max(cell_metadata['x'])
+    ymin = np.min(cell_metadata['y'])
+    ymax = np.max(cell_metadata['y'])
+    cell_metadata['x'] = np.floor(np.interp(cell_metadata['x'].values, [xmin, xmax], [0, nx])).astype(int)
+    cell_metadata['y'] = np.floor(np.interp(cell_metadata['y'].values, [ymin, ymax], [0, ny])).astype(int)
     # coords = coords.drop(['x', 'y'], axis=1)
-    coords = coords.join(days_data_frame)
-    coords[np.isnan(coords['t'].values)] = -1
-    if args.cell_meta is not None:
-        coords = coords.join(pd.read_csv(args.cell_meta, index_col='id', engine='python', sep=None))
+    # cell_metadata[np.isnan(cell_metadata['day'].values)] = -1
+
     if args.dir is not None:
         transport_maps = wot.io.list_transport_maps(args.dir)
         if len(transport_maps) == 0:
@@ -95,24 +93,21 @@ def main(argsv):
     app = flask.Flask(__name__, static_folder=static_folder)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
-    @app.route("/cell_info/", methods=['GET'])
-    def get_coords():
-        json = {'id': coords.index.values.tolist()}
-        for column_name in coords:
-            json[column_name] = coords[column_name].values.tolist()
-        return flask.jsonify(json)
+    @app.route("/info/", methods=['GET'])
+    def info():
+        json = {'id': cell_metadata.index.values.tolist()}
+        for column_name in cell_metadata:
+            json[column_name] = cell_metadata[column_name].values.tolist()
 
-    @app.route("/list_times/", methods=['GET'])
-    def list_times():
-        return flask.jsonify(transport_map_times)
-
-    @app.route("/list_features/", methods=['GET'])
-    def list_features():
         features = set()
         for dataset_index in range(len(datasets)):
             features.update(datasets[dataset_index].col_meta.index.values.astype(
                 str).tolist())
-        return flask.jsonify(list(features))
+        info_json = {}
+        info_json['features'] = list(features)
+        info_json['transport_map_times'] = list(transport_map_times)
+        info_json['cell'] = json
+        return flask.jsonify(info_json)
 
     @app.route("/feature_value/", methods=['GET'])
     def feature_value():
@@ -190,7 +185,7 @@ def main(argsv):
                         wot.Dataset(ds.x[:, column_indices], ds.row_meta, ds.col_meta.iloc[column_indices]))
                     filtered_dataset_names.append(dataset_names[i])
 
-        data = wot.ot.TrajectorySampler.trajectory_plot(transport_maps=transport_maps, coords=coords,
+        data = wot.ot.TrajectorySampler.trajectory_plot(transport_maps=transport_maps, coords=cell_metadata[['x', 'y']],
                                                         time_to_cell_sets=filtered_time_to_cell_sets,
                                                         datasets=filtered_datasets,
                                                         dataset_names=filtered_dataset_names, cache_transport_maps=True,
@@ -204,7 +199,3 @@ def main(argsv):
         return flask.jsonify(data)
 
     app.run()
-
-
-if __name__ == '__main__':
-    main()

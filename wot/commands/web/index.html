@@ -27,10 +27,10 @@
 <div class="container-fluid">
 
     <ul class="nav nav-tabs" role="tablist">
-        <li role="presentation" class="active"><a href="#trajectory_el" aria-controls="trajectory_el" role="tab"
-                                                  data-toggle="tab">Trajectory</a></li>
-        <li role="presentation"><a href="#sets_el" aria-controls="sets_el" role="tab" data-toggle="tab">Custom Cell
-            Sets</a></li>
+        <li id="trajectory_li" role="presentation" class="active"><a href="#trajectory_el" aria-controls="trajectory_el"
+                                                                     role="tab"
+                                                                     data-toggle="tab">Trajectory</a></li>
+        <li role="presentation"><a href="#sets_el" aria-controls="sets_el" role="tab" data-toggle="tab">Cells</a></li>
     </ul>
 
 
@@ -74,15 +74,7 @@
                                    id="set_features" type="text">
                         </div>
                         <button id="set_submit" type="submit" class="btn btn-default btn-sm">Go</button>
-
-                        <div class="form-group">
-                            <hr/>
-                            <!--<label for="scale">Scale</label>-->
-                            <!--<select id="scale" class="form-control">-->
-                            <!--<option value="log2">Log2</option>-->
-                            <!--<option value="none">None</option>-->
-                            <!--</select>-->
-                        </div>
+                        <hr/>
                         <div class="form-group">
                             <label style="display:block;" for="filter_quantile">Select Cells</label>
                             <select id="filter_op" style="width:auto;display:inline-block;"
@@ -94,11 +86,20 @@
                                    type="text" style="width:150px;display:inline-block;">
                             <span class="help-block"><a style="display:none;" id="enter-quantile" href="#">Enter a quantile instead</a><a
                                     id="enter-value" href="#">Enter a value instead</a></span>
+
                         </div>
-                        <button id="create_set" type="button" class="btn btn-default btn-sm">Create Cell Sets</button>
+                        <div class="form-group"><label for="force_layout_group_by">Group By</label>
+                            <select id="force_layout_group_by" data-width="fit"
+                                    class="form-control input-sm selectpicker" multiple>
+                            </select>
+                        </div>
+                        <hr/>
+                        <button id="create_set" type="button" class="btn btn-default btn-sm" disabled>Create Cell Sets
+                        </button>
                         <hr/>
                         <button id="export_set" type="button" class="btn btn-default btn-sm">Export Custom Cell Sets
                         </button>
+                        <span id="ncustom_sets" class="help-block"></span>
                     </form>
                 </div>
 
@@ -108,15 +109,9 @@
                             style="padding-left:4px;vertical-align:middle;font-weight:bold;">Loading...</span></div>
                     <h2 id="set_title"></h2>
                     <div style="display:inline-block;vertical-align:top;">
-                        <!--<div><label style="display:block;" for="force_layout_group_by">Animate By</label>-->
-                            <!--<select id="force_layout_group_by" style="width:auto;display:inline-block;"-->
-                                    <!--data-width="fit" class="form-control input-sm selectpicker" multiple>-->
-                            <!--</select></div>-->
-                        <!--<hr/>-->
                         <div id="force_layout_vis_controls"></div>
                         <div id="force_layout_vis" style="display:inline-block;vertical-align:top;"></div>
                     </div>
-                    <div id="histogram_vis" style="width:500px;display:inline-block;vertical-align:top;"></div>
                     <div id="table_vis" style="max-width:400px;display:inline-block;vertical-align:top;"></div>
                 </div>
             </div>
