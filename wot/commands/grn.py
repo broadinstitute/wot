@@ -177,8 +177,6 @@ def main(argsv):
     parser.add_argument('--nmodules', help='Number of gene expression modules', type=int, default=50)
 
     parser.add_argument('--U', help='Gene module initialization matrix')
-    parser.add_argument('--cell_filter',
-                        help='File with one cell id per line to include or or a python regular expression of cell ids to include')
 
     parser.add_argument('--epochs',
                         help='Number of epochs', type=int, default=10000)
@@ -207,7 +205,7 @@ def main(argsv):
         ds.x = ds.x.toarray()
     if args.expm1:
         ds.x = np.expm1(ds.x)
-    ds = wot.io.filter_ds_from_command_line(ds, args)
+
     if args.percentile is not None:
         p = np.percentile(ds.x, args.percentile)
         ds.x[ds.x > p] = p
@@ -322,7 +320,8 @@ def main(argsv):
     # for sparse model: lda_z1=3,lda_z2=1.5,lda_u=0.25
     # currently using: lda_z1=2,lda_z2=0.5,lda_u=1.5
     Z, U, Xh, k, b, y0, x0 = update_regulation(ComposedLineage, Xg, Xr, TP, TimeLag, Z=Z, U=U, lda_z1=2, lda_z2=0.5,
-                                               lda_u=1.5, epochs=10000, sample_fraction=5e-6, threads=40, inner_iters=1,
+                                               lda_u=1.5, epochs=epochs, sample_fraction=5e-6, threads=40,
+                                               inner_iters=1,
                                                k=k, b=b, y0=y0, x0=x0, differences=differences, frequent_fa=False,
                                                num_modules=N, epoch_block_size=500,
                                                savepath='LineageRegulators_Combined/intermediateResults')
