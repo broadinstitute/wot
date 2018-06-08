@@ -203,7 +203,6 @@ def main(argsv):
     if args.percentile is not None:
         p = np.percentile(ds.x, args.percentile)
         ds.x[ds.x > p] = p
-    ds.row_meta = ds.row_meta.join(days_data_frame)
 
     tf_ids = pd.read_table(args.tf, index_col=0, header=None).index.values
     tf_column_indices = ds.col_meta.index.isin(tf_ids)
@@ -254,11 +253,9 @@ def main(argsv):
         Lineage.append(l)
 
     for t in TP:
-        day_indices = np.where(ds.row_meta[days_data_frame.columns[0]] == t)[0]
-        ds_t = wot.Dataset(ds.x[day_indices], ds.row_meta.iloc[day_indices], ds.col_meta)
         # align transport map and matrix
         tmap_ids = time_to_tmap_ids[t]
-        aligned_order = ds_t.row_meta.index.get_indexer_for(tmap_ids)
+        aligned_order = ds.row_meta.index.get_indexer_for(tmap_ids)
         if (aligned_order == -1).sum() > 0:
             raise ValueError('Missing ids')
 
