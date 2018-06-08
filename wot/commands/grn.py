@@ -170,9 +170,6 @@ def main(argsv):
     parser.add_argument('--matrix',
                         help='Gene expression file with cells on '
                              'rows and features on columns', required=True)
-    parser.add_argument('--cell_days',
-                        help='Two column tab delimited file without header with '
-                             'cell ids and days', required=True)
     parser.add_argument('--time_lag', help='Time lag', type=float, required=True)
     parser.add_argument('--nmodules', help='Number of gene expression modules', type=int, default=50)
 
@@ -196,10 +193,7 @@ def main(argsv):
     if len(transport_maps) == 0:
         print('No transport maps found in ' + args.dir)
         exit(1)
-    days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
-                                    names=['day'],
-                                    engine='python', sep=None,
-                                    dtype={'day': np.float64})
+
     ds = wot.io.read_dataset(args.matrix)
     if scipy.sparse.isspmatrix(ds.x):
         ds.x = ds.x.toarray()
@@ -320,7 +314,7 @@ def main(argsv):
     # for sparse model: lda_z1=3,lda_z2=1.5,lda_u=0.25
     # currently using: lda_z1=2,lda_z2=0.5,lda_u=1.5
     Z, U, Xh, k, b, y0, x0 = update_regulation(ComposedLineage, Xg, Xr, TP, TimeLag, Z=Z, U=U, lda_z1=2, lda_z2=0.5,
-                                               lda_u=1.5, epochs=epochs, sample_fraction=5e-6, threads=40,
+                                               lda_u=1.5, epochs=epochs, sample_fraction=5e-6, threads=threads,
                                                inner_iters=1,
                                                k=k, b=b, y0=y0, x0=x0, differences=differences, frequent_fa=False,
                                                num_modules=N, epoch_block_size=500,
