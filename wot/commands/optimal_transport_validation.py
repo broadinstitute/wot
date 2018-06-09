@@ -14,8 +14,7 @@ def main(argv):
                         required=True)
 
     parser.add_argument('--covariate',
-                        help='Two column tab delimited file without header with '
-                             'cell ids and covariate value')
+                        help='Two column file with headers "id" and "covariate" indicating cell ids and covariate value')
     parser.add_argument('--resample_iter', help='Number of resample iterations to perform', type=int, default=0)
     parser.add_argument('--npairs', type=int, default=10000)
     parser.add_argument('--save_interpolated', action='store_true', help='Save interpolated point clouds')
@@ -31,10 +30,7 @@ def main(argv):
     unique_covariates = None
     covariate_pairs = None
     if args.covariate is not None:
-        covariate_df = pd.read_table(args.covariate, index_col=0,
-                                     header=None, names=['covariate'],
-                                     engine='python',
-                                     sep=None)
+        covariate_df = pd.read_table(args.covariate, index_col='id', engine='python', sep=None)
 
         import itertools
 

@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import csv
 import scipy
 import sklearn.metrics
 import sklearn.decomposition
@@ -23,10 +22,10 @@ class OptimalTransportHelper:
                                  'rows and features on columns', required=True)
 
         parser.add_argument('--cell_days',
-                            help='Two column tab delimited file without header with '
-                                 'cell ids and days', required=True)
+                            help='Two column file with headers "id" and "day" corresponding to cell id and days',
+                            required=True)
         parser.add_argument('--day_pairs',
-                            help='Two column tab delimited file without header with '
+                            help='Two column file without header with '
                                  'pairs of days to compute transport maps for')
 
         parser.add_argument('--gene_filter',
@@ -94,12 +93,11 @@ class OptimalTransportHelper:
         growth_rate_group.add_argument('--gene_set_scores', help='File containing "Cell.cycle" and "Apoptosis" scores')
 
         growth_rate_group.add_argument('--cell_growth_rates',
-                                       help='Two column tab delimited file without '
-                                            'header with '
-                                            'cell ids and growth rates per day.')
+                                       help='Two column file with "id" and "cell_growth_rate" headers corresponding to cell id and growth rate per day.')
         parser.add_argument('--diagonal', help='Diagonal scaling matrix')
         parser.add_argument('--power', help='Diagonal scaling power', type=float)
-        parser.add_argument('--local_pca', help='Convert day pairs matrix to PCA coordinates', type=int)
+        parser.add_argument('--local_pca', help='Convert day pairs matrix to PCA coordinates. Set to -1 to disable',
+                            type=int, default=30)
 
         parser.add_argument('--solver',
                             help='Solver to use when computing transport maps. One of unbalanced, floating_epsilon, '
@@ -138,8 +136,7 @@ class OptimalTransportHelper:
                     p /= counts_p
                     ds.x[i] = np.random.multinomial(args.ncounts, p, size=1)[0]
 
-        days_data_frame = pd.read_table(args.cell_days, index_col=0, header=None,
-                                        names=['day'], engine='python', sep=None,
+        days_data_frame = pd.read_table(args.cell_days, index_col='id', engine='python', sep=None,
                                         dtype={'day': np.float64})
         if args.day_pairs is not None:
             if not os.path.isfile(args.day_pairs):
@@ -182,10 +179,7 @@ class OptimalTransportHelper:
             cell_growth_rates = pd.DataFrame(index=gene_set_scores_ids, data={'cell_growth_rate': g})
 
         elif args.cell_growth_rates is not None:
-            cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col=0,
-                                              header=None, names=['cell_growth_rate'],
-                                              quoting=csv.QUOTE_NONE, engine='python',
-                                              sep=None)
+            cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col='id', engine='python', sep=None)
         else:
             cell_growth_rates = pd.DataFrame(index=ds.row_meta.index.values, data={'cell_growth_rate': 1})
             if args.verbose:
@@ -298,7 +292,7 @@ class OptimalTransportHelper:
                     print('Unable to find time ' + str(t0_5) + ' - skipping.')
                     continue
 
-            if args.local_pca is not None:
+            if args.local_pca is not None and args.local_pca >= 0:
                 import scipy.sparse
                 matrices = list()
                 matrices.append(p0_full.x if not scipy.sparse.isspmatrix(p0_full.x) else p0_full.x.toarray())

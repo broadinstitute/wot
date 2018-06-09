@@ -12,6 +12,7 @@ by using the mathematical approach of Optimal Transport (OT)
 
 
 ## <a name="install"></a> Install
+Python 3 is required.
 
 ```
 git clone https://github.com/broadinstitute/wot.git
@@ -42,7 +43,7 @@ Apoptosis and cell cycle scores used to compute growth rates. If not specified, 
 Use principal component analysis to reduce the dimensionality of the expression matrix locally in the space of consecutive days. Thirty components are used by default. | --local_pca 
 Pairs of days to compute transport maps for | --day_pairs
 File with one gene id per line to use for computing cost matrices | --gene_filter
-Base name for output files | --prefix
+Base name for output files | --out
 To see all options, type:
 ```
 wot optimal_transport -h 
