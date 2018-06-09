@@ -6,3 +6,4 @@ from .optimal_transport import *
 from .optimal_transport_validation import *
 from .convert_matrix import *
 from .grn import *
+from .force_layout import *

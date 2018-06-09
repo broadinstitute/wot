@@ -540,7 +540,7 @@ var showFeature = function () {
                 var field = groupBy[fieldIndex];
                 keyArray.push(cellInfo[field][index]);
             }
-            var key = keyArray.join(', ');
+            var key = keyArray.join('_');
             var trace = traceNameToTrace[key];
             if (trace == null) {
                 trace = {
@@ -744,6 +744,18 @@ $createSet.on('click', function (e) {
 
 $groupBy.on('change', function (e) {
     groupBy = $(this).val();
+    // put day at end
+    var dayIndex = -1;
+    for (var i = 0; i < groupBy.length; i++) {
+        if (groupBy[i] === 'day') {
+            dayIndex = i;
+            break;
+        }
+    }
+    if (dayIndex !== -1) {
+        groupBy.splice(dayIndex, 1);
+        groupBy.push('day');
+    }
     showFeature();
 });
 
