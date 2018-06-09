@@ -36,8 +36,21 @@ def compose_transports(Lineage, TP, lag):
     return ComposedLineage
 
 
-def coupling_sampler(Lineage, nf=1e-3, s=1, threads=1, nmin=10):
+try:
     from gslrandom import PyRNG, multinomial
+
+
+    def coupling_random_sample(n, l, s, threads):
+        P = np.empty((s, len(l)), dtype=np.uint32)
+        l_tile = np.tile(l, (s, 1))
+        rngs = [PyRNG(np.random.randint(2 ** 16)) for _ in range(threads)]
+        return multinomial(rngs, n, l_tile, P)
+except:
+    def coupling_random_sample(n, l, s, threads):
+        return np.random.multinomial(n[0], l, size=s)
+
+
+def coupling_sampler(Lineage, nf=1e-3, s=1, threads=1, nmin=10):
     Pairs = [[] for _ in range(s)]
     for lineage in Lineage:
         if len(lineage) > 0:
@@ -47,15 +60,10 @@ def coupling_sampler(Lineage, nf=1e-3, s=1, threads=1, nmin=10):
             sd = np.exp(entropy(l))
             n = max(nmin, int(sd * nf)) * np.ones(s, dtype=np.uint32)
             # P = np.ones((s,len(l)),dtype=np.uint32)
-            P = np.empty((s, len(l)), dtype=np.uint32)
-            l_tile = np.tile(l, (s, 1))
-            rngs = [PyRNG(np.random.randint(2 ** 16)) for _ in range(threads)]
-            P = multinomial(rngs, n, l_tile, P)
-            # P = np.random.multinomial(n, l, size=s)
+            P = coupling_random_sample(n, l, s, threads)
             for i in range(s):
                 pairs = np.nonzero(P[i].reshape(lineage.shape))
                 Pairs[i].append(pairs)
-            del P, l_tile
         else:
             for i in range(s):
                 Pairs[i].append([])
@@ -162,7 +170,7 @@ def main(argsv):
         description='Gene Regulatory Networks')
 
     parser.add_argument('--dir',
-                        help='Directory of transport maps', required=True)
+                        help='Directory of transport maps', required=True, action='append')
     parser.add_argument('--tf',
                         help='File with one gene id per line to assign transcription factors', required=True)
     parser.add_argument('--gene_filter',
@@ -175,12 +183,14 @@ def main(argsv):
 
     parser.add_argument('--U', help='Gene module initialization matrix')
 
+    parser.add_argument('--threads',
+                        help='Number of threads to use', type=int)
     parser.add_argument('--epochs',
                         help='Number of epochs', type=int, default=10000)
+    parser.add_argument('--exp2',
+                        help='Element-wise 2 to the power x minus 1', action='store_true')
     parser.add_argument('--percentile',
                         help='Threshold matrix values at specified percentile (99.5 recommended)', type=float)
-    parser.add_argument('--expm1', help='Take exponential minus one of input matrix', action='store_true')
-
     parser.add_argument('--out',
                         help='Prefix for ouput file names')
     args = parser.parse_args(argsv)
@@ -189,20 +199,19 @@ def main(argsv):
     N = args.nmodules
     epochs = args.epochs
     TimeLag = args.time_lag
-    transport_maps = wot.io.list_transport_maps(args.dir)
-    if len(transport_maps) == 0:
-        print('No transport maps found in ' + args.dir)
-        exit(1)
 
     ds = wot.io.read_dataset(args.matrix)
     if scipy.sparse.isspmatrix(ds.x):
         ds.x = ds.x.toarray()
-    if args.expm1:
-        ds.x = np.expm1(ds.x)
+    if args.exp2:
+        ds.x = 2 ** ds.x - 1
 
     if args.percentile is not None:
-        p = np.percentile(ds.x, args.percentile)
-        ds.x[ds.x > p] = p
+        thresh = np.percentile(ds.x, args.percentile)
+        ds.x[(ds.x > thresh)] = thresh
+
+    print(np.min(ds.x))
+    print(np.max(ds.x))
 
     tf_ids = pd.read_table(args.tf, index_col=0, header=None).index.values
     tf_column_indices = ds.col_meta.index.isin(tf_ids)
@@ -219,49 +228,52 @@ def main(argsv):
         exit(1)
     print(str(non_tf_sum) + ' non-transcription factors')
 
-    time_to_tmap_ids = {}
-    time_to_tmap = {}
     TP = []
     Lineage = []  # list of transport maps
-    threads = os.cpu_count()
+    if args.threads is None:
+        threads = os.cpu_count()
+    else:
+        threads = args.threads
 
     differences = False
 
     Xg = []  # list of non-tf expression
     Xr = []  # list of tf expression
 
-    for i in range(len(transport_maps)):
-        tmap_dict = transport_maps[i]
-        tmap = wot.io.read_dataset(tmap_dict['path'])
-        if time_to_tmap_ids.get(tmap_dict['t1']) is None:
-            time_to_tmap_ids[tmap_dict['t1']] = tmap.row_meta.index.values
-        if time_to_tmap_ids.get(tmap_dict['t2']) is None:
-            time_to_tmap_ids[tmap_dict['t2']] = tmap.col_meta.index.values
+    for transport_map_dir in args.dir:
+        transport_maps = wot.io.list_transport_maps(transport_map_dir)
+        if len(transport_maps) == 0:
+            print('No transport maps found in ' + transport_map_dir)
+            exit(1)
+        for i in range(len(transport_maps)):
+            tmap_dict = transport_maps[i]
+            tmap = wot.io.read_dataset(tmap_dict['path'])
+            if i == 0:  # first timepoint, align dataset with tmap rows
+                aligned_order = ds.row_meta.index.get_indexer_for(tmap.row_meta.index.values.astype(str))
+                if (aligned_order == -1).sum() > 0:
+                    print(tmap.row_meta.index.values[aligned_order == -1])
+                    nmissing = (aligned_order == -1).sum()
+                    raise ValueError(str(nmissing) + ' missing ids for ' + tmap_dict['path'])
 
-        if time_to_tmap.get(tmap_dict['t2']) is not None:
-            raise ValueError('Duplicate time')
-        time_to_tmap[tmap_dict['t2']] = tmap.x
-        if i == 0:
-            TP.append(tmap_dict['t1'])
-        TP.append(tmap_dict['t2'])
+                ds_t = wot.Dataset(ds.x[aligned_order], ds.row_meta.iloc[aligned_order], ds.col_meta)
+                Xg.append(ds_t.x[:, non_tf_column_indices])
+                Xr.append(ds_t.x[:, tf_column_indices])
+                TP.append(tmap_dict['t1'])
+                if len(TP) > 0 and TP[len(TP) - 1] < TP[len(TP) - 2]:
+                    Lineage.append([])
 
-    for i, tp in zip(range(1, len(TP)), TP[1:]):
-        if TP[i] < TP[i - 1]:
-            l = []
-        else:
-            l = time_to_tmap[tp]
-        Lineage.append(l)
+            # align dataset with tmap columns
+            aligned_order = ds.row_meta.index.get_indexer_for(tmap.col_meta.index.values.astype(str))
+            if (aligned_order == -1).sum() > 0:
+                print(tmap.col_meta.index.values[aligned_order == -1])
+                nmissing = (aligned_order == -1).sum()
+                raise ValueError(str(nmissing) + ' missing ids for ' + tmap_dict['path'])
 
-    for t in TP:
-        # align transport map and matrix
-        tmap_ids = time_to_tmap_ids[t]
-        aligned_order = ds.row_meta.index.get_indexer_for(tmap_ids)
-        if (aligned_order == -1).sum() > 0:
-            raise ValueError('Missing ids')
-
-        ds_t = wot.Dataset(ds.x[aligned_order], ds.row_meta.iloc[aligned_order], ds.col_meta)
-        Xg.append(ds_t.x[:, non_tf_column_indices])
-        Xr.append(ds_t.x[:, tf_column_indices])
+            ds_t = wot.Dataset(ds.x[aligned_order], ds.row_meta.iloc[aligned_order], ds.col_meta)
+            Xg.append(ds_t.x[:, non_tf_column_indices])
+            Xr.append(ds_t.x[:, tf_column_indices])
+            TP.append(tmap_dict['t2'])
+            Lineage.append(tmap.x)
 
     if args.U is None:
         # rows are modules, columns are genes
@@ -272,7 +284,6 @@ def main(argsv):
         U = wot.io.read_dataset(args.U).x
         # TODO ensure in same order as ds
 
-    assert len(TP) - 1 == len(Lineage)
     Uinv = np.linalg.pinv(U)
     Z = []
     XU = []
@@ -284,12 +295,6 @@ def main(argsv):
     y0 = np.array([ki / 10 for ki in k])
     # for differences model:
     # lda_z1,lda_z2,lda_u = 0.1
-
-    # add all pairs of TFs (optional)
-    for i, xr in []:  # enumerate(Xr):
-        combo_idx = list(combinations(range(xr.shape[1]), 2))
-        xr_combo = np.prod(xr[:, combo_idx], axis=2) ** .5
-        Xr[i] = np.hstack([xr, xr_combo])
 
     # optionally add constant to each day
     for i, x in enumerate(Xr):
@@ -315,7 +320,7 @@ def main(argsv):
                                                inner_iters=1,
                                                k=k, b=b, y0=y0, x0=x0, differences=differences, frequent_fa=False,
                                                num_modules=N, epoch_block_size=500,
-                                               savepath='LineageRegulators_Combined/intermediateResults')
+                                               savepath=None)
     np.save(args.out + '_Z.npy', Z)
     np.save(args.out + '_kbyx.npy', (k, b, y0, x0))
 
