@@ -457,10 +457,10 @@ $('#trajectory_submit').on('click', function (e) {
 });
 
 
-var setSelectedFeature = null;
+var setSelectedFeature = null; // selected feature name
 var $setFeature = $('#set_features');
 var featureResult;
-var userFilterValue = null;
+var userFilterValue = null; // enter entered filter value
 var customCellSetNameToIds = {};
 var $filterOp = $('#filter_op');
 var filterOp = $filterOp.val();
@@ -510,12 +510,16 @@ var createSets = function () {
 var showFeature = function () {
     var traces = [];
     var html = [];
-    if (featureResult != null) {
+    var filterValue = null;
 
-        var filterValue = null;
-        var f = function () {
-            return true;
-        };
+    var f = function () {
+        return true;
+    };
+
+    var isBackgroundTrace = featureResult == null || featureResult.featureRange == null;
+    if (isBackgroundTrace) {
+        featureResult = {ids: cellInfo.id};
+    } else {
         if (userFilterValue != null && !isNaN(userFilterValue)) {
             filterValue = enterQuantile ? d3.quantile(featureResult.sortedValues, userFilterValue / 100.0) : userFilterValue;
             if ($('#filter_op').val() == 'gt') {
@@ -528,114 +532,124 @@ var showFeature = function () {
                 };
             }
         }
-        var nfields = groupBy.length;
-        var traceNameToTrace = {};
-        var colorScale = d3.scaleLinear()
-            .domain(featureResult.featureRange)
-            .range(forceLayoutColorScale);
-        for (var i = 0, length = featureResult.ids.length; i < length; i++) {
-            var id = featureResult.ids[i];
-            var keyArray = [];
-            for (var fieldIndex = 0; fieldIndex < nfields; fieldIndex++) {
-                var field = groupBy[fieldIndex];
-                keyArray.push(cellInfo[field][index]);
-            }
-            var key = keyArray.join('_');
-            var trace = traceNameToTrace[key];
-            if (trace == null) {
-                trace = {
-                    x: [],
-                    y: [],
-                    ids: [],
-                    nids: 0,
-                    keyArray: keyArray,
-                    key: key,
-                    mode: 'markers',
-                    type: 'scattergl',
-                    hoverinfo: 'text',
-                    showlegend: false,
-                    marker: {
-                        cmin: featureResult.featureRange[0],
-                        cmax: featureResult.featureRange[1],
-                        // autocolorscale: false,
-                        color: [],
-                        showscale: true,
-                        size: 2
-                    }
+    }
+    var nfields = groupBy.length;
+    var traceNameToTrace = {};
+    // var colorScale = d3.scaleLinear()
+    //     .domain(featureResult.featureRange)
+    //     .range(forceLayoutColorScale);
+    for (var i = 0, length = featureResult.ids.length; i < length; i++) {
+        var id = featureResult.ids[i];
+        var keyArray = [];
+        for (var fieldIndex = 0; fieldIndex < nfields; fieldIndex++) {
+            var field = groupBy[fieldIndex];
+            keyArray.push(cellInfo[field][index]);
+        }
+        var key = keyArray.join('_');
+        var trace = traceNameToTrace[key];
+        if (trace == null) {
+            trace = {
+                x: [],
+                y: [],
+                ids: [],
+                nids: 0,
+                keyArray: keyArray,
+                key: key,
+                mode: 'markers',
+                type: 'scattergl',
+                hoverinfo: 'text',
+                showlegend: false
+            };
+            if (!isBackgroundTrace) {
+                trace.marker = {
+                    cmin: featureResult.featureRange[0],
+                    cmax: featureResult.featureRange[1],
+                    color: [],
+                    showscale: true,
+                    size: 2
                 };
-                traceNameToTrace[key] = trace;
+            } else {
+                trace.marker = {size: 2, color: 'black'};
             }
+            traceNameToTrace[key] = trace;
+        }
+        var accept = true;
+        if (!isBackgroundTrace) {
             var value = featureResult.values[i];
-            trace.nids++;
-            if (f(value)) {
-                var index = cellIdToIndex[id];
-                trace.x.push(cellInfo.x[index]);
-                trace.y.push(cellInfo.y[index]);
-                trace.ids.push(id);
+            accept = f(value);
+            if (accept) {
                 trace.marker.color.push(value);
             }
         }
-
-        for (var key in traceNameToTrace) {
-            traces.push(traceNameToTrace[key]);
+        trace.nids++;
+        if (accept) {
+            var index = cellIdToIndex[id];
+            trace.x.push(cellInfo.x[index]);
+            trace.y.push(cellInfo.y[index]);
+            trace.ids.push(id);
         }
-        traces.sort(function (t1, t2) {
-            for (var i = 0; i < t1.keyArray.length; i++) {
-                var a = t1.keyArray[i];
-                var b = t2.keyArray[i];
-                var val = (a === b ? 0 : (a < b ? -1 : 1));
-                if (val !== 0) {
-                    return val;
-                }
-            }
-            return 0;
-
-        });
-
-        var percentFormatter = d3.format('.1f');
-        var groupedThousands = d3.format(',');
-        if (filterValue != null) {
-            html.push('<h4>Cell Selection Summary <small> ' + ($('#filter_op').val() === 'gt' ? 'Greater then' : 'Less then') + ' ' + d3.format('.2f')(filterValue) + '</small></h4>');
-        }
-
-        html.push('<table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Group</th><th># Cells Selected</th><th>% Cells Selected</th></tr>');
-        var totalPass = 0;
-        var total = 0;
-        for (var i = 0; i < traces.length; i++) {
-            var trace = traces[i];
-            totalPass += trace.ids.length;
-            total += trace.nids;
-        }
-
-        for (var i = 0; i < traces.length; i++) {
-            var trace = traces[i];
-            html.push('<tr>');
-            html.push('<td><input class="wot-group" name="' + trace.key + '" type="checkbox" ' + (trace.ids.length === 0 ? 'disabled' : 'checked') + '>');
-            html.push('<td>');
-            html.push(trace.key);
-            html.push('</td>');
-            html.push('<td>');
-            html.push(groupedThousands(trace.ids.length) + '/' + groupedThousands(trace.nids));
-            html.push('</td>');
-            html.push('<td>');
-            html.push(percentFormatter(100 * (trace.ids.length / trace.nids)));
-            html.push('</td>');
-            html.push('</tr>');
-        }
-        if (traces.length > 1) {
-            html.push('<td></td>');
-            html.push('<td>All</td>');
-            html.push('<td>');
-            html.push(groupedThousands(totalPass) + '/' + groupedThousands(total));
-            html.push('</td>');
-            html.push('<td>');
-            html.push(percentFormatter(100 * (totalPass / total)));
-            html.push('</td>');
-            html.push('</tr>');
-        }
-        html.push('</table>');
 
     }
+    for (var key in traceNameToTrace) {
+        traces.push(traceNameToTrace[key]);
+    }
+    traces.sort(function (t1, t2) {
+        for (var i = 0; i < t1.keyArray.length; i++) {
+            var a = t1.keyArray[i];
+            var b = t2.keyArray[i];
+            var val = (a === b ? 0 : (a < b ? -1 : 1));
+            if (val !== 0) {
+                return val;
+            }
+        }
+        return 0;
+
+    });
+
+    var percentFormatter = d3.format('.1f');
+    var groupedThousands = d3.format(',');
+    if (filterValue != null) {
+        html.push('<h4>Cell Summary <small> ' + ($('#filter_op').val() === 'gt' ? 'Greater then' : 'Less then') + ' ' + d3.format('.2f')(filterValue) + '</small></h4>');
+    }
+
+    html.push('<table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Group</th><th># Cells Selected</th><th>% Cells Selected</th></tr>');
+    var totalPass = 0;
+    var total = 0;
+    for (var i = 0; i < traces.length; i++) {
+        var trace = traces[i];
+        totalPass += trace.ids.length;
+        total += trace.nids;
+    }
+
+    for (var i = 0; i < traces.length; i++) {
+        var trace = traces[i];
+        html.push('<tr>');
+        html.push('<td><input class="wot-group" name="' + trace.key + '" type="checkbox" ' + (trace.ids.length === 0 ? 'disabled' : 'checked') + '>');
+        html.push('<td>');
+        html.push(trace.key);
+        html.push('</td>');
+        html.push('<td>');
+        html.push(groupedThousands(trace.ids.length) + '/' + groupedThousands(trace.nids));
+        html.push('</td>');
+        html.push('<td>');
+        html.push(percentFormatter(100 * (trace.ids.length / trace.nids)));
+        html.push('</td>');
+        html.push('</tr>');
+    }
+    if (traces.length > 1) {
+        html.push('<td></td>');
+        html.push('<td>All</td>');
+        html.push('<td>');
+        html.push(groupedThousands(totalPass) + '/' + groupedThousands(total));
+        html.push('</td>');
+        html.push('<td>');
+        html.push(percentFormatter(100 * (totalPass / total)));
+        html.push('</td>');
+        html.push('</tr>');
+    }
+    html.push('</table>');
+
+
     $('#table_vis').html(html.join(''));
 
     var $controls = $('#force_layout_vis_controls');
@@ -644,32 +658,7 @@ var showFeature = function () {
     enableCreateSet();
 };
 
-var showFeatureOld = function () {
 
-
-
-    // Plotly.react('histogram_vis', [
-    //     {
-    //         name: 'All Cells',
-    //         x: featureResult.values,
-    //         type: 'histogram',
-    //         marker: {color: 'LightGrey', opacity: 0.7}
-    //     }], {
-    //     shapes: filterValue == null ? null : [{
-    //         type: 'line',
-    //         xref: 'x',
-    //         yref: 'paper',
-    //         x0: filterValue,
-    //         x1: filterValue,
-    //         y0: 0,
-    //         y1: 1,
-    //         line: {
-    //             color: 'rgb(0, 0, 0)',
-    //             width: 2
-    //         }
-    //     }]
-    // });
-};
 var groupBy = [];
 
 var fetchFeatureData = function () {
