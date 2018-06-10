@@ -69,13 +69,17 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
         var t;
         if (traces.length > 0) {
             if (index === 0) {
-                traces[0].marker.showscale = true;
+                if (traces[0].marker.cmin != null && !isNaN(traces[0].marker.cmin)) {
+                    traces[0].marker.showscale = true;
+                }
                 for (var i = 1; i < traces.length; i++) {
                     traces[i].marker.showscale = false;
                 }
                 concatTraces = traces; // all
             } else {
-                traces[index - 1].marker.showscale = true;
+                if (traces[index - 1].marker.cmin != null && !isNaN(traces[index - 1].marker.cmin)) {
+                    traces[index - 1].marker.showscale = true;
+                }
                 concatTraces = [traces[index - 1]]
             }
         }
@@ -153,7 +157,7 @@ var createForceLayoutPlotObject = function (showLegend) {
     var backgroundTrace = {
         hoverinfo: 'skip',
         showlegend: false,
-        marker: {size: 2, color: 'rgb(217,217,217)', opacity: 0.5},
+        marker: {size: 2, color: 'rgb(217,217,217)', opacity: 0.5, showscale: false},
         mode: 'markers',
         type: 'scattergl',
         name: 'All Cells',
@@ -569,7 +573,7 @@ var showFeature = function () {
                     size: 2
                 };
             } else {
-                trace.marker = {size: 2, color: 'black'};
+                trace.marker = {size: 2, color: 'black', showscale: false, cmin: null, cmax: null};
             }
             traceNameToTrace[key] = trace;
         }
