@@ -470,6 +470,7 @@ var $filterOp = $('#filter_op');
 var filterOp = $filterOp.val();
 var enterQuantile = true; // enter a quantile or value
 var featurePlotTraces;
+var zScore = false;
 var createSets = function () {
     var selectedGroups = [];
     $('.wot-group').filter(':checked').each(function () {
@@ -519,13 +520,23 @@ var showFeature = function () {
     var f = function () {
         return true;
     };
-
     var isBackgroundTrace = featureResult == null || featureResult.featureRange == null;
     if (isBackgroundTrace) {
         featureResult = {ids: cellInfo.id};
-    } else {
+    }
+    var values = featureResult.values;
+
+    if (values != null && zScore && featureResult.mean == null) {
+        featureResult.mean = d3.mean(values);
+        featureResult.std = d3.deviation(values)
+    }
+
+    if (!isBackgroundTrace) {
+
         if (userFilterValue != null && !isNaN(userFilterValue)) {
-            filterValue = enterQuantile ? d3.quantile(featureResult.sortedValues, userFilterValue / 100.0) : userFilterValue;
+            filterValue = enterQuantile ? d3.quantile(featureResult.sortedValues, userFilterValue / 100.0, (zScore ? function (d) {
+                return (d - featureResult.mean) / featureResult.std;
+            } : null)) : userFilterValue;
             if ($('#filter_op').val() == 'gt') {
                 f = function (d) {
                     return d > filterValue;
@@ -542,6 +553,7 @@ var showFeature = function () {
     // var colorScale = d3.scaleLinear()
     //     .domain(featureResult.featureRange)
     //     .range(forceLayoutColorScale);
+
     for (var i = 0, length = featureResult.ids.length; i < length; i++) {
         var id = featureResult.ids[i];
         var keyArray = [];
@@ -565,13 +577,27 @@ var showFeature = function () {
                 showlegend: false
             };
             if (!isBackgroundTrace) {
-                trace.marker = {
-                    cmin: featureResult.featureRange[0],
-                    cmax: featureResult.featureRange[1],
-                    color: [],
-                    showscale: true,
-                    size: 2
-                };
+                if (zScore) {
+                    trace.marker = {
+                        cmin: -3,
+                        cmax: 3,
+                        color: [],
+                        showscale: true,
+                        colorscale: [[0, 'blue'], [0.25, 'rgb(217,217,217)'], [0.75, 'rgb(217,217,217)'], [1, 'red']],
+                        size: 2
+                    };
+
+                } else {
+                    trace.marker = {
+                        cmin: featureResult.featureRange[0],
+                        cmax: featureResult.featureRange[1],
+                        color: [],
+                        showscale: true,
+                        colorscale: forceLayoutColorScale,
+                        size: 2
+                    };
+                }
+
             } else {
                 trace.marker = {size: 2, color: 'black', showscale: false, cmin: null, cmax: null};
             }
@@ -579,7 +605,10 @@ var showFeature = function () {
         }
         var accept = true;
         if (!isBackgroundTrace) {
-            var value = featureResult.values[i];
+            var value = values[i];
+            if (zScore) {
+                value = (value - featureResult.mean) / featureResult.std;
+            }
             accept = f(value);
             if (accept) {
                 trace.marker.color.push(value);
@@ -703,6 +732,10 @@ $setFeature.on('keydown', function (event) {
     }
 });
 var $filterValue = $('#filter_quantile');
+$('#z_score').on('change', function () {
+    zScore = $(this).prop('checked');
+    showFeature();
+});
 
 $('#enter-quantile').on('click', function (e) {
     e.preventDefault();
