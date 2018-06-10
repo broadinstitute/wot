@@ -167,8 +167,7 @@ class OptimalTransportHelper:
                 proliferation = gene_set_scores_ds[:, np.where(gene_set_scores_ds.col_meta.columns == 'Cell.cycle')[0]]
                 gene_set_scores_ids = gene_set_scores_ds.row_meta.index
             else:
-                gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0, quoting=csv.QUOTE_NONE,
-                                                engine='python', sep=None)
+                gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0, engine='python', sep=None)
                 apoptosis = gene_set_scores['Apoptosis'].values
                 proliferation = gene_set_scores['Cell.cycle'].values
                 gene_set_scores_ids = gene_set_scores.index
