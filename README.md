@@ -26,74 +26,82 @@ Apply a pre-processing workflow to normalize and scale your data, and detect var
 Suggested tools include [Seurat](https://satijalab.org/seurat/) or [Scanpy](http://scanpy.readthedocs.io/en/latest/).
 
     
+## WOT Tools
+WOT tools are run using the syntax *wot tool*. To see all tool options, type *wot tool -h* (e.g. wot optimal_transport -h)
+
 
 ## <a name="optimal_transport"></a> Optimal Transport
-Required Options
+*wot optimal_transport* calculates transport maps between consecutive time points and automatically learns cellular growth and death rates.
 
-Description | Flag
+Common Options (required in **bold**)
+
+Flag | Description
 --- | --- |
-**Normalized gene expression matrix.** | --matrix
-**Assigns days to cells** | --cell_days
+**--matrix** | Normalized gene expression matrix.
+**--cell_days** | Assigns days to cells
+--gene_set_scores | Apoptosis and cell cycle scores used to compute growth rates. If not specified, a constant growth rate is used. The wot tool [gene_set_scores](#gene_set_scores) can be used to compute gene set scores.
+--local_pca | Use principal component analysis to reduce the dimensionality of the expression matrix locally in the space of consecutive days. Thirty components are used by default.
+--day_pairs | Pairs of days to compute transport maps for
+--gene_filter | File with one gene id per line to use for computing cost matrices (e.g. variable genes)
+--out | Base name for output files 
 
-Optional Common Options
 
-Description | Flag
+## <a name="validation">Optimal Transport Validation</a>
+*wot optimal_transport_validation* tests the performance of optimal transport by comparing interpolated distributions to held-out time points.
+
+optimal_transport_validation has the same options as [optimal_transport](#optimal_transport) and
+
+Flag | Description
 --- | --- |
-Apoptosis and cell cycle scores used to compute growth rates. If not specified, a constant growth rate is used. The tool gene_set_scores can be used to compute gene set scores. | --gene_set_scores
-Use principal component analysis to reduce the dimensionality of the expression matrix locally in the space of consecutive days. Thirty components are used by default. | --local_pca 
-Pairs of days to compute transport maps for | --day_pairs
-File with one gene id per line to use for computing cost matrices | --gene_filter
-Base name for output files | --out
-To see all options, type:
-```
-wot optimal_transport -h 
-```
+**t_interpolate** | Interpolation fraction between two time points
+covariate | Two column file with headers "id" and "covariate" indicating cell ids and covariate value
 
-    
+
+
 ## <a name="visualization">Visualization</a>
 
 ## <a name="gene_set_scores">Gene Set Scores</a>
-Required Option
+*wot gene_set_scores* computes gene set scores for each cell given a gene expression matrix and gene sets.
 
-Description | Flag
+Options
+
+Flag | Description
 --- | --- |
-**Normalized gene expression matrix to compute gene set scores (e.g. apoptosis and cell cycle scores) for each cell.** | --matrix
+**--matrix** | Normalized gene expression matrix to compute gene set scores (e.g. apoptosis and cell cycle scores) for each cell.
 
 ## <a name="file_formats"></a> File Formats
-* Expression matrix
-    * [Market Exchange Format (MEX)](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/matrices)
-    * [HDF5 Gene-Barcode Matrix](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices)
-    * [Loom](http://linnarssonlab.org/loompy/format/index.html)
-    * Tab-delimited Text
+
+#### <a name="matrix">Gene Expression matrix</a> 
+Cells on rows and genes (features) on columns. Accepted file formats are [Market Exchange Format (MEX)](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/matrices), [HDF5 Gene-Barcode Matrix](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices), [Loom](http://linnarssonlab.org/loompy/format/index.html), and text
     
-    Example:
-    <table>
-    <tr><td>id</td><td>gene_1</td><td>gene_2</td><td>gene_3</td></tr>
-    <tr><td>cell_1</td><td>1.2</td><td>12.2</td><td>5.4</td></tr>
-    <tr><td>cell_2</td><td>2.3</td><td>4.1</td><td>5.0</td></tr>
-    </table>
+Example Text File:
+    
+<table>
+<tr><td>id</td><td>gene_1</td><td>gene_2</td><td>gene_3</td></tr>
+<tr><td>cell_1</td><td>1.2</td><td>12.2</td><td>5.4</td></tr>
+<tr><td>cell_2</td><td>2.3</td><td>4.1</td><td>5.0</td></tr>
+</table>
    
        
 
-* Cell days
-    * Two column tab delimited file header "id" and "day".
+#### <a name="cell_days">Cell Days</a>
+Two column file with header "id" and "day".
 
-    Example:
-    
-    <table>
-        <tr><td>id</td><td>day</td></tr>
-        <tr><td>cell_1</td><td>1</td></tr>
-        <tr><td>cell_2</td><td>2.5</td></tr>
-        </table>
+Example:
+
+<table>
+<tr><td>id</td><td>day</td></tr>
+<tr><td>cell_1</td><td>1</td></tr>
+<tr><td>cell_2</td><td>2.5</td></tr>
+</table>
   
-    
-* Day pairs
-    * Two column tab delimited file without header with pairs of days to compute transport maps for.
+#### <a name="day_pairs">Days Pairs</a> 
+Two column file without header with pairs of days to compute transport maps for.
 
-    Example:
-    
-    <table>
-            <tr><td>0</td><td>2</td></tr>
-            <tr><td>2</td><td>4</td></tr>
-            <tr><td>4</td><td>6</td></tr>
-            </table>
+Example:
+
+<table>
+<tr><td>0</td><td>2</td></tr>
+<tr><td>2</td><td>4</td></tr>
+<tr><td>4</td><td>6</td></tr>
+</table>
