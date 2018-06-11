@@ -3,7 +3,10 @@
 
 """The setup script."""
 
-from setuptools import setup, find_packages
+import setuptools
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 requirements = [
     'h5py >= 2.7.0', 'numpy >=1.8.2', 'SciPy >= 0.13.3',
@@ -22,18 +25,16 @@ test_requirements = [
     'unittest'
 ]
 
-setup(
+setuptools.setup(
     name='wot',
     version='0.1.0',
     description="Optimal transport for time-course single cell data",
-    long_description="Uses time-course data to infer how the probability "
-                     "distribution of cells "
-                     "evolves over time, by using the mathematical approach "
-                     "of Optimal Transport (OT)",
     author="Geoffrey Schiebinger, Jian Shu, Marcin Tabaka, Brian Cleary",
     author_email='wot@broadinstitute.org',
     url='https://github.com/broadinstitute/wot',
-    packages=find_packages(include=['wot']),
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    packages=setuptools.find_packages(include=['wot']),
     include_package_data=True,
     install_requires=requirements,
     license="BSD license",
