@@ -73,8 +73,10 @@ def main(argsv):
     xmax = np.max(cell_metadata['x'])
     ymin = np.min(cell_metadata['y'])
     ymax = np.max(cell_metadata['y'])
+
     cell_metadata['x'] = np.floor(np.interp(cell_metadata['x'].values, [xmin, xmax], [0, nx])).astype(int)
     cell_metadata['y'] = np.floor(np.interp(cell_metadata['y'].values, [ymin, ymax], [0, ny])).astype(int)
+
     # coords = coords.drop(['x', 'y'], axis=1)
     # cell_metadata[np.isnan(cell_metadata['day'].values)] = -1
 
@@ -90,10 +92,11 @@ def main(argsv):
         transport_map_times.add(tmap['t2'])
     datasets = []
     dataset_names = []
+
     if args.matrix is not None:
         for path in args.matrix:
             dataset_names.append(wot.io.get_filename_and_extension(os.path.basename(path))[0])
-            ds = wot.io.read_dataset(path)
+            ds = wot.io.read_dataset(path, backed=True)
 
             if args.cell_filter is not None:
                 if not os.path.isfile(args.cell_filter):
@@ -111,6 +114,7 @@ def main(argsv):
             # ds_order = ds.row_meta.index.get_indexer_for(days_data_frame.index.values)
             # ds = wot.Dataset(ds.x[ds_order], ds.row_meta.iloc[ds_order], ds.col_meta)
             # np.sum(ds_order == -1)
+            print('x')
             datasets.append(ds)
 
     static_folder = os.path.join(os.path.dirname(sys.argv[0]), 'web')
@@ -119,18 +123,18 @@ def main(argsv):
 
     @app.route("/info/", methods=['GET'])
     def info():
-        json = {'id': cell_metadata.index.values.tolist()}
+        cell_json = {'id': cell_metadata.index.values.tolist()}
         for column_name in cell_metadata:
-            json[column_name] = cell_metadata[column_name].values.tolist()
+            cell_json[column_name] = cell_metadata[column_name].values.tolist()
 
         features = set()
         for dataset_index in range(len(datasets)):
-            features.update(datasets[dataset_index].col_meta.index.values.astype(
-                str).tolist())
+            ds = datasets[dataset_index]
+            features.update(ds.col_meta.index.values.astype(str).tolist())
         info_json = {}
         info_json['features'] = list(features)
         info_json['transport_map_times'] = list(transport_map_times)
-        info_json['cell'] = json
+        info_json['cell'] = cell_json
         return flask.jsonify(info_json)
 
     @app.route("/feature_value/", methods=['GET'])

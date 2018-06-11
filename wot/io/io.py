@@ -4,9 +4,8 @@ import pandas as pd
 import wot
 import numpy as np
 import os
-import scipy.sparse
+import scipy
 import glob
-import csv
 
 
 def filter_ds_from_command_line(ds, args):
@@ -262,7 +261,7 @@ def read_gmx(path, feature_ids=None):
 
 
 def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_filter=None, col_filter=None,
-                 force_sparse=False):
+                 force_sparse=False, backed=False):
     path = str(path)
     basename_and_extension = get_filename_and_extension(path)
     ext = basename_and_extension[1]
@@ -340,9 +339,8 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
             col_meta.set_index('id', inplace=True)
         if not use_dask:
             x = f[h5_x]
-            import scipy
-            is_sparse = x.attrs.get('sparse')
-            if (is_sparse or force_sparse) and (row_filter is None and col_filter is None):
+            is_x_sparse = x.attrs.get('sparse')
+            if not backed and (is_x_sparse or force_sparse) and (row_filter is None and col_filter is None):
                 # read in blocks of 1000
                 chunk_start = 0
                 chunk_step = min(nrows, 1000)
@@ -358,19 +356,21 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
 
                 x = scipy.sparse.vstack(sparse_arrays)
             else:
-                if row_filter is None and col_filter is None:
+                if row_filter is None and col_filter is None and not backed:
                     x = x[()]
                 elif row_filter is not None and col_filter is not None:
                     x = x[row_attrs['indices']]
                     x = x[:, col_attrs['indices']]
                 elif row_filter is not None:
                     x = x[row_attrs['indices']]
-                else:
+                elif col_filter is not None:
                     x = x[:, col_attrs['indices']]
 
-                if (is_sparse or force_sparse) and not scipy.sparse.issparse(x):
+                if not backed and (is_x_sparse or force_sparse):
                     x = scipy.sparse.csr_matrix(x)
-            f.close()
+            if not backed:
+                f.close()
+
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
         else:
 
@@ -510,8 +510,8 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
             # TODO write as sparse array
             pd.DataFrame(index=ds.row_meta.index, data=np.hstack(
                 (ds.row_meta.values, ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x))).to_csv(f, sep='\t',
-                                                                                                         header=False,
-                                                                                                         quoting=csv.QUOTE_NONE)
+                                                                                                         header=False
+                                                                                                         )
             f.close()
         else:
 
@@ -521,7 +521,7 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
                                                            sep='\t',
                                                            doublequote=False,
                                                            compression='gzip' if output_format == 'txt.gz'
-                                                           else None, quoting=csv.QUOTE_NONE)
+                                                           else None)
     elif output_format == 'loom':
         f = h5py.File(path, 'w')
         x = ds.x
