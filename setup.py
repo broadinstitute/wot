@@ -10,7 +10,7 @@ with open("README.md", "r") as fh:
 
 requirements = [
     'h5py >= 2.7.0', 'numpy >=1.8.2', 'SciPy >= 0.13.3',
-    'scikit-learn >=0.19', 'pandas >= 0.18', 'POT >= 0.4.0', 'Cython >= 0.28.1', 'Flask >= 1.0.2',
+    'scikit-learn >=0.19', 'pandas >= 0.23.0', 'POT >= 0.4.0', 'Cython >= 0.28.1', 'Flask >= 1.0.2',
     'gunicorn >= 19.8.1', 'numexpr >= 2.6.5'
 ]
 
