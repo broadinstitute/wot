@@ -28,9 +28,9 @@ test_requirements = [
 
 setuptools.setup(
     name='wot',
-    version='0.1.0',
+    version='0.1.1',
     description="Optimal transport for time-course single cell data",
-    author="Geoffrey Schiebinger, Jian Shu, Marcin Tabaka, Brian Cleary",
+    author="WOT Team",
     author_email='wot@broadinstitute.org',
     url='https://github.com/broadinstitute/wot',
     long_description=long_description,
@@ -42,7 +42,6 @@ setuptools.setup(
     zip_safe=False,
     keywords='wot',
     classifiers=[
-        'Development Status :: 3 - Beta',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: BSD License',
