@@ -49,6 +49,7 @@ def main(argsv):
     parser.add_argument('--workers', help='Number of worker processes', type=int, default=2)
     parser.add_argument('--port', help='Web server port', type=int, default=8080)
     parser.add_argument('--host', help='Web server host', default='127.0.0.1')
+    parser.add_argument('--background', help='Run in background', action='store_true')
 
     args = parser.parse_args(argsv)
     if args.cell_sets is not None:
@@ -65,7 +66,7 @@ def main(argsv):
             if cell_metadata is None:
                 cell_metadata = df
             else:
-                cell_metadata = cell_metadata.join(df)
+                cell_metadata = cell_metadata.join(df, how='outer')
 
     nx = 800
     ny = 800
@@ -114,7 +115,6 @@ def main(argsv):
             # ds_order = ds.row_meta.index.get_indexer_for(days_data_frame.index.values)
             # ds = wot.Dataset(ds.x[ds_order], ds.row_meta.iloc[ds_order], ds.col_meta)
             # np.sum(ds_order == -1)
-            print('x')
             datasets.append(ds)
 
     static_folder = os.path.join(os.path.dirname(sys.argv[0]), 'web')
