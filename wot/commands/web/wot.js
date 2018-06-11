@@ -204,6 +204,8 @@ var featureForceLayoutInfo = null;
 var $groupBy = $('#force_layout_group_by');
 $.ajax('/info/').done(function (json) {
     cellInfoHeaderNames = []
+    featureIds = json.features;
+
     var result = json.cell;
     for (var key in result) {
         if (key !== 'id' && key !== 'x' && key !== 'y') {
@@ -226,7 +228,7 @@ $.ajax('/info/').done(function (json) {
         data: [cellForceLayoutInfo.backgroundTrace],
         layout: cellForceLayoutInfo.layout
     });
-    featureIds = json.features;
+
     if (json.transport_map_times.length === 0) {
         $('a[href="#sets_el"]').tab('show');
         $('#trajectory_li').hide();
@@ -234,6 +236,8 @@ $.ajax('/info/').done(function (json) {
     }
     showFeature();
 
+}).fail(function (e) {
+    window.alert('An unexpected error occurred. Please try again.');
 });
 
 $('body').find('.selectpicker').selectpicker({
@@ -318,15 +322,16 @@ function extractLast(term) {
 function autocompleteFilter(term) {
     term = term.toUpperCase();
     var filteredResults = [];
-    for (var i = 0, length = featureIds.length; i < length; i++) {
-        if (featureIds[i].toUpperCase().startsWith(term)) {
-            filteredResults.push(featureIds[i]);
-            if (filteredResults.length === 10) {
-                return filteredResults;
+    if (featureIds != null) {
+        for (var i = 0, length = featureIds.length; i < length; i++) {
+            if (featureIds[i].toUpperCase().startsWith(term)) {
+                filteredResults.push(featureIds[i]);
+                if (filteredResults.length === 10) {
+                    return filteredResults;
+                }
             }
         }
     }
-
     return filteredResults;
 
 }
@@ -446,6 +451,8 @@ var fetchTrajectoryData = function () {
         $.ajax({url: '/trajectory/', data: data, method: 'POST'}).done(function (results) {
             showTrajectoryPlots(results);
             $('#trajectory_loading').hide();
+        }).fail(function () {
+            window.alert('An unexpected error occurred. Please try again.');
         });
     }
 };
@@ -599,7 +606,7 @@ var showFeature = function () {
                 }
 
             } else {
-                trace.marker = {size: 2, color: 'black', showscale: false, cmin: null, cmax: null};
+                trace.marker = {size: 2, color: 'black', showscale: false};
             }
             traceNameToTrace[key] = trace;
         }
@@ -709,6 +716,8 @@ var fetchFeatureData = function () {
                 featureResult.sortedValues = sortedValues;
                 showFeature();
                 $('#set_loading').hide();
+            }).fail(function () {
+                window.alert('An unexpected error occurred. Please try again.')
             });
         }
     }
