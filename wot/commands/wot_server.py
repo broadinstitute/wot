@@ -47,6 +47,7 @@ def main(argsv):
                         action='append')
     parser.add_argument('--workers', help='Number of worker processes', type=int, default=2)
     parser.add_argument('--port', help='Web server port', type=int, default=8080)
+    parser.add_argument('--host', help='Web server host', default='127.0.0.1')
 
     args = parser.parse_args(argsv)
     if args.cell_sets is not None:
@@ -221,8 +222,8 @@ def main(argsv):
         return flask.jsonify(data)
 
     options = {
-        'bind': '%s:%s' % ('127.0.0.1', args.port),
+        'bind': '%s:%s' % (args.host, args.port),
         'workers': args.workers,
     }
+    print('Please go to http://127.0.0.1:' + str(args.port) + '/web/index.html')
     StandaloneApplication(app, options).run()
-    print('http://127.0.0.1:' + str(args.port) + '/web/index.html')
