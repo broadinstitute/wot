@@ -7,6 +7,8 @@ by using the mathematical approach of Optimal Transport (OT)
 * [Prepare Gene Expression Matrix](#prepare-expression-matrix)
 * [Optimal Transport](#optimal_transport)
 * [Visualization](#visualization)
+* [Optimal Transport Validation](#optimal_transport_validation)
+* [Gene Set Scores](#gene_set_score)
 * [File Formats](#file_formats)
 
 
@@ -37,13 +39,13 @@ Common Options (required in **bold**)
 
 Flag | Description
 --- | --- |
-**--matrix** | Normalized gene expression matrix.
-**--cell_days** | Assigns days to cells
---gene_set_scores | Apoptosis and cell cycle scores used to compute growth rates. If not specified, a constant growth rate is used. The wot tool [gene_set_scores](#gene_set_scores) can be used to compute gene set scores.
---local_pca | Use principal component analysis to reduce the dimensionality of the expression matrix locally in the space of consecutive days. Thirty components are used by default.
---day_pairs | Pairs of days to compute transport maps for
---gene_filter | File with one gene id per line to use for computing cost matrices (e.g. variable genes)
---out | Base name for output files 
+**matrix** | Normalized gene expression matrix.
+**cell_days** | Assigns days to cells
+gene_set_scores | Apoptosis and cell cycle scores used to compute growth rates. If not specified, a constant growth rate is used. The wot tool [gene_set_scores](#gene_set_scores) can be used to compute gene set scores.
+local_pca | Use principal component analysis to reduce the dimensionality of the expression matrix locally in the space of consecutive days. Thirty components are used by default.
+day_pairs | Pairs of days to compute transport maps for
+gene_filter | File with one gene id per line to use for computing cost matrices (e.g. variable genes)
+out | Base name for output files 
 
 
 ## <a name="validation">Optimal Transport Validation</a>
@@ -67,12 +69,12 @@ Options
 
 Flag | Description
 --- | --- |
-**--matrix** | Normalized gene expression matrix to compute gene set scores (e.g. apoptosis and cell cycle scores) for each cell.
+**matrix** | Normalized gene expression matrix to compute gene set scores (e.g. apoptosis and cell cycle scores) for each cell.
 
 ## <a name="file_formats"></a> File Formats
 
 #### <a name="matrix">Gene Expression matrix</a> 
-Cells on rows and genes (features) on columns. Accepted file formats are [Market Exchange Format (MEX)](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/matrices), [HDF5 Gene-Barcode Matrix](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices), [Loom](http://linnarssonlab.org/loompy/format/index.html), and text
+Cells on rows and genes (features) on columns. Accepted formats are [Market Exchange Format (MEX)](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/matrices), [HDF5 Gene-Barcode Matrix](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices), [Loom](http://linnarssonlab.org/loompy/format/index.html), and text
     
 Example Text File:
     
