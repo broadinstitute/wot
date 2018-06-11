@@ -45,6 +45,8 @@ def main(argsv):
     parser.add_argument('--matrix',
                         help='One or more matrices with cells on rows and features, such as genes or pathways on columns',
                         action='append')
+    parser.add_argument('--workers', help='Number of worker processes', type=int, default=2)
+    parser.add_argument('--port', help='Web server port', type=int, default=8080)
 
     args = parser.parse_args(argsv)
     if args.cell_sets is not None:
@@ -219,7 +221,8 @@ def main(argsv):
         return flask.jsonify(data)
 
     options = {
-        'bind': '%s:%s' % ('127.0.0.1', '8080'),
-        'workers': 4,
+        'bind': '%s:%s' % ('127.0.0.1', args.port),
+        'workers': args.workers,
     }
     StandaloneApplication(app, options).run()
+    print('http://127.0.0.1:' + str(args.port) + '/web/index.html')
