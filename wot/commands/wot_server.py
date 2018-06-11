@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import sys
 import flask
+import scipy
 import gunicorn.app.base
 from gunicorn.six import iteritems
 
@@ -139,9 +140,10 @@ def main(argsv):
         for dataset_index in range(len(datasets)):
             column_indices = np.where(ds.col_meta.index.str.upper().isin(feature_ids))[0]
             if len(column_indices) == 1:
-                return flask.jsonify(
-                    {'ids': ds.row_meta.index.values.astype(str).tolist(),
-                     'values': ds.x[:, column_indices[0]].tolist()})
+                values = ds.x[:, column_indices[0]]
+                if scipy.sparse.isspmatrix(values):
+                    values = values.toarray()
+                return flask.jsonify({'ids': ds.row_meta.index.values.astype(str).tolist(), 'values': values.tolist()})
 
         raise ValueError('Feature not found')
 
