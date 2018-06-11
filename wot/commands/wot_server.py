@@ -8,10 +8,29 @@ import wot.ot
 import numpy as np
 import pandas as pd
 import sys
+import flask
+import gunicorn.app.base
+from gunicorn.six import iteritems
+
+
+class StandaloneApplication(gunicorn.app.base.BaseApplication):
+
+    def __init__(self, app, options=None):
+        self.options = options or {}
+        self.application = app
+        super(StandaloneApplication, self).__init__()
+
+    def load_config(self):
+        config = dict([(key, value) for key, value in iteritems(self.options)
+                       if key in self.cfg.settings and value is not None])
+        for key, value in iteritems(config):
+            self.cfg.set(key.lower(), value)
+
+    def load(self):
+        return self.application
 
 
 def main(argsv):
-    import flask
     parser = argparse.ArgumentParser(description='Run wot server')
     parser.add_argument('--dir',
                         help='Directory of transport maps as produced by ot')
@@ -75,6 +94,7 @@ def main(argsv):
             if args.cell_filter is not None:
                 if not os.path.isfile(args.cell_filter):
                     import re
+
                     expr = re.compile(args.cell_filter)
                     cell_ids = [elem for elem in ds.row_meta.index.values if expr.match(elem)]
                 else:
@@ -198,4 +218,8 @@ def main(argsv):
                 trace['y'] = trace['y'].tolist()
         return flask.jsonify(data)
 
-    app.run()
+    options = {
+        'bind': '%s:%s' % ('127.0.0.1', '8080'),
+        'workers': 4,
+    }
+    StandaloneApplication(app, options).run()

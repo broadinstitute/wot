@@ -17,10 +17,7 @@ by using the mathematical approach of Optimal Transport (OT)
 Python 3 is required.
 
 ```
-git clone https://github.com/broadinstitute/wot.git
-cd wot
-git checkout develop
-pip install -e .
+pip install wot
 ```
 
 ## <a name="prepare-expression-matrix"></a> Prepare Expression Matrix
