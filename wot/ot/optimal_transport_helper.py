@@ -29,7 +29,7 @@ class OptimalTransportHelper:
                                  'pairs of days to compute transport maps for')
 
         parser.add_argument('--gene_filter',
-                            help='File with one gene id per line to use for computing cost matrices')
+                            help='File with one gene id per line to use for computing cost matrices (e.g. variable genes)')
         parser.add_argument('--cell_filter',
                             help='File with one cell id per line to include or or a python regular expression of cell ids to include')
 
@@ -138,22 +138,16 @@ class OptimalTransportHelper:
 
         days_data_frame = pd.read_table(args.cell_days, index_col='id', engine='python', sep=None,
                                         dtype={'day': np.float64})
+        day_pairs = None
         if args.day_pairs is not None:
             if not os.path.isfile(args.day_pairs):
                 day_pairs = pd.read_table(io.StringIO(args.day_pairs), header=None, names=['t0', 't1'],
-                                          index_col=False, lineterminator=';', sep=',', dtype=np.float64)
+                                          index_col=False, lineterminator=';', sep=',',
+                                          dtype={'t0': np.float64, 't1': np.float64})
             else:
                 day_pairs = pd.read_table(args.day_pairs, header=None, names=['t0', 't1'],
-                                          index_col=False, engine='python', sep=None, dtype=np.float64)
-        else:
-            unique_days = list(set(days_data_frame['day'].values))
-            unique_days.sort()
-            pairs = []
-            for i in range(len(unique_days) - 1):
-                d1 = unique_days[i]
-                d2 = unique_days[i + 1]
-                pairs.append([d1, d2])
-            day_pairs = pd.DataFrame(data=pairs, columns=['t0', 't1'])
+                                          index_col=False, engine='python', sep=None,
+                                          dtype={'t0': np.float64, 't1': np.float64})
 
         self.eigenvals = np.diag(eigenvals) if eigenvals is not None else None
         if day_pairs.shape[0] is 0:
@@ -184,6 +178,22 @@ class OptimalTransportHelper:
             if args.verbose:
                 print('Using growth rate of 1')
         ds.row_meta = ds.row_meta.join(cell_growth_rates).join(days_data_frame)
+        if day_pairs is None:
+            unique_days = list(set(days_data_frame['day'].values))
+            unique_days.sort()
+            _unique_days = []
+            for i in range(len(unique_days)):
+                indices = np.where(ds.row_meta[days_data_frame.columns[0]] == unique_days[i])[0]
+                if len(indices) > 0:
+                    _unique_days.append(unique_days[i])
+            unique_days = _unique_days
+            pairs = []
+            for i in range(len(unique_days) - 1):
+                d1 = unique_days[i]
+                d2 = unique_days[i + 1]
+                if d1 >= 0 and d2 >= 0:
+                    pairs.append([d1, d2])
+            day_pairs = pd.DataFrame(data=pairs, columns=['t0', 't1'])
 
         if covariate_df is not None:
             self.covariate_df = covariate_df
@@ -193,14 +203,11 @@ class OptimalTransportHelper:
             self.covariate_df = None
             self.covariate_pairs = [[None, None]]
         self.day_pairs = day_pairs
-
         self.cell_growth_rates = cell_growth_rates
         self.args = args
         self.t_interpolate = vars(args).get('t_interpolate')
         day_to_indices = {}
-
         self.ds = ds
-
         if args.ncells is not None:
             unique_cvs = set()
             if covariate_pairs is None:
