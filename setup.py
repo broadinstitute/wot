@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 requirements = [
     'Cython', 'h5py', 'numpy', 'scipy',
     'scikit-learn', 'pandas', 'pypandoc', 'pot', 'Flask',
-    'gunicorn', 'numexpr'
+    'gunicorn', 'numexpr', 'simplejson'
 ]
 
 extras_require = {

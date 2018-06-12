@@ -12,6 +12,7 @@ import flask
 import scipy
 import gunicorn.app.base
 from gunicorn.six import iteritems
+import simplejson as json
 
 
 class StandaloneApplication(gunicorn.app.base.BaseApplication):
@@ -141,7 +142,7 @@ def main(argsv):
         info_json['features'] = list(features)
         info_json['transport_map_times'] = list(transport_map_times)
         info_json['cell'] = cell_json
-        return flask.jsonify(info_json, ignore_nan=True)
+        return flask.Response(json.dumps(info_json, ignore_nan=True), mimetype='application/json')
 
     @app.route("/feature_value/", methods=['GET'])
     def feature_value():
