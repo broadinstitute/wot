@@ -538,8 +538,8 @@ var showFeature = function () {
         featureResult.std = d3.deviation(values)
     }
 
-    if (!isBackgroundTrace) {
 
+    if (!isBackgroundTrace) {
         if (userFilterValue != null && !isNaN(userFilterValue)) {
             filterValue = enterQuantile ? d3.quantile(featureResult.sortedValues, userFilterValue / 100.0, (zScore ? function (d) {
                 return (d - featureResult.mean) / featureResult.std;
@@ -560,6 +560,7 @@ var showFeature = function () {
     // var colorScale = d3.scaleLinear()
     //     .domain(featureResult.featureRange)
     //     .range(forceLayoutColorScale);
+
     var hidePoint = function (d) {
         return d === featureResult.featureRange[0];
     };
@@ -615,7 +616,11 @@ var showFeature = function () {
                 }
 
             } else {
-                trace.marker = {size: 2, color: 'black', showscale: false};
+                trace.marker = {
+                    size: 2,
+                    color: isBackgroundTrace && nfields > 0 ? 'black' : 'rgb(217,217,217)',
+                    showscale: false
+                };
             }
             traceNameToTrace[key] = trace;
         }

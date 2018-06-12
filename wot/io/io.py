@@ -6,6 +6,7 @@ import numpy as np
 import os
 import scipy
 import glob
+from scipy.sparse import csr_matrix
 
 
 def filter_ds_from_command_line(ds, args):
@@ -302,9 +303,13 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
             row_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
 
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
-    elif ext == 'hdf5' or ext == 'h5' or ext == 'loom':
+    elif ext == 'hdf5' or ext == 'h5' or ext == 'loom' or ext == 'h5ad':
         f = h5py.File(path, 'r')
-        if ext == 'loom':
+        if ext == 'h5ad':
+            h5_x = '/X'
+            h5_row_meta = '/obs'
+            h5_col_meta = '/var'
+        elif ext == 'loom':
             h5_x = '/matrix'
             h5_row_meta = '/row_attrs'
             h5_col_meta = '/col_attrs'
@@ -314,7 +319,7 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
                 if len(keys) > 0:
                     genome10x = keys[0]
             group = f['/' + genome10x]
-            from scipy.sparse import csr_matrix
+
             M, N = group['shape'][()]
             data = group['data'][()]
             x = csr_matrix((data, group['indices'][()], group['indptr'][()]), shape=(N, M))
@@ -324,50 +329,63 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
             f.close()
 
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
+        if ext == 'h5ad':
+            row_meta = pd.DataFrame.from_records(f[h5_row_meta][()], index='index')
+            col_meta = pd.DataFrame.from_records(f[h5_col_meta][()], index='index')
+            row_meta.index = row_meta.index.values.astype(str)
+            col_meta.index = col_meta.index.values.astype(str)
 
-        row_attrs = read_h5_attrs(f, h5_row_meta, row_filter)
-        nrows = len(row_attrs['indices']) if row_attrs['indices'] is not None else f[h5_x].shape[0]
-        row_meta = pd.DataFrame(row_attrs['attrs'], index=pd.RangeIndex(start=0, stop=nrows, step=1))
-        if row_meta.get('id') is not None:
-            row_meta.set_index('id', inplace=True)
+        else:
+            row_attrs = read_h5_attrs(f, h5_row_meta, row_filter)
+            nrows = len(row_attrs['indices']) if row_attrs['indices'] is not None else f[h5_x].shape[0]
+            row_meta = pd.DataFrame(row_attrs['attrs'], index=pd.RangeIndex(start=0, stop=nrows, step=1))
+            if row_meta.get('id') is not None:
+                row_meta.set_index('id', inplace=True)
 
-        col_attrs = read_h5_attrs(f, h5_col_meta, col_filter)
-        ncols = len(col_attrs['indices']) if col_attrs['indices'] is not None else f[h5_x].shape[1]
+            col_attrs = read_h5_attrs(f, h5_col_meta, col_filter)
+            ncols = len(col_attrs['indices']) if col_attrs['indices'] is not None else f[h5_x].shape[1]
 
-        col_meta = pd.DataFrame(col_attrs['attrs'], index=pd.RangeIndex(start=0, stop=ncols, step=1))
-        if col_meta.get('id') is not None:
-            col_meta.set_index('id', inplace=True)
+            col_meta = pd.DataFrame(col_attrs['attrs'], index=pd.RangeIndex(start=0, stop=ncols, step=1))
+            if col_meta.get('id') is not None:
+                col_meta.set_index('id', inplace=True)
+
         if not use_dask:
             x = f[h5_x]
-            is_x_sparse = x.attrs.get('sparse')
-            if not backed and (is_x_sparse or force_sparse) and (row_filter is None and col_filter is None):
-                # read in blocks of 1000
-                chunk_start = 0
-                chunk_step = min(nrows, 1000)
-                chunk_stop = chunk_step
-                nchunks = int(np.ceil(max(1, nrows / chunk_step)))
-                sparse_arrays = []
-                for chunk in range(nchunks):
-                    chunk_stop = min(nrows, chunk_stop)
-                    subset = scipy.sparse.csr_matrix(x[chunk_start:chunk_stop])
-                    sparse_arrays.append(subset)
-                    chunk_start += chunk_step
-                    chunk_stop += chunk_step
-
-                x = scipy.sparse.vstack(sparse_arrays)
+            is_x_sparse = False
+            if type(x) == h5py.Group:
+                data = x['data'][()]
+                x = csr_matrix((data, x['indices'][()], x['indptr'][()]), shape=x.attrs['h5sparse_shape'])
+                backed = False
             else:
-                if row_filter is None and col_filter is None and not backed:
-                    x = x[()]
-                elif row_filter is not None and col_filter is not None:
-                    x = x[row_attrs['indices']]
-                    x = x[:, col_attrs['indices']]
-                elif row_filter is not None:
-                    x = x[row_attrs['indices']]
-                elif col_filter is not None:
-                    x = x[:, col_attrs['indices']]
+                is_x_sparse = x.attrs.get('sparse')
+                if not backed and (is_x_sparse or force_sparse) and (row_filter is None and col_filter is None):
+                    # read in blocks of 1000
+                    chunk_start = 0
+                    chunk_step = min(nrows, 1000)
+                    chunk_stop = chunk_step
+                    nchunks = int(np.ceil(max(1, nrows / chunk_step)))
+                    sparse_arrays = []
+                    for chunk in range(nchunks):
+                        chunk_stop = min(nrows, chunk_stop)
+                        subset = scipy.sparse.csr_matrix(x[chunk_start:chunk_stop])
+                        sparse_arrays.append(subset)
+                        chunk_start += chunk_step
+                        chunk_stop += chunk_step
 
-                if not backed and (is_x_sparse or force_sparse):
-                    x = scipy.sparse.csr_matrix(x)
+                    x = scipy.sparse.vstack(sparse_arrays)
+                else:
+                    if row_filter is None and col_filter is None and not backed:
+                        x = x[()]
+                    elif row_filter is not None and col_filter is not None:
+                        x = x[row_attrs['indices']]
+                        x = x[:, col_attrs['indices']]
+                    elif row_filter is not None:
+                        x = x[row_attrs['indices']]
+                    elif col_filter is not None:
+                        x = x[:, col_attrs['indices']]
+
+                    if not backed and (is_x_sparse or force_sparse):
+                        x = scipy.sparse.csr_matrix(x)
             if not backed:
                 f.close()
 

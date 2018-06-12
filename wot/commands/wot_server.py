@@ -49,7 +49,6 @@ def main(argsv):
     parser.add_argument('--workers', help='Number of worker processes', type=int, default=2)
     parser.add_argument('--port', help='Web server port', type=int, default=8080)
     parser.add_argument('--host', help='Web server host', default='127.0.0.1')
-    parser.add_argument('--background', help='Run in background', action='store_true')
 
     args = parser.parse_args(argsv)
     if args.cell_sets is not None:
@@ -67,16 +66,6 @@ def main(argsv):
                 cell_metadata = df
             else:
                 cell_metadata = cell_metadata.join(df, how='outer')
-
-    nx = 800
-    ny = 800
-    xmin = np.min(cell_metadata['x'])
-    xmax = np.max(cell_metadata['x'])
-    ymin = np.min(cell_metadata['y'])
-    ymax = np.max(cell_metadata['y'])
-
-    cell_metadata['x'] = np.floor(np.interp(cell_metadata['x'].values, [xmin, xmax], [0, nx])).astype(int)
-    cell_metadata['y'] = np.floor(np.interp(cell_metadata['y'].values, [ymin, ymax], [0, ny])).astype(int)
 
     # coords = coords.drop(['x', 'y'], axis=1)
     # cell_metadata[np.isnan(cell_metadata['day'].values)] = -1
@@ -96,7 +85,8 @@ def main(argsv):
 
     if args.matrix is not None:
         for path in args.matrix:
-            dataset_names.append(wot.io.get_filename_and_extension(os.path.basename(path))[0])
+            name_and_ext = wot.io.get_filename_and_extension(os.path.basename(path))
+            dataset_names.append(name_and_ext[0])
             ds = wot.io.read_dataset(path, backed=True)
 
             if args.cell_filter is not None:
@@ -115,7 +105,21 @@ def main(argsv):
             # ds_order = ds.row_meta.index.get_indexer_for(days_data_frame.index.values)
             # ds = wot.Dataset(ds.x[ds_order], ds.row_meta.iloc[ds_order], ds.col_meta)
             # np.sum(ds_order == -1)
+            if cell_metadata is None:
+                cell_metadata = ds.row_meta
+            else:
+                cell_metadata = cell_metadata.join(ds.row_meta, how='outer')
             datasets.append(ds)
+
+    nx = 800
+    ny = 800
+    xmin = np.min(cell_metadata['x'])
+    xmax = np.max(cell_metadata['x'])
+    ymin = np.min(cell_metadata['y'])
+    ymax = np.max(cell_metadata['y'])
+
+    cell_metadata['x'] = np.floor(np.interp(cell_metadata['x'].values, [xmin, xmax], [0, nx])).astype(int)
+    cell_metadata['y'] = np.floor(np.interp(cell_metadata['y'].values, [ymin, ymax], [0, ny])).astype(int)
 
     static_folder = os.path.join(os.path.dirname(sys.argv[0]), 'web')
     app = flask.Flask(__name__, static_folder=static_folder)
@@ -146,7 +150,8 @@ def main(argsv):
             if len(column_indices) == 1:
                 values = ds.x[:, column_indices[0]]
                 if scipy.sparse.isspmatrix(values):
-                    values = values.toarray()
+                    values = values.toarray().flatten()
+                
                 return flask.jsonify({'ids': ds.row_meta.index.values.astype(str).tolist(), 'values': values.tolist()})
 
         raise ValueError('Feature not found')
@@ -231,5 +236,5 @@ def main(argsv):
         'bind': '%s:%s' % (args.host, args.port),
         'workers': args.workers,
     }
-    print('Please go to http://127.0.0.1:' + str(args.port) + '/web/index.html')
+    print('Please go to http://' + args.host + ':' + str(args.port) + '/web/index.html')
     StandaloneApplication(app, options).run()
