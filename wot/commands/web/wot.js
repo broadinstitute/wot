@@ -560,7 +560,14 @@ var showFeature = function () {
     // var colorScale = d3.scaleLinear()
     //     .domain(featureResult.featureRange)
     //     .range(forceLayoutColorScale);
-
+    var hidePoint = function (d) {
+        return d === featureResult.featureRange[0];
+    };
+    if (zScore) {
+        hidePoint = function (d) {
+            return d <= 1.5 && d >= -1.5;
+        };
+    }
     for (var i = 0, length = featureResult.ids.length; i < length; i++) {
         var id = featureResult.ids[i];
         var keyArray = [];
@@ -589,6 +596,7 @@ var showFeature = function () {
                         cmin: -3,
                         cmax: 3,
                         color: [],
+                        opacity: [],
                         showscale: true,
                         colorscale: [[0, 'blue'], [0.25, 'rgb(217,217,217)'], [0.75, 'rgb(217,217,217)'], [1, 'red']],
                         size: 2
@@ -599,6 +607,7 @@ var showFeature = function () {
                         cmin: featureResult.featureRange[0],
                         cmax: featureResult.featureRange[1],
                         color: [],
+                        opacity: [],
                         showscale: true,
                         colorscale: forceLayoutColorScale,
                         size: 2
@@ -618,7 +627,9 @@ var showFeature = function () {
             }
             accept = f(value);
             if (accept) {
+                // skip background points
                 trace.marker.color.push(value);
+                trace.marker.opacity.push(hidePoint(value) ? 0 : 1);
             }
         }
         trace.nids++;
