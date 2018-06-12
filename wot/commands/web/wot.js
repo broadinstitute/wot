@@ -56,6 +56,7 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
     for (var i = 0; i < traces.length; i++) {
         groups.push(traces[i].key);
     }
+
     var $group = $controls.find('[data-name=group]');
     $group.html(groups.map(function (value, groupIndex) {
         return '<option value="' + groupIndex + '">' + value + '</option>';
@@ -619,7 +620,9 @@ var showFeature = function () {
                 trace.marker = {
                     size: 2,
                     color: isBackgroundTrace && nfields > 0 ? 'black' : 'rgb(217,217,217)',
-                    showscale: false
+                    showscale: false,
+                    cmin: null,
+                    cmax: null
                 };
             }
             traceNameToTrace[key] = trace;

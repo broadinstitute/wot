@@ -59,27 +59,7 @@ def main(argsv):
         cell_set_group_to_names = {}
         time_to_cell_sets = {}
     cell_metadata = None
-    if args.cell_meta is not None:
-        for f in args.cell_meta:
-            df = pd.read_table(f, engine='python', sep=None, index_col='id')
-            if cell_metadata is None:
-                cell_metadata = df
-            else:
-                cell_metadata = cell_metadata.join(df, how='outer')
 
-    # coords = coords.drop(['x', 'y'], axis=1)
-    # cell_metadata[np.isnan(cell_metadata['day'].values)] = -1
-
-    if args.dir is not None:
-        transport_maps = wot.io.list_transport_maps(args.dir)
-        if len(transport_maps) == 0:
-            raise ValueError('No transport maps found')
-    else:
-        transport_maps = []
-    transport_map_times = set()
-    for tmap in transport_maps:
-        transport_map_times.add(tmap['t1'])
-        transport_map_times.add(tmap['t2'])
     datasets = []
     dataset_names = []
 
@@ -105,11 +85,33 @@ def main(argsv):
             # ds_order = ds.row_meta.index.get_indexer_for(days_data_frame.index.values)
             # ds = wot.Dataset(ds.x[ds_order], ds.row_meta.iloc[ds_order], ds.col_meta)
             # np.sum(ds_order == -1)
-            if cell_metadata is None:
-                cell_metadata = ds.row_meta
-            else:
-                cell_metadata = cell_metadata.join(ds.row_meta, how='outer')
+            # if cell_metadata is None:
+            #     cell_metadata = ds.row_meta
+            # else:
+            #     cell_metadata = pd.concat([cell_metadata, ds.row_meta], join='outer', sort=False)
             datasets.append(ds)
+
+    if args.cell_meta is not None:
+        for f in args.cell_meta:
+            df = pd.read_table(f, engine='python', sep=None, index_col='id')
+            if cell_metadata is None:
+                cell_metadata = df
+            else:
+                cell_metadata = pd.concat([cell_metadata, df], join='outer', sort=False)
+
+    # coords = coords.drop(['x', 'y'], axis=1)
+    # cell_metadata[np.isnan(cell_metadata['day'].values)] = -1
+
+    if args.dir is not None:
+        transport_maps = wot.io.list_transport_maps(args.dir)
+        if len(transport_maps) == 0:
+            raise ValueError('No transport maps found')
+    else:
+        transport_maps = []
+    transport_map_times = set()
+    for tmap in transport_maps:
+        transport_map_times.add(tmap['t1'])
+        transport_map_times.add(tmap['t2'])
 
     nx = 800
     ny = 800
@@ -139,7 +141,7 @@ def main(argsv):
         info_json['features'] = list(features)
         info_json['transport_map_times'] = list(transport_map_times)
         info_json['cell'] = cell_json
-        return flask.jsonify(info_json)
+        return flask.jsonify(info_json, ignore_nan=True)
 
     @app.route("/feature_value/", methods=['GET'])
     def feature_value():
@@ -151,7 +153,7 @@ def main(argsv):
                 values = ds.x[:, column_indices[0]]
                 if scipy.sparse.isspmatrix(values):
                     values = values.toarray().flatten()
-                
+
                 return flask.jsonify({'ids': ds.row_meta.index.values.astype(str).tolist(), 'values': values.tolist()})
 
         raise ValueError('Feature not found')
