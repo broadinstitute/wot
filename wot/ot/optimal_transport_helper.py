@@ -150,9 +150,7 @@ class OptimalTransportHelper:
                                           dtype={'t0': np.float64, 't1': np.float64})
 
         self.eigenvals = np.diag(eigenvals) if eigenvals is not None else None
-        if day_pairs.shape[0] is 0:
-            print('No day pairs found')
-            exit(1)
+
         if args.gene_set_scores is not None:
             ext = wot.io.get_filename_and_extension(args.gene_set_scores)[1]
             if ext == 'loom' or ext == 'gct':
@@ -194,7 +192,9 @@ class OptimalTransportHelper:
                 if d1 >= 0 and d2 >= 0:
                     pairs.append([d1, d2])
             day_pairs = pd.DataFrame(data=pairs, columns=['t0', 't1'])
-
+        if day_pairs.shape[0] is 0:
+            print('No day pairs found')
+            exit(1)
         if covariate_df is not None:
             self.covariate_df = covariate_df
             ds.row_meta = ds.row_meta.join(covariate_df)
