@@ -98,10 +98,7 @@ def main(argsv):
             if cell_metadata is None:
                 cell_metadata = df
             else:
-                cell_metadata = pd.concat([cell_metadata, df], join='outer', sort=False)
-
-    # coords = coords.drop(['x', 'y'], axis=1)
-    # cell_metadata[np.isnan(cell_metadata['day'].values)] = -1
+                cell_metadata = cell_metadata.join(df)
 
     if args.dir is not None:
         transport_maps = wot.io.list_transport_maps(args.dir)
@@ -116,6 +113,7 @@ def main(argsv):
 
     nx = 800
     ny = 800
+    cell_metadata = cell_metadata[~np.isnan(cell_metadata['x'].values)]
     xmin = np.min(cell_metadata['x'])
     xmax = np.max(cell_metadata['x'])
     ymin = np.min(cell_metadata['y'])
@@ -123,7 +121,6 @@ def main(argsv):
 
     cell_metadata['x'] = np.floor(np.interp(cell_metadata['x'].values, [xmin, xmax], [0, nx])).astype(int)
     cell_metadata['y'] = np.floor(np.interp(cell_metadata['y'].values, [ymin, ymax], [0, ny])).astype(int)
-
     static_folder = os.path.join(os.path.dirname(sys.argv[0]), 'web')
     app = flask.Flask(__name__, static_folder=static_folder)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0

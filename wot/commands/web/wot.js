@@ -207,8 +207,8 @@ $.ajax('/info/').done(function (json) {
     cellInfoHeaderNames = []
     featureIds = json.features;
 
-    var result = json.cell;
-    for (var key in result) {
+    cellInfo = json.cell;
+    for (var key in cellInfo) {
         if (key !== 'id' && key !== 'x' && key !== 'y') {
             cellInfoHeaderNames.push(key);
         }
@@ -218,7 +218,9 @@ $.ajax('/info/').done(function (json) {
     }).join(''));
     $groupBy.selectpicker('refresh');
     $groupBy.selectpicker('render');
-    cellInfo = result;
+    if (cellInfo.id.length != cellInfo.x.length) {
+        throw new Error('x!=id');
+    }
     for (var i = 0, length = cellInfo.id.length; i < length; i++) {
         cellIdToIndex[cellInfo.id[i]] = i;
     }
@@ -524,7 +526,6 @@ var showFeature = function () {
     var traces = [];
     var html = [];
     var filterValue = null;
-
     var f = function () {
         return true;
     };
@@ -562,6 +563,7 @@ var showFeature = function () {
     //     .domain(featureResult.featureRange)
     //     .range(forceLayoutColorScale);
 
+
     var hidePoint = function (d) {
         return d === featureResult.featureRange[0];
     };
@@ -572,10 +574,11 @@ var showFeature = function () {
     }
     for (var i = 0, length = featureResult.ids.length; i < length; i++) {
         var id = featureResult.ids[i];
+        var index = cellIdToIndex[id];
         var keyArray = [];
         for (var fieldIndex = 0; fieldIndex < nfields; fieldIndex++) {
-            var field = groupBy[fieldIndex];
-            keyArray.push(cellInfo[field][index]);
+            var fieldName = groupBy[fieldIndex];
+            keyArray.push(cellInfo[fieldName][index]);
         }
         var key = keyArray.join('_');
         var trace = traceNameToTrace[key];
@@ -619,7 +622,7 @@ var showFeature = function () {
             } else {
                 trace.marker = {
                     size: 2,
-                    color: isBackgroundTrace && nfields > 0 ? 'black' : 'rgb(217,217,217)',
+                    color: nfields > 0 ? 'black' : 'rgb(217,217,217)',
                     showscale: false,
                     cmin: null,
                     cmax: null
@@ -642,7 +645,6 @@ var showFeature = function () {
         }
         trace.nids++;
         if (accept) {
-            var index = cellIdToIndex[id];
             trace.x.push(cellInfo.x[index]);
             trace.y.push(cellInfo.y[index]);
             trace.ids.push(id);
