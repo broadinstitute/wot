@@ -69,18 +69,24 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
         var concatTraces = [];
         var t;
         if (traces.length > 0) {
-            if (index === 0) {
+            if (index === 0) { // all traces
                 if (traces[0].marker.cmin != null && !isNaN(traces[0].marker.cmin)) {
                     traces[0].marker.showscale = true;
                 }
                 for (var i = 1; i < traces.length; i++) {
                     traces[i].marker.showscale = false;
                 }
-                concatTraces = traces; // all
-            } else {
+                if (layout.showlegend) {
+                    for (var i = 0; i < traces.length; i++) {
+                        traces[i].showlegend = true;
+                    }
+                }
+                concatTraces = traces;
+            } else { // one trace
                 if (traces[index - 1].marker.cmin != null && !isNaN(traces[index - 1].marker.cmin)) {
                     traces[index - 1].marker.showscale = true;
                 }
+                traces[index - 1].showlegend = false;
                 concatTraces = [traces[index - 1]]
             }
         }
@@ -529,19 +535,18 @@ var showFeature = function () {
     var f = function () {
         return true;
     };
-    var isBackgroundTrace = featureResult == null || featureResult.featureRange == null;
+    var isBackgroundTrace = featureResult == null || featureResult.isBackground;
     if (isBackgroundTrace) {
-        featureResult = {ids: cellInfo.id};
+        featureResult = {ids: cellInfo.id, isBackground: true, isNumeric: false};
     }
     var values = featureResult.values;
-
     if (values != null && zScore && featureResult.mean == null) {
         featureResult.mean = d3.mean(values);
         featureResult.std = d3.deviation(values)
     }
 
 
-    if (!isBackgroundTrace) {
+    if (!isBackgroundTrace && featureResult.isNumeric) {
         if (userFilterValue != null && !isNaN(userFilterValue)) {
             filterValue = enterQuantile ? d3.quantile(featureResult.sortedValues, userFilterValue / 100.0, (zScore ? function (d) {
                 return (d - featureResult.mean) / featureResult.std;
@@ -558,11 +563,8 @@ var showFeature = function () {
         }
     }
     var nfields = groupBy.length;
+    var showlegend = nfields > 0 && isBackgroundTrace;
     var traceNameToTrace = {};
-    // var colorScale = d3.scaleLinear()
-    //     .domain(featureResult.featureRange)
-    //     .range(forceLayoutColorScale);
-
 
     var hidePoint = function (d) {
         return d === featureResult.featureRange[0];
@@ -572,6 +574,7 @@ var showFeature = function () {
             return d <= 1.5 && d >= -1.5;
         };
     }
+    var colors = d3.schemeBlues[9].concat(d3.schemeReds[9]).concat(d3.schemeGreens[9]).concat(d3.schemePurples[9]);
     for (var i = 0, length = featureResult.ids.length; i < length; i++) {
         var id = featureResult.ids[i];
         var index = cellIdToIndex[id];
@@ -588,42 +591,45 @@ var showFeature = function () {
                 y: [],
                 ids: [],
                 nids: 0,
+                name: key,
                 keyArray: keyArray,
                 key: key,
                 mode: 'markers',
                 type: 'scattergl',
                 hoverinfo: 'text',
-                showlegend: false
+                showlegend: showlegend
             };
             if (!isBackgroundTrace) {
-                if (zScore) {
-                    trace.marker = {
-                        cmin: -3,
-                        cmax: 3,
-                        color: [],
-                        opacity: [],
-                        showscale: true,
-                        colorscale: [[0, 'blue'], [0.25, 'rgb(217,217,217)'], [0.75, 'rgb(217,217,217)'], [1, 'red']],
-                        size: 2
-                    };
+                if (featureResult.isNumeric) {
+                    if (zScore) {
+                        trace.marker = {
+                            cmin: -3,
+                            cmax: 3,
+                            color: [],
+                            opacity: [],
+                            showscale: true,
+                            colorscale: [[0, 'blue'], [0.25, 'rgb(217,217,217)'], [0.75, 'rgb(217,217,217)'], [1, 'red']],
+                            size: 2
+                        };
 
-                } else {
-                    trace.marker = {
-                        cmin: featureResult.featureRange[0],
-                        cmax: featureResult.featureRange[1],
-                        color: [],
-                        opacity: [],
-                        showscale: true,
-                        colorscale: forceLayoutColorScale,
-                        size: 2
-                    };
+                    } else {
+                        trace.marker = {
+                            cmin: featureResult.featureRange[0],
+                            cmax: featureResult.featureRange[1],
+                            color: [],
+                            opacity: [],
+                            showscale: true,
+                            colorscale: forceLayoutColorScale,
+                            size: 2
+                        };
+                    }
                 }
 
             } else {
                 trace.marker = {
                     size: 2,
-                    color: nfields > 0 ? 'black' : 'rgb(217,217,217)',
                     showscale: false,
+                    color: nfields === 0 ? 'black' : null,
                     cmin: null,
                     cmax: null
                 };
@@ -666,6 +672,11 @@ var showFeature = function () {
         return 0;
 
     });
+    if (showlegend) {
+        for (var i = 0; i < traces.length; i++) {
+            traces[i].marker.color = colors[i % colors.length];
+        }
+    }
 
     var percentFormatter = d3.format('.1f');
     var groupedThousands = d3.format(',');
@@ -715,6 +726,9 @@ var showFeature = function () {
 
     var $controls = $('#force_layout_vis_controls');
     featurePlotTraces = traces;
+    featureForceLayoutInfo.layout.showlegend = showlegend;
+    featureForceLayoutInfo.layout.width = showlegend ? 1100 : 840; // leave room for legend
+    featureForceLayoutInfo.layout.margin.r = showlegend ? 300 : 0;
     $controls.html(createPlotAnimation(featureForceLayoutInfo.backgroundTrace, featurePlotTraces, 'force_layout_vis', featureForceLayoutInfo.layout));
     enableCreateSet();
 };
@@ -730,6 +744,7 @@ var fetchFeatureData = function () {
             $('#set_loading').show();
             $.ajax({url: '/feature_value/', data: {feature: text}}).done(function (result) {
                 featureResult = result;
+                featureResult.isNumeric = true;
                 var sortedValues = featureResult.values.slice(0).sort(function (a, b) {
                     return (a === b ? 0 : (a < b ? -1 : 1));
                 });
