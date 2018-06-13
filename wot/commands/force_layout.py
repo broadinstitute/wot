@@ -8,6 +8,8 @@ import os
 import pandas as pd
 import subprocess
 import pkg_resources
+import tempfile
+
 
 def force_layout(ds, n_neighbors=100, n_comps=100, neighbors_diff=20, n_steps=10000):
     import anndata
@@ -21,8 +23,8 @@ def force_layout(ds, n_neighbors=100, n_comps=100, neighbors_diff=20, n_steps=10
     if n_comps > 0:
         sc.tl.diffmap(adata, n_comps=n_comps)
         sc.pp.neighbors(adata, use_rep='X_diffmap', n_neighbors=neighbors_diff)
-    input_graph_file = 'gephi_input.net'
-    output_coord_file = 'coords.txt'
+    input_graph_file = tempfile.mkstemp(prefix='gephi', suffix='.net')[1]
+    output_coord_file = tempfile.mkstemp(prefix='coords', suffix='.txt')[1]
     W = adata.uns['neighbors']['connectivities']
     n_obs = W.shape[0]
     cids = adata.obs.index.values
@@ -45,7 +47,7 @@ def force_layout(ds, n_neighbors=100, n_comps=100, neighbors_diff=20, n_steps=10
                            'GraphLayout', input_graph_file, output_coord_file, layout, str(n_steps),
                            str(os.cpu_count())])
     # replace numbers with cids
-    df = pd.read_table(output_coord_file, header=0, index_col=0)
+    df = pd.read_table(output_coord_file, header=0, index_col='id')
     os.remove(output_coord_file)
     os.remove(input_graph_file)
     df.index = np.array(cids)[df.index.values - 1]

@@ -159,7 +159,7 @@ def main(argv):
                         help='One or more gmt or gmx files containing cell sets. Each set id should end with _time (e.g. my_set_9).',
                         required=True, action='append')
     parser.add_argument('--start_time',
-                        help='The start time',
+                        help='The start time for the cell sets to compute the transitions to cell sets at end_time',
                         required=True, type=float)
     parser.add_argument('--end_time', help='The end time', required=True, type=float)
     parser.add_argument('--out', help='Prefix for ouput file.')

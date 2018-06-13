@@ -181,16 +181,16 @@ class OptimalTransportHelper:
             unique_days.sort()
             _unique_days = []
             for i in range(len(unique_days)):
-                indices = np.where(ds.row_meta[days_data_frame.columns[0]] == unique_days[i])[0]
-                if len(indices) > 0:
-                    _unique_days.append(unique_days[i])
+                if unique_days[i] >= 0:
+                    indices = np.where(ds.row_meta[days_data_frame.columns[0]] == unique_days[i])[0]
+                    if len(indices) > 0:
+                        _unique_days.append(unique_days[i])
             unique_days = _unique_days
             pairs = []
             for i in range(len(unique_days) - 1):
                 d1 = unique_days[i]
                 d2 = unique_days[i + 1]
-                if d1 >= 0 and d2 >= 0:
-                    pairs.append([d1, d2])
+                pairs.append([d1, d2])
             day_pairs = pd.DataFrame(data=pairs, columns=['t0', 't1'])
         if day_pairs.shape[0] is 0:
             print('No day pairs found')

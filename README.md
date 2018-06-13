@@ -7,6 +7,7 @@ by using the mathematical approach of Optimal Transport (OT)
 * [Prepare Gene Expression Matrix](#prepare-expression-matrix)
 * [Optimal Transport](#optimal_transport)
 * [Visualization](#visualization)
+* [Optimal Transport Transition Table](#optimal_transport_transition_table)
 * [Optimal Transport Validation](#optimal_transport_validation)
 * [Gene Set Scores](#gene_set_score)
 * [File Formats](#file_formats)
@@ -58,7 +59,22 @@ covariate | Two column file with headers "id" and "covariate" indicating cell id
 
 
 ## <a name="visualization">Visualization</a>
+*wot force_layout* generates a force-directed layout using the ForceAtlas2 algorithm. The tool can optionally perform dimensionality reduction using diffusion component embedding of the dataset. 
+After you have generated the force layout coordinates, you can use *wot wot_server* to view trajectories and gene expression in the force layout.
 
+
+## <a name="optimal_transport_transition_table">Transition Table</a>
+*wot transition_table* generate a transition table from one cell set to another cell set.
+Options
+
+Flag | Description
+--- | --- |
+**dir** |Directory of transport maps as produced by [optimal_transport](#optimal_transport)
+**cell_set** | One or more [gmt](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29) or [gmx](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMX:_Gene_MatriX_file_format_.28.2A.gmx.29) files containing cell sets. Each set id should end with _time (e.g. my_set_9).
+**start_time** | The start time for the cell sets to compute the transitions to cell sets at end_time
+**end_time** | The end time. 
+
+    
 ## <a name="gene_set_scores">Gene Set Scores</a>
 *wot gene_set_scores* computes gene set scores for each cell given a gene expression matrix and gene sets.
 

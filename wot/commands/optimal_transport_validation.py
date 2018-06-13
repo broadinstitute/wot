@@ -12,7 +12,6 @@ def main(argv):
     parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute point cloud distances')
     parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float,
                         required=True)
-
     parser.add_argument('--covariate',
                         help='Two column file with headers "id" and "covariate" indicating cell ids and covariate value')
     parser.add_argument('--resample_iter', help='Number of resample iterations to perform', type=int, default=0)
