@@ -120,3 +120,8 @@ Example:
 <tr><td>2</td><td>4</td></tr>
 <tr><td>4</td><td>6</td></tr>
 </table>
+
+
+#### <a name="cell_sets">Cell Sets</a>
+Cell sets can be provided in [gmt](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29) or [gmx](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMX:_Gene_MatriX_file_format_.28.2A.gmx.29). 
+Each set id should end with _day to indicate the day on which the cell set was created (e.g. my_set_9).
