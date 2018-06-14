@@ -166,15 +166,15 @@ def read_grp(path, feature_ids=None):
 
 def read_gmt(path, feature_ids=None):
     with open(path) as fp:
-        row_id_to_index = {}
+        row_id_lc_to_index = {}
+        row_id_lc_to_row_id = {}
         if feature_ids is not None:
             for i in range(len(feature_ids)):
-                row_id_to_index[feature_ids[i]] = i
-            row_ids = feature_ids
-        else:
-            row_ids = []
+                fid = feature_ids[i].lower()
+                row_id_lc_to_index[fid] = i
+                row_id_lc_to_row_id[fid] = feature_ids[i]
 
-        members = []
+        members_array = []
         set_descriptions = []
         set_names = []
         for line in fp:
@@ -189,29 +189,35 @@ def read_gmt(path, feature_ids=None):
                 description = ''
             set_descriptions.append(description)
             ids = tokens[2:]
-            set_ids = []
-            members.append(set_ids)
+            ids_in_set = []
+            members_array.append(ids_in_set)
             for i in range(len(ids)):
-                id = ids[i].strip()
-                if id != '':
-                    row_index = row_id_to_index.get(id)
+                value = ids[i].strip()
+                if value != '':
+                    value_lc = value.lower()
+                    row_index = row_id_lc_to_index.get(value_lc)
                     if feature_ids is None:
-                        set_ids.append(id)
                         if row_index is None:
-                            row_index = len(row_id_to_index)
-                            row_id_to_index[id] = row_index
-                            row_ids.append(id)
-                    elif row_index is not None:
-                        set_ids.append(id)
+                            row_id_lc_to_row_id[value_lc] = value
+                            row_index = len(row_id_lc_to_index)
+                            row_id_lc_to_index[value_lc] = row_index
 
-        x = np.zeros(shape=(len(row_ids), len(set_names)), dtype=np.int8)
-        for j in range(len(members)):
-            ids = members[j]
+                    if row_index is not None:
+                        ids_in_set.append(value)
+
+        if feature_ids is None:
+            feature_ids = np.empty(len(row_id_lc_to_index), dtype='object')
+            for rid_lc in row_id_lc_to_index:
+                feature_ids[row_id_lc_to_index[rid_lc]] = row_id_lc_to_row_id[rid_lc]
+
+        x = np.zeros(shape=(len(feature_ids), len(set_names)), dtype=np.int8)
+        for j in range(len(members_array)):
+            ids = members_array[j]
             for id in ids:
-                row_index = row_id_to_index.get(id)
+                row_index = row_id_lc_to_index.get(id.lower())
                 x[row_index, j] = 1
 
-        row_meta = pd.DataFrame(index=row_ids)
+        row_meta = pd.DataFrame(index=feature_ids)
         col_meta = pd.DataFrame(data={'description': set_descriptions}, index=set_names)
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
 
@@ -229,7 +235,9 @@ def read_gmx(path, feature_ids=None):
         array_of_arrays = None
         if feature_ids is not None:
             for i in range(len(feature_ids)):
-                row_id_lc_to_index[feature_ids[i].lower()] = i
+                fid = feature_ids[i].lower()
+                row_id_lc_to_index[fid] = i
+                row_id_lc_to_row_id[fid] = feature_ids[i]
             x = np.zeros(shape=(len(feature_ids), ncols), dtype=np.int8)
         else:
             array_of_arrays = []

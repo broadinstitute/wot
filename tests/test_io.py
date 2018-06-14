@@ -33,6 +33,38 @@ class TestIO(unittest.TestCase):
             self.assertTrue(len(index) == 1)
             self.assertTrue(index[0] >= 0)
 
+    def test_read_gmt_write_gmx(self):
+        gs = wot.io.read_gene_sets(
+            os.path.abspath('inputs/io/msigdb.v6.1.symbols.gmt'))
+
+        set_id_filter = gs.col_meta.index.values == \
+                        'GO_NUCLEOTIDE_TRANSMEMBRANE_TRANSPORT'
+        d = gs.x[:, set_id_filter]
+        gene_id_filter = np.where(d == 1)
+        ids = gs.row_meta.index.values[gene_id_filter[0]]
+        expected_ids = (
+            'SLC35B2', 'SLC35E3', 'SLC35D1', 'SLC35B3', 'SLC35A2', 'SLC35D2',
+            'SLC25A42', 'SLC35B1', 'SLC35A3', 'SLC35B4', 'SLC25A33', 'SLC25A17')
+        self.assertTrue(len(ids) == len(expected_ids))
+        for id in expected_ids:
+            index = np.where(ids == id)
+            self.assertTrue(len(index) == 1)
+            self.assertTrue(index[0] >= 0)
+
+    def test_read_gmt_gmx_order(self):
+        expected_ids_array = [['a', 'b'], ['c', 'd']]
+        inputs = ['inputs/io/test_gene_sets2.gmx', 'inputs/io/test_gene_sets2.gmt'];
+        for input in inputs:
+
+            for j in range(len(expected_ids_array)):
+                gs = wot.io.read_gene_sets(
+                    os.path.abspath(input), feature_ids=expected_ids_array[j])
+                gs_ids = gs.row_meta.index.values
+                expected_ids = expected_ids_array[j]
+
+                for i in range(len(expected_ids)):
+                    self.assertTrue(expected_ids[i] == gs_ids[i])
+
     def test_mtx_to_gct(self):
         ds = wot.io.read_dataset(
             'inputs/io/filtered_gene_bc_matrices/hg19/matrix.mtx')
@@ -64,25 +96,6 @@ class TestIO(unittest.TestCase):
         pd.testing.assert_frame_equal(
             ds.col_meta,
             ds2.col_meta)
-
-    def test_read_gmt_dataset_order(self):
-        sets = (('ENSG00000248473', 'ENSG00000272431'), ('ENSG00000181323', 'ENSG00000266824'))
-        ds = wot.io.read_dataset(
-            'inputs/io/filtered_gene_bc_matrices/hg19/matrix.mtx')
-        gs = wot.io.read_gene_sets(
-            os.path.abspath('inputs/io/test_gene_sets2.gmx'), feature_ids=ds.col_meta.index.values)
-        for j in range(len(sets)):
-            expected_ids = sets[j]
-            indices = np.isin(gs.row_meta.index.values, expected_ids)
-            gs_x = gs.x[indices, [j]]
-            gs_row_meta = gs.row_meta.iloc[indices]
-            self.assertTrue(np.sum(gs_x) == 2)
-            ids = gs_row_meta.index.values
-
-            for id in expected_ids:
-                index = np.where(ids == id)
-                self.assertTrue(len(index) == 1)
-                self.assertTrue(index[0] >= 0)
 
     def test_read_mtx(self):
         ds2 = wot.io.read_dataset(
