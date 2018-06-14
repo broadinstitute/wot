@@ -146,6 +146,7 @@ def main(argsv):
         feature_ids = [flask.request.args.get('feature')]
         feature_ids = set(map(lambda x: x.upper(), feature_ids))
         for dataset_index in range(len(datasets)):
+            ds = datasets[dataset_index]
             column_indices = np.where(ds.col_meta.index.str.upper().isin(feature_ids))[0]
             if len(column_indices) == 1:
                 values = ds.x[:, column_indices[0]]
@@ -154,7 +155,7 @@ def main(argsv):
 
                 return flask.jsonify({'ids': ds.row_meta.index.values.astype(str).tolist(), 'values': values.tolist()})
 
-        raise ValueError('Feature not found')
+        raise ValueError('Feature not found: ' + ', '.join(feature_ids))
 
     @app.route("/list_cell_sets/", methods=['GET'])
     def list_cell_sets():
