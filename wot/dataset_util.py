@@ -17,8 +17,11 @@ def score_gene_sets(ds, gs, z_score_ds=True, use_dask=False):
     # ds has cells on rows, genes on columns
     gs_x = gs.x
     ds_x = ds.x
+    if z_score_ds:
+        ds_x = ds_x.toarray() if scipy.sparse.isspmatrix(ds_x) else ds_x
     gene_indices = (gs_x.sum(axis=1) > 0) & (
-            np.std(ds_x, axis=0) > 0)  # keep genes that are in gene sets and have standard deviation > 0
+            ds_x.std(axis=0) > 0)  # keep genes that are in gene sets and have standard deviation > 0
+
     gs_x = gs_x[gene_indices]
     ds_x = ds_x[:, gene_indices]
     if z_score_ds:
