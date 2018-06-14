@@ -414,7 +414,7 @@ var showTrajectoryPlots = function (result) {
     }
     if (datasetNameToTraces) {
         for (var key in datasetNameToTraces) {
-            var $div = $('<li style="list-style: none;"><h4>Trajectory Trends</h4><div class="plot"></div></li>');
+            var $div = $('<li style="list-style: none;"><h4>Trajectory Trends <small>- Mean Expression Profiles</small></h4><div class="plot"></div></li>');
             $div.appendTo($trajectoryEl);
             var traces = datasetNameToTraces[key];
             traces.forEach(function (trace) {
