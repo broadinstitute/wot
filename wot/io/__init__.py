@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
-from . import io
-from . import read_gct
+from .io import *
+from .read_gct import *

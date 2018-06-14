@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-from . import sparse_optimization
+from .sparse_optimization import *
