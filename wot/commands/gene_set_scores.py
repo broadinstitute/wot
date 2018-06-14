@@ -8,10 +8,9 @@ import os
 
 def compute(matrix, gene_sets, no_zscore, out, format, use_dask=False):
     ds = wot.io.read_dataset(matrix, use_dask=use_dask, chunks=(10000, None))
-
-    gene_ids = ds.col_meta.index.values
-
-    gs = wot.io.read_gene_sets(gene_sets, gene_ids)
+    gs = wot.io.read_gene_sets(gene_sets, ds.col_meta.index.values)
+    if gs.x.shape[1] is 0:
+        raise ValueError('No overlap of genes in gene sets and dataset')
 
     # scores contains cells on rows, gene sets on columns
     result = wot.score_gene_sets(ds=ds, gs=gs, z_score_ds=not no_zscore, use_dask=use_dask)
@@ -36,7 +35,7 @@ def main(argv):
 
     args = parser.parse_args(argv)
     if args.out is None:
-        args.out = wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0] + '_scores'
+        args.out = wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0] + '_gene_set_scores'
 
     use_dask = False
     # use_dask = args.dask is not None
@@ -52,6 +51,6 @@ def main(argv):
     gene_sets = args.gene_sets
     if gene_sets is None:
         import sys
-        gene_sets = os.path.join(os.path.dirname(sys.argv[0]), 'resources', 'growth_scores_gene_sets.gmt')
+        gene_sets = os.path.join(os.path.dirname(sys.argv[0]), 'resources', 'growth_scores_gene_sets.gmx')
     compute(matrix=args.matrix, gene_sets=gene_sets, no_zscore=args.no_zscore, out=args.out,
             format=args.format)
