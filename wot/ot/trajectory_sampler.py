@@ -66,7 +66,7 @@ class TrajectorySampler:
                     v = p['v']
                     cell_ids = p['cell_ids']
                     joined = coords.join(pd.DataFrame(index=cell_ids, data={'v': v}), how='right')
-                    df_sum = joined.groupby(['px', 'py']).sum()
+                    df_sum = joined.groupby(['x', 'y']).sum()
                     p = np.percentile(df_sum['v'].values, [5, 95])
                     lows.append(p[0])
                     highs.append(p[1])
