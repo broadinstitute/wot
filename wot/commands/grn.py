@@ -1,5 +1,5 @@
 import numpy as np
-from wot.grn import SparseOptimization
+import wot.grn
 from scipy.stats import entropy
 import numexpr as ne
 from sklearn.cluster import SpectralClustering
@@ -121,7 +121,7 @@ def update_regulation(Lineage, Xg, Xr, TP, lag, Z=[], U=[], num_modules=50, lda_
     # lineage from optimal transport
     # Xg is a list of observed gene expression matrices at each time point
     # Xr is a list of regulatory levels at each time point (lagged by 1 from Xg)
-    model = SparseOptimization(threads)
+    model = wot.grn.SparseOptimization(threads)
     if len(U) == 0:
         model.U = np.random.random((num_modules, Xg[0].shape[1]))
         model.U = (model.U.T / np.linalg.norm(model.U, axis=1)).T
