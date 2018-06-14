@@ -3,7 +3,6 @@ from wot.grn import SparseOptimization
 from scipy.stats import entropy
 import numexpr as ne
 from sklearn.cluster import SpectralClustering
-from itertools import combinations
 import scipy
 
 
