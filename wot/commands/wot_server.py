@@ -179,7 +179,6 @@ def main(argsv):
         feature_ids = flask.request.form.getlist('feature[]')  # list of ids
         cell_set_ids = set(flask.request.form.getlist('cell_set[]'))  # list of ids
         ncustom_cell_sets = int(flask.request.form.get('ncustom_cell_sets', '0'))
-        print(flask.request.form)
         filtered_time_to_cell_sets = {}
         if ncustom_cell_sets > 0:
             for i in range(ncustom_cell_sets):
@@ -236,5 +235,5 @@ def main(argsv):
         'bind': '%s:%s' % (args.host, args.port),
         'workers': args.workers,
     }
-    print('Please go to http://' + args.host + ':' + str(args.port) + '/web/index.html')
+    print('WOT running at http://' + args.host + ':' + str(args.port) + '/web/index.html')
     StandaloneApplication(app, options).run()

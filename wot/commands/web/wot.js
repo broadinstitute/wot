@@ -174,12 +174,13 @@ var createForceLayoutPlotObject = function (showLegend) {
     return {layout: layout, backgroundTrace: backgroundTrace}
 
 };
-var createForceLayoutTrajectory = function (force, key) {
+var createForceLayoutTrajectory = function (forceLayoutData, key) {
 
-    var traces = force[key];
+    var traces = forceLayoutData[key];
     var $div = $('<li style="list-style: none;"><h4>' + key +
         ' Trajectory</h4><div class="plot"></div><div data-name="controls"></div></li>'
     );
+    $div.appendTo($trajectoryEl);
     traces.forEach(function (trace) {
         trace.mode = 'markers';
         trace.type = 'scattergl';
@@ -197,7 +198,6 @@ var createForceLayoutTrajectory = function (force, key) {
             color: trace.marker.color
         };
     });
-
 
     var elem = $div.find('.plot')[0];
     var forceLayoutInfo = createForceLayoutPlotObject(false);
@@ -376,7 +376,7 @@ $features
 
 var showTrajectoryPlots = function (result) {
     var ancestryDivergenceTraces = result.ancestry_divergence_traces;
-    var force = result.force;
+    var trajectoryForceLayoutData = result.force;
     var datasetNameToTraces = result.dataset_name_to_traces;
     if (ancestryDivergenceTraces && ancestryDivergenceTraces.length > 0) {
         var $div = $('<li style="list-style: none;"><h4>Ancestry Divergence</h4><div class="plot"></div></li>');
@@ -421,8 +421,8 @@ var showTrajectoryPlots = function (result) {
 
     }
     if (cellInfo != null) {
-        for (var key in force) {
-            createForceLayoutTrajectory(force, key);
+        for (var key in trajectoryForceLayoutData) {
+            createForceLayoutTrajectory(trajectoryForceLayoutData, key);
         }
     }
     $trajectoryEl.sortable({handle: 'h4'});
