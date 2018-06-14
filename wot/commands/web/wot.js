@@ -86,7 +86,9 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
                 if (traces[index - 1].marker.cmin != null && !isNaN(traces[index - 1].marker.cmin)) {
                     traces[index - 1].marker.showscale = true;
                 }
-                traces[index - 1].showlegend = false;
+                for (var i = 0; i < traces.length; i++) {
+                    traces[i].showlegend = false;
+                }
                 concatTraces = [traces[index - 1]]
             }
         }
@@ -190,9 +192,7 @@ var createForceLayoutTrajectory = function (forceLayoutData, key) {
         trace.marker = {
             cmax: trace.marker.cmax,
             cmin: trace.marker.cmin,
-            autocolorscale: false,
             showscale: true,
-            cauto: false,
             colorscale: forceLayoutColorScale,
             size: 2,
             color: trace.marker.color
@@ -282,11 +282,29 @@ $cellSet.on('change', function () {
         });
         return;
     }
-    $.ajax({url: '/cell_set_members/', data: {cell_set: selectedSets}}).done(function (results) {
+    // remove custom cell sets
+    var allSelectedSets = selectedSets;
+    selectedSets = selectedSets.filter(function (name) {
+        return customCellSetNameToIds[name] == null;
+    });
+    var p;
+    if (selectedSets.length > 0) {
+        p = $.ajax({url: '/cell_set_members/', data: {cell_set: selectedSets}});
+    } else {
+        p = $.Deferred();
+        p.resolve([]);
+    }
+    p.done(function (results) {
         var traces = [];
-        for (var setIndex = 0, nsets = results.length; setIndex < nsets; setIndex++) {
-            var name = results[setIndex].name;
-            var cellIds = results[setIndex].ids;
+        var cellSetNameToIds = {};
+        results.forEach(function (result) {
+            cellSetNameToIds[result.name] = result.ids;
+        });
+        allSelectedSets.forEach(function (name) {
+            var cellIds = cellSetNameToIds[name];
+            if (cellIds == null) {
+                cellIds = customCellSetNameToIds[name];
+            }
             var forceLayoutX = [];
             var forceLayoutY = [];
             for (var i = 0, ncells = cellIds.length; i < ncells; i++) {
@@ -308,10 +326,7 @@ $cellSet.on('change', function () {
                 x: forceLayoutX,
                 y: forceLayoutY
             });
-
-
-        }
-
+        });
         Plotly.newPlot('trajectory_set_vis', {
             data: [cellForceLayoutInfo.backgroundTrace].concat(traces),
             layout: cellForceLayoutInfo.layout
@@ -536,7 +551,7 @@ var showFeature = function () {
         return true;
     };
     var isBackgroundTrace = featureResult == null || featureResult.isBackground;
-    if (isBackgroundTrace) {
+    if (featureResult == null) {
         featureResult = {ids: cellInfo.id, isBackground: true, isNumeric: false};
     }
     var values = featureResult.values;
@@ -574,7 +589,7 @@ var showFeature = function () {
             return d <= 1.5 && d >= -1.5;
         };
     }
-    var colors = d3.schemeBlues[9].concat(d3.schemeReds[9]).concat(d3.schemeGreens[9]).concat(d3.schemePurples[9]);
+
     for (var i = 0, length = featureResult.ids.length; i < length; i++) {
         var id = featureResult.ids[i];
         var index = cellIdToIndex[id];
@@ -673,8 +688,9 @@ var showFeature = function () {
 
     });
     if (showlegend) {
+        var colorMap = d3.scaleSequential(d3.interpolateViridis).domain([0, traces.length]);
         for (var i = 0; i < traces.length; i++) {
-            traces[i].marker.color = colors[i % colors.length];
+            traces[i].marker.color = colorMap(i)
         }
     }
 
@@ -756,6 +772,9 @@ var fetchFeatureData = function () {
                 window.alert('An unexpected error occurred. Please try again.')
             });
         }
+    } else {
+        featureResult = null;
+        showFeature();
     }
 };
 
