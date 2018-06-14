@@ -69,6 +69,10 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
         var concatTraces = [];
         var t;
         if (traces.length > 0) {
+            for (var i = 0; i < traces.length; i++) {
+                traces[i].showlegend = false;
+            }
+
             if (index === 0) { // all traces
                 if (traces[0].marker.cmin != null && !isNaN(traces[0].marker.cmin)) {
                     traces[0].marker.showscale = true;
@@ -85,9 +89,6 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
             } else { // one trace
                 if (traces[index - 1].marker.cmin != null && !isNaN(traces[index - 1].marker.cmin)) {
                     traces[index - 1].marker.showscale = true;
-                }
-                for (var i = 0; i < traces.length; i++) {
-                    traces[i].showlegend = false;
                 }
                 concatTraces = [traces[index - 1]]
             }
@@ -151,13 +152,13 @@ var createForceLayoutPlotObject = function (showLegend) {
                 showticklabels: false
             },
             title: '',
-            width: showLegend ? 1100 : 840, // leave room for legend
+            width: showLegend ? 1115 : 855, // leave room for legend
             height: 840,
             margin: {
                 l: 0,
                 b: 0,
                 r: showLegend ? 300 : 0,
-                t: 15,
+                t: 30,
                 pad: 0
             },
             autosize: true
@@ -180,7 +181,7 @@ var createForceLayoutTrajectory = function (forceLayoutData, key) {
 
     var traces = forceLayoutData[key];
     var $div = $('<li style="list-style: none;"><h4>' + key +
-        ' Trajectory</h4><div class="plot"></div><div data-name="controls"></div></li>'
+        ' Trajectory</h4><div data-name="controls"></div><div class="plot"></div></li>'
     );
     $div.appendTo($trajectoryEl);
     traces.forEach(function (trace) {
@@ -414,7 +415,7 @@ var showTrajectoryPlots = function (result) {
     }
     if (datasetNameToTraces) {
         for (var key in datasetNameToTraces) {
-            var $div = $('<li style="list-style: none;"><h4>Trajectory Trends <small>- Mean Expression Profiles</small></h4><div class="plot"></div></li>');
+            var $div = $('<li style="list-style: none;"><h4>Trajectory Trends <small>- Mean Expression Profile</small></h4><div class="plot"></div></li>');
             $div.appendTo($trajectoryEl);
             var traces = datasetNameToTraces[key];
             traces.forEach(function (trace) {
@@ -694,12 +695,24 @@ var showFeature = function () {
         }
     }
 
+    featureForceLayoutInfo.layout.title = featureResult.name != null ? featureResult.name : '';
+
+
+    var $controls = $('#force_layout_vis_controls');
+    featurePlotTraces = traces;
+    featureForceLayoutInfo.layout.showlegend = showlegend;
+    featureForceLayoutInfo.layout.width = showlegend ? 1100 : 840; // leave room for legend
+    featureForceLayoutInfo.layout.margin.r = showlegend ? 300 : 0;
+    $controls.html(createPlotAnimation(featureForceLayoutInfo.backgroundTrace, featurePlotTraces, 'force_layout_vis', featureForceLayoutInfo.layout));
+
     var percentFormatter = d3.format('.1f');
     var groupedThousands = d3.format(',');
+    html.push('<h4 style="display: inline-block;">Cell Summary');
     if (filterValue != null) {
-        html.push('<h4>Cell Summary <small> ' + ($('#filter_op').val() === 'gt' ? 'Greater then' : 'Less then') + ' ' + d3.format('.2f')(filterValue) + '</small></h4>');
+        html.push('<small> ' + ($('#filter_op').val() === 'gt' ? 'Greater then' : 'Less then') + ' ' + d3.format('.2f')(filterValue) + '</small>');
     }
-
+    html.push('</h4>');
+    html.push('<div></div>');
     html.push('<table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Group</th><th># Cells Selected</th><th>% Cells Selected</th></tr>');
     var totalPass = 0;
     var total = 0;
@@ -739,13 +752,6 @@ var showFeature = function () {
 
 
     $('#table_vis').html(html.join(''));
-
-    var $controls = $('#force_layout_vis_controls');
-    featurePlotTraces = traces;
-    featureForceLayoutInfo.layout.showlegend = showlegend;
-    featureForceLayoutInfo.layout.width = showlegend ? 1100 : 840; // leave room for legend
-    featureForceLayoutInfo.layout.margin.r = showlegend ? 300 : 0;
-    $controls.html(createPlotAnimation(featureForceLayoutInfo.backgroundTrace, featurePlotTraces, 'force_layout_vis', featureForceLayoutInfo.layout));
     enableCreateSet();
 };
 
@@ -758,9 +764,10 @@ var fetchFeatureData = function () {
         if (text !== setSelectedFeature) {
             setSelectedFeature = text;
             $('#set_loading').show();
-            $.ajax({url: '/feature_value/', data: {feature: text}}).done(function (result) {
+            $.ajax({url: '/feature_value/', context: {name: text}, data: {feature: text}}).done(function (result) {
                 featureResult = result;
                 featureResult.isNumeric = true;
+                featureResult.name = this.name;
                 var sortedValues = featureResult.values.slice(0).sort(function (a, b) {
                     return (a === b ? 0 : (a < b ? -1 : 1));
                 });
