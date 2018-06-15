@@ -5,7 +5,12 @@ var cellIdToIndex = {};
 var featureIds;
 var $cellSet = $('#cell_sets');
 var $features = $('#features');
-
+var groupedThousands = d3.format(',');
+var plotConfig = {
+    showLink: false,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['sendDataToCloud', 'hoverCompareCartesian', 'hoverClosestCartesian', 'toggleSpikelines']
+};
 var forceLayoutColorScale = ['rgb(217,217,217)', 'rgb(255,0,0)'];
 
 var interpolate = function (x, xi, yi, sigma) {
@@ -48,8 +53,22 @@ var kernelSmooth = function (xi, yi, stop, start, steps, sigma) {
 };
 
 
-var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
-    var $controls = $('<div style="display: inline;"><button class="btn btn-default btn-sm" name="play">Play</button>  <select style="width:auto;" class="form-control input-sm" data-name="group"></select></div>');
+/**
+ *
+ * @param plotAnimatiobObject.backgroundTrace
+ * @param plotAnimatiobObject.traces
+ * @param plotAnimatiobObject.elem
+ * @param plotAnimatiobObject.layout
+ * @param plotAnimatiobObject.select
+ * @returns {jQuery|HTMLElement}
+ */
+var customSetCounter = 0;
+var createPlotAnimation = function (plotAnimatiobObject) {
+    var backgroundTrace = plotAnimatiobObject.backgroundTrace;
+    var traces = plotAnimatiobObject.traces;
+    var elem = plotAnimatiobObject.elem;
+    var layout = plotAnimatiobObject.layout;
+    var $controls = $('<div style="display: inline;"><button style="display: inline-block;width:auto;" class="btn btn-default btn-sm" name="create-cell-set" disabled>Create Cell Set</button> <span style="display: inline-block;" class="help-block" data-name="nselected"></span><div data-name="wot-anim"><button class="btn btn-default btn-sm" name="play">Play</button>  <select style="width:auto;" class="form-control input-sm" data-name="group"></select></div>');
     var index = 0;
     var groups = [];
     groups.push('All');
@@ -58,6 +77,21 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
     }
 
     var $group = $controls.find('[data-name=group]');
+    var $createSelectedCellSet = $controls.find('[name=create-cell-set]');
+    var $nselected = $controls.find('[data-name=nselected]');
+    var selectedIds = [];
+    $createSelectedCellSet.on('click', function (e) {
+        e.preventDefault();
+        var name;
+        if (index === 0) {
+            name = 'custom_set' + customSetCounter;
+        } else {
+            name = 'custom_set' + customSetCounter + '_' + traces[index - 1].name;
+        }
+        customSetCounter++;
+        customCellSetNameToIds[name] = selectedIds;
+        updateCellSetsSelector();
+    });
     $group.html(groups.map(function (value, groupIndex) {
         return '<option value="' + groupIndex + '">' + value + '</option>';
     }).join(''));
@@ -95,10 +129,31 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
         }
         $group.val(index);
 
-        Plotly.newPlot(elem, {
-            data: backgroundTrace != null ? [backgroundTrace].concat(concatTraces) : concatTraces,
-            layout: layout
-        });
+        Plotly.newPlot(elem, backgroundTrace != null ? [backgroundTrace].concat(concatTraces) : concatTraces, layout, plotConfig);
+        //  plotly_deselect
+
+        if (plotAnimatiobObject.select) {
+            elem.on('plotly_selected', function (eventData) {
+                selectedIds = [];
+                if (eventData) {
+                    var curveNumber = index === 0 ? 0 : 1;
+                    eventData.points.forEach(function (pt) {
+                        if (pt.curveNumber === curveNumber) {
+                            selectedIds.push(pt.id);
+                        }
+                        // pointNumber
+                        // curveNumber
+                    });
+                }
+                $nselected.html(groupedThousands(selectedIds.length) + ' selected');
+                $createSelectedCellSet.prop('disabled', selectedIds.length === 0);
+            });
+
+        }
+        // reset on new frame
+        selectedIds = [];
+        $nselected.html('0 selected');
+        $createSelectedCellSet.prop('disabled', true);
     }
 
     function nextTick() {
@@ -128,8 +183,16 @@ var createPlotAnimation = function (backgroundTrace, traces, elem, layout) {
         showFrame();
     });
     showFrame();
-    return traces.length > 1 ? $controls : $('<div></div>');
+    if (traces.length === 0) {
+        $controls.find('[data-name=wot-anim]').hide();
+    }
+    if (!plotAnimatiobObject.select) {
+        $createSelectedCellSet.hide();
+    }
+    return $controls;
 };
+
+
 var createForceLayoutPlotObject = function (showLegend) {
     var layout =
         {
@@ -161,7 +224,8 @@ var createForceLayoutPlotObject = function (showLegend) {
                 t: 30,
                 pad: 0
             },
-            autosize: true
+            autosize: true,
+            displaylogo: false
         };
 
     var backgroundTrace = {
@@ -170,7 +234,8 @@ var createForceLayoutPlotObject = function (showLegend) {
         marker: {size: 2, color: 'rgb(217,217,217)', opacity: 0.5, showscale: false},
         mode: 'markers',
         type: 'scattergl',
-        name: 'All Cells',
+        name: 'All',
+        ids: cellInfo.id,
         x: cellInfo.x,
         y: cellInfo.y
     };
@@ -203,11 +268,17 @@ var createForceLayoutTrajectory = function (forceLayoutData, key) {
     var elem = $div.find('.plot')[0];
     var forceLayoutInfo = createForceLayoutPlotObject(false);
     var backgroundTrace = forceLayoutInfo.backgroundTrace;
-    var $controls = createPlotAnimation(backgroundTrace, traces, elem, forceLayoutInfo.layout);
+
+    var $controls = createPlotAnimation({
+        backgroundTrace: backgroundTrace,
+        traces: traces,
+        elem: elem,
+        layout: forceLayoutInfo.layout
+    });
     $controls.appendTo($div.find('[data-name=controls]'));
 
 };
-var cellForceLayoutInfo = null;
+var cellSetForceLayoutInfo = null;
 var featureForceLayoutInfo = null;
 var $groupBy = $('#force_layout_group_by');
 $.ajax('/info/').done(function (json) {
@@ -231,13 +302,15 @@ $.ajax('/info/').done(function (json) {
     for (var i = 0, length = cellInfo.id.length; i < length; i++) {
         cellIdToIndex[cellInfo.id[i]] = i;
     }
-    cellForceLayoutInfo = createForceLayoutPlotObject(true);
+    cellSetForceLayoutInfo = createForceLayoutPlotObject(true);
 
     featureForceLayoutInfo = createForceLayoutPlotObject(false);
-    Plotly.newPlot('trajectory_set_vis', {
-        data: [cellForceLayoutInfo.backgroundTrace],
-        layout: cellForceLayoutInfo.layout
-    });
+    featureForceLayoutInfo.layout.dragmode = 'select';
+    Plotly.newPlot('trajectory_set_vis',
+        [cellSetForceLayoutInfo.backgroundTrace],
+        cellSetForceLayoutInfo.layout,
+        plotConfig
+    );
 
     if (json.transport_map_times.length === 0) {
         $('a[href="#sets_el"]').tab('show');
@@ -277,10 +350,7 @@ $.ajax('/list_cell_sets/').done(function (result) {
 $cellSet.on('change', function () {
     var selectedSets = $cellSet.val();
     if (selectedSets == null || selectedSets.length === 0) {
-        Plotly.newPlot('trajectory_set_vis', {
-            data: [cellForceLayoutInfo.backgroundTrace],
-            layout: cellForceLayoutInfo.layout
-        });
+        Plotly.newPlot('trajectory_set_vis', [cellSetForceLayoutInfo.backgroundTrace], cellSetForceLayoutInfo.layout, plotConfig);
         return;
     }
     // remove custom cell sets
@@ -328,38 +398,15 @@ $cellSet.on('change', function () {
                 y: forceLayoutY
             });
         });
-        Plotly.newPlot('trajectory_set_vis', {
-            data: [cellForceLayoutInfo.backgroundTrace].concat(traces),
-            layout: cellForceLayoutInfo.layout
-        });
+        Plotly.newPlot('trajectory_set_vis',
+            [cellSetForceLayoutInfo.backgroundTrace].concat(traces),
+            cellSetForceLayoutInfo.layout,
+            plotConfig
+        );
     });
 
 });
 
-function split(val) {
-    return val.split(/,\s*/);
-}
-
-function extractLast(term) {
-    return split(term).pop();
-}
-
-function autocompleteFilter(term) {
-    term = term.toUpperCase();
-    var filteredResults = [];
-    if (featureIds != null) {
-        for (var i = 0, length = featureIds.length; i < length; i++) {
-            if (featureIds[i].toUpperCase().startsWith(term)) {
-                filteredResults.push(featureIds[i]);
-                if (filteredResults.length === 10) {
-                    return filteredResults;
-                }
-            }
-        }
-    }
-    return filteredResults;
-
-}
 
 $features
     .on('keydown', function (event) {
@@ -410,7 +457,7 @@ var showTrajectoryPlots = function (result) {
                 xaxis: {
                     title: 'Time'
                 }
-            }
+            }, plotConfig
         );
     }
     if (datasetNameToTraces) {
@@ -432,7 +479,7 @@ var showTrajectoryPlots = function (result) {
                     yaxis: {title: 'Value', autorange: true, 'zeroline': false},
                     showlegend: true,
                     margin: {t: 15}
-                });
+                }, plotConfig);
         }
 
     }
@@ -524,6 +571,10 @@ var createSets = function () {
         var setName = setSelectedFeature + '_' + filterOp + '_' + userFilterValue + '_' + key;
         customCellSetNameToIds[setName] = trace.ids;
     });
+    updateCellSetsSelector();
+};
+
+function updateCellSetsSelector() {
     var options = [];
     options.push('<optgroup label="Custom Sets">');
     var count = 0;
@@ -541,12 +592,12 @@ var createSets = function () {
     $cellSet.val(val);
     $cellSet.selectpicker('refresh');
     $cellSet.selectpicker('render');
-};
+}
 
 
 var showFeature = function () {
     var traces = [];
-    var html = [];
+
     var filterValue = null;
     var f = function () {
         return true;
@@ -703,15 +754,24 @@ var showFeature = function () {
     featureForceLayoutInfo.layout.showlegend = showlegend;
     featureForceLayoutInfo.layout.width = showlegend ? 1100 : 840; // leave room for legend
     featureForceLayoutInfo.layout.margin.r = showlegend ? 300 : 0;
-    $controls.html(createPlotAnimation(featureForceLayoutInfo.backgroundTrace, featurePlotTraces, 'force_layout_vis', featureForceLayoutInfo.layout));
+
+    $controls.html(createPlotAnimation({
+        backgroundTrace: featureForceLayoutInfo.backgroundTrace,
+        traces: featurePlotTraces,
+        elem: document.getElementById('force_layout_vis'),
+        layout: featureForceLayoutInfo.layout,
+        select: true
+    }));
 
     var percentFormatter = d3.format('.1f');
-    var groupedThousands = d3.format(',');
-    html.push('<h4 style="display: inline-block;">Cell Summary');
+
+    var html = [];
+    html.push('<h4 style="display: inline-block;">Summary');
     if (filterValue != null) {
         html.push('<small> ' + ($('#filter_op').val() === 'gt' ? 'Greater then' : 'Less then') + ' ' + d3.format('.2f')(filterValue) + '</small>');
     }
     html.push('</h4>');
+    html.push('<button style="float:right;" name="create-cell-sets" type="button" class="btn btn-default btn-sm" disabled>Create Cell Sets</button>');
     html.push('<div></div>');
     html.push('<table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Group</th><th># Cells Selected</th><th>% Cells Selected</th></tr>');
     var totalPass = 0;
@@ -721,7 +781,7 @@ var showFeature = function () {
         totalPass += trace.ids.length;
         total += trace.nids;
     }
-
+    var showViolinPlot = false;
     for (var i = 0; i < traces.length; i++) {
         var trace = traces[i];
         html.push('<tr>');
@@ -735,6 +795,9 @@ var showFeature = function () {
         html.push('<td>');
         html.push(percentFormatter(100 * (trace.ids.length / trace.nids)));
         html.push('</td>');
+        if (showViolinPlot) {
+            html.push('<td data-name="violin-' + i + '"></td>');
+        }
         html.push('</tr>');
     }
     if (traces.length > 1) {
@@ -746,28 +809,105 @@ var showFeature = function () {
         html.push('<td>');
         html.push(percentFormatter(100 * (totalPass / total)));
         html.push('</td>');
+        if (showViolinPlot) {
+            html.push('<td></td>');
+        }
         html.push('</tr>');
     }
     html.push('</table>');
 
 
-    $('#table_vis').html(html.join(''));
+    $tableEl.html(html.join(''));
+    if (showViolinPlot) {
+        for (var i = 0; i < traces.length; i++) {
+            var trace = traces[i];
+            var data = [{
+                type: 'violin',
+                x: trace.marker.color,
+                points: 'none',
+                box: {
+                    visible: false
+                },
+                boxpoints: false,
+                line: {
+                    color: 'black'
+                },
+                fillcolor: '#8dd3c7',
+                opacity: 0.6,
+                meanline: {
+                    visible: true
+                }
+            }];
+            var layout = {
+                title: "",
+                xaxis: {
+                    autorange: true,
+                    showgrid: false,
+                    zeroline: false,
+                    showline: false
+                },
+                yaxis: {
+                    autorange: true,
+                    showgrid: false,
+                    zeroline: false,
+                    showline: false,
+                    autotick: false,
+                    ticks: '',
+                    showticklabels: false
+                },
+                title: '',
+                width: 300,
+                margin: {
+                    l: 0,
+                    b: 0,
+                    r: 0,
+                    t: 30,
+                    pad: 0
+                },
+                autosize: true
+            }
+            Plotly.plot($('[data-name=violin-' + i + ']')[0], data, layout);
+        }
+    }
     enableCreateSet();
 };
 
 
 var groupBy = [];
 
+function summarizeMultipleFeatures() {
+    var nfeatures = featureResult.v.length;
+    if (nfeatures === 1) {
+        featureResult.values = featureResult.v[0].values;
+    } else {
+        var values = new Float64Array(featureResult.v[0].values.length);
+        for (var i = 0, n = values.length; i < n; i++) {
+            var sum = 0;
+            for (var j = 0; j < nfeatures; j++) {
+                sum += featureResult.v[j].values[i];
+            }
+            values[i] = sum / nfeatures;
+        }
+        featureResult.values = values;
+    }
+};
+
 var fetchFeatureData = function () {
     var text = $setFeature.val().trim();
     if (text !== '') {
+
         if (text !== setSelectedFeature) {
             setSelectedFeature = text;
             $('#set_loading').show();
-            $.ajax({url: '/feature_value/', context: {name: text}, data: {feature: text}}).done(function (result) {
+            var terms = autocompleteSplit(text)
+            $.ajax({url: '/feature_value/', context: {name: text}, data: {feature: terms}}).done(function (result) {
                 featureResult = result;
                 featureResult.isNumeric = true;
-                featureResult.name = this.name;
+                summarizeMultipleFeatures();
+                featureResult.name = featureResult.v.map(function (obj) {
+                    return obj.name;
+                }).join(', ');
+
                 var sortedValues = featureResult.values.slice(0).sort(function (a, b) {
                     return (a === b ? 0 : (a < b ? -1 : 1));
                 });
@@ -786,6 +926,31 @@ var fetchFeatureData = function () {
 };
 
 
+function autocompleteSplit(val) {
+    return val.split(/,\s*/);
+}
+
+function extractLast(term) {
+    return autocompleteSplit(term).pop();
+}
+
+function autocompleteFilter(term) {
+    term = term.toUpperCase();
+    var filteredResults = [];
+    if (featureIds != null) {
+        for (var i = 0, length = featureIds.length; i < length; i++) {
+            if (featureIds[i].toUpperCase().startsWith(term)) {
+                filteredResults.push(featureIds[i]);
+                if (filteredResults.length === 10) {
+                    return filteredResults;
+                }
+            }
+        }
+    }
+    return filteredResults;
+
+}
+
 $setFeature.on('keydown', function (event) {
     if (event.keyCode === $.ui.keyCode.TAB &&
         $(this).autocomplete('instance').menu.active) {
@@ -799,7 +964,18 @@ $setFeature.on('keydown', function (event) {
     },
     source: function (request, response) {
         // delegate back to autocomplete, but extract the last term
-        response(autocompleteFilter(request.term));
+        response(autocompleteFilter(extractLast(request.term)));
+    },
+    select: function (event, ui) {
+        var terms = autocompleteSplit(this.value);
+        // remove the current input
+        terms.pop();
+        // add the selected item
+        terms.push(ui.item.value);
+        // add placeholder to get the comma-and-space at the end
+        terms.push("");
+        this.value = terms.join(", ");
+        return false;
     }
 });
 var $filterValue = $('#filter_quantile');
@@ -833,11 +1009,11 @@ $('#set_submit').on('click', function (e) {
     e.preventDefault();
     fetchFeatureData();
 });
-
-var $createSet = $('#create_set');
-$createSet.on('click', function (e) {
+var $tableEl = $('#table_vis');
+$tableEl.on('click', 'button[name=create-cell-sets]', function () {
     createSets();
 });
+
 
 $groupBy.on('change', function (e) {
     groupBy = $(this).val();
@@ -884,16 +1060,16 @@ $filterOp.on('change', function (e) {
 });
 
 function enableCreateSet() {
-    $createSet.prop('disabled', $('.wot-group').filter(':checked').length === 0);
+    $tableEl.find('button[name=create-cell-sets]').prop('disabled', $('.wot-group').filter(':checked').length === 0);
 }
 
-$('#table_vis').on('click', 'input[name=select_all]', function (e) {
+$tableEl.on('click', 'input[name=select_all]', function (e) {
     var selected = $(this).prop('checked');
-    $('#table_vis').find('.wot-group').prop('checked', selected);
+    $tableEl.find('.wot-group').prop('checked', selected);
     enableCreateSet();
 });
 
-$('#table_vis').on('click', '.wot-group', function (e) {
+$tableEl.on('click', '.wot-group', function (e) {
     enableCreateSet();
 });
 

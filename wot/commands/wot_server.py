@@ -83,15 +83,15 @@ def main(argsv):
                 row_indices = ds.row_meta.index.isin(cell_ids)
 
                 ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
-            # ds_order = ds.row_meta.index.get_indexer_for(days_data_frame.index.values)
-            # ds = wot.Dataset(ds.x[ds_order], ds.row_meta.iloc[ds_order], ds.col_meta)
-            # np.sum(ds_order == -1)
-            # if cell_metadata is None:
-            #     cell_metadata = ds.row_meta
-            # else:
-            #     cell_metadata = pd.concat([cell_metadata, ds.row_meta], join='outer', sort=False)
             datasets.append(ds)
-
+        # align datasets
+        # ref_dataset = datasets[0]
+        # for i in range(1, len(datasets)):
+        #     ds = datasets[i]
+        #     ds_order = ds.row_meta.index.get_indexer_for(ref_dataset.row_meta.index.values)
+        #     ds_order = ds_order[ds_order != -1]
+        #     ds = wot.Dataset(ds.x[ds_order], ds.row_meta.iloc[ds_order], ds.col_meta)
+        #     datasets[i] = ds
     if args.cell_meta is not None:
         for f in args.cell_meta:
             df = pd.read_table(f, engine='python', sep=None, index_col='id')
@@ -143,19 +143,21 @@ def main(argsv):
 
     @app.route("/feature_value/", methods=['GET'])
     def feature_value():
-        feature_ids = [flask.request.args.get('feature')]
+        feature_ids = flask.request.args.getlist('feature[]')
         feature_ids = set(map(lambda x: x.upper(), feature_ids))
+        result = {'v': []}
         for dataset_index in range(len(datasets)):
             ds = datasets[dataset_index]
             column_indices = np.where(ds.col_meta.index.str.upper().isin(feature_ids))[0]
-            if len(column_indices) == 1:
-                values = ds.x[:, column_indices[0]]
-                if scipy.sparse.isspmatrix(values):
-                    values = values.toarray().flatten()
+            if len(column_indices) > 0:
+                for j in column_indices:
+                    values = ds.x[:, j]
+                    if scipy.sparse.isspmatrix(values):
+                        values = values.toarray().flatten()
 
-                return flask.jsonify({'ids': ds.row_meta.index.values.astype(str).tolist(), 'values': values.tolist()})
-
-        raise ValueError('Feature not found: ' + ', '.join(feature_ids))
+                    result['v'].append({'values': values.tolist(), 'name': ds.col_meta.index.values[j]})
+                result['ids'] = ds.row_meta.index.values.astype(str).tolist()
+            return flask.jsonify(result)  # only return values for one dataset as dataset might not be aligned
 
     @app.route("/list_cell_sets/", methods=['GET'])
     def list_cell_sets():
