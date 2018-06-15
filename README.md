@@ -17,6 +17,14 @@ by using the mathematical approach of Optimal Transport (OT)
 ## <a name="install"></a> Install
 Python 3 is required.
 
+Optionally install dependencies using conda:
+```
+conda install cython h5py flask gunicorn numexpr numpy pandas scikit-learn scipy simplejson psutil
+conda install -c conda-forge pot
+```
+
+Install WOT:
+
 ```
 pip install wot
 ```
@@ -37,11 +45,11 @@ Common Options (required in **bold**)
 
 Flag | Description
 --- | --- |
-**matrix** | Normalized gene expression matrix.
-**cell_days** | Assigns days to cells
+**matrix** | [Normalized gene expression matrix](#matrix).
+**cell_days** | [Assigns days to cells](#cell_days)
 gene_set_scores | Apoptosis and cell cycle scores used to compute growth rates. If not specified, a constant growth rate is used. The wot tool [gene_set_scores](#gene_set_scores) can be used to compute gene set scores.
 local_pca | Use principal component analysis to reduce the dimensionality of the expression matrix locally in the space of consecutive days. Thirty components are used by default.
-day_pairs | Pairs of days to compute transport maps for
+day_pairs | [Pairs of days to compute transport maps for](#day_pairs)
 gene_filter | File with one gene id per line to use for computing cost matrices (e.g. variable genes)
 out | Base name for output files 
 
@@ -62,6 +70,7 @@ covariate | Two column file with headers "id" and "covariate" indicating cell id
 *wot force_layout* generates a force-directed layout using the ForceAtlas2 algorithm. The tool can optionally perform dimensionality reduction using diffusion component embedding of the dataset. 
 After you have generated the force layout coordinates, you can use *wot wot_server* to view trajectories and gene expression in the force layout.
 
+**Trajectory Trends** plots the expression of a gene over time based on the transport maps
 
 ## <a name="optimal_transport_transition_table">Transition Table</a>
 *wot transition_table* generate a transition table from one cell set to another cell set.
