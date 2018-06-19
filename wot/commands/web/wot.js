@@ -6,6 +6,7 @@ var featureIds;
 var $cellSet = $('#cell_sets');
 var $features = $('#features');
 var groupedThousands = d3.format(',');
+var logTransform = false;
 var plotConfig = {
     showLink: false,
     displaylogo: false,
@@ -631,11 +632,24 @@ var showFeature = function () {
         return d;
     };
 
+    if (logTransform && zScore) {
+        valueTransform = function (d) {
+            d = Math.log(d + 1);
+            return (d - featureResult.mean) / featureResult.std;
+        };
+    } else if (logTransform) {
+        valueTransform = function (d) {
+            return Math.log(d + 1);
+        };
+    } else if (zScore) {
+        valueTransform = function (d) {
+            return (d - featureResult.mean) / featureResult.std;
+        };
+    }
+
     if (!isBackgroundTrace && featureResult.isNumeric) {
         if (userFilterValue != null && !isNaN(userFilterValue)) {
-            filterValue = enterQuantile ? d3.quantile(featureResult.sortedValues, userFilterValue / 100.0, (zScore ? function (d) {
-                return (d - featureResult.mean) / featureResult.std;
-            } : null)) : userFilterValue;
+            filterValue = enterQuantile ? d3.quantile(featureResult.sortedValues, userFilterValue / 100.0, valueTransform) : userFilterValue;
             if ($('#filter_op').val() == 'gt') {
                 f = function (d) {
                     return d > filterValue;
@@ -652,7 +666,7 @@ var showFeature = function () {
     var traceNameToTrace = {};
 
     var hidePoint = function (d) {
-        return d === featureResult.featureRange[0];
+        return d === valueTransform(featureResult.featureRange[0]);
     };
     if (zScore) {
         hidePoint = function (d) {
@@ -699,8 +713,8 @@ var showFeature = function () {
 
                     } else {
                         trace.marker = {
-                            cmin: featureResult.featureRange[0],
-                            cmax: featureResult.featureRange[1],
+                            cmin: valueTransform(featureResult.featureRange[0]),
+                            cmax: valueTransform(featureResult.featureRange[1]),
                             color: [],
                             opacity: [],
                             showscale: true,
@@ -714,7 +728,8 @@ var showFeature = function () {
                 trace.marker = {
                     size: 2,
                     showscale: false,
-                    color: nfields === 0 ? 'black' : null,
+                    opacity: isBackgroundTrace ? 0.5 : null,
+                    color: isBackgroundTrace ? 'rgb(217,217,217)' : null,
                     cmin: null,
                     cmax: null
                 };
@@ -723,10 +738,7 @@ var showFeature = function () {
         }
         var accept = true;
         if (!isBackgroundTrace) {
-            var value = values[i];
-            if (zScore) {
-                value = (value - featureResult.mean) / featureResult.std;
-            }
+            var value = valueTransform(values[i]);
             accept = f(value);
             if (accept) {
                 // skip background points
@@ -758,7 +770,6 @@ var showFeature = function () {
 
     });
     if (showlegend) {
-
         // var temperature = ['rgb(4,35,51)', 'rgb(23,51,122)', 'rgb(85,59,157)', 'rgb(129,79,143)', 'rgb(175,95,130)', 'rgb(222,112,101)', 'rgb(249,146,66)', 'rgb(249,196,65)', 'rgb(232,250,91)'];
         // var colorMap = d3.scaleSequential(d3.interpolateRgbBasis(temperature))
         //     .domain([0, traces.length])
@@ -778,7 +789,7 @@ var showFeature = function () {
     featureForceLayoutInfo.layout.margin.r = showlegend ? 300 : 0;
 
     $controls.html(createPlotAnimation({
-        backgroundTrace: featureForceLayoutInfo.backgroundTrace,
+        backgroundTrace: isBackgroundTrace ? null : featureForceLayoutInfo.backgroundTrace,
         traces: featurePlotTraces,
         elem: document.getElementById('force_layout_vis'),
         layout: featureForceLayoutInfo.layout,
@@ -844,6 +855,9 @@ var showFeature = function () {
 
     $tableEl.html(html.join(''));
     if (!isBackgroundTrace) {
+        var range = featureResult.featureRange.slice(0);
+        range[0] = valueTransform(range[0]);
+        range[1] = valueTransform(range[1]);
         var allData = [];
         for (var i = 0; i < traces.length; i++) {
             var trace = traces[i];
@@ -869,7 +883,7 @@ var showFeature = function () {
                 title: "",
                 xaxis: {
                     autorange: false,
-                    range: featureResult.featureRange,
+                    range: range,
                     showgrid: false,
                     zeroline: false,
                     showline: true
@@ -917,7 +931,7 @@ var showFeature = function () {
             }], {
                 title: "",
                 xaxis: {
-                    range: featureResult.featureRange,
+                    range: range,
                     showgrid: false,
                     zeroline: false,
                     showline: true
@@ -1057,6 +1071,10 @@ $setFeature.on('keydown', function (event) {
 var $filterValue = $('#filter_quantile');
 $('#z_score').on('change', function () {
     zScore = $(this).prop('checked');
+    showFeature();
+});
+$('#log').on('change', function () {
+    logTransform = $(this).prop('checked');
     showFeature();
 });
 
