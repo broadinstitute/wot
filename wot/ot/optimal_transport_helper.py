@@ -303,8 +303,6 @@ class OptimalTransportHelper:
                 matrices = list()
                 matrices.append(p0_full.x if not scipy.sparse.isspmatrix(p0_full.x) else p0_full.x.toarray())
                 matrices.append(p1_full.x if not scipy.sparse.isspmatrix(p1_full.x) else p1_full.x.toarray())
-                #                if p0_5_full is not None:
-                #                    matrices.append(p0_5_full.x if not scipy.sparse.isspmatrix(p0_5_full.x) else p0_5_full.x.toarray())
 
                 x = np.vstack(matrices)
                 mean_shift = x.mean(axis=0)
@@ -324,9 +322,6 @@ class OptimalTransportHelper:
                     y = p0_5_full.x - mean_shift
                     p0_5_full = wot.Dataset(np.diag(1 / pca.singular_values_).dot(U.T.dot(y.T)).T, p0_5_full.row_meta,
                                             pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
-                #                    p0_5_full = wot.Dataset(x[len(t0_indices) + len(t1_indices):],
-                #                                            p0_5_full.row_meta,
-                #                                            pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 self.eigenvals = np.diag(pca.singular_values_)
 
             delta_t = t1 - t0
@@ -346,7 +341,7 @@ class OptimalTransportHelper:
                     p1 = wot.Dataset(p1_full.x[p1_expr], p1_full.row_meta.iloc[p1_expr], p1_full.col_meta)
 
                 if args.verbose:
-                    print('Computing cost matrix...', end='')
+                    print('Computing cost matrix in ' + str(p0.x.shape[1]) + ' dimensions...', end='')
 
                 cost_matrix = self.compute_cost_matrix(p0.x, p1.x)
                 if args.verbose:
