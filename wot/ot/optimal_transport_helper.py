@@ -182,7 +182,7 @@ class OptimalTransportHelper:
             _unique_days = []
             for i in range(len(unique_days)):
                 if unique_days[i] >= 0:
-                    indices = np.where(ds.row_meta[days_data_frame.columns[0]] == unique_days[i])[0]
+                    indices = np.where(ds.row_meta['day'] == unique_days[i])[0]
                     if len(indices) > 0:
                         _unique_days.append(unique_days[i])
             unique_days = _unique_days
@@ -227,7 +227,7 @@ class OptimalTransportHelper:
                     unique_days.add(t0_5)
             for day in unique_days:
                 index_list = []
-                day_query = ds.row_meta[days_data_frame.columns[0]] == day
+                day_query = ds.row_meta['day'] == day
                 for cv in unique_cvs:
                     if cv is None:
                         indices = np.where(day_query)[0]
@@ -240,7 +240,7 @@ class OptimalTransportHelper:
                 day_to_indices[day] = np.concatenate(index_list)
 
         else:
-            days = ds.row_meta[days_data_frame.columns[0]].values
+            days = ds.row_meta['day'].values
             for i in range(len(days)):
                 val = days[i]
                 if val is not None:
@@ -358,7 +358,7 @@ class OptimalTransportHelper:
                             'Computing transport map from ' + str(
                                 t0) + ' to ' + str(
                                 t1) + '...', end='')
-                growth_rate = p0.row_meta[cell_growth_rates.columns[0]].values
+                growth_rate = p0.row_meta['cell_growth_rate'].values
                 result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
                                                   growth_rate=growth_rate,
                                                   delta_days=delta_t,
