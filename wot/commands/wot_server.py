@@ -50,6 +50,7 @@ def main(argsv):
     parser.add_argument('--workers', help='Number of worker processes', type=int, default=2)
     parser.add_argument('--port', help='Web server port', type=int, default=8080)
     parser.add_argument('--host', help='Web server host', default='127.0.0.1')
+    parser.add_argument('--timeout', help='Worker timeout', default=600, type=int)
 
     args = parser.parse_args(argsv)
     if args.cell_sets is not None:
@@ -237,7 +238,7 @@ def main(argsv):
     options = {
         'bind': '%s:%s' % (args.host, args.port),
         'workers': args.workers,
-        'timeout': 180
+        'timeout': args.timeout
     }
     print('WOT running at http://' + args.host + ':' + str(args.port) + '/web/index.html')
     StandaloneApplication(app, options).run()
