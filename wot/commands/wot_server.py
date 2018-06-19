@@ -99,7 +99,7 @@ def main(argsv):
             if cell_metadata is None:
                 cell_metadata = df
             else:
-                cell_metadata = cell_metadata.join(df)
+                cell_metadata = cell_metadata.join(df, how='outer')
     name_to_transport_maps = {}
     if args.dir is not None:
         for d in args.dir:
