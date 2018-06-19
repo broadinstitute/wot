@@ -96,7 +96,7 @@ Flag | Description
 ## <a name="file_formats"></a> File Formats
 
 #### <a name="matrix">Gene Expression matrix</a> 
-Cells on rows and genes (features) on columns. Accepted formats are [Market Exchange Format (MEX)](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/matrices), [HDF5 Gene-Barcode Matrix](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices), [Loom](http://linnarssonlab.org/loompy/format/index.html), and text
+Cells on rows and genes (features) on columns. Accepted formats are [Market Exchange Format (MEX)](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/matrices), [HDF5 Gene-Barcode Matrix](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices), [loom](http://linnarssonlab.org/loompy/format/index.html), [h5ad](http://scanpy.readthedocs.io/en/latest/), and text
     
 Example Text File:
     
