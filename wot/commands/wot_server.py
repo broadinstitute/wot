@@ -35,14 +35,14 @@ class StandaloneApplication(gunicorn.app.base.BaseApplication):
 def main(argsv):
     parser = argparse.ArgumentParser(description='Run wot server')
     parser.add_argument('--dir',
-                        help='Directory of transport maps as produced by ot')
+                        help='Directory of transport maps as produced by ot', action='append')
     parser.add_argument('--cell_sets',
                         help='One or more gmt or gmx files containing cell sets. Each set id should end with _time (e.g. my_cell_set_9)',
                         action='append')
     parser.add_argument('--cell_filter',
                         help='File with one cell id per line to include or or a python regular expression of cell ids to include')
     parser.add_argument('--cell_meta',
-                        help='Should have headers "id", "x", "y", "day", and any additional metadata fields',
+                        help='Every file needs to have the header "id". One file should have "x" and "y", the x and y cell coordinates',
                         action='append', required=True)
     parser.add_argument('--matrix',
                         help='One or more matrices with cells on rows and features, such as genes or pathways on columns',
@@ -99,17 +99,13 @@ def main(argsv):
                 cell_metadata = df
             else:
                 cell_metadata = cell_metadata.join(df)
-
+    name_to_transport_maps = {}
     if args.dir is not None:
-        transport_maps = wot.io.list_transport_maps(args.dir)
-        if len(transport_maps) == 0:
-            raise ValueError('No transport maps found')
-    else:
-        transport_maps = []
-    transport_map_times = set()
-    for tmap in transport_maps:
-        transport_map_times.add(tmap['t1'])
-        transport_map_times.add(tmap['t2'])
+        for d in args.dir:
+            tmaps = wot.io.list_transport_maps(d)
+            if len(tmaps) == 0:
+                raise ValueError('No transport maps found in ' + d)
+            name_to_transport_maps[os.path.basename(os.path.abspath(d))] = tmaps
 
     nx = 800
     ny = 800
@@ -136,8 +132,8 @@ def main(argsv):
             ds = datasets[dataset_index]
             features.update(ds.col_meta.index.values.astype(str).tolist())
         info_json = {}
+        info_json['transport_maps'] = list(name_to_transport_maps.keys())
         info_json['features'] = list(features)
-        info_json['transport_map_times'] = list(transport_map_times)
         info_json['cell'] = cell_json
         return flask.Response(json.dumps(info_json, ignore_nan=True), mimetype='application/json')
 
@@ -182,6 +178,10 @@ def main(argsv):
         feature_ids = flask.request.form.getlist('feature[]')  # list of ids
         cell_set_ids = set(flask.request.form.getlist('cell_set[]'))  # list of ids
         ncustom_cell_sets = int(flask.request.form.get('ncustom_cell_sets', '0'))
+        transport_map_name = flask.request.form.get('transport_map', '')
+        if transport_map_name is '' and len(name_to_transport_maps) == 1:
+            transport_map_name = list(name_to_transport_maps.keys())[0]
+        transport_maps = name_to_transport_maps[transport_map_name]
         filtered_time_to_cell_sets = {}
         if ncustom_cell_sets > 0:
             for i in range(ncustom_cell_sets):
@@ -237,6 +237,7 @@ def main(argsv):
     options = {
         'bind': '%s:%s' % (args.host, args.port),
         'workers': args.workers,
+        'timeout': 180
     }
     print('WOT running at http://' + args.host + ':' + str(args.port) + '/web/index.html')
     StandaloneApplication(app, options).run()

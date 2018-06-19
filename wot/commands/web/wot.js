@@ -12,7 +12,7 @@ var plotConfig = {
     modeBarButtonsToRemove: ['sendDataToCloud', 'hoverCompareCartesian', 'hoverClosestCartesian', 'toggleSpikelines']
 };
 var forceLayoutColorScale = ['rgb(217,217,217)', 'rgb(255,0,0)'];
-
+var $transportMaps = $('#transport_maps');
 var interpolate = function (x, xi, yi, sigma) {
     var n = xi.length;
     var diff = new Float64Array(n);
@@ -242,13 +242,11 @@ var createForceLayoutPlotObject = function (showLegend) {
     return {layout: layout, backgroundTrace: backgroundTrace}
 
 };
-var createForceLayoutTrajectory = function (forceLayoutData, key) {
+var createForceLayoutTrajectory = function (forceLayoutData, key, $el) {
 
     var traces = forceLayoutData[key];
-    var $div = $('<li style="list-style: none;"><h4>' + key +
-        ' Trajectory</h4><div data-name="controls"></div><div class="plot"></div></li>'
-    );
-    $div.appendTo($trajectoryEl);
+    var $div = $('<li style="list-style: none;"><h4>' + key + ' Trajectory</h4><div data-name="controls"></div><div class="plot"></div></li>');
+    $div.appendTo($el);
     traces.forEach(function (trace) {
         trace.mode = 'markers';
         trace.type = 'scattergl';
@@ -311,10 +309,21 @@ $.ajax('/info/').done(function (json) {
         cellSetForceLayoutInfo.layout,
         plotConfig
     );
-
-    if (json.transport_map_times.length === 0) {
-        $('a[href="#sets_el"]').tab('show');
+    var transportMapNames = json.transport_maps;
+    if (transportMapNames.length === 0) {
         $('#trajectory_li').hide();
+    } else {
+
+        $transportMaps.html(transportMapNames.map(function (name) {
+            return '<option value="' + name + '">' + name + '</option>'
+        }));
+        $transportMaps.val(transportMapNames[0]);
+        if (transportMapNames.length > 1) {
+            $('#transport_maps_group').show();
+            $transportMaps.selectpicker('refresh');
+            $transportMaps.selectpicker('render');
+        }
+
 
     }
     showFeature();
@@ -437,13 +446,13 @@ $features
     }
 });
 
-var showTrajectoryPlots = function (result) {
+var showTrajectoryPlots = function (result, $el) {
     var ancestryDivergenceTraces = result.ancestry_divergence_traces;
     var trajectoryForceLayoutData = result.force;
     var datasetNameToTraces = result.dataset_name_to_traces;
     if (ancestryDivergenceTraces && ancestryDivergenceTraces.length > 0) {
         var $div = $('<li style="list-style: none;"><h4>Ancestry Divergence</h4><div class="plot"></div></li>');
-        $div.appendTo($trajectoryEl);
+        $div.appendTo($el);
 
         Plotly.newPlot($div.find('.plot')[0], ancestryDivergenceTraces, {
                 title: '',
@@ -463,7 +472,7 @@ var showTrajectoryPlots = function (result) {
     if (datasetNameToTraces) {
         for (var key in datasetNameToTraces) {
             var $div = $('<li style="list-style: none;"><h4>Trajectory Trends <small>- Mean Expression Profile</small></h4><div class="plot"></div></li>');
-            $div.appendTo($trajectoryEl);
+            $div.appendTo($el);
             var traces = datasetNameToTraces[key];
             traces.forEach(function (trace) {
                 var smoothed = kernelSmooth(trace.x, trace.y, trace.x[trace.x.length - 1], 0, 1000, 0.7);
@@ -485,10 +494,10 @@ var showTrajectoryPlots = function (result) {
     }
     if (cellInfo != null) {
         for (var key in trajectoryForceLayoutData) {
-            createForceLayoutTrajectory(trajectoryForceLayoutData, key);
+            createForceLayoutTrajectory(trajectoryForceLayoutData, key, $el);
         }
     }
-    $trajectoryEl.sortable({handle: 'h4'});
+    $el.sortable({handle: 'h4'});
 };
 
 var fetchTrajectoryData = function () {
@@ -502,30 +511,37 @@ var fetchTrajectoryData = function () {
             _selectedFeatures.push(value);
         }
     });
-    if (selectedCellSets.length > 0) {
+    var transportMaps = $transportMaps.val();
+    if (selectedCellSets.length > 0 && transportMaps.length > 0) {
         $trajectoryEl.empty();
-        $('#trajectory_loading').show();
-        var predefinedCellSets = [];
-        var ncustom_cell_sets = 0;
-        var data = {feature: _selectedFeatures};
-        selectedCellSets.forEach(function (name) {
-            var ids = customCellSetNameToIds[name];
-            if (ids != null) {
-                data['cell_set_name' + ncustom_cell_sets] = name;
-                data['cell_set_ids' + ncustom_cell_sets] = ids;
-                ncustom_cell_sets++;
-            } else {
-                predefinedCellSets.push(name);
-            }
+        transportMaps.forEach(function (transportMap) {
+            var $el = $('<div>Loading...</div>');
+            $el.appendTo($trajectoryEl);
+            var predefinedCellSets = [];
+            var ncustom_cell_sets = 0;
+            var data = {feature: _selectedFeatures, transport_map: transportMap};
+            selectedCellSets.forEach(function (name) {
+                var ids = customCellSetNameToIds[name];
+                if (ids != null) {
+                    data['cell_set_name' + ncustom_cell_sets] = name;
+                    data['cell_set_ids' + ncustom_cell_sets] = ids;
+                    ncustom_cell_sets++;
+                } else {
+                    predefinedCellSets.push(name);
+                }
+            });
+            data.ncustom_cell_sets = ncustom_cell_sets;
+            data.cell_set = selectedCellSets;
+
+            $.ajax({url: '/trajectory/', data: data, method: 'POST'}).done(function (results) {
+                showTrajectoryPlots(results, $el.empty());
+            }).fail(function (err) {
+                console.log(err);
+                $el.html('An unexpected error occurred. Please try again.');
+            });
         });
-        data.ncustom_cell_sets = ncustom_cell_sets;
-        data.cell_set = selectedCellSets;
-        $.ajax({url: '/trajectory/', data: data, method: 'POST'}).done(function (results) {
-            showTrajectoryPlots(results);
-            $('#trajectory_loading').hide();
-        }).fail(function () {
-            window.alert('An unexpected error occurred. Please try again.');
-        });
+
+
     }
 };
 
@@ -611,7 +627,9 @@ var showFeature = function () {
         featureResult.mean = d3.mean(values);
         featureResult.std = d3.deviation(values)
     }
-
+    var valueTransform = function (d) {
+        return d;
+    };
 
     if (!isBackgroundTrace && featureResult.isNumeric) {
         if (userFilterValue != null && !isNaN(userFilterValue)) {
@@ -740,6 +758,10 @@ var showFeature = function () {
 
     });
     if (showlegend) {
+
+        // var temperature = ['rgb(4,35,51)', 'rgb(23,51,122)', 'rgb(85,59,157)', 'rgb(129,79,143)', 'rgb(175,95,130)', 'rgb(222,112,101)', 'rgb(249,146,66)', 'rgb(249,196,65)', 'rgb(232,250,91)'];
+        // var colorMap = d3.scaleSequential(d3.interpolateRgbBasis(temperature))
+        //     .domain([0, traces.length])
         var colorMap = d3.scaleSequential(d3.interpolateViridis).domain([0, traces.length]);
         for (var i = 0; i < traces.length; i++) {
             traces[i].marker.color = colorMap(i)
@@ -773,7 +795,11 @@ var showFeature = function () {
     html.push('</h4>');
     html.push('<button style="float:right;" name="create-cell-sets" type="button" class="btn btn-default btn-sm" disabled>Create Cell Sets</button>');
     html.push('<div></div>');
-    html.push('<table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Group</th><th># Cells Selected</th><th>% Cells Selected</th></tr>');
+    html.push('<table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Group</th><th># Cells Selected</th><th>% Cells Selected</th>');
+    if (!isBackgroundTrace) {
+        html.push('<th>Distribution</th>');
+    }
+    html.push('</tr>');
     var totalPass = 0;
     var total = 0;
     for (var i = 0; i < traces.length; i++) {
@@ -781,7 +807,6 @@ var showFeature = function () {
         totalPass += trace.ids.length;
         total += trace.nids;
     }
-    var showViolinPlot = false;
     for (var i = 0; i < traces.length; i++) {
         var trace = traces[i];
         html.push('<tr>');
@@ -795,7 +820,7 @@ var showFeature = function () {
         html.push('<td>');
         html.push(percentFormatter(100 * (trace.ids.length / trace.nids)));
         html.push('</td>');
-        if (showViolinPlot) {
+        if (!isBackgroundTrace) {
             html.push('<td data-name="violin-' + i + '"></td>');
         }
         html.push('</tr>');
@@ -809,8 +834,8 @@ var showFeature = function () {
         html.push('<td>');
         html.push(percentFormatter(100 * (totalPass / total)));
         html.push('</td>');
-        if (showViolinPlot) {
-            html.push('<td></td>');
+        if (!isBackgroundTrace) {
+            html.push('<td data-name="violin-all"></td>');
         }
         html.push('</tr>');
     }
@@ -818,12 +843,15 @@ var showFeature = function () {
 
 
     $tableEl.html(html.join(''));
-    if (showViolinPlot) {
+    if (!isBackgroundTrace) {
+        var allData = [];
         for (var i = 0; i < traces.length; i++) {
             var trace = traces[i];
-            var data = [{
+            allData = allData.concat(trace.marker.color);
+            Plotly.plot($('[data-name=violin-' + i + ']')[0], [{
                 type: 'violin',
                 x: trace.marker.color,
+                bandwidth: Math.pow(trace.marker.color.length, -1 / (1 + 4)),
                 points: 'none',
                 box: {
                     visible: false
@@ -832,19 +860,19 @@ var showFeature = function () {
                 line: {
                     color: 'black'
                 },
-                fillcolor: '#8dd3c7',
+                fillcolor: '#bdbdbd',
                 opacity: 0.6,
                 meanline: {
                     visible: true
                 }
-            }];
-            var layout = {
+            }], {
                 title: "",
                 xaxis: {
-                    autorange: true,
+                    autorange: false,
+                    range: featureResult.featureRange,
                     showgrid: false,
                     zeroline: false,
-                    showline: false
+                    showline: true
                 },
                 yaxis: {
                     autorange: true,
@@ -857,16 +885,64 @@ var showFeature = function () {
                 },
                 title: '',
                 width: 300,
+                height: 100,
                 margin: {
-                    l: 0,
-                    b: 0,
-                    r: 0,
-                    t: 30,
+                    l: 15,
+                    b: 15,
+                    r: 15,
+                    t: 15,
                     pad: 0
                 },
                 autosize: true
-            }
-            Plotly.plot($('[data-name=violin-' + i + ']')[0], data, layout);
+            }, plotConfig);
+        }
+        if (traces.length > 1) {
+            Plotly.plot($('[data-name=violin-all]')[0], [{
+                type: 'violin',
+                x: allData,
+                bandwidth: Math.pow(allData.length, -1 / (1 + 4)),
+                points: 'none',
+                box: {
+                    visible: false
+                },
+                boxpoints: false,
+                line: {
+                    color: 'black'
+                },
+                fillcolor: '#bdbdbd',
+                opacity: 0.6,
+                meanline: {
+                    visible: true
+                }
+            }], {
+                title: "",
+                xaxis: {
+                    range: featureResult.featureRange,
+                    showgrid: false,
+                    zeroline: false,
+                    showline: true
+                },
+                yaxis: {
+                    autorange: true,
+                    showgrid: false,
+                    zeroline: false,
+                    showline: false,
+                    autotick: false,
+                    ticks: '',
+                    showticklabels: false
+                },
+                title: '',
+                width: 300,
+                height: 100,
+                margin: {
+                    l: 15,
+                    b: 15,
+                    r: 15,
+                    t: 15,
+                    pad: 0
+                },
+                autosize: true
+            }, plotConfig);
         }
     }
     enableCreateSet();
