@@ -151,7 +151,6 @@ def main(argsv):
                     values = ds.x[:, j]
                     if scipy.sparse.isspmatrix(values):
                         values = values.toarray().flatten()
-
                     result['v'].append({'values': values.tolist(), 'name': ds.col_meta.index.values[j]})
                 result['ids'] = ds.row_meta.index.values.astype(str).tolist()
                 return flask.jsonify(result)  # only return values for one dataset as dataset might not be aligned

@@ -970,7 +970,11 @@ var groupBy = [];
 
 function summarizeMultipleFeatures() {
     var nfeatures = featureResult.v.length;
-    if (nfeatures === 1) {
+    if (nfeatures === 0) {
+        console.log('not found'); // FIXME
+        featureResult.values = [];
+    }
+    else if (nfeatures === 1) {
         featureResult.values = featureResult.v[0].values;
     } else {
         var values = new Float64Array(featureResult.v[0].values.length);
