@@ -154,7 +154,9 @@ def main(argsv):
 
                     result['v'].append({'values': values.tolist(), 'name': ds.col_meta.index.values[j]})
                 result['ids'] = ds.row_meta.index.values.astype(str).tolist()
-            return flask.jsonify(result)  # only return values for one dataset as dataset might not be aligned
+                return flask.jsonify(result)  # only return values for one dataset as dataset might not be aligned
+        # not found
+        return flask.jsonify(result)
 
     @app.route("/list_cell_sets/", methods=['GET'])
     def list_cell_sets():
