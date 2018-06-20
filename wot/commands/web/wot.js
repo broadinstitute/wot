@@ -7,6 +7,7 @@ var $cellSet = $('#cell_sets');
 var $features = $('#features');
 var groupedThousands = d3.format(',');
 var logTransform = false;
+var backgroundOpacity = 0.4;
 var plotConfig = {
     showLink: false,
     displaylogo: false,
@@ -232,7 +233,7 @@ var createForceLayoutPlotObject = function (showLegend) {
     var backgroundTrace = {
         hoverinfo: 'skip',
         showlegend: false,
-        marker: {size: 2, color: 'rgb(217,217,217)', opacity: 0.5, showscale: false},
+        marker: {size: 2, color: 'rgb(217,217,217)', opacity: backgroundOpacity, showscale: false},
         mode: 'markers',
         type: 'scattergl',
         name: 'All',
@@ -498,7 +499,7 @@ var showTrajectoryPlots = function (result, $el) {
             createForceLayoutTrajectory(trajectoryForceLayoutData, key, $el);
         }
     }
-    $el.sortable({handle: 'h4'});
+
 };
 
 var fetchTrajectoryData = function () {
@@ -535,10 +536,12 @@ var fetchTrajectoryData = function () {
             data.cell_set = selectedCellSets;
 
             $.ajax({url: '/trajectory/', data: data, method: 'POST'}).done(function (results) {
-                showTrajectoryPlots(results, $el.empty());
+                $el.html('<h2>' + transportMap + '</h2>');
+                showTrajectoryPlots(results, $el);
+                $el.sortable({handle: 'h4'});
             }).fail(function (err) {
                 console.log(err);
-                $el.html('An unexpected error occurred. Please try again.');
+                $el.html('An unexpected error occurred while loading ' + transportMap + '. Please try again.');
             });
         });
 
@@ -728,7 +731,7 @@ var showFeature = function () {
                 trace.marker = {
                     size: 2,
                     showscale: false,
-                    opacity: isBackgroundTrace ? 0.5 : null,
+                    opacity: isBackgroundTrace ? backgroundOpacity : null,
                     color: isBackgroundTrace ? 'rgb(217,217,217)' : null,
                     cmin: null,
                     cmax: null
@@ -789,7 +792,7 @@ var showFeature = function () {
     featureForceLayoutInfo.layout.margin.r = showlegend ? 300 : 0;
 
     $controls.html(createPlotAnimation({
-        backgroundTrace: isBackgroundTrace ? null : featureForceLayoutInfo.backgroundTrace,
+        backgroundTrace: isBackgroundTrace && nfields === 0 ? null : featureForceLayoutInfo.backgroundTrace,
         traces: featurePlotTraces,
         elem: document.getElementById('force_layout_vis'),
         layout: featureForceLayoutInfo.layout,
