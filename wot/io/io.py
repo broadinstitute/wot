@@ -4,10 +4,9 @@ import pandas as pd
 import wot
 import numpy as np
 import os
-import scipy
 import glob
-from scipy.sparse import csr_matrix
-
+import scipy.sparse
+import scipy.io
 
 def filter_ds_from_command_line(ds, args):
     params = vars(args)
@@ -300,7 +299,6 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
                                          header=None)
                 break
 
-        import scipy.io
         x = scipy.io.mmread(path)
         x = scipy.sparse.csr_matrix(x.T)
         if col_meta is None:
@@ -330,7 +328,7 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
 
             M, N = group['shape'][()]
             data = group['data'][()]
-            x = csr_matrix((data, group['indices'][()], group['indptr'][()]), shape=(N, M))
+            x = scipy.sparse.csr_matrix((data, group['indices'][()], group['indptr'][()]), shape=(N, M))
             col_meta = pd.DataFrame(index=group['gene_names'][()].astype(str),
                                     data={'ensembl': group['genes'][()].astype(str)})
             row_meta = pd.DataFrame(index=group['barcodes'][()].astype(str))
@@ -362,7 +360,7 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
             is_x_sparse = False
             if type(x) == h5py.Group:
                 data = x['data'][()]
-                x = csr_matrix((data, x['indices'][()], x['indptr'][()]), shape=x.attrs['h5sparse_shape'])
+                x = scipy.sparse.csr_matrix((data, x['indices'][()], x['indptr'][()]), shape=x.attrs['h5sparse_shape'])
                 backed = False
             else:
                 is_x_sparse = x.attrs.get('sparse')
