@@ -227,7 +227,7 @@ def main(argsv):
                                                         time_to_cell_sets=filtered_time_to_cell_sets,
                                                         datasets=filtered_datasets,
                                                         dataset_names=filtered_dataset_names, cache_transport_maps=True,
-                                                        smooth=True)
+                                                        smooth=False)
         dataset_name_to_traces = data['dataset_name_to_traces']
         for name in dataset_name_to_traces:
             traces = dataset_name_to_traces[name]

@@ -105,7 +105,7 @@ class TrajectorySampler:
                     y.append(d)
 
                 ancestry_divergence_traces.append(
-                    {'x': x, 'y': y, 'name': cell_set_name_i + ' vs. ' + cell_set_name_j, 'mode': 'lines',
+                    {'x': x, 'y': y, 'name': cell_set_name_i + ' vs. ' + cell_set_name_j, 'mode': 'lines+markers',
                      'type': 'scatter'})
         for key in cell_set_name_to_force_layout_traces:
             traces = cell_set_name_to_force_layout_traces[key]
@@ -267,7 +267,7 @@ class TrajectorySampler:
                     trace['x'] = xsmooth
                     trace['y'] = ysmooth
 
-                trace['mode'] = 'lines'
+                trace['mode'] = 'lines+markers'
 
                 # trace['size'] = trace['size'].tolist()
                 # trace['text'] = trace['text'].tolist()

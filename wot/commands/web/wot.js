@@ -70,7 +70,8 @@ var createPlotAnimation = function (plotAnimatiobObject) {
     var traces = plotAnimatiobObject.traces;
     var elem = plotAnimatiobObject.elem;
     var layout = plotAnimatiobObject.layout;
-    var $controls = $('<div style="display: inline;"><button style="display: inline-block;width:auto;" class="btn btn-default btn-sm" name="create-cell-set" disabled>Create Cell Set</button> <span style="display: inline-block;" class="help-block" data-name="nselected"></span><div data-name="wot-anim"><button class="btn btn-default btn-sm" name="play">Play</button>  <select style="width:auto;" class="form-control input-sm" data-name="group"></select></div>');
+    var $controls = $('<div style="display: inline;"><div data-name="create-cell-set-el"><button style="display: inline-block;width:auto;" class="btn btn-default btn-sm" name="create-cell-set" disabled>Create Cell Set</button> <span style="display: inline-block;" class="help-block" data-name="nselected"></span></div>' +
+        '<div data-name="wot-anim"><button class="btn btn-default btn-sm" name="play">Play</button>  <select style="width:auto;" class="form-control input-sm" data-name="group"></select></div></div>');
     var index = 0;
     var groups = [];
     groups.push('All');
@@ -92,6 +93,7 @@ var createPlotAnimation = function (plotAnimatiobObject) {
         }
         customSetCounter++;
         customCellSetNameToIds[name] = selectedIds;
+        $(elem).find('.select-outline').remove();
         updateCellSetsSelector();
     });
     $group.html(groups.map(function (value, groupIndex) {
@@ -99,6 +101,7 @@ var createPlotAnimation = function (plotAnimatiobObject) {
     }).join(''));
 
     function showFrame() {
+        $(elem).find('.select-outline').remove();
         if (index > traces.length) {
             index = 0; // reset
         }
@@ -133,6 +136,7 @@ var createPlotAnimation = function (plotAnimatiobObject) {
 
         Plotly.newPlot(elem, backgroundTrace != null ? [backgroundTrace].concat(concatTraces) : concatTraces, layout, plotConfig);
         //  plotly_deselect
+        $(elem).find('.legendpoints').css('transform', 'scale(5) translate(-16px, 0)');
 
         if (plotAnimatiobObject.select) {
             elem.on('plotly_selected', function (eventData) {
@@ -189,7 +193,7 @@ var createPlotAnimation = function (plotAnimatiobObject) {
         $controls.find('[data-name=wot-anim]').hide();
     }
     if (!plotAnimatiobObject.select) {
-        $createSelectedCellSet.hide();
+        $controls.find('[data-name=create-cell-set-el]').hide();
     }
     return $controls;
 };
@@ -275,6 +279,16 @@ var createForceLayoutTrajectory = function (forceLayoutData, key, $el) {
         elem: elem,
         layout: forceLayoutInfo.layout
     });
+    // var $download = $('<button class="form-control btn-sm btn-default">Download</button>');
+    // $download.on('click', function () {
+    //     var s = [];
+    //     s.push('id\tp');
+    //     traces.forEach(function (trace) {
+    //         var values = trace.marker.color;
+    //         var ids = trace.xxx;
+    //
+    //     });
+    // });
     $controls.appendTo($div.find('[data-name=controls]'));
 
 };
@@ -414,6 +428,8 @@ $cellSet.on('change', function () {
             cellSetForceLayoutInfo.layout,
             plotConfig
         );
+        $('#trajectory_set_vis').find('.legendpoints').css('transform', 'scale(5) translate(-16px, 0)');
+
     });
 
 });
@@ -453,7 +469,7 @@ var showTrajectoryPlots = function (result, $el) {
     var trajectoryForceLayoutData = result.force;
     var datasetNameToTraces = result.dataset_name_to_traces;
     if (ancestryDivergenceTraces && ancestryDivergenceTraces.length > 0) {
-        var $div = $('<li style="list-style: none;"><h4>Ancestry Divergence</h4><div class="plot"></div></li>');
+        var $div = $('<li style="list-style: none;"><h4>Trajectory Similarity</h4><div class="plot"></div></li>');
         $div.appendTo($el);
 
         Plotly.newPlot($div.find('.plot')[0], ancestryDivergenceTraces, {
@@ -463,7 +479,7 @@ var showTrajectoryPlots = function (result, $el) {
                 margin: {t: 15},
                 yaxis: {
                     range: [-0.05, 1.05], autorange: false, 'zeroline': false,
-                    title: 'Divergence'
+                    title: 'Similarity'
                 },
                 xaxis: {
                     title: 'Time'
@@ -477,9 +493,9 @@ var showTrajectoryPlots = function (result, $el) {
             $div.appendTo($el);
             var traces = datasetNameToTraces[key];
             traces.forEach(function (trace) {
-                var smoothed = kernelSmooth(trace.x, trace.y, trace.x[trace.x.length - 1], 0, 1000, 0.7);
-                trace.x = smoothed[0];
-                trace.y = smoothed[1];
+                // var smoothed = kernelSmooth(trace.x, trace.y, trace.x[trace.x.length - 1], 0, 1000, 0.7);
+                // trace.x = smoothed[0];
+                // trace.y = smoothed[1];
             });
 
             Plotly.newPlot($div.find('.plot')[0], traces,
