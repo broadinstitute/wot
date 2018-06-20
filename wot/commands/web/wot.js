@@ -436,7 +436,7 @@ $features
         return false;
     },
     select: function (event, ui) {
-        var terms = split(this.value);
+        var terms = autocompleteSplit(this.value);
         // remove the current input
         terms.pop();
         // add the selected item
