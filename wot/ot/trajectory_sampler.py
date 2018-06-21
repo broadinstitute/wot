@@ -68,7 +68,7 @@ class TrajectorySampler:
                     joined = coords.join(pd.DataFrame(index=cell_ids, data={'v': v}), how='right')
                     df_sum = joined.groupby(['x', 'y']).sum()
                     p = np.percentile(df_sum['v'].values, 95)
-                    highs.append(p[1])
+                    highs.append(p)
                     traces.append({'v': v, 't': t, 'x': df_sum.index.get_level_values(0).tolist(),
                                    'y': df_sum.index.get_level_values(1).tolist(),
                                    'marker': {'color': df_sum['v'].values.tolist()}})
