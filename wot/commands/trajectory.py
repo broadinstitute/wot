@@ -12,14 +12,14 @@ def main(argv):
         description='Generate ancestors and descendants given a starting cell cet and transport maps')
     parser.add_argument('--dir',
                         help='Directory of transport maps', required=True)
-    parser.add_argument('--cell_sets',
+    parser.add_argument('--cell_set',
                         help='One or more gmt or gmx files containing cell sets. Each set id should end with _time (e.g. my_set_9)',
                         required=True, action='append')
     parser.add_argument('--out', help='Output file name', default='wot_trajectory')
 
     args = parser.parse_args(argv)
 
-    cell_set_info = wot.ot.TrajectorySampler.create_time_to_cell_sets(args.cell_sets)
+    cell_set_info = wot.ot.TrajectorySampler.create_time_to_cell_sets(args.cell_set)
     time_to_cell_sets = cell_set_info['time_to_cell_sets']
     nsets = 0
     for t in time_to_cell_sets:

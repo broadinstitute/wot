@@ -7,6 +7,7 @@ by using the mathematical approach of Optimal Transport (OT)
 * [Prepare Gene Expression Matrix](#prepare-expression-matrix)
 * [Optimal Transport](#optimal_transport)
 * [Visualization](#visualization)
+* [Optimal Transport Trajectory](#optimal_transport_trajectory)
 * [Optimal Transport Transition Table](#optimal_transport_transition_table)
 * [Optimal Transport Validation](#optimal_transport_validation)
 * [Gene Set Scores](#gene_set_score)
@@ -71,6 +72,17 @@ covariate | Two column file with headers "id" and "covariate" indicating cell id
 After you have generated the force layout coordinates, you can use *wot wot_server* to view trajectories and gene expression in the force layout.
 
 **Trajectory Trends** plots the expression of a gene over time based on the transport maps
+
+## <a name="optimal_transport_trajectory">Trajectory<a>
+*wot trajectory* generate ancestors and descendants given a starting cell cet and transport maps.
+Options
+
+Flag | Description
+--- | --- |
+**dir** |Directory of transport maps as produced by [optimal_transport](#optimal_transport)
+**cell_set** | One or more [gmt](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29) or [gmx](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMX:_Gene_MatriX_file_format_.28.2A.gmx.29) files containing cell sets. Each set id should end with _time (e.g. my_set_9).
+ 
+
 
 ## <a name="optimal_transport_transition_table">Transition Table</a>
 *wot transition_table* generate a transition table from one cell set to another cell set.
