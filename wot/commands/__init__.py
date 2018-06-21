@@ -8,3 +8,4 @@ from .convert_matrix import *
 from .grn import *
 from .force_layout import *
 from .transition_table import *
+from .trajectory import *

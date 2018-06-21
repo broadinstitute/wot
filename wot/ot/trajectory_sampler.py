@@ -53,7 +53,7 @@ class TrajectorySampler:
 
         for result_dict in results:  # each cell set
             highs = []
-            lows = []
+
             for p in result_dict['pvecs']:
                 cell_set = p['cell_set']
                 traces = cell_set_name_to_force_layout_traces.get(cell_set)
@@ -67,14 +67,13 @@ class TrajectorySampler:
                     cell_ids = p['cell_ids']
                     joined = coords.join(pd.DataFrame(index=cell_ids, data={'v': v}), how='right')
                     df_sum = joined.groupby(['x', 'y']).sum()
-                    p = np.percentile(df_sum['v'].values, [5, 95])
-                    lows.append(p[0])
+                    p = np.percentile(df_sum['v'].values, 95)
                     highs.append(p[1])
                     traces.append({'v': v, 't': t, 'x': df_sum.index.get_level_values(0).tolist(),
                                    'y': df_sum.index.get_level_values(1).tolist(),
                                    'marker': {'color': df_sum['v'].values.tolist()}})
             cmax = np.percentile(highs, 50)
-            cmin = np.percentile(lows, 50)
+            cmin = 0
             for cell_set_name in cell_set_name_to_force_layout_traces:
                 traces = cell_set_name_to_force_layout_traces[cell_set_name]
                 for trace in traces:

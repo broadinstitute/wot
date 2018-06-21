@@ -11,7 +11,7 @@ import argparse
 
 def main():
     command_list = [convert_matrix, force_layout, gene_set_scores, grn, optimal_transport,
-                    optimal_transport_validation, trajectory_trends, transition_table, wot_server]
+                    optimal_transport_validation, trajectory, trajectory_trends, transition_table, wot_server]
     parser = argparse.ArgumentParser(description='Run a wot command')
     command_list_strings = list(map(lambda x: x.__name__[len('wot.commands.'):], command_list))
     parser.add_argument('command', help='The wot command', choices=command_list_strings)
