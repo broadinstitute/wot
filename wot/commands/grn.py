@@ -180,12 +180,17 @@ def main(argsv):
     parser.add_argument('--time_lag', help='Time lag', type=float, required=True)
     parser.add_argument('--nmodules', help='Number of gene expression modules', type=int, default=50)
 
-    parser.add_argument('--U', help='Gene module initialization matrix')
+    # parser.add_argument('--U', help='Gene module initialization matrix')
 
     parser.add_argument('--threads',
                         help='Number of threads to use', type=int)
     parser.add_argument('--epochs',
                         help='Number of epochs', type=int, default=10000)
+
+    parser.add_argument('--sample_fraction', type=float, default=5e-6)
+    parser.add_argument('--epoch_block_size',
+                        help='Epoch block size', type=int, default=500)
+
     parser.add_argument('--exp2',
                         help='Element-wise 2 to the power x minus 1', action='store_true')
     parser.add_argument('--percentile',
@@ -208,9 +213,6 @@ def main(argsv):
     if args.percentile is not None:
         thresh = np.percentile(ds.x, args.percentile)
         ds.x[(ds.x > thresh)] = thresh
-
-    print(np.min(ds.x))
-    print(np.max(ds.x))
 
     tf_ids = pd.read_table(args.tf, index_col=0, header=None).index.values
     tf_column_indices = ds.col_meta.index.isin(tf_ids)
@@ -274,14 +276,13 @@ def main(argsv):
             TP.append(tmap_dict['t2'])
             Lineage.append(tmap.x)
 
-    if args.U is None:
-        # rows are modules, columns are genes
-        U = initialize_modules(Xg, N, threads=threads)
-        print('Initialized modules')
+    # if args.U is None:
+    # rows are modules, columns are genes
+    U = initialize_modules(Xg, N, threads=threads)
 
-    else:
-        U = wot.io.read_dataset(args.U).x
-        # TODO ensure in same order as ds
+    # else:
+    #     U = wot.io.read_dataset(args.U).x
+    # TODO ensure in same order as ds
 
     Uinv = np.linalg.pinv(U)
     Z = []
@@ -309,20 +310,36 @@ def main(argsv):
     # Xr = [x/(np.average(x,axis=0) + 0.01) for x in Xr]
 
     ComposedLineage = compose_transports(Lineage, TP, TimeLag)
-    print('ComposedLineage ' + str(len(ComposedLineage)))
 
     # for original model: lda_z1=1.5,lda_z2=0.25,lda_u=1.5
     # for sparse model: lda_z1=3,lda_z2=1.5,lda_u=0.25
     # currently using: lda_z1=2,lda_z2=0.5,lda_u=1.5
     Z, U, Xh, k, b, y0, x0 = update_regulation(ComposedLineage, Xg, Xr, TP, TimeLag, Z=Z, U=U, lda_z1=2, lda_z2=0.5,
-                                               lda_u=1.5, epochs=epochs, sample_fraction=5e-6, threads=threads,
+                                               lda_u=1.5, epochs=epochs, sample_fraction=args.sample_fraction,
+                                               threads=threads,
                                                inner_iters=1,
                                                k=k, b=b, y0=y0, x0=x0, differences=differences, frequent_fa=False,
-                                               num_modules=N, epoch_block_size=500,
+                                               num_modules=N, epoch_block_size=args.epoch_block_size,
                                                savepath=None)
-    np.save(args.out + '_Z.npy', Z)
-    np.save(args.out + '_kbyx.npy', (k, b, y0, x0))
+
+    # U has modules on rows, non-TFs on columns
+    wot.io.write_dataset(
+        wot.Dataset(U, row_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=U.shape[0], step=1)),
+                    col_meta=ds.col_meta.iloc[non_tf_column_indices]),
+        args.out + '_U', output_format='loom')
+
+    # # Z has TFs on rows, modules on columns
+    wot.io.write_dataset(
+        wot.Dataset(Z, row_meta=ds.col_meta.iloc[tf_column_indices],
+                    col_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=Z.shape[1], step=1))),
+        args.out + '_Z', output_format='loom')
+    # np.save(args.out + '_kbyx.npy', (k, b, y0, x0))
 
     for i, tp in enumerate(TP):
         if len(Xh[i]) > 0:
-            np.save(args.out + '_regulators_deltaX.day-%d.npy' % tp, Xh[i])
+            # genes on columns, modules on rows
+            name = args.out + '_regulators_deltaX.day-%d' % tp
+            wot.io.write_dataset(
+                wot.Dataset(Xh[i], row_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=Xh[i].shape[0], step=1)),
+                            col_meta=ds.col_meta.iloc[non_tf_column_indices]),
+                name, output_format='loom')
