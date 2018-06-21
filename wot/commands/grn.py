@@ -187,7 +187,9 @@ def main(argsv):
     parser.add_argument('--epochs',
                         help='Number of epochs', type=int, default=10000)
 
-    parser.add_argument('--sample_fraction', type=float, default=5e-6)
+    parser.add_argument('--sample_fraction',
+                        help='For each pair of consecutive time points, we compute the Shannon diversity S of the transport map, then randomly sample max(S × sample_fraction, 10) pairs of points to add to the batch',
+                        type=float, default=5e-6)
     parser.add_argument('--epoch_block_size',
                         help='Epoch block size', type=int, default=500)
 
