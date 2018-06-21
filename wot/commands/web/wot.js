@@ -107,9 +107,13 @@ var createPlotAnimation = function (plotAnimatiobObject) {
         }
         var concatTraces = [];
         var t;
+        if (backgroundTrace != null) {
+            delete backgroundTrace.selectedpoints;
+        }
         if (traces.length > 0) {
             for (var i = 0; i < traces.length; i++) {
                 traces[i].showlegend = false;
+                delete traces[i].selectedpoints;
             }
 
             if (index === 0) { // all traces
