@@ -45,6 +45,9 @@ try:
         rngs = [PyRNG(np.random.randint(2 ** 16)) for _ in range(threads)]
         return multinomial(rngs, n, l_tile, P)
 except:
+    print('gslrandom not available. Please install for faster random number generation.')
+
+
     def coupling_random_sample(n, l, s, threads):
         return np.random.multinomial(n[0], l, size=s)
 
@@ -179,8 +182,9 @@ def main(argsv):
                              'rows and features on columns', required=True)
     parser.add_argument('--time_lag', help='Time lag', type=float, required=True)
     parser.add_argument('--nmodules', help='Number of gene expression modules', type=int, default=50)
-
-    # parser.add_argument('--U', help='Gene module initialization matrix')
+    parser.add_argument('--z1', help='Z L1 regularlization parameter', type=float, default=2)
+    parser.add_argument('--z2', help='Z L2 regularlization parameter', type=float, default=0.5)
+    parser.add_argument('--u2', help='U L2 regularlization parameter', type=float, default=1.5)
 
     parser.add_argument('--threads',
                         help='Number of threads to use', type=int)
@@ -205,6 +209,10 @@ def main(argsv):
     N = args.nmodules
     epochs = args.epochs
     TimeLag = args.time_lag
+
+    lda_z1 = args.z1
+    lda_z2 = args.z2
+    lda_u = args.u2
 
     ds = wot.io.read_dataset(args.matrix)
     if scipy.sparse.isspmatrix(ds.x):
@@ -316,8 +324,9 @@ def main(argsv):
     # for original model: lda_z1=1.5,lda_z2=0.25,lda_u=1.5
     # for sparse model: lda_z1=3,lda_z2=1.5,lda_u=0.25
     # currently using: lda_z1=2,lda_z2=0.5,lda_u=1.5
-    Z, U, Xh, k, b, y0, x0 = update_regulation(ComposedLineage, Xg, Xr, TP, TimeLag, Z=Z, U=U, lda_z1=2, lda_z2=0.5,
-                                               lda_u=1.5, epochs=epochs, sample_fraction=args.sample_fraction,
+    Z, U, Xh, k, b, y0, x0 = update_regulation(ComposedLineage, Xg, Xr, TP, TimeLag, Z=Z, U=U, lda_z1=lda_z1,
+                                               lda_z2=lda_z2,
+                                               lda_u=lda_u, epochs=epochs, sample_fraction=args.sample_fraction,
                                                threads=threads,
                                                inner_iters=1,
                                                k=k, b=b, y0=y0, x0=x0, differences=differences, frequent_fa=False,
@@ -335,13 +344,24 @@ def main(argsv):
         wot.Dataset(Z, row_meta=ds.col_meta.iloc[tf_column_indices],
                     col_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=Z.shape[1], step=1))),
         args.out + '_Z', output_format='loom')
+
+    with open(args.out + '_kbyx.txt', 'w') as writer:
+        writer.write('k' + '\t' + 'b' + '\t' + 'y0' + '\t' + 'x0' + '\n')
+        writer.write(str(k))
+        writer.write('\t')
+        writer.write(str(b))
+        writer.write('\t')
+        writer.write(str(y0))
+        writer.write('\t')
+        writer.write(str(x0))
+        writer.write('\n')
     # np.save(args.out + '_kbyx.npy', (k, b, y0, x0))
 
-    for i, tp in enumerate(TP):
-        if len(Xh[i]) > 0:
-            # genes on columns, modules on rows
-            name = args.out + '_regulators_deltaX.day-%d' % tp
-            wot.io.write_dataset(
-                wot.Dataset(Xh[i], row_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=Xh[i].shape[0], step=1)),
-                            col_meta=ds.col_meta.iloc[non_tf_column_indices]),
-                name, output_format='loom')
+    # for i, tp in enumerate(TP):
+    #     if len(Xh[i]) > 0:
+    #         # genes on columns, modules on rows
+    #         name = args.out + '_regulators_deltaX.day-%d' % tp
+    #         wot.io.write_dataset(
+    #             wot.Dataset(Xh[i], row_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=Xh[i].shape[0], step=1)),
+    #                         col_meta=ds.col_meta.iloc[non_tf_column_indices]),
+    #             name, output_format='loom')
