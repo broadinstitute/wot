@@ -136,8 +136,7 @@ class OptimalTransportHelper:
                     p /= counts_p
                     ds.x[i] = np.random.multinomial(args.ncounts, p, size=1)[0]
 
-        days_data_frame = pd.read_table(args.cell_days, index_col='id', engine='python', sep=None,
-                                        dtype={'day': np.float64})
+        days_data_frame = wot.io.read_days_data_frame(args.cell_days)
         day_pairs = None
         if args.day_pairs is not None:
             if not os.path.isfile(args.day_pairs):
