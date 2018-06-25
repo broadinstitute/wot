@@ -153,11 +153,14 @@ def multiply_tmaps(start_time, end_time, transport_maps, store=False):
 def main(argv):
     parser = argparse.ArgumentParser(
         description='Generate a transition table from one cell set to another cell set')
-    parser.add_argument('--dir',
+    parser.add_argument('--tmap',
                         help='Directory of transport maps', required=True)
     parser.add_argument('--cell_set',
-                        help='One or more gmt or gmx files containing cell sets. Each set id should end with _time (e.g. my_set_9).',
+                        help='One or more gmt or gmx files containing cell sets.',
                         required=True, action='append')
+    parser.add_argument('--cell_days',
+                        help='File with headers "id" and "day" corresponding to cell id and days',
+                        required=True)
     parser.add_argument('--start_time',
                         help='The start time for the cell sets to compute the transitions to cell sets at end_time',
                         required=True, type=float)
@@ -167,15 +170,17 @@ def main(argv):
 
     args = parser.parse_args(argv)
 
-    cell_set_info = wot.ot.TrajectorySampler.create_time_to_cell_sets(args.cell_sets)
-    time_to_cell_sets = cell_set_info['time_to_cell_sets']
+    time_to_cell_sets = wot.ot.TrajectorySampler.group_cell_sets(args.cell_set,
+                                                                 pd.read_table(args.cell_days, index_col='id',
+                                                                               engine='python', sep=None,
+                                                                               dtype={'day': np.float64}))
     nsets = 0
     for t in time_to_cell_sets:
         nsets += len(time_to_cell_sets[t])
 
-    transport_maps = wot.io.list_transport_maps(args.dir)
+    transport_maps = wot.io.list_transport_maps(args.tmap)
     if len(transport_maps) == 0:
-        print('No transport maps found in ' + args.dir)
+        print('No transport maps found in ' + args.tmap)
         exit(1)
     ds = summarize_transport_map(transport_maps=transport_maps, start_cell_sets=time_to_cell_sets[args.start_time],
                                  end_cell_sets=time_to_cell_sets[args.end_time],

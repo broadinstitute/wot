@@ -79,8 +79,9 @@ Options
 
 Flag | Description
 --- | --- |
-**dir** |Directory of transport maps as produced by [optimal_transport](#optimal_transport)
-**cell_set** | One or more [gmt](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29) or [gmx](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMX:_Gene_MatriX_file_format_.28.2A.gmx.29) files containing cell sets. Each set id should end with _time (e.g. my_set_9).
+**tmap** |Directory of transport maps as produced by [optimal_transport](#optimal_transport)
+**cell_set** | [Assigns cells to cell sets](#cell_sets) 
+**cell_days** | [Assigns days to cells](#cell_days)
  
 
 
@@ -90,8 +91,9 @@ Options
 
 Flag | Description
 --- | --- |
-**dir** |Directory of transport maps as produced by [optimal_transport](#optimal_transport)
-**cell_set** | One or more [gmt](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29) or [gmx](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMX:_Gene_MatriX_file_format_.28.2A.gmx.29) files containing cell sets. Each set id should end with _time (e.g. my_set_9).
+**tmap** |Directory of transport maps as produced by [optimal_transport](#optimal_transport)
+**cell_set** | [Assigns cells to cell sets](#cell_sets) 
+**cell_days** | [Assigns days to cells](#cell_days)
 **start_time** | The start time for the cell sets to compute the transitions to cell sets at end_time
 **end_time** | The end time. 
 
@@ -145,4 +147,3 @@ Example:
 
 #### <a name="cell_sets">Cell Sets</a>
 Cell sets can be provided in [gmt](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29) or [gmx](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMX:_Gene_MatriX_file_format_.28.2A.gmx.29). 
-Each set id should end with _day to indicate the day on which the cell set was created (e.g. my_set_9).

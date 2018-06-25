@@ -34,7 +34,7 @@ class StandaloneApplication(gunicorn.app.base.BaseApplication):
 
 def main(argsv):
     parser = argparse.ArgumentParser(description='Run wot server')
-    parser.add_argument('--dir',
+    parser.add_argument('--tmap',
                         help='Directory of transport maps as produced by ot', action='append')
     parser.add_argument('--cell_sets',
                         help='One or more gmt or gmx files containing cell sets. Each set id should end with _time (e.g. my_cell_set_9)',
@@ -53,15 +53,8 @@ def main(argsv):
     parser.add_argument('--timeout', help='Worker timeout', default=600, type=int)
 
     args = parser.parse_args(argsv)
-    if args.cell_sets is not None:
-        cell_set_info = wot.ot.TrajectorySampler.create_time_to_cell_sets(args.cell_sets)
-        cell_set_group_to_names = cell_set_info['cell_set_group_to_names']
-        time_to_cell_sets = cell_set_info['time_to_cell_sets']
-    else:
-        cell_set_group_to_names = {}
-        time_to_cell_sets = {}
-    cell_metadata = None
 
+    cell_metadata = None
     datasets = []
     dataset_names = []
 
@@ -100,9 +93,16 @@ def main(argsv):
                 cell_metadata = df
             else:
                 cell_metadata = cell_metadata.join(df, how='outer')
+    else:
+        cell_metadata = pd.DataFrame()
+
+    if args.cell_sets is not None:
+        time_to_cell_sets = wot.ot.TrajectorySampler.group_cell_sets(args.cell_sets, cell_metadata)
+    else:
+        time_to_cell_sets = {}
     name_to_transport_maps = {}
-    if args.dir is not None:
-        for d in args.dir:
+    if args.tmap is not None:
+        for d in args.tmap:
             tmaps = wot.io.list_transport_maps(d)
             if len(tmaps) == 0:
                 raise ValueError('No transport maps found in ' + d)
@@ -159,7 +159,12 @@ def main(argsv):
 
     @app.route("/list_cell_sets/", methods=['GET'])
     def list_cell_sets():
-        return flask.jsonify(cell_set_group_to_names)
+        names = []
+        for name in time_to_cell_sets:
+            cell_sets = time_to_cell_sets[name]
+            for cell_set in cell_sets:
+                names.append(cell_set['name'])
+        return flask.jsonify(names)
 
     @app.route("/cell_set_members/", methods=['GET'])
     def cell_set_members():
@@ -186,20 +191,22 @@ def main(argsv):
         transport_maps = name_to_transport_maps[transport_map_name]
         filtered_time_to_cell_sets = {}
         if ncustom_cell_sets > 0:
-            for i in range(ncustom_cell_sets):
-                cell_set_name = flask.request.form.get('cell_set_name' + str(i))
-                cell_ids = flask.request.form.getlist('cell_set_ids' + str(i) + '[]')
-                if len(cell_ids) == 0:
-                    raise ValueError('No cell ids specified for custom cell set ' + cell_set_name)
+            for cell_set_idx in range(ncustom_cell_sets):
+                cell_set_name = flask.request.form.get('cell_set_name' + str(cell_set_idx))
+                cell_ids_in_set = flask.request.form.getlist('cell_set_ids' + str(cell_set_idx) + '[]')
+                subset = cell_metadata[cell_metadata.index.isin(cell_ids_in_set)]
+                print(subset.shape)
+                group_by_day = subset.groupby('day')
 
-                tokens = cell_set_name.split('_')
-                t = float(tokens[len(tokens) - 1])
-                cell_sets = filtered_time_to_cell_sets.get(t)
-                if cell_sets is None:
-                    cell_sets = []
-                    filtered_time_to_cell_sets[t] = cell_sets
-                cell_sets.append({'set': set(cell_ids), 'name': cell_set_name})
+                for group_name, group in group_by_day:
+                    cell_sets = filtered_time_to_cell_sets.get(group_name)
+                    if cell_sets is None:
+                        cell_sets = []
+                        filtered_time_to_cell_sets[group_name] = cell_sets
+                    full_name = cell_set_name + '_' + str(group_name)
+                    cell_sets.append({'set': set(group.index.values), 'name': full_name})
 
+        # filter predefined sets
         for t in time_to_cell_sets:
             cell_sets = time_to_cell_sets[t]
             filtered_cell_sets = []
@@ -207,6 +214,9 @@ def main(argsv):
                 if cell_set['name'] in cell_set_ids:
                     filtered_cell_sets.append(cell_set)
             if len(filtered_cell_sets) > 0:
+                custom_sets = filtered_time_to_cell_sets.get(t)
+                if custom_sets is not None:
+                    filtered_cell_sets = custom_sets + filtered_cell_sets
                 filtered_time_to_cell_sets[t] = filtered_cell_sets
 
         if len(filtered_time_to_cell_sets) == 0:

@@ -6,31 +6,36 @@ import wot.io
 import h5py
 import numpy as np
 import os
+import pandas as pd
 
 
 def main(argv):
     parser = argparse.ArgumentParser(
         description='Generate mean expression profiles given a starting cell cet and transport maps.')
-    parser.add_argument('--dir',
+    parser.add_argument('--tmap',
                         help='Directory of transport maps', required=True)
-    parser.add_argument('--cell_sets',
-                        help='One or more gmt or gmx files containing cell sets. Each set id should end with _time (e.g. my_set_9)',
+    parser.add_argument('--cell_days',
+                        help='File with headers "id" and "day" corresponding to cell id and days',
+                        required=True)
+    parser.add_argument('--cell_set',
+                        help='One or more gmt or gmx files containing cell sets.',
                         required=True, action='append')
     parser.add_argument('--matrix',
                         help='A matrix with cells on rows and features, such as genes or pathways on columns',
                         required=True)
 
     args = parser.parse_args(argv)
-
-    cell_set_info = wot.ot.TrajectorySampler.create_time_to_cell_sets(args.cell_sets)
-    time_to_cell_sets = cell_set_info['time_to_cell_sets']
+    time_to_cell_sets = wot.ot.TrajectorySampler.group_cell_sets(args.cell_set,
+                                                                 pd.read_table(args.cell_days, index_col='id',
+                                                                               engine='python', sep=None,
+                                                                               dtype={'day': np.float64}))
     nsets = 0
     for t in time_to_cell_sets:
         nsets += len(time_to_cell_sets[t])
 
-    transport_maps = wot.io.list_transport_maps(args.dir)
+    transport_maps = wot.io.list_transport_maps(args.tmap)
     if len(transport_maps) == 0:
-        print('No transport maps found in ' + args.dir)
+        print('No transport maps found in ' + args.tmap)
         exit(1)
     transport_map_times = set()
     for tmap in transport_maps:

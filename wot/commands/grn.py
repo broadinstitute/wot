@@ -171,7 +171,7 @@ def main(argsv):
     parser = argparse.ArgumentParser(
         description='Gene Regulatory Networks')
 
-    parser.add_argument('--dir',
+    parser.add_argument('--tmap',
                         help='Directory of transport maps', required=True, action='append')
     parser.add_argument('--tf',
                         help='File with one gene id per line to assign transcription factors', required=True)
@@ -251,7 +251,7 @@ def main(argsv):
     Xg = []  # list of non-tf expression
     Xr = []  # list of tf expression
 
-    for transport_map_dir in args.dir:
+    for transport_map_dir in args.tmap:
         transport_maps = wot.io.list_transport_maps(transport_map_dir)
         if len(transport_maps) == 0:
             print('No transport maps found in ' + transport_map_dir)

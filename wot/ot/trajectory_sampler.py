@@ -12,30 +12,23 @@ import os
 class TrajectorySampler:
 
     @staticmethod
-    def create_time_to_cell_sets(cell_set_paths):
-        time_to_cell_sets = {}
-        cell_set_group_to_names = {}
+    def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
+        group_to_cell_sets = {}
         for path in cell_set_paths:
             cell_set_ds = wot.io.read_gene_sets(path)
-            cell_set_names = []
-            cell_set_group_to_names[wot.io.get_filename_and_extension(os.path.basename(path))[0]] = cell_set_names
             for i in range(cell_set_ds.x.shape[1]):
                 cell_set_name = cell_set_ds.col_meta.index.values[i]
-                tokens = cell_set_name.split('_')
-                try:
-                    t = float(tokens[len(tokens) - 1])
-                except ValueError:
-                    raise ValueError('Cell set name ' + cell_set_name + ' must end with _time')
-
                 cell_ids_in_set = cell_set_ds.row_meta.index[cell_set_ds.x[:, i] > 0]
-                cell_sets = time_to_cell_sets.get(t)
-                if cell_sets is None:
-                    cell_sets = []
-                    time_to_cell_sets[t] = cell_sets
-                cell_set_names.append(cell_set_name)
-                cell_sets.append({'set': set(cell_ids_in_set), 'name': cell_set_name})
+                grouped = group_by_df[group_by_df.isin(cell_ids_in_set)].groupby(group_by_key)
+                for name, group in grouped:
+                    cell_sets = group_to_cell_sets.get(name)
+                    if cell_sets is None:
+                        cell_sets = []
+                        group_to_cell_sets[name] = cell_sets
+                    full_name = cell_set_name + '_' + str(name)
+                    cell_sets.append({'set': set(group.index.values), 'name': full_name})
 
-        return {'time_to_cell_sets': time_to_cell_sets, 'cell_set_group_to_names': cell_set_group_to_names}
+        return group_to_cell_sets
 
     @staticmethod
     def trajectory_plot(transport_maps, time_to_cell_sets, coords=None,
