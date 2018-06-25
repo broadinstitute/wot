@@ -55,7 +55,7 @@ def cell_indices_by_day(dataset):
         day_to_indices[day] = indices
     return day_to_indices
 
-def extract_cells_at_indices(dataset, indices):
+def extract_cells_at_indices(ds, indices):
     return wot.Dataset(ds.x[indices], ds.row_meta.iloc[indices], ds.col_meta)
 
 def add_cell_metadata(dataset, name, data):
