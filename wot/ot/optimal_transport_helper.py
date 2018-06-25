@@ -254,16 +254,20 @@ class OptimalTransportHelper:
                                                                                day_pairs.shape[0] > 1 else ''))
         self.day_to_indices = day_to_indices
 
-    def compute_cost_matrix(self, a, b):
-        if self.eigenvals is not None:
-            a = a.dot(self.eigenvals)
-            b = b.dot(self.eigenvals)
+    @staticmethod
+    def compute_default_cost_matrix(a, b, eigenvals=None):
+        if eigenvals is not None:
+            a = a.dot(eigenvals)
+            b = b.dot(eigenvals)
 
         cost_matrix = sklearn.metrics.pairwise.pairwise_distances(a.toarray() if scipy.sparse.isspmatrix(a) else a,
                                                                   b.toarray() if scipy.sparse.isspmatrix(b) else b,
                                                                   metric='sqeuclidean')
         cost_matrix = cost_matrix / np.median(cost_matrix)
         return cost_matrix
+
+    def compute_cost_matrix(self, a, b):
+        return OptimalTransportHelper.compute_default_cost_matrix(a, b, self.eigenvals)
 
     def compute_transport_maps(self, callback):
         day_pairs = self.day_pairs
