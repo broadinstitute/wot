@@ -829,7 +829,8 @@ var showFeature = function () {
     html.push('</h4>');
     html.push('<button style="float:right;" name="create-cell-sets" type="button" class="btn btn-default btn-sm" disabled>Create Cell Sets</button>');
     html.push('<div></div>');
-    html.push('<table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Group</th><th># Cells Selected</th><th>% Cells Selected</th>');
+    var percentScale = d3.scaleLinear().domain([0, 100]).range([0, 136]);
+    html.push('<table class="table table-condensed table-bordered"><tr><th><input name="select_all" type="checkbox" checked></th><th>Group</th><th style="min-width:200px;width:200px;">Cells Selected</th>');
     if (!isBackgroundTrace) {
         html.push('<th>Distribution</th>');
     }
@@ -849,10 +850,11 @@ var showFeature = function () {
         html.push(trace.key);
         html.push('</td>');
         html.push('<td>');
+        var p = 100 * (trace.ids.length / trace.nids);
+        html.push('<span style="display:inline-block;height:12px;width:' + percentScale(p) + 'px;background-color:LightGrey;"></span> ');
+        html.push(percentFormatter(p) + '%');
+        html.push('<br />');
         html.push(groupedThousands(trace.ids.length) + '/' + groupedThousands(trace.nids));
-        html.push('</td>');
-        html.push('<td>');
-        html.push(percentFormatter(100 * (trace.ids.length / trace.nids)));
         html.push('</td>');
         if (!isBackgroundTrace) {
             html.push('<td data-name="violin-' + i + '"></td>');
@@ -862,11 +864,13 @@ var showFeature = function () {
     if (traces.length > 1) {
         html.push('<td></td>');
         html.push('<td>All</td>');
+
         html.push('<td>');
+        var p = 100 * (totalPass / total);
+        html.push('<span style="display:inline-block;height:12px;width:' + percentScale(p) + 'px;background-color:LightGrey;"></span> ');
+        html.push(percentFormatter(p) + '%');
+        html.push('<br />');
         html.push(groupedThousands(totalPass) + '/' + groupedThousands(total));
-        html.push('</td>');
-        html.push('<td>');
-        html.push(percentFormatter(100 * (totalPass / total)));
         html.push('</td>');
         if (!isBackgroundTrace) {
             html.push('<td data-name="violin-all"></td>');
