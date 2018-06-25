@@ -2,6 +2,7 @@
 
 import wot
 import scipy.sparse
+from numpy import where
 
 
 # Compute the z-score for each gene in the set. Truncate these z-scores at 5
@@ -38,3 +39,30 @@ def score_gene_sets(ds, gs, z_score_ds=True, use_dask=False):
     ngenes_in_set[ngenes_in_set == 0] = 1  # avoid divide by zero
     scores = scores / ngenes_in_set  # scores contains cells on rows, gene sets on columns
     return wot.Dataset(x=scores, row_meta=ds.row_meta, col_meta=gs.col_meta)
+
+def list_of_days_in_dataset(dataset):
+    if 'day' not in dataset.row_meta.columns:
+        raise ValueError("No day information available for this dataset")
+    return sorted(list(set(dataset.row_meta['day'].values)))
+
+def cell_indices_by_day(dataset):
+    """Returns a dictionary mapping each day with the list of indices of cells from that day"""
+    day_to_indices = {}
+    unique_days = list_of_days_in_dataset(dataset)
+    for day in unique_days:
+        day_query = dataset.row_meta['day'] == day
+        indices = where(day_query)[0]
+        day_to_indices[day] = indices
+    return day_to_indices
+
+def extract_cells_at_indices(dataset, indices):
+    return wot.Dataset(ds.x[indices], ds.row_meta.iloc[indices], ds.col_meta)
+
+def add_cell_metadata(dataset, name, data):
+    dataset.row_meta[name] = data
+
+def set_cell_metadata(dataset, name, data, indices=None):
+    if indices is None:
+        dataset.row_meta[name] = data
+    else:
+        dataset.row_meta.loc[dataset.row_meta.index[indices], name] = data

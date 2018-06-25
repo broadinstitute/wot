@@ -621,3 +621,12 @@ def save_loom_attrs(f, is_columns, metadata, length):
             save_metadata_array(attrs_path + '/' + str(name), metadata[name].values)
     else:
         save_metadata_array(attrs_path + '/id', np.array(range(1, length + 1)).astype('S'))
+
+def read_days_data_frame(path):
+    return pd.read_table(path, index_col='id',
+        engine='python', sep=None, dtype={'day': np.float64})
+
+def incorporate_days_information_in_dataset(dataset, path):
+    days_data_frame = read_days_data_frame(path)
+    dataset.row_meta = dataset.row_meta.join(days_data_frame)
+    return dataset
