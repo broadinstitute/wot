@@ -13,7 +13,7 @@ def main(argv):
     parser = argparse.ArgumentParser(
         description='Generate mean expression profiles given a starting cell cet and transport maps.')
     parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
-    parser.add_argument('--cell_days',help=wot.commands.CELL_DAYS_HELP,required=True)
+    parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True, action='append')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
 
@@ -22,6 +22,9 @@ def main(argv):
                                                                  pd.read_table(args.cell_days, index_col='id',
                                                                                engine='python', sep=None,
                                                                                dtype={'day': np.float64}))
+    if len(time_to_cell_sets) == 0:
+        print('No cell sets found')
+        exit(1)
     nsets = 0
     for t in time_to_cell_sets:
         nsets += len(time_to_cell_sets[t])
@@ -51,6 +54,7 @@ def main(argv):
     transport_map_times.sort()
     ds_shape = (len(transport_map_times), nsets * nfeatures)
     for ds_name in dataset_name_to_traces:
+
         # for each dataset, output a matrix with time on rows and features/cell sets on columns. Values in matrix are mean expression
         f = h5py.File(ds_name + '_trajectory_trends.loom', 'w')
         f.create_group('/layers')

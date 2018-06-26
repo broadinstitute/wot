@@ -18,8 +18,9 @@ class TrajectorySampler:
             cell_set_ds = wot.io.read_gene_sets(path)
             for i in range(cell_set_ds.x.shape[1]):
                 cell_set_name = cell_set_ds.col_meta.index.values[i]
-                cell_ids_in_set = cell_set_ds.row_meta.index[cell_set_ds.x[:, i] > 0]
-                grouped = group_by_df[group_by_df.isin(cell_ids_in_set)].groupby(group_by_key)
+                cell_ids_in_set = cell_set_ds.row_meta.index.values[cell_set_ds.x[:, i] > 0]
+
+                grouped = group_by_df[group_by_df.index.isin(cell_ids_in_set)].groupby(group_by_key)
                 for name, group in grouped:
                     cell_sets = group_to_cell_sets.get(name)
                     if cell_sets is None:
@@ -130,7 +131,8 @@ class TrajectorySampler:
     @staticmethod
     def weighted_average(result, t, weights, cell_set_name, datasets=None, dataset_names=None):
         if datasets is not None:
-            weights = weights / np.sum(weights)
+            if weights is not None:
+                weights = weights / np.sum(weights)
             for ds_index in range(len(datasets)):
                 ds = datasets[ds_index]
                 values = ds.x
@@ -211,7 +213,7 @@ class TrajectorySampler:
                 cache_transport_maps=cache_transport_maps)
             results.append(result)
 
-        trace_fields = ['x', 'y', 'variance']
+        trace_fields_to_concat = ['x', 'y', 'variance']
         line_traces = []
         for result_dict in results:  # each group of cell sets
             for trace in result_dict['traces']:
@@ -224,6 +226,7 @@ class TrajectorySampler:
                 dataset_name_to_all_traces[trace['dataset']] = dataset_traces
             dataset_traces.append(trace)
         dataset_name_to_line_traces = {}
+
         for dataset_name in dataset_name_to_all_traces:
             all_traces = dataset_name_to_all_traces[dataset_name]
             trace_name_to_line_trace = {}
@@ -234,12 +237,16 @@ class TrajectorySampler:
                     line_trace = {'name': trace['name'],
                                   "mode": "lines+markers",
                                   "showlegend": True,
-                                  "type": 'scatter'}
-                    for field in trace_fields:
+                                  "type": 'scatter',
+                                  "dataset": trace['dataset'],
+                                  "cell_set_name": trace['cell_set_name'],
+                                  'feature': trace['feature']
+                                  }
+                    for field in trace_fields_to_concat:
                         line_trace[field] = np.array([trace[field]])
                     trace_name_to_line_trace[line_trace['name']] = line_trace
                 else:
-                    for field in trace_fields:
+                    for field in trace_fields_to_concat:
                         line_trace[field] = np.concatenate((line_trace[field], [trace[field]]))
         dataset_name_to_traces = {}
         for dataset_name in dataset_name_to_line_traces:
@@ -251,7 +258,7 @@ class TrajectorySampler:
                 traces.append(trace)
                 sort_order = np.argsort(trace['x'])
                 # max_size = max(max_size, np.max(trace['size']))
-                for field in trace_fields:
+                for field in trace_fields_to_concat:
                     trace[field] = trace[field][sort_order]
 
                 if smooth:
@@ -260,14 +267,6 @@ class TrajectorySampler:
                     trace['x'] = xsmooth
                     trace['y'] = ysmooth
 
-                trace['mode'] = 'lines+markers'
-
-                # trace['size'] = trace['size'].tolist()
-                # trace['text'] = trace['text'].tolist()
-                trace['showlegend'] = True
-                # trace['sizemode'] = 'area'
-                # trace['sizemin'] = 4
-                # trace['marker'] = {'size': trace['size'], 'sizeref': (2 * 100) / (4 * 4), 'size_min': 4}
         # each trace in dataset_name_to_traces is a cell_set/feature combination, x is time, y is mean
         return {'results': results, 'dataset_name_to_traces': dataset_name_to_traces,
                 'cell_set_names': cell_set_names}
