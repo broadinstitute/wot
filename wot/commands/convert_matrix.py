@@ -8,8 +8,8 @@ import wot.io
 def main(argv):
     parser = argparse.ArgumentParser(
         description='Convert matrix data formats')
-    parser.add_argument('--format', help='Output file format', default='loom')
-    parser.add_argument('file', help='File(s) to convert', nargs='+')
+    parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='loom', choices=wot.commands.FORMAT_CHOICES)
+    parser.add_argument('matrix', help='File(s) to convert', nargs='+')
     args = parser.parse_args(argv)
     files = args.file
 

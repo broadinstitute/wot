@@ -45,9 +45,7 @@ try:
         rngs = [PyRNG(np.random.randint(2 ** 16)) for _ in range(threads)]
         return multinomial(rngs, n, l_tile, P)
 except:
-    print('gslrandom not available. Please install for faster random number generation.')
-
-
+    # print('gslrandom not available. Please install for faster random number generation.')
     def coupling_random_sample(n, l, s, threads):
         return np.random.multinomial(n[0], l, size=s)
 
@@ -171,15 +169,12 @@ def main(argsv):
     parser = argparse.ArgumentParser(
         description='Gene Regulatory Networks')
 
-    parser.add_argument('--tmap',
-                        help='Directory of transport maps', required=True, action='append')
+    parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True, action='append')
     parser.add_argument('--tf',
                         help='File with one gene id per line to assign transcription factors', required=True)
     parser.add_argument('--gene_filter',
                         help='File with one gene id per line to include')
-    parser.add_argument('--matrix',
-                        help='Gene expression file with cells on '
-                             'rows and features on columns', required=True)
+    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--time_lag', help='Time lag', type=float, required=True)
     parser.add_argument('--nmodules', help='Number of gene expression modules', type=int, default=50)
     parser.add_argument('--z1', help='Z L1 regularlization parameter', type=float, default=2)

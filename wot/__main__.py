@@ -4,7 +4,6 @@
 import matplotlib
 
 matplotlib.use('Agg')
-import sys
 from wot.commands import *
 import argparse
 

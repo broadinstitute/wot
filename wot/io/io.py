@@ -8,6 +8,7 @@ import glob
 import scipy.sparse
 import scipy.io
 
+
 def filter_ds_from_command_line(ds, args):
     params = vars(args)
     if params.get('gene_filter') is not None:
@@ -504,7 +505,7 @@ def get_filename_and_extension(name):
     return basename, ext
 
 
-def write_dataset(ds, path, output_format='txt', txt_full=False):
+def write_dataset(ds, path, output_format='txt', txt_full=True):
     path = check_file_extension(path, output_format)
     if output_format == 'txt' or output_format == 'txt.gz' or output_format == 'gct':
         if txt_full or output_format == 'gct':

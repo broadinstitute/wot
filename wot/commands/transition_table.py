@@ -153,20 +153,15 @@ def multiply_tmaps(start_time, end_time, transport_maps, store=False):
 def main(argv):
     parser = argparse.ArgumentParser(
         description='Generate a transition table from one cell set to another cell set')
-    parser.add_argument('--tmap',
-                        help='Directory of transport maps', required=True)
-    parser.add_argument('--cell_set',
-                        help='One or more gmt or gmx files containing cell sets.',
-                        required=True, action='append')
-    parser.add_argument('--cell_days',
-                        help='File with headers "id" and "day" corresponding to cell id and days',
-                        required=True)
+    parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
+    parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True, action='append')
+    parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     parser.add_argument('--start_time',
                         help='The start time for the cell sets to compute the transitions to cell sets at end_time',
                         required=True, type=float)
     parser.add_argument('--end_time', help='The end time', required=True, type=float)
     parser.add_argument('--out', help='Prefix for ouput file.')
-    parser.add_argument('--format', help='Output file format', default='loom')
+    parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='loom', choices=wot.commands.FORMAT_CHOICES)
 
     args = parser.parse_args(argv)
 
@@ -186,4 +181,4 @@ def main(argv):
                                  end_cell_sets=time_to_cell_sets[args.end_time],
                                  start_time=args.start_time, end_time=args.end_time)
     wot.io.write_dataset(ds, args.out + '_' + str(args.start_time) + '_' + str(args.end_time) + '_transition_table',
-                         output_format=args.format, txt_full=True)
+                         output_format=args.format)

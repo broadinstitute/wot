@@ -58,7 +58,7 @@ def main(argv):
     import anndata
     import scanpy.api as sc
     parser = argparse.ArgumentParser(description='Force-directed layout embedding')
-    parser.add_argument('--input', help='Input matrix', required=True)
+    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--neighbors', help='Number of nearest neighbors', type=int, default=100)
     parser.add_argument('--neighbors_diff', help='Number of nearest neighbors to use in diffusion component space',
                         type=int, default=20)
@@ -69,8 +69,8 @@ def main(argv):
     if args.out is None:
         args.out = 'wot'
 
-    if os.path.isfile(args.input):
-        ds = wot.io.read_dataset(args.input)
+    if os.path.isfile(args.matrix):
+        ds = wot.io.read_dataset(args.matrix)
         compute_force_layout(ds, neighbors=args.neighbors, neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
                      n_steps=args.n_steps)
 

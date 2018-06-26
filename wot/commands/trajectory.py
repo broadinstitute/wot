@@ -10,14 +10,9 @@ import pandas as pd
 def main(argv):
     parser = argparse.ArgumentParser(
         description='Generate ancestors and descendants given a starting cell cet and transport maps')
-    parser.add_argument('--tmap',
-                        help='Directory of transport maps', required=True)
-    parser.add_argument('--cell_set',
-                        help='One or more gmt or gmx files containing cell sets.',
-                        required=True, action='append')
-    parser.add_argument('--cell_days',
-                        help='File with headers "id" and "day" corresponding to cell id and days',
-                        required=True)
+    parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
+    parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True, action='append')
+    parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     parser.add_argument('--out', help='Output file name', default='wot_trajectory')
 
     args = parser.parse_args(argv)

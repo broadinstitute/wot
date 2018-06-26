@@ -130,21 +130,22 @@ class TrajectorySampler:
     @staticmethod
     def weighted_average(result, t, weights, cell_set_name, datasets=None, dataset_names=None):
         if datasets is not None:
+            weights = weights / np.sum(weights)
             for ds_index in range(len(datasets)):
                 ds = datasets[ds_index]
                 values = ds.x
                 values = values.toarray() if scipy.sparse.isspmatrix(values) else values
                 for feature_index in range(ds.x.shape[1]):
                     array = values[:, feature_index]
-                    # count = 100 * (np.count_nonzero(array) / len(array))
-
+                    mean = np.average(array, weights=weights)
+                    variance = np.average((array - mean) ** 2, weights=weights)
                     trace = {
                         "dataset": dataset_names[ds_index],
                         "cell_set_name": cell_set_name,
+                        "feature": str(ds.col_meta.index.values[feature_index]),
                         "name": cell_set_name + '_' + str(ds.col_meta.index.values[feature_index]),
-                        "y": np.average(array, weights=weights),
-                        # "size": count,
-                        # "text": "{:.1f}".format(count) + ' %',
+                        "y": mean,
+                        "variance": variance,
                         "x": t
                     }
                     result.append(trace)
@@ -210,7 +211,7 @@ class TrajectorySampler:
                 cache_transport_maps=cache_transport_maps)
             results.append(result)
 
-        trace_fields = ['x', 'y']
+        trace_fields = ['x', 'y', 'variance']
         line_traces = []
         for result_dict in results:  # each group of cell sets
             for trace in result_dict['traces']:
@@ -267,7 +268,7 @@ class TrajectorySampler:
                 # trace['sizemode'] = 'area'
                 # trace['sizemin'] = 4
                 # trace['marker'] = {'size': trace['size'], 'sizeref': (2 * 100) / (4 * 4), 'size_min': 4}
-
+        # each trace in dataset_name_to_traces is a cell_set/feature combination, x is time, y is mean
         return {'results': results, 'dataset_name_to_traces': dataset_name_to_traces,
                 'cell_set_names': cell_set_names}
 

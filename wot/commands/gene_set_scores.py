@@ -21,8 +21,7 @@ def compute(matrix, gene_sets, no_zscore, out, format, use_dask=False):
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Compute gene set scores for each cell')
-    parser.add_argument('--matrix',
-                        help='Gene expression matrix', required=True)
+    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--gene_sets',
                         help='Gene sets in gmx or gmt format. If not specified gene sets for apoptosis and cell cycle are used')
     parser.add_argument('--out', help='Output file name prefix')
@@ -31,7 +30,7 @@ def main(argv):
     parser.add_argument('--verbose', action='store_true',
                         help='Print progress information')
     # parser.add_argument('--dask', help='Dask scheduler URL')
-    parser.add_argument('--format', help='Output file format', default='loom')
+    parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='loom', choices=wot.commands.FORMAT_CHOICES)
 
     args = parser.parse_args(argv)
     if args.out is None:

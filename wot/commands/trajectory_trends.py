@@ -12,17 +12,10 @@ import pandas as pd
 def main(argv):
     parser = argparse.ArgumentParser(
         description='Generate mean expression profiles given a starting cell cet and transport maps.')
-    parser.add_argument('--tmap',
-                        help='Directory of transport maps', required=True)
-    parser.add_argument('--cell_days',
-                        help='File with headers "id" and "day" corresponding to cell id and days',
-                        required=True)
-    parser.add_argument('--cell_set',
-                        help='One or more gmt or gmx files containing cell sets.',
-                        required=True, action='append')
-    parser.add_argument('--matrix',
-                        help='A matrix with cells on rows and features, such as genes or pathways on columns',
-                        required=True)
+    parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
+    parser.add_argument('--cell_days',help=wot.commands.CELL_DAYS_HELP,required=True)
+    parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True, action='append')
+    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
 
     args = parser.parse_args(argv)
     time_to_cell_sets = wot.ot.TrajectorySampler.group_cell_sets(args.cell_set,
@@ -58,7 +51,7 @@ def main(argv):
     transport_map_times.sort()
     ds_shape = (len(transport_map_times), nsets * nfeatures)
     for ds_name in dataset_name_to_traces:
-        # for each cell set, output a matrix with time on rows and features on columns. Values in matrix are mean expression
+        # for each dataset, output a matrix with time on rows and features/cell sets on columns. Values in matrix are mean expression
         f = h5py.File(ds_name + '_trajectory_trends.loom', 'w')
         f.create_group('/layers')
         f.create_group('/row_graphs')
@@ -73,20 +66,22 @@ def main(argv):
                                 maxshape=(None, ds_shape[1]),
                                 compression='gzip', compression_opts=9,
                                 data=None)
+        vdset = f.create_dataset('/layers/variance', shape=ds_shape,
+                                 chunks=(1000, 1000) if ds_shape[0] >= 1000 and ds_shape[1] >= 1000 else None,
+                                 maxshape=(None, ds_shape[1]),
+                                 compression='gzip', compression_opts=9,
+                                 data=None)
         traces = dataset_name_to_traces[ds_name]  # each trace is a cell set/feature combo
 
         for i in range(len(traces)):
             trace = traces[i]
-            y = trace['y']  # across time
-            trace_name = trace['name']  # cell_set_name_feature
-            # cell_set_name = np.string_(trace['cell_set_name'])
-            sep = trace_name.rfind('_')
-            feature = trace_name[sep + 1:]
-            cell_set_name = trace_name[0:sep]
+            cell_set_name = np.string_(trace['cell_set_name'])
+            feature = np.string_(trace['feature'])
             cell_set_names.append(cell_set_name)
             features.append(feature)
-            dset[:, i] = y
-            cids.append(np.string_(trace_name))
+            dset[:, i] = trace['y']
+            vdset[:, i] = trace['variance']
+            cids.append(np.string_(trace['name']))
 
         f.create_dataset('/col_attrs/id', data=cids)
         f.create_dataset('/col_attrs/feature', data=features)

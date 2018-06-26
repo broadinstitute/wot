@@ -17,16 +17,14 @@ class OptimalTransportHelper:
         parser = argparse.ArgumentParser(
             description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-        parser.add_argument('--matrix',
-                            help='Gene expression file with cells on '
-                                 'rows and features on columns', required=True)
+        parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
 
-        parser.add_argument('--cell_days',
-                            help='Two column file with headers "id" and "day" corresponding to cell id and days',
-                            required=True)
+        parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
         parser.add_argument('--day_pairs',
                             help='Two column file without header with '
                                  'pairs of days to compute transport maps for')
+        parser.add_argument('--local_pca', help='Convert day pairs matrix to PCA coordinates. Set to -1 to disable',
+                            type=int, default=30)
 
         parser.add_argument('--gene_filter',
                             help='File with one gene id per line to use for computing cost matrices (e.g. variable genes)')
@@ -51,12 +49,12 @@ class OptimalTransportHelper:
         parser.add_argument('--max_transport_fraction',
                             default=0.4,
                             help='The maximum fraction of cells at time t that are '
-                                 'transported to time t + 1',
+                                 'transported to time t + 1 for floating_epsilon solver',
                             type=float)
         parser.add_argument('--min_transport_fraction',
                             default=0.05,
                             help='The minimum fraction of cells at time t that are '
-                                 'transported to time t + 1',
+                                 'transported to time t + 1 for floating_epsilon solver',
                             type=float)
         parser.add_argument('--lambda1',
                             help='Regularization parameter that controls the '
@@ -96,8 +94,7 @@ class OptimalTransportHelper:
                                        help='Two column file with "id" and "cell_growth_rate" headers corresponding to cell id and growth rate per day.')
         parser.add_argument('--diagonal', help='Diagonal scaling matrix')
         parser.add_argument('--power', help='Diagonal scaling power', type=float)
-        parser.add_argument('--local_pca', help='Convert day pairs matrix to PCA coordinates. Set to -1 to disable',
-                            type=int, default=30)
+
 
         parser.add_argument('--solver',
                             help='Solver to use when computing transport maps. One of unbalanced, floating_epsilon, '

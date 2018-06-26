@@ -34,19 +34,14 @@ class StandaloneApplication(gunicorn.app.base.BaseApplication):
 
 def main(argsv):
     parser = argparse.ArgumentParser(description='Run wot server')
-    parser.add_argument('--tmap',
-                        help='Directory of transport maps as produced by ot', action='append')
-    parser.add_argument('--cell_sets',
-                        help='One or more gmt or gmx files containing cell sets. Each set id should end with _time (e.g. my_cell_set_9)',
-                        action='append')
+    parser.add_argument('--tmap',help=wot.commands.TMAP_HELP, action='append')
+    parser.add_argument('--cell_sets', help=wot.commands.CELL_SET_HELP, action='append')
     parser.add_argument('--cell_filter',
                         help='File with one cell id per line to include or or a python regular expression of cell ids to include')
     parser.add_argument('--cell_meta',
                         help='Every file needs to have the header "id". One file should have "x" and "y", the x and y cell coordinates',
                         action='append', required=True)
-    parser.add_argument('--matrix',
-                        help='One or more matrices with cells on rows and features, such as genes or pathways on columns',
-                        action='append')
+    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, action='append')
     parser.add_argument('--workers', help='Number of worker processes', type=int, default=2)
     parser.add_argument('--port', help='Web server port', type=int, default=8080)
     parser.add_argument('--host', help='Web server host', default='127.0.0.1')
@@ -96,8 +91,8 @@ def main(argsv):
     else:
         cell_metadata = pd.DataFrame()
 
-    if args.cell_sets is not None:
-        time_to_cell_sets = wot.ot.TrajectorySampler.group_cell_sets(args.cell_sets, cell_metadata)
+    if args.cell_set is not None:
+        time_to_cell_sets = wot.ot.TrajectorySampler.group_cell_sets(args.cell_set, cell_metadata)
     else:
         time_to_cell_sets = {}
     name_to_transport_maps = {}

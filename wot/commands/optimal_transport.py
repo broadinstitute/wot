@@ -8,7 +8,7 @@ import wot.io
 
 def main(argv):
     parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute transport maps between pairs of time points')
-    parser.add_argument('--format', help='Output file format', default='loom')
+    parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='loom', choices=wot.commands.FORMAT_CHOICES)
 
     args = parser.parse_args(argv)
     ot_helper = wot.ot.OptimalTransportHelper(args)
