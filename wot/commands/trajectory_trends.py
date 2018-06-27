@@ -52,42 +52,54 @@ def main(argv):
     dataset_name_to_traces = sampled_results['dataset_name_to_traces']
     transport_map_times = list(transport_map_times)
     transport_map_times.sort()
-    ds_shape = (len(transport_map_times), nsets * nfeatures)
+    ds_shape = (len(transport_map_times), nfeatures)
     for ds_name in dataset_name_to_traces:
+        all_traces = dataset_name_to_traces[ds_name]  # each trace is a cell set/feature combo
+        cell_set_name_to_traces = {}
+        for trace in all_traces:
+            cell_set_name = trace['cell_set_name']
+            traces = cell_set_name_to_traces.get(cell_set_name)
+            if traces is None:
+                traces = []
+                cell_set_name_to_traces[cell_set_name] = traces
+            traces.append(trace)
 
-        # for each dataset, output a matrix with time on rows and features/cell sets on columns. Values in matrix are mean expression
-        f = h5py.File(ds_name + '_trajectory_trends.loom', 'w')
-        f.create_group('/layers')
-        f.create_group('/row_graphs')
-        f.create_group('/col_graphs')
-        f.create_dataset('/row_attrs/id', data=transport_map_times)
-        cids = []
-        features = []
-        cell_set_names = []
+        for cell_set_name in cell_set_name_to_traces:
+            traces = cell_set_name_to_traces[cell_set_name]
+            traces.sort(key=lambda x: x['feature'])
+            # for each dataset, output a matrix with time on rows and features/cell sets on columns. Values in matrix are mean expression
+            f = h5py.File(cell_set_name + '_' + 'trajectory_trends.loom', 'w')
+            f.create_group('/layers')
+            f.create_group('/row_graphs')
+            f.create_group('/col_graphs')
+            f.create_dataset('/row_attrs/id', data=transport_map_times)
+            # cids = []
+            features = []
+            # cell_set_names = []
 
-        dset = f.create_dataset('/matrix', shape=ds_shape,
-                                chunks=(1000, 1000) if ds_shape[0] >= 1000 and ds_shape[1] >= 1000 else None,
-                                maxshape=(None, ds_shape[1]),
-                                compression='gzip', compression_opts=9,
-                                data=None)
-        vdset = f.create_dataset('/layers/variance', shape=ds_shape,
-                                 chunks=(1000, 1000) if ds_shape[0] >= 1000 and ds_shape[1] >= 1000 else None,
-                                 maxshape=(None, ds_shape[1]),
-                                 compression='gzip', compression_opts=9,
-                                 data=None)
-        traces = dataset_name_to_traces[ds_name]  # each trace is a cell set/feature combo
+            dset = f.create_dataset('/matrix', shape=ds_shape,
+                                    chunks=(1000, 1000) if ds_shape[0] >= 1000 and ds_shape[1] >= 1000 else None,
+                                    maxshape=(None, ds_shape[1]),
+                                    compression='gzip', compression_opts=9,
+                                    data=None)
+            vdset = f.create_dataset('/layers/variance', shape=ds_shape,
+                                     chunks=(1000, 1000) if ds_shape[0] >= 1000 and ds_shape[1] >= 1000 else None,
+                                     maxshape=(None, ds_shape[1]),
+                                     compression='gzip', compression_opts=9,
+                                     data=None)
 
-        for i in range(len(traces)):
-            trace = traces[i]
-            cell_set_name = np.string_(trace['cell_set_name'])
-            feature = np.string_(trace['feature'])
-            cell_set_names.append(cell_set_name)
-            features.append(feature)
-            dset[:, i] = trace['y']
-            vdset[:, i] = trace['variance']
-            cids.append(np.string_(trace['name']))
+            for i in range(len(traces)):
+                trace = traces[i]
+                # cell_set_name = np.string_(trace['cell_set_name'])
+                feature = np.string_(trace['feature'])
+                # cell_set_names.append(cell_set_name)
+                features.append(feature)
+                dset[:, i] = trace['y']
+                vdset[:, i] = trace['variance']
+                # cids.append(np.string_(trace['name']))
+                # cids.append()
 
-        f.create_dataset('/col_attrs/id', data=cids)
-        f.create_dataset('/col_attrs/feature', data=features)
-        f.create_dataset('/col_attrs/cell_set', data=cell_set_names)
-        f.close()
+            f.create_dataset('/col_attrs/id', data=features)
+            # f.create_dataset('/col_attrs/feature', data=features)
+            # f.create_dataset('/col_attrs/cell_set', data=cell_set_names)
+            f.close()

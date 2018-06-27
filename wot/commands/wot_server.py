@@ -34,8 +34,8 @@ class StandaloneApplication(gunicorn.app.base.BaseApplication):
 
 def main(argsv):
     parser = argparse.ArgumentParser(description='Run wot server')
-    parser.add_argument('--tmap',help=wot.commands.TMAP_HELP, action='append')
-    parser.add_argument('--cell_sets', help=wot.commands.CELL_SET_HELP, action='append')
+    parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, action='append')
+    parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, action='append')
     parser.add_argument('--cell_filter',
                         help='File with one cell id per line to include or or a python regular expression of cell ids to include')
     parser.add_argument('--cell_meta',
