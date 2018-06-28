@@ -1,0 +1,41 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+nav[data-toggle='toc'] {
+  margin-top: 3rem;
+  top: 42px;
+}
+
+nav[data-toggle="toc"] .nav-link.active,
+nav[data-toggle="toc"] .nav-link.active:focus,
+nav[data-toggle="toc"] .nav-link.active:hover {
+  color: #157878;
+  border-color: #157878;
+}
+
+/* the top-level nav */
+nav[data-toggle='toc'] .nav > li > a {
+  font-size: 1rem;
+}
+
+/* the sub-nav */
+nav[data-toggle='toc'] .nav .nav > li > a {
+  font-size: 1rem;
+}
+
+
+/* small screens */
+@media (max-width: 768px) {
+  /* override stickyness so that the navigation does not follow scrolling */
+  nav[data-toggle='toc'] {
+    margin-bottom: 42px;
+    position: static;
+  }
+
+  nav[data-toggle='toc'] .nav .nav {
+    display: block;
+  }
+}
+
