@@ -14,18 +14,18 @@ def main(argv):
     ot_helper = wot.ot.OptimalTransportHelper(args)
 
     params_writer = None
-    if args.solver is 'floating_epsilon':
-        params_writer = open(args.out + '_params.txt', 'w')
-        params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda1' + '\t' + 'lambda2' +
-                            '\n')
+    # if args.solver is 'floating_epsilon':
+    #     params_writer = open(args.out + '_params.txt', 'w')
+    #     params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda1' + '\t' + 'lambda2' +
+    #                         '\n')
 
     def callback(cb_args):
         result = cb_args['result']
-        if args.solver is 'floating_epsilon':
-            params_writer.write(
-                str(cb_args['t0']) + '\t' + str(cb_args['t1']) + '\t' + str(result['epsilon']) + '\t' + str(
-                    result['lambda1']) + '\t' + str(
-                    result['lambda2']) + '\n')
+        # if args.solver is 'floating_epsilon':
+        #     params_writer.write(
+        #         str(cb_args['t0']) + '\t' + str(cb_args['t1']) + '\t' + str(result['epsilon']) + '\t' + str(
+        #             result['lambda1']) + '\t' + str(
+        #             result['lambda2']) + '\n')
 
         # save the tranport map
 

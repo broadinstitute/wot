@@ -190,7 +190,6 @@ def main(argsv):
                 cell_set_name = flask.request.form.get('cell_set_name' + str(cell_set_idx))
                 cell_ids_in_set = flask.request.form.getlist('cell_set_ids' + str(cell_set_idx) + '[]')
                 subset = cell_metadata[cell_metadata.index.isin(cell_ids_in_set)]
-                print(subset.shape)
                 group_by_day = subset.groupby('day')
 
                 for group_name, group in group_by_day:
@@ -239,6 +238,7 @@ def main(argsv):
             for trace in traces:
                 trace['x'] = trace['x'].tolist()
                 trace['y'] = trace['y'].tolist()
+                trace['variance'] = trace['variance'].tolist()
         return flask.jsonify(data)
 
     options = {

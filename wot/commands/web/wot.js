@@ -360,15 +360,16 @@ $('body').find('.selectpicker').selectpicker({
 var cellSetHtml;
 $.ajax('/list_cell_sets/').done(function (result) {
     var options = [];
-    for (var key in result) {
-        options.push('<optgroup label="' + key + '">');
-        var names = result[key];
-        for (var i = 0; i < names.length; i++) {
-            options.push('<option value="' + names[i] + '">');
-            options.push(names[i]);
-            options.push('</option>');
-        }
-        options.push('</optgroup>');
+    // for (var key in result) {
+    //     // options.push('<optgroup label="' + key + '">');
+    //     var names = result[key];
+    //
+    //     // options.push('</optgroup>');
+    // }
+    for (var i = 0; i < result.length; i++) {
+        options.push('<option value="' + result[i] + '">');
+        options.push(result[i]);
+        options.push('</option>');
     }
     cellSetHtml = options.join('');
     $cellSet.html(cellSetHtml);

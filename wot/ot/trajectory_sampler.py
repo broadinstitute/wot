@@ -76,12 +76,12 @@ class TrajectorySampler:
 
         for name in cell_set_name_to_force_layout_traces:
             traces = cell_set_name_to_force_layout_traces[name]
-            traces.sort(key=lambda x: x['t'])
+            traces.sort(key=lambda x: x['t'])  # sort by time
 
-        def ancestry_divergence(ancestor_dist1, ancestor_dist2):
+        def ancestry_similarity(ancestor_dist1, ancestor_dist2):
             return 1.0 - 0.5 * np.sum(np.abs(ancestor_dist1 - ancestor_dist2))
 
-        ancestry_divergence_traces = []
+        ancestry_similarity_traces = []
 
         for i in range(1, len(cell_set_names)):
             cell_set_name_i = cell_set_names[i]
@@ -93,11 +93,11 @@ class TrajectorySampler:
                 x = []
                 y = []
                 for k in range(len(traces1)):
-                    d = ancestry_divergence(traces1[k]['v'], traces2[k]['v'])
+                    d = ancestry_similarity(traces1[k]['v'], traces2[k]['v'])
                     x.append(traces1[k]['t'])
                     y.append(d)
 
-                ancestry_divergence_traces.append(
+                ancestry_similarity_traces.append(
                     {'x': x, 'y': y, 'name': cell_set_name_i + ' vs. ' + cell_set_name_j, 'mode': 'lines+markers',
                      'type': 'scatter'})
         for key in cell_set_name_to_force_layout_traces:
@@ -106,7 +106,7 @@ class TrajectorySampler:
                 del t['v']
 
         dataset_name_to_traces = sampled_results['dataset_name_to_traces']
-        return {'ancestry_divergence_traces': ancestry_divergence_traces,
+        return {'ancestry_similarity_traces': ancestry_similarity_traces,
                 'dataset_name_to_traces': dataset_name_to_traces,
                 'force': cell_set_name_to_force_layout_traces}
 

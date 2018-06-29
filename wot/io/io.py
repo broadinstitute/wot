@@ -224,11 +224,12 @@ def read_gmt(path, feature_ids=None):
 
 def read_gmx(path, feature_ids=None):
     with open(path) as fp:
-        ids = fp.readline().split('\t')
+        set_ids = fp.readline().split('\t')
         descriptions = fp.readline().split('\t')
-        ncols = len(ids)
-        ids[len(ids) - 1] = ids[len(ids) - 1].rstrip()
-        descriptions[len(ids) - 1] = descriptions[len(ids) - 1].rstrip()
+        nsets = len(set_ids)
+        for i in range(len(set_ids)):
+            set_ids[i] = set_ids[i].rstrip()
+
         row_id_lc_to_index = {}
         row_id_lc_to_row_id = {}
         x = None
@@ -238,12 +239,12 @@ def read_gmx(path, feature_ids=None):
                 fid = feature_ids[i].lower()
                 row_id_lc_to_index[fid] = i
                 row_id_lc_to_row_id[fid] = feature_ids[i]
-            x = np.zeros(shape=(len(feature_ids), ncols), dtype=np.int8)
+            x = np.zeros(shape=(len(feature_ids), nsets), dtype=np.int8)
         else:
             array_of_arrays = []
         for line in fp:
             tokens = line.split('\t')
-            for j in range(ncols):
+            for j in range(nsets):
                 value = tokens[j].strip()
                 if value != '':
                     value_lc = value.lower()
@@ -253,7 +254,7 @@ def read_gmx(path, feature_ids=None):
                             row_id_lc_to_row_id[value_lc] = value
                             row_index = len(row_id_lc_to_index)
                             row_id_lc_to_index[value_lc] = row_index
-                            array_of_arrays.append(np.zeros(shape=(ncols,), dtype=np.int8))
+                            array_of_arrays.append(np.zeros(shape=(nsets,), dtype=np.int8))
                         array_of_arrays[row_index][j] = 1
                     elif row_index is not None:
                         x[row_index, j] = 1
@@ -261,11 +262,12 @@ def read_gmx(path, feature_ids=None):
             feature_ids = np.empty(len(row_id_lc_to_index), dtype='object')
             for rid_lc in row_id_lc_to_index:
                 feature_ids[row_id_lc_to_index[rid_lc]] = row_id_lc_to_row_id[rid_lc]
+
         if array_of_arrays is not None:
             x = np.array(array_of_arrays)
         row_meta = pd.DataFrame(index=feature_ids)
         col_meta = pd.DataFrame(data={'description': descriptions},
-                                index=ids)
+                                index=set_ids)
         return wot.Dataset(x, row_meta=row_meta, col_meta=col_meta)
 
 

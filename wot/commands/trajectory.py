@@ -72,8 +72,6 @@ def main(argv):
         array_for_t = np.array(arrays).T  # create a 2d array. Each array is one cell set
         data_to_stack.append(array_for_t)
         ids_to_stack.append(cell_ids_t)
-    for x in data_to_stack:
-        print(x.shape)
     rids = np.concatenate(ids_to_stack)
     data = np.concatenate(data_to_stack, axis=0)
 

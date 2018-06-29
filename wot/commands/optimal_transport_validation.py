@@ -18,13 +18,13 @@ def main(argv):
     parser.add_argument('--npairs', type=int, default=10000)
     parser.add_argument('--save_interpolated', action='store_true', help='Save interpolated point clouds')
     parser.add_argument('--save_transport', action='store_true', help='Save transport maps')
-    parser.add_argument('--output_param', action='append', help='Parameters to save in output file',
-                        default=['epsilon', 'lambda1', 'lambda2', 'beta_min', 'delta_min', 'delta_max', 'beta_max',
-                                 'ncells', 'ncounts'])
+    parser.add_argument('--output_param', action='append', help='Parameters to save in output file')
 
     args = parser.parse_args(argv)
     args_dict = vars(args)
     parameters_to_write = args.output_param
+    if parameters_to_write is None:
+        parameters_to_write = []
     covariate_df = None
     unique_covariates = None
     covariate_pairs = None

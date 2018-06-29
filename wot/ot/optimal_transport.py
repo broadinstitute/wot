@@ -147,8 +147,7 @@ def optimal_transport(cost_matrix, growth_rate, p=None, q=None, solver=None,
         g = growth_rate ** delta_days
         transport = transport_stable_learnGrowth(C=cost_matrix, lambda1=lambda1, lambda2=lambda2, epsilon=epsilon,
                                                  scaling_iter=scaling_iter, g=g, numInnerItermax=numInnerItermax,
-                                                 tau=tau,
-                                                 epsilon0=epsilon0, growth_iters=growth_iters)
+                                                 tau=tau, epsilon0=epsilon0, growth_iters=growth_iters)
         return {'transport': transport}
     elif solver == 'floating_epsilon':
         return optimal_transport_with_entropy(cost_matrix, growth_rate, p=p, q=q,

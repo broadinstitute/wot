@@ -18,21 +18,20 @@ class OptimalTransportHelper:
             description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
         parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
-
         parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
         parser.add_argument('--day_pairs',
                             help='Two column file without header with '
                                  'pairs of days to compute transport maps for')
-        parser.add_argument('--local_pca', help='Convert day pairs matrix to PCA coordinates. Set to -1 to disable',
+        parser.add_argument('--local_pca', help='Convert day pairs matrix to PCA coordinates. Set to 0 to disable',
                             type=int, default=30)
-
+        parser.add_argument('--growth_iters', type=int, default=3,
+                            help='Number of growth iterations for learning the growth rate.')
+        parser.add_argument('--cell_growth_rates',
+                            help='Two column file with "id" and "cell_growth_rate" headers corresponding to cell id and growth rate per day.')
         parser.add_argument('--gene_filter',
                             help='File with one gene id per line to use for computing cost matrices (e.g. variable genes)')
         parser.add_argument('--cell_filter',
                             help='File with one cell id per line to include or or a python regular expression of cell ids to include')
-
-        parser.add_argument('--out', help='Prefix for ouput file names')
-
         parser.add_argument('--epsilon', type=float, default=0.05,
                             help='Controls the entropy of the transport map. An '
                                  'extremely large entropy parameter will give a '
@@ -43,19 +42,6 @@ class OptimalTransportHelper:
                                  'lead to '
                                  'numerical instability in the algorithm')
 
-        parser.add_argument('--ncells', help='Number of cells to sample from each timepoint', type=int)
-        parser.add_argument('--ncounts', help='sample ncounts from each cell', type=int)
-
-        parser.add_argument('--max_transport_fraction',
-                            default=0.4,
-                            help='The maximum fraction of cells at time t that are '
-                                 'transported to time t + 1 for floating_epsilon solver',
-                            type=float)
-        parser.add_argument('--min_transport_fraction',
-                            default=0.05,
-                            help='The minimum fraction of cells at time t that are '
-                                 'transported to time t + 1 for floating_epsilon solver',
-                            type=float)
         parser.add_argument('--lambda1',
                             help='Regularization parameter that controls the '
                                  'fidelity of the constraints on p', type=float, default=1)
@@ -64,56 +50,63 @@ class OptimalTransportHelper:
                                  'fidelity of the constraints on q', type=float)
         parser.add_argument('--scaling_iter', default=3000,
                             help='Number of scaling iterations', type=int)
-        parser.add_argument('--min_growth_fit', type=float, default=0.9)
-        parser.add_argument('--l0_max', type=float, default=100)
+        parser.add_argument('--out', help='Prefix for ouput file names')
+        parser.add_argument('--ncells', help='Number of cells to downsample from each timepoint', type=int)
+        parser.add_argument('--ncounts', help='Number of counts to downsample from each cell', type=int)
 
-        parser.add_argument('--epsilon_adjust', help='Scaling factor to adjust epsilon for floating_epsilon solver',
-                            type=float, default=1.1)
-        parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda for floating_epsilon solver',
-                            type=float, default=1.5)
+        # parser.add_argument('--max_transport_fraction',
+        #                     default=0.4,
+        #                     help='The maximum fraction of cells at time t that are '
+        #                          'transported to time t + 1 for floating_epsilon solver',
+        #                     type=float)
+        # parser.add_argument('--min_transport_fraction',
+        #                     default=0.05,
+        #                     help='The minimum fraction of cells at time t that are '
+        #                          'transported to time t + 1 for floating_epsilon solver',
+        #                     type=float)
 
-        parser.add_argument('--numItermax', type=int, default=100, help='For sinkhorn_epsilon solver')
-        parser.add_argument('--epsilon0', type=float, default=1, help='For sinkhorn_epsilon and unbalanced solvers')
-        parser.add_argument('--numInnerItermax', type=int, default=50,
-                            help='For sinkhorn_epsilon and unbalanced solvers')
-        parser.add_argument('--tau', type=float, default=10000, help='For sinkhorn_epsilon and unbalanced solvers')
-        parser.add_argument('--stopThr', type=float, default=1e-10, help='For sinkhorn_epsilon solver')
+        # parser.add_argument('--min_growth_fit', type=float, default=0.9)
+        # parser.add_argument('--l0_max', type=float, default=100)
 
-        parser.add_argument('--beta_min', type=float, default=0.3, help='Growth function parameter')
-        parser.add_argument('--delta_min', type=float, default=0.3, help='Growth function parameter')
-        parser.add_argument('--beta_max', type=float, default=1.7, help='Growth function parameter')
-        parser.add_argument('--delta_max', type=float, default=1.7, help='Growth function parameter')
-        parser.add_argument('--beta_center', type=float, default=0.25, help='Growth function parameter')
+        # parser.add_argument('--epsilon_adjust', help='Scaling factor to adjust epsilon for floating_epsilon solver',
+        #                     type=float, default=1.1)
+        # parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda for floating_epsilon solver',
+        #                     type=float, default=1.5)
 
-        parser.add_argument('--growth_iters', type=int, default=3, help='Number of growth iterations')
+        parser.add_argument('--numItermax', type=int, default=100)
+        parser.add_argument('--epsilon0', type=float, default=1, help='Warm starting value for epsilon')
+        parser.add_argument('--numInnerItermax', type=int, default=50)
+        parser.add_argument('--tau', type=float, default=10000)
+        # parser.add_argument('--stopThr', type=float, default=1e-10, help='For sinkhorn_epsilon solver')
 
-        growth_rate_group = parser.add_mutually_exclusive_group(required=False)
-        growth_rate_group.add_argument('--gene_set_scores', help='File containing "Cell.cycle" and "Apoptosis" scores')
+        # parser.add_argument('--beta_min', type=float, default=0.3, help='Growth function parameter')
+        # parser.add_argument('--delta_min', type=float, default=0.3, help='Growth function parameter')
+        # parser.add_argument('--beta_max', type=float, default=1.7, help='Growth function parameter')
+        # parser.add_argument('--delta_max', type=float, default=1.7, help='Growth function parameter')
+        # parser.add_argument('--beta_center', type=float, default=0.25, help='Growth function parameter')
 
-        growth_rate_group.add_argument('--cell_growth_rates',
-                                       help='Two column file with "id" and "cell_growth_rate" headers corresponding to cell id and growth rate per day.')
-        parser.add_argument('--diagonal', help='Diagonal scaling matrix')
-        parser.add_argument('--power', help='Diagonal scaling power', type=float)
+        # parser.add_argument('--diagonal', help='Diagonal scaling matrix')
+        # parser.add_argument('--power', help='Diagonal scaling power', type=float)
 
-
-        parser.add_argument('--solver',
-                            help='Solver to use when computing transport maps. One of unbalanced, floating_epsilon, '
-                                 'sinkhorn_epsilon, unregularized',
-                            choices=['epsilon', 'sinkhorn_epsilon', 'unbalanced', 'unregularized'],
-                            default='unbalanced')
+        # parser.add_argument('--solver',
+        #                     help='Solver to use when computing transport maps. One of unbalanced, floating_epsilon, '
+        #                          'sinkhorn_epsilon, unregularized',
+        #                     choices=['epsilon', 'sinkhorn_epsilon', 'unbalanced', 'unregularized'],
+        #                     default='unbalanced')
 
         parser.add_argument('--verbose', action='store_true',
                             help='Print progress information')
         return parser
 
     def __init__(self, args, covariate_df=None, covariate_pairs=None):
+
         eigenvals = None
-        if args.diagonal is not None:
-            eigenvals = \
-                pd.read_table(args.diagonal, header=None, names=['eigenvals'], index_col=False, dtype=np.float64)[
-                    'eigenvals'].values
-        if eigenvals is not None and args.power is not None:
-            eigenvals = np.power(eigenvals, args.power)
+        # if args.diagonal is not None:
+        #     eigenvals = \
+        #         pd.read_table(args.diagonal, header=None, names=['eigenvals'], index_col=False, dtype=np.float64)[
+        #             'eigenvals'].values
+        # if eigenvals is not None and args.power is not None:
+        #     eigenvals = np.power(eigenvals, args.power)
 
         if args.out is None:
             args.out = wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0] + '_ot'
@@ -146,27 +139,28 @@ class OptimalTransportHelper:
                                           index_col=False, engine='python', sep=None,
                                           dtype={'t0': np.float64, 't1': np.float64})
 
-        self.eigenvals = np.diag(eigenvals) if eigenvals is not None else None
+        # self.eigenvals = np.diag(eigenvals) if eigenvals is not None else None
+        self.eigenvals = None
 
-        if args.gene_set_scores is not None:
-            ext = wot.io.get_filename_and_extension(args.gene_set_scores)[1]
-            if ext == 'loom' or ext == 'gct':
-                gene_set_scores_ds = wot.io.read_dataset(args.gene_set_scores)
-                apoptosis = gene_set_scores_ds[:, np.where(gene_set_scores_ds.col_meta.columns == 'Apoptosis')[0]]
-                proliferation = gene_set_scores_ds[:, np.where(gene_set_scores_ds.col_meta.columns == 'Cell.cycle')[0]]
-                gene_set_scores_ids = gene_set_scores_ds.row_meta.index
-            else:
-                gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0, engine='python', sep=None)
-                apoptosis = gene_set_scores['Apoptosis'].values
-                proliferation = gene_set_scores['Cell.cycle'].values
-                gene_set_scores_ids = gene_set_scores.index
-            g = wot.ot.compute_growth_scores(proliferation, apoptosis, beta_max=args.beta_max,
-                                             beta_center=args.beta_center,
-                                             delta_max=args.delta_max, delta_min=args.delta_min,
-                                             beta_min=args.beta_min)
-            cell_growth_rates = pd.DataFrame(index=gene_set_scores_ids, data={'cell_growth_rate': g})
+        # if args.gene_set_scores is not None:
+        #     ext = wot.io.get_filename_and_extension(args.gene_set_scores)[1]
+        #     if ext == 'loom' or ext == 'gct':
+        #         gene_set_scores_ds = wot.io.read_dataset(args.gene_set_scores)
+        #         apoptosis = gene_set_scores_ds[:, np.where(gene_set_scores_ds.col_meta.columns == 'Apoptosis')[0]]
+        #         proliferation = gene_set_scores_ds[:, np.where(gene_set_scores_ds.col_meta.columns == 'Cell.cycle')[0]]
+        #         gene_set_scores_ids = gene_set_scores_ds.row_meta.index
+        #     else:
+        #         gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0, engine='python', sep=None)
+        #         apoptosis = gene_set_scores['Apoptosis'].values
+        #         proliferation = gene_set_scores['Cell.cycle'].values
+        #         gene_set_scores_ids = gene_set_scores.index
+        #     g = wot.ot.compute_growth_scores(proliferation, apoptosis, beta_max=args.beta_max,
+        #                                      beta_center=args.beta_center,
+        #                                      delta_max=args.delta_max, delta_min=args.delta_min,
+        #                                      beta_min=args.beta_min)
+        #     cell_growth_rates = pd.DataFrame(index=gene_set_scores_ids, data={'cell_growth_rate': g})
 
-        elif args.cell_growth_rates is not None:
+        if args.cell_growth_rates is not None:
             cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col='id', engine='python', sep=None)
         else:
             cell_growth_rates = pd.DataFrame(index=ds.row_meta.index.values, data={'cell_growth_rate': 1})
@@ -265,7 +259,6 @@ class OptimalTransportHelper:
 
     def compute_transport_maps(self, callback):
         day_pairs = self.day_pairs
-        cell_growth_rates = self.cell_growth_rates
         args = self.args
         covariate_df = self.covariate_df
         covariate_pairs = self.covariate_pairs
@@ -295,7 +288,7 @@ class OptimalTransportHelper:
                     print('Unable to find time ' + str(t0_5) + ' - skipping.')
                     continue
 
-            if args.local_pca is not None and args.local_pca >= 0:
+            if args.local_pca is not None and args.local_pca > 0:
                 import scipy.sparse
                 matrices = list()
                 matrices.append(p0_full.x if not scipy.sparse.isspmatrix(p0_full.x) else p0_full.x.toarray())
@@ -356,23 +349,19 @@ class OptimalTransportHelper:
                                 t0) + ' to ' + str(
                                 t1) + '...', end='')
                 growth_rate = p0.row_meta['cell_growth_rate'].values
+                solver = 'unbalanced'
                 result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
                                                   growth_rate=growth_rate,
                                                   delta_days=delta_t,
-                                                  max_transport_fraction=args.max_transport_fraction,
-                                                  min_transport_fraction=args.min_transport_fraction,
-                                                  min_growth_fit=args.min_growth_fit,
-                                                  l0_max=args.l0_max, lambda1=args.lambda1,
+                                                  lambda1=args.lambda1,
                                                   lambda2=args.lambda2,
                                                   epsilon=args.epsilon,
                                                   scaling_iter=args.scaling_iter,
-                                                  epsilon_adjust=args.epsilon_adjust,
-                                                  lambda_adjust=args.lambda_adjust,
                                                   numItermax=args.numItermax,
                                                   epsilon0=args.epsilon0,
-                                                  numInnerItermax=args.numInnerItermax, tau=args.tau,
-                                                  stopThr=args.stopThr,
-                                                  solver=args.solver, growth_iters=args.growth_iters)
+                                                  numInnerItermax=args.numInnerItermax,
+                                                  tau=args.tau,
+                                                  solver=solver, growth_iters=max(1, args.growth_iters))
 
                 if args.verbose:
                     print('done')
