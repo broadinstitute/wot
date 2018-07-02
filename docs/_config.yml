@@ -6,3 +6,15 @@ description: Optimal-transport based software tools for single-cell RNA sequenci
 repository: robindar/wot
 
 show_downloads: false
+
+navbar_items:
+  - title: Home
+    url: /
+  - title: Documentation
+    url: /cli_documentation
+  - title: Publications
+    url: /
+  - title: Examples
+    url: /
+  - title: Github
+    url: /github

@@ -1,5 +1,6 @@
 ---
 layout: documentation
+location: Documentation
 ---
 
 Waddington Optimal Transport uses time-course data to infer how the

@@ -1,3 +1,23 @@
+<nav class="navbar navbar-expand-lg navbar-dark cayman-navbar">
+  <div class="container">
+  <a class="navbar-brand px-5" href="{{site.base_url}}">Waddington - OT</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+    <div class="navbar-nav">
+      {% for item in site.navbar_items %}
+        <a class="nav-item nav-link
+           {% if page.location == item["title"] %} active {% endif %}"
+           href="{{ site.baseurl | append: item["url"] }}">
+          {{ item["title"] }}
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+  </div>
+</nav>
+
 <header class="page-header" role="banner">
   <h1 class="project-name">{{ site.title | default: site.github.repository_name }}</h1>
   <h2 data-toc-text="Introduction" class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
