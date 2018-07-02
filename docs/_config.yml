@@ -4,3 +4,5 @@ title: Waddington Optimal Transport
 description: Optimal-transport based software tools for single-cell RNA sequencing analysis
 
 repository: robindar/wot
+
+show_downloads: false
