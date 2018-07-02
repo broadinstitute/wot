@@ -602,6 +602,10 @@ def write_dataset(ds, path, output_format='txt', txt_full=False):
     else:
         raise Exception('Unknown file output_format')
 
+def write_dataset_metadata(ds, path, metadata_name):
+    if metadata_name not in ds.row_meta.columns:
+        raise ValueError("Metadata not present in dataset: \"{}\"".format(metadata_name))
+    ds.row_meta[[metadata_name]].to_csv(path, index_label='id', sep='\t', doublequote=False)
 
 def save_loom_attrs(f, is_columns, metadata, length):
     attrs_path = '/col_attrs' if is_columns else '/row_attrs'
