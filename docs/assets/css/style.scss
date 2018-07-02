@@ -46,6 +46,12 @@ nav[data-toggle='toc'] .nav .nav > li > a {
 .cayman-navbar {
   color: $header-heading-color;
   text-align: center;
-  background-color: $header-bg-color;
+  background-color: $header-bg-color-secondary;
   background-image: linear-gradient(20deg, $header-bg-color-secondary, $header-bg-color);
+}
+
+@media all and (max-width: 768px) {
+  .cayman-navbar {
+    background-image: none;
+  }
 }
