@@ -15,6 +15,6 @@ navbar_items:
   - title: Publications
     url: /
   - title: Examples
-    url: /
+    url: /examples
   - title: Github
     url: /github
