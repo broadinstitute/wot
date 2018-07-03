@@ -71,7 +71,7 @@ def main(argv):
 
     if os.path.isfile(args.matrix):
         ds = wot.io.read_dataset(args.matrix)
-        compute_force_layout(ds, neighbors=args.neighbors, neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
+        compute_force_layout(ds, n_neighbors=args.neighbors, neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
                      n_steps=args.n_steps)
 
     else:
