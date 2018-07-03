@@ -2,6 +2,7 @@
 ---
 
 @import "{{ site.theme }}";
+@import url('https://fonts.googleapis.com/css?family=Inconsolata');
 
 nav[data-toggle='toc'] {
   margin-top: 3rem;
@@ -43,6 +44,11 @@ nav[data-toggle='toc'] .nav .nav > li > a {
   text-decoration: none !important;
 }
 
+a.nostyle, a.nostyle:hover, a.nostyle:active, a.nostyle:focus {
+  text-decoration: none !important;
+  color: inherit;
+}
+
 .cayman-navbar {
   color: $header-heading-color;
   text-align: center;
@@ -54,4 +60,14 @@ nav[data-toggle='toc'] .nav .nav > li > a {
   .cayman-navbar {
     background-image: none;
   }
+}
+
+.main-content pre > code {
+  font-family: 'Inconsolata', monospace;
+  font-size: 1.2rem;
+  line-height: 1.45rem;
+}
+
+.main-content {
+  padding: 2rem 1rem;
 }
