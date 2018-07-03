@@ -11,7 +11,7 @@ import pkg_resources
 import tempfile
 
 
-def force_layout(ds, n_neighbors=100, n_comps=100, neighbors_diff=20, n_steps=10000):
+def force_layout_embedding(ds, n_neighbors=100, n_comps=100, neighbors_diff=20, n_steps=10000):
     import anndata
     import scanpy.api as sc
     if type(ds) == wot.Dataset:
@@ -71,7 +71,7 @@ def main(argv):
 
     if os.path.isfile(args.input):
         ds = wot.io.read_dataset(args.input)
-        force_layout(ds, neighbors=args.neighbors, neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
+        force_layout_embedding(ds, n_neighbors=args.neighbors, neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
                      n_steps=args.n_steps)
 
     else:
@@ -131,13 +131,7 @@ def main(argv):
                     if i < j:
                         writer.write("{u} {v} {w:.6g}\n".format(u=i + 1, v=j + 1, w=W[i, j]))
 
-    df, adata = force_layout(ds)
+    df, adata = force_layout_embedding(ds)
     adata.write(args.out + '.h5ad')
     csv_file = args.out if args.out.lower().endswith('.csv') else args.out + '.csv'
     df.to_csv(csv_file, index_label='id')
-
-
-if __name__ == '__main__':
-    import sys
-
-    main(sys.argv[1:])
