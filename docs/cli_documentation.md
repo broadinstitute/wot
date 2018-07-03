@@ -348,7 +348,7 @@ Example:
 ## More documentation ##
 ------------------------------
 
-This document and the **examples** section should be more than enough to use **wot**.
+This document and the [examples]({{site.baseurl}}/examples) section should be more than enough to use **wot**.
 However, if you feel the need for a more in-depth documentation about each of the python
 functions in this package, it is available and can be generated from the sources of
 the package with the [Sphinx](http://www.sphinx-doc.org/en/master/) tool :
