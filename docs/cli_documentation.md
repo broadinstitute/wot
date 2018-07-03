@@ -269,6 +269,28 @@ Each line contains information about the relation between two cell sets :
 
 ### Force-directed Layout Embedding ###
 
+```sh
+wot force_layout --input matrix.txt --out fdlayout
+```
+
+This command will create two files containing the force-directed projection :
+`fdlayout.csv` and `fdlayout.h5ad`.
+
+<table class="table table-hover" style="display: table">
+  <thead class="thead-light">
+    <tr>
+      <th>Option</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>--input</b></td>
+      <td>Gene expression matrix. See <a href="#matrix_file">formats</a></td>
+    </tr>
+  </tbody>
+</table>
+
 
 ## Supported file formats ##
 ----------------------------
