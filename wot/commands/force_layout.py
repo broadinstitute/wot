@@ -131,7 +131,7 @@ def main(argv):
                     if i < j:
                         writer.write("{u} {v} {w:.6g}\n".format(u=i + 1, v=j + 1, w=W[i, j]))
 
-    df, adata = force_layout(ds)
+    df, adata = compute_force_layout(ds)
     adata.write(args.out + '.h5ad')
     csv_file = args.out if args.out.lower().endswith('.csv') else args.out + '.csv'
     df.to_csv(csv_file, index_label='id')

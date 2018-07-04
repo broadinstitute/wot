@@ -29,3 +29,6 @@ class Dataset:
         tmp = self.row_meta
         self.row_meta = self.col_meta
         self.col_meta = tmp
+
+    def __len__(self):
+        return len(self.x)
