@@ -69,69 +69,13 @@ def main(argv):
     if args.out is None:
         args.out = 'wot'
 
-    if os.path.isfile(args.matrix):
-        ds = wot.io.read_dataset(args.matrix)
-        compute_force_layout(ds, n_neighbors=args.neighbors, neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
-                     n_steps=args.n_steps)
-
-    else:
-        print('Input matrix is not a file')
+    if not os.path.isfile(args.matrix):
+        print("Input matrix is not a file")
         exit(1)
-        cids = []
-        transport_maps = wot.io.list_transport_maps(args.input)
-        if len(transport_maps) == 0:
-            print('No transport maps found in ' + args.input)
-            exit(1)
-        datasets = []
-        for tm in transport_maps:
-            datasets.append(wot.io.read_dataset(tm['path']))
-
-        with open(input_graph_file, 'w') as writer:
-            n_obs = 0
-            name_to_id = {}
-            for ds_index in range(len(datasets)):
-                ds = datasets[ds_index]
-                n_obs += ds.x.shape[0]
-                if ds_index == len(datasets) - 1:
-                    n_obs += datasets[len(datasets) - 1].x.shape[1]
-            writer.write("*Vertices {n_obs}\n".format(n_obs=n_obs))
-            node_counter = 0
-            for ds_index in range(len(datasets)):
-                ds = datasets[ds_index]
-                for cid in ds.row_meta.index.values:
-                    node_counter += 1
-                    name_to_id[cid] = node_counter
-                    cids.append(cid)
-                    writer.write("{node} \"{node}\"\n".format(node=node_counter))
-                if ds_index == len(datasets) - 1:
-                    for cid in ds.col_meta.index.values:
-                        node_counter += 1
-                        name_to_id[cid] = node_counter
-                        cids.append(cid)
-                        writer.write("{node} \"{node}\"\n".format(node=node_counter))
-
-            writer.write("*Edges\n")
-            for ds_index in range(len(datasets)):
-                ds = datasets[ds_index]
-
-                for i in range(ds.x.shape[0]):
-                    start_id = name_to_id[ds.row_meta.index.values[i]]
-                    order = np.argsort(ds.x[i])
-
-                    for j in range(n_neighbors):
-                        writer.write(
-                            "{u} {v} {w:.6g}\n".format(u=start_id, v=name_to_id[ds.col_meta.index.values[order[j]]],
-                                                       w=ds.x[i, order[j]]))
-                # internal nearest neighbors
-                adata = anndata.AnnData(ds.x, ds.row_meta, ds.col_meta)
-                sc.pp.neighbors(adata, use_rep='X', n_neighbors=n_neighbors)
-                W = adata.uns['neighbors']['connectivities']
-                rows, cols = W.nonzero()
-                for i, j in zip(rows, cols):
-                    if i < j:
-                        writer.write("{u} {v} {w:.6g}\n".format(u=i + 1, v=j + 1, w=W[i, j]))
-
-    df, adata = compute_force_layout(ds)
+    ds = wot.io.read_dataset(args.matrix)
+    df, adata = compute_force_layout(ds, n_neighbors=args.neighbors,
+            neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
+            n_steps=args.n_steps)
     adata.write(args.out + '.h5ad')
     csv_file = args.out if args.out.lower().endswith('.csv') else args.out + '.csv'
     df.to_csv(csv_file, index_label='id')
