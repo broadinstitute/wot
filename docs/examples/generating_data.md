@@ -7,7 +7,7 @@ location: Examples
 # Generating simulated data
 ---------------------------
 
-## Gaussian noise around a path ##
+## Gaussians around a path ##
 
 One way to generate simulated data is to pick a few "paths" in gene-expression
 space, defined by piecewise linear interpolation between a set of fixed points,
@@ -77,6 +77,34 @@ import wot.graphics
 from matplotlib import pyplot
 
 ds = wot.io.read_dataset('matrix.txt')
+
+pyplot.axis('off')
+wot.graphics.plot_2d_dataset(pyplot, ds, x=0, y=1)
+pyplot.show()
+```
+
+## Coloring the graph ##
+
+You can easily add colors to this kind of plot by using the 'color' metadata
+in your dataset. For instance, here is how to color according to time :
+
+```sh
+import numpy
+import wot.io
+import wot.graphics
+from matplotlib import pyplot
+
+ds = wot.io.read_dataset('matrix.txt')
+
+color1 = [ .08, .34, .59 ] # first color
+color2 = [ .08, .59, .34 ] # final color
+wot.io.incorporate_days_information_in_dataset(ds, 'days.txt')
+# you can use any of the columns here, or metadata information :
+cell_colors = numpy.asarray(ds.row_meta['day'])
+cell_colors = cell_colors / max(cell_colors)
+cell_colors = [ wot.graphics.color_mix(color1, color2, d)
+        for d in cell_colors ]
+wot.set_cell_metadata(ds, 'color', cell_colors)
 
 pyplot.axis('off')
 wot.graphics.plot_2d_dataset(pyplot, ds, x=0, y=1)
