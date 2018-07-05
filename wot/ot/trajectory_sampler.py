@@ -21,6 +21,8 @@ class TrajectorySampler:
                 cell_ids_in_set = cell_set_ds.row_meta.index.values[cell_set_ds.x[:, i] > 0]
 
                 grouped = group_by_df[group_by_df.index.isin(cell_ids_in_set)].groupby(group_by_key)
+                if not grouped:
+                    print('WARNING: No cells found for cell set "{}"'.format(cell_set_name))
                 for name, group in grouped:
                     cell_sets = group_to_cell_sets.get(name)
                     if cell_sets is None:
@@ -29,6 +31,8 @@ class TrajectorySampler:
                     full_name = cell_set_name + '_' + str(name)
                     cell_sets.append({'set': set(group.index.values), 'name': full_name})
 
+        if not group_to_cell_sets:
+            raise ValueError("Invalid cell sets : No overlapping cell ids between cell sets and dataset")
         return group_to_cell_sets
 
     @staticmethod
