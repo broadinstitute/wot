@@ -39,18 +39,27 @@ cd wot && python setup.py sdist
 
 The package gets built to `dist/wot-VERSION.tar.gz`, for instance `dist/wot-0.1.2.tar.gz`.
 
-Once built, you can install it with :
+> <button class="btn-info rounded border-0 px-3 py-1" disabled>Dependencies</button>
+>
+> Once built, if you don't already satisfy all dependecies, you must install required packages :
+>
+> ```sh
+> pip install --user h5py docutils msgpack-python --no-cache-dir
+> pip install --user cython --no-cache-dir
+> echo -e "\n# Cython path\nPATH=\"\$PATH:\$HOME/.local/bin\"" >> ~/.bashrc
+> ```
+>
+> *h5py*, *docutils*, and *msgpack-python* have to be installed separately and
+> before cython because of [a known issue](https://github.com/h5py/h5py/issues/535)
+> during the automatic installation through pip.
+
+Then install the built package from the *dist/* directory :
 
 ```sh
-pip install --user h5py docutils msgpack-python --no-cache-dir
-pip install --user cython --no-cache-dir
-echo -e "\n# Required by cython\nPATH=\"\$PATH:\$HOME/.local/bin\"" >> ~/.bashrc
 pip install --user dist/wot-*.tar.gz
 ```
 
-*h5py*, *docutils*, and *msgpack-python* have to be installed separately and
-before cython because of [a known issue](https://github.com/h5py/h5py/issues/535)
-during the automatic installation through pip.
+And then **wot** is installed and ready to use.
 
 <hr />
 
@@ -87,6 +96,21 @@ a table containing the core options. Required options are in bold font.
 > thereafter in the same directory.
 >
 > <div class="center-block text-center py-2"><a class="nounderline btn-outline-secondary btn-lg border px-4 py-2" role="button" href="#">Download .zip</a></div>
+
+<br />
+
+> <button class="btn-success rounded border-0 px-3 py-1" disabled>Interactive</button>
+>
+> Alternatively, **wot** features an interactive web interface to visualize
+> your data and perform all the tasks described below.
+>
+> <div class="center-block text-center py-2">
+>   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
+>      role="button" href="{{site.baseurl}}/interactive_documentation">
+>      Learn more &raquo;
+>   </a>
+> </div>
+>
 
 ### Transport maps ###
 
@@ -301,12 +325,13 @@ Each line contains information about the relation between two cell sets :
 
 ### Force-directed Layout Embedding ###
 
-```sh
-wot force_layout --input matrix.txt --out fdlayout
-```
+In order to visualize data in two dimensions, **wot** uses
+[Force-directed Layout Embedding](https://en.wikipedia.org/wiki/Force-directed_graph_drawing).
 
-This command will create two files containing the force-directed projection :
-`fdlayout.csv` and `fdlayout.h5ad`.
+
+```sh
+wot force_layout --matrix matrix.txt --out fdlayout
+```
 
 <table class="table table-hover" style="display: table">
   <thead class="thead-light">
@@ -317,11 +342,40 @@ This command will create two files containing the force-directed projection :
   </thead>
   <tbody>
     <tr>
-      <td><b>--input</b></td>
-      <td>Gene expression matrix. See <a href="#matrix_file">formats</a></td>
+      <td><b>--matrix</b></td>
+      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
+    </tr>
+    <tr>
+      <td>--neighbors</td>
+      <td>Number of nearest neighbors to consider<br/>default : 100</td>
+    </tr>
+    <tr>
+      <td>--neighbors_diff</td>
+      <td>Number of nearest neighbors to use in diffusion component space<br/>default : 20</td>
+    </tr>
+    <tr>
+      <td>--n_comps</td>
+      <td>Number of diffusion components<br/>default : 20</td>
+    </tr>
+    <tr>
+      <td>--n_steps</td>
+      <td>Force-directed layout iteration count<br/>default : 1000</td>
+    </tr>
+    <tr>
+      <td>--out</td>
+      <td>Output filename prefix<br/>default : 'wot'</td>
     </tr>
   </tbody>
 </table>
+
+##### Output #####
+
+This command will create two files containing the projection of the data
+in two dimensions: `<prefix>.csv` and `<prefix>.h5ad`
+
+The **h5ad** is just a regular 2D matrix that can be converted to any other
+format with the *convert_matrix* tool. The **csv** is provided for convenience
+and can be given directly to the *wot_server* interactive tool.
 
 
 ## Supported file formats ##
