@@ -99,3 +99,11 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# Github Pages (Jekyll) generated files
+docs/Gemfile.lock
+docs/_site
+docs/.jekyll-metadata
+
+# Tags for the package
+tags
