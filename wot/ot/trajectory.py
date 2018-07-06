@@ -28,10 +28,11 @@ class Trajectory:
         return cell_set_name_to_trajectories
 
     @staticmethod
-    def ancestry_similarity(trajectories):
-        def ancestry_similarity_score(ancestor_dist1, ancestor_dist2):
-            return 1.0 - 0.5 * np.sum(np.abs(ancestor_dist1 - ancestor_dist2))
+    def ancestry_similarity_score(ancestor_dist1, ancestor_dist2):
+        return 1.0 - 0.5 * np.sum(np.abs(ancestor_dist1 - ancestor_dist2))
 
+    @staticmethod
+    def ancestry_similarity(trajectories):
         traces = []
         cell_set_name_to_trajectories = Trajectory.group_trajectories_by_cell_set(trajectories)
         cell_set_names = list(cell_set_name_to_trajectories.keys())
@@ -45,7 +46,7 @@ class Trajectory:
                 x = []
                 y = []
                 for k in range(len(trajectories1)):
-                    sim = ancestry_similarity_score(trajectories1[k]['p'], trajectories2[k]['p'])
+                    sim = Trajectory.ancestry_similarity_score(trajectories1[k]['p'], trajectories2[k]['p'])
                     x.append(trajectories1[k]['t'])
                     y.append(sim)
 
@@ -83,6 +84,16 @@ class Trajectory:
 
     @staticmethod
     def trajectory_for_cell_sets(transport_maps, time_to_cell_sets, cache_transport_maps=True):
+        """
+        Args:
+            transport_maps (list) A list of transport maps
+            time_to_cell_sets (dict): Maps time to cell sets. A cell set is a dict containing "name" and "set"
+            cache_transport_maps (bool): Whether to cache the transport maps in memory
+
+        Returns:
+            List of trajectories. A trajectory is a dict containing cell_set, p, entropy, normalized_entropy, and cell_ids
+        """
+
         trajectory_results = []
         for t in time_to_cell_sets:
             cell_sets = time_to_cell_sets[t]

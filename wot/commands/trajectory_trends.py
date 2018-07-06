@@ -7,6 +7,7 @@ import os
 import h5py
 import numpy as np
 import wot.io
+import scipy
 
 
 def main(argv):
@@ -16,6 +17,8 @@ def main(argv):
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True, action='append')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
+    parser.add_argument('--matrix_transform', help='Transform matrix values', action='append',
+                        choices=['expm1', 'log1p', 'rank'])
 
     args = parser.parse_args(argv)
     time_to_cell_sets = wot.io.group_cell_sets(args.cell_set, wot.io.read_days_data_frame(args.cell_days))
@@ -41,11 +44,27 @@ def main(argv):
     ds = wot.io.read_dataset(args.matrix)
     nfeatures = ds.x.shape[1]
     datasets.append(ds)
+    value_transform_functions = []
+    if args.matrix_transform is not None and len(args.matrix_transform) > 0:
+        for matrix_transform in args.matrix_transform:
+            if matrix_transform == 'expm1':
+                value_transform_functions.append(np.expm1)
+            elif matrix_transform == 'log1p':
+                value_transform_functions.append(np.log1p)
+            elif matrix_transform == 'rank':
+                value_transform_functions.append(scipy.stats.rankdata)
+
+        def value_transform(values):
+            for op in value_transform_functions:
+                values = op(values)
+            return values
 
     trajectories = wot.ot.Trajectory.trajectory_for_cell_sets(transport_maps=transport_maps,
                                                               time_to_cell_sets=time_to_cell_sets)
 
-    dataset_name_to_traces = wot.ot.TrajectoryTrends.compute(trajectories, datasets, dataset_names)
+    dataset_name_to_traces = wot.ot.TrajectoryTrends.compute(trajectories, datasets, dataset_names,
+                                                             value_transform=value_transform if len(
+                                                                 value_transform_functions) > 0 else None)
 
     transport_map_times = list(transport_map_times)
     transport_map_times.sort()
