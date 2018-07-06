@@ -9,6 +9,26 @@ import scipy.sparse
 import scipy.io
 
 
+def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
+    group_to_cell_sets = {}
+    for path in cell_set_paths:
+        cell_set_ds = wot.io.read_gene_sets(path)
+        for i in range(cell_set_ds.x.shape[1]):
+            cell_set_name = cell_set_ds.col_meta.index.values[i]
+            cell_ids_in_set = cell_set_ds.row_meta.index.values[cell_set_ds.x[:, i] > 0]
+
+            grouped = group_by_df[group_by_df.index.isin(cell_ids_in_set)].groupby(group_by_key)
+            for name, group in grouped:
+                cell_sets = group_to_cell_sets.get(name)
+                if cell_sets is None:
+                    cell_sets = []
+                    group_to_cell_sets[name] = cell_sets
+                full_name = cell_set_name + '_' + str(name)
+                cell_sets.append({'set': set(group.index.values), 'name': full_name})
+
+    return group_to_cell_sets
+
+
 def filter_ds_from_command_line(ds, args):
     params = vars(args)
     if params.get('gene_filter') is not None:
@@ -605,10 +625,12 @@ def write_dataset(ds, path, output_format='txt', txt_full=True):
     else:
         raise Exception('Unknown file output_format')
 
+
 def write_dataset_metadata(ds, path, metadata_name):
     if metadata_name not in ds.row_meta.columns:
         raise ValueError("Metadata not present in dataset: \"{}\"".format(metadata_name))
     ds.row_meta[[metadata_name]].to_csv(path, index_label='id', sep='\t', doublequote=False)
+
 
 def save_loom_attrs(f, is_columns, metadata, length):
     attrs_path = '/col_attrs' if is_columns else '/row_attrs'
@@ -629,9 +651,11 @@ def save_loom_attrs(f, is_columns, metadata, length):
     else:
         save_metadata_array(attrs_path + '/id', np.array(range(1, length + 1)).astype('S'))
 
+
 def read_days_data_frame(path):
     return pd.read_table(path, index_col='id',
-        engine='python', sep=None, dtype={'day': np.float64})
+                         engine='python', sep=None, dtype={'day': np.float64})
+
 
 def incorporate_days_information_in_dataset(dataset, path):
     days_data_frame = read_days_data_frame(path)

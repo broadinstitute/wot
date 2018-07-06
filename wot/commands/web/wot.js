@@ -252,9 +252,7 @@ var createForceLayoutPlotObject = function (showLegend) {
     return {layout: layout, backgroundTrace: backgroundTrace}
 
 };
-var createForceLayoutTrajectory = function (forceLayoutData, key, $el) {
-
-    var traces = forceLayoutData[key];
+var createForceLayoutTrajectory = function (traces, key, $el) {
     var $div = $('<li style="list-style: none;"><h4>' + key + ' Trajectory</h4><div data-name="controls"></div><div class="plot"></div></li>');
     $div.appendTo($el);
     traces.forEach(function (trace) {
@@ -470,14 +468,14 @@ $features
 });
 
 var showTrajectoryPlots = function (result, $el) {
-    var ancestryDivergenceTraces = result.ancestry_divergence_traces;
-    var trajectoryForceLayoutData = result.force;
-    var datasetNameToTraces = result.dataset_name_to_traces;
-    if (ancestryDivergenceTraces && ancestryDivergenceTraces.length > 0) {
+    var ancestrySimilarityTraces = result.ancestry_similarity;
+    var cellSetToTrajectoryEmbedding = result.cell_set_to_trajectory_embedding;
+    var trajectoryTrends = result.trajectory_trends;
+    if (ancestrySimilarityTraces.length > 0) {
         var $div = $('<li style="list-style: none;"><h4>Trajectory Similarity</h4><div class="plot"></div></li>');
         $div.appendTo($el);
 
-        Plotly.newPlot($div.find('.plot')[0], ancestryDivergenceTraces, {
+        Plotly.newPlot($div.find('.plot')[0], ancestrySimilarityTraces, {
                 title: '',
                 showlegend: true,
                 autosize: true,
@@ -492,16 +490,16 @@ var showTrajectoryPlots = function (result, $el) {
             }, plotConfig
         );
     }
-    if (datasetNameToTraces) {
-        for (var key in datasetNameToTraces) {
+    if (trajectoryTrends) {
+        for (var datasetName in trajectoryTrends) {
             var $div = $('<li style="list-style: none;"><h4>Trajectory Trends <small>- Mean Expression Profile</small></h4><div class="plot"></div></li>');
             $div.appendTo($el);
-            var traces = datasetNameToTraces[key];
-            traces.forEach(function (trace) {
-                // var smoothed = kernelSmooth(trace.x, trace.y, trace.x[trace.x.length - 1], 0, 1000, 0.7);
-                // trace.x = smoothed[0];
-                // trace.y = smoothed[1];
-            });
+            var traces = trajectoryTrends[datasetName];
+            // traces.forEach(function (trace) {
+            //     var smoothed = kernelSmooth(trace.x, trace.y, trace.x[trace.x.length - 1], 0, 1000, 0.7);
+            //     trace.x = smoothed[0];
+            //     trace.y = smoothed[1];
+            // });
 
             Plotly.newPlot($div.find('.plot')[0], traces,
                 {
@@ -516,8 +514,8 @@ var showTrajectoryPlots = function (result, $el) {
 
     }
     if (cellInfo != null) {
-        for (var key in trajectoryForceLayoutData) {
-            createForceLayoutTrajectory(trajectoryForceLayoutData, key, $el);
+        for (var cellSet in cellSetToTrajectoryEmbedding) {
+            createForceLayoutTrajectory(cellSetToTrajectoryEmbedding[cellSet], cellSet, $el);
         }
     }
 

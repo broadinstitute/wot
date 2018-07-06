@@ -1,99 +1,203 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import scipy.stats
+import wot.io
+import wot.ot
 
 
-def trajectory(transport_maps, time, ids=None, normalize=False):
-    """
-        Compute the trajectory of the given ids.
+class Trajectory:
 
-        Args:
-            transport_maps (list): A sorted list of dictionaries
-            containing 'transport_map' (wot.Dataset), 't1', and 't2'. The
-            ids (list): A list of ids to compute the trajectory for.
-            time (float): The time at which the ids were measured.
-            normalize (bool) Whether to normalize total mass to one at each
-            timepoint.
+    @staticmethod
+    def group_trajectories_by_cell_set(trajectories):
+        cell_set_name_to_trajectories = {}
+        for trajectory_result in trajectories:
+            cell_set = trajectory_result['cell_set']
+            results = cell_set_name_to_trajectories.get(cell_set)
+            if results is None:
+                results = []
+                cell_set_name_to_trajectories[cell_set] = results
+            results.append(trajectory_result)
 
-        Returns:
-            dict: A dictionary containing ancestors and descendants.
+        for cell_set_name in cell_set_name_to_trajectories:
+            trajectories = cell_set_name_to_trajectories[cell_set_name]
+            trajectories.sort(key=lambda x: x['t'])
+
+        return cell_set_name_to_trajectories
+
+    @staticmethod
+    def ancestry_similarity(trajectories):
+        def ancestry_similarity_score(ancestor_dist1, ancestor_dist2):
+            return 1.0 - 0.5 * np.sum(np.abs(ancestor_dist1 - ancestor_dist2))
+
+        traces = []
+        cell_set_name_to_trajectories = Trajectory.group_trajectories_by_cell_set(trajectories)
+        cell_set_names = list(cell_set_name_to_trajectories.keys())
+        for i in range(1, len(cell_set_names)):
+            cell_set_name_i = cell_set_names[i]
+            trajectories1 = cell_set_name_to_trajectories[cell_set_name_i]
+
+            for j in range(i):
+                cell_set_name_j = cell_set_names[j]
+                trajectories2 = cell_set_name_to_trajectories[cell_set_name_j]
+                x = []
+                y = []
+                for k in range(len(trajectories1)):
+                    sim = ancestry_similarity_score(trajectories1[k]['p'], trajectories2[k]['p'])
+                    x.append(trajectories1[k]['t'])
+                    y.append(sim)
+
+                traces.append(
+                    {'x': x, 'y': y, 'name': cell_set_name_i + ' vs. ' + cell_set_name_j, 'mode': 'lines+markers',
+                     'type': 'scatter'})
+        return traces
+
+    @staticmethod
+    def trajectory_embedding(trajectory_results, coords):
+        cell_set_name_to_trajectories = Trajectory.group_trajectories_by_cell_set(trajectory_results)
+        cell_set_name_to_traces = {}
+        for cell_set in cell_set_name_to_trajectories:
+            highs = []
+            trajectories = cell_set_name_to_trajectories[cell_set]
+            traces = []
+            for trajectory in trajectories:
+                t = trajectory['t']
+                p = trajectory['p']
+                cell_ids = trajectory['cell_ids']
+                joined = coords.join(pd.DataFrame(index=cell_ids, data={'p': p}), how='right')
+                df_sum = joined.groupby(['x', 'y']).sum()
+                p = np.percentile(df_sum['p'].values, 95)
+                highs.append(p)
+                traces.append({'p': p, 't': t, 'x': df_sum.index.get_level_values(0).tolist(),
+                               'y': df_sum.index.get_level_values(1).tolist(),
+                               'marker': {'color': df_sum['p'].values.tolist()}})
+            cmax = np.percentile(highs, 50)
+            cmin = 0
+            for trace in traces:
+                trace['marker']['cmin'] = cmin
+                trace['marker']['cmax'] = cmax
+            cell_set_name_to_traces[cell_set] = traces
+        return cell_set_name_to_traces
+
+    @staticmethod
+    def trajectory_for_cell_sets(transport_maps, time_to_cell_sets, cache_transport_maps=True):
+        trajectory_results = []
+        for t in time_to_cell_sets:
+            cell_sets = time_to_cell_sets[t]
+            trajectory_result = Trajectory.__trajectory_for_cell_sets_at_time_t(
+                cell_sets=cell_sets,
+                transport_maps=transport_maps,
+                time=t,
+                cache_transport_maps=cache_transport_maps)
+            trajectory_results += trajectory_result
+
+        return trajectory_results
+
+    @staticmethod
+    def __trajectory_for_cell_sets_at_time_t(cell_sets, transport_maps, time, cache_transport_maps=True):
         """
 
-    t_start_time_index = None
-    for i in range(len(transport_maps)):
-        if transport_maps[i]['t1'] == time:
-            t_start_time_index = i
-            break
-    if t_start_time_index is None:
-        raise RuntimeError(
-            'Transport transport_map for time ' + str(time) + ' not found.')
+        Args:
+            cell_sets (list): A list of dicts containing "name" and "set"
+            transport_maps (llist) A list of transport maps
+            time (float): The time at which the cell sets are defined
+            cache_transport_maps (bool): Whether to cache the transport maps in memory
+        """
 
-    # transport maps have t1 on rows, t2 on columns
-    transport_maps_by_start_time = list(map(lambda x: x['transport_map'], transport_maps))
-    # if t=9, t_start_time_index=t9_t10
+        transport_map_t1_index = -1
+        transport_map_t2_index = -1
+        for i in range(len(transport_maps)):
+            tmap_dict = transport_maps[i]
+            if tmap_dict['t1'] == time:
+                transport_map_t1_index = i
+            if tmap_dict['t2'] == time:
+                transport_map_t2_index = i
 
-    # subset rows
-    if ids is not None:
-        transport_maps_by_start_time[t_start_time_index] = \
-            transport_maps_by_start_time[t_start_time_index][
-                transport_maps_by_start_time[t_start_time_index].index.isin(
-                    ids)]
+        use_t1 = transport_map_t1_index != -1
+        tmap_index = transport_map_t1_index if use_t1 else transport_map_t2_index
+        tmap_dict_at_t = transport_maps[tmap_index]
+        tmap_at_t = tmap_dict_at_t.get('ds')
+        if tmap_at_t is None:
+            tmap_at_t = wot.io.read_dataset(tmap_dict_at_t['path'])
+            if cache_transport_maps:
+                tmap_dict_at_t['ds'] = tmap_at_t
+        results = []
+        pvec_array_at_t = []
+        for cell_set_index in range(len(cell_sets)):
+            cell_ids_in_set = cell_sets[cell_set_index]['set']
+            membership = tmap_at_t.row_meta.index.isin(cell_ids_in_set) if use_t1 else tmap_at_t.col_meta.index.isin(
+                cell_ids_in_set)
+            membership = membership.astype(np.float)
+            membership /= membership.sum()
+            pvec_array_at_t.append(membership)
+            entropy = np.exp(scipy.stats.entropy(membership))
+            results.append(
+                {'cell_set': cell_sets[cell_set_index]['name'],
+                 'p': membership,
+                 'entropy': entropy,
+                 'normalized_entropy': entropy / len(membership), 't': time,
+                 'cell_ids': tmap_at_t.row_meta.index.values if use_t1 else tmap_at_t.col_meta.index.values
+                 })
 
+        trajectory_ranges = []
+        if transport_map_t2_index != -1:
+            trajectory_ranges.append({'is_back': True, 'range': range(transport_map_t2_index, - 1, -1)})
 
-    # ancestors, go backwards in time
-    # t[i−2,i] = t[i−2,i−1]t[i−1,i]
-    # e.g. t=9, t7_t8, t8_t9, t9_t10 compute ancestors of t9 at t7
+        if transport_map_t1_index != -1:
+            trajectory_ranges.append({'is_back': False, 'range': range(transport_map_t1_index, len(transport_maps))})
 
-    if t_start_time_index >= 1:
-        # subset columns to specified cell ids only
-        if ids is not None:
-            transport_maps_by_start_time[
-                t_start_time_index - 1] = transport_maps_by_start_time[t_start_time_index - 1][ids]
+        for trajectory_range in trajectory_ranges:
+            is_back = trajectory_range['is_back']
+            pvec_array = pvec_array_at_t  # initialize
+            for transport_index in trajectory_range['range']:
+                tmap_dict = transport_maps[transport_index]
+                tmap_ds = tmap_dict.get('ds')
+                if tmap_ds is None:
+                    tmap_ds = wot.io.read_dataset(tmap_dict['path'])
+                    if cache_transport_maps:
+                        tmap_dict['ds'] = tmap_ds
 
-        for i in range(t_start_time_index - 2, -1, -1):
-            transport_maps_by_start_time[i] = transport_maps_by_start_time[i].dot(transport_maps_by_start_time[i + 1]) * \
-                                              transport_maps_by_start_time[i + 1].shape[0]
+                new_pvec_array = []
+                for cell_set_index in range(len(cell_sets)):
+                    p = pvec_array[cell_set_index]
+                    if is_back:
+                        p = tmap_ds.x.dot(p)
+                    else:
+                        p = p.dot(tmap_ds.x)
+                    p /= p.sum()
+                    entropy = np.exp(scipy.stats.entropy(p))
+                    results.append(
+                        {'cell_set': cell_sets[cell_set_index]['name'],
+                         'p': p,
+                         'entropy': entropy,
+                         'normalized_entropy': entropy / len(p),
+                         't': tmap_dict['t1'] if is_back else tmap_dict['t2'],
+                         'cell_ids': tmap_ds.row_meta.index.values if is_back else tmap_ds.col_meta.index.values})
+                    # n_choose = int(np.ceil(entropy))
+                    # n_choose = min(ncells, n_choose)
+                    # n_choose = ncells
+                    # sampled_indices = np.random.choice(len(v), n_choose, p=v, replace=True)
+                    new_pvec_array.append(p)
+                pvec_array = new_pvec_array
 
-    # descendants, go forwards in time
-    # e.g. t=9, t_start_time_index=t9_t10, t+1=t10_t11
-    for i in range(t_start_time_index + 1,
-                   len(transport_maps_by_start_time)):
-        transport_maps_by_start_time[i] = transport_maps_by_start_time[i - 1].dot(transport_maps_by_start_time[i]) * \
-                                          transport_maps_by_start_time[i].shape[0]
+        return results
 
-    descendants = []
-    descendants_summary = []
-    for i in range(t_start_time_index,
-                   len(transport_maps_by_start_time)):
-        # sum across columns
-        m = transport_maps_by_start_time[i].transpose()
-        summary = m.sum(axis=1)
-        if normalize:
-            total = np.sum(summary.values)
-            summary = summary / total
-        summary = summary.to_frame(name='sum')
-        descendants_summary.append(summary)
-        descendants.append(m)
-
-    descendants = pd.concat(descendants)
-    descendants_summary = pd.concat(descendants_summary)
-
-    ancestors = []
-    ancestors_summary = []
-    for m in transport_maps_by_start_time[t_start_time_index - 1::-1]:
-        # sum across columns
-        summary = m.sum(axis=1)
-        if normalize:
-            total = np.sum(summary.values)
-            summary = summary / total
-        summary = summary.to_frame(name='sum')
-        ancestors_summary.append(summary)
-        ancestors.append(m)
-
-    ancestors = pd.concat(ancestors)
-    ancestors_summary = pd.concat(ancestors_summary)
-
-    return {'descendants': descendants,
-            'descendants_summary': descendants_summary,
-            'ancestors': ancestors,
-            'ancestors_summary': ancestors_summary}
+    # @staticmethod
+    # def interpolate(x, xi, yi, sigma):
+    #     diff = (x - xi)
+    #     diff *= -diff
+    #     sigma2 = 2 * np.power(sigma, 2)
+    #     wi = np.exp(diff / sigma2)
+    #     fx = np.sum(yi * wi) / np.sum(wi)
+    #     return fx
+    #
+    # @staticmethod
+    # def kernel_smooth(xi, yi, stop, start=0, steps=1000, sigma=0.7):
+    #     xlist = np.linspace(start, stop, steps)
+    #     fhat = np.zeros(len(xlist))
+    #     for i in range(len(xlist)):
+    #         fhat[i] = TrajectoryUtil.interpolate(xlist[i], xi, yi, sigma)
+    #
+    #     return xlist, fhat

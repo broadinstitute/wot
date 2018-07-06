@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import wot.io
+import os
+
 import h5py
 import numpy as np
-import os
-import pandas as pd
+import wot.io
 
 
 def main(argv):
@@ -18,8 +18,7 @@ def main(argv):
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
 
     args = parser.parse_args(argv)
-    time_to_cell_sets = wot.ot.TrajectorySampler.group_cell_sets(args.cell_set,
-            wot.io.read_days_data_frame(args.cell_days))
+    time_to_cell_sets = wot.io.group_cell_sets(args.cell_set, wot.io.read_days_data_frame(args.cell_days))
     if len(time_to_cell_sets) == 0:
         print('No cell sets found')
         exit(1)
@@ -43,12 +42,11 @@ def main(argv):
     nfeatures = ds.x.shape[1]
     datasets.append(ds)
 
-    sampled_results = wot.ot.TrajectorySampler.sample_all_timepoints(transport_maps=transport_maps,
-                                                                     time_to_cell_sets=time_to_cell_sets,
-                                                                     datasets=datasets,
-                                                                     dataset_names=dataset_names)
+    trajectories = wot.ot.Trajectory.trajectory_for_cell_sets(transport_maps=transport_maps,
+                                                              time_to_cell_sets=time_to_cell_sets)
 
-    dataset_name_to_traces = sampled_results['dataset_name_to_traces']
+    dataset_name_to_traces = wot.ot.TrajectoryTrends.compute(trajectories, datasets, dataset_names)
+
     transport_map_times = list(transport_map_times)
     transport_map_times.sort()
     ds_shape = (len(transport_map_times), nfeatures)

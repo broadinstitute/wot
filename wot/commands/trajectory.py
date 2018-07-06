@@ -17,8 +17,7 @@ def main(argv):
 
     args = parser.parse_args(argv)
 
-    time_to_cell_sets = wot.ot.TrajectorySampler.group_cell_sets(args.cell_set,
-            wot.io.read_days_data_frame(args.cell_days))
+    time_to_cell_sets = wot.io.group_cell_sets(args.cell_set, wot.io.read_days_data_frame(args.cell_days))
     nsets = 0
     for t in time_to_cell_sets:
         nsets += len(time_to_cell_sets[t])
@@ -32,25 +31,24 @@ def main(argv):
         transport_map_times.add(tmap['t1'])
         transport_map_times.add(tmap['t2'])
 
-    sampled_results = wot.ot.TrajectorySampler.sample_all_timepoints(transport_maps=transport_maps,
-                                                                     time_to_cell_sets=time_to_cell_sets)
-    sampled_results = sampled_results['results']
+    trajectories = wot.ot.Trajectory.trajectory_for_cell_sets(transport_maps=transport_maps,
+                                                              time_to_cell_sets=time_to_cell_sets)
+
     # create a matrix with cell set on columns, cell ids on rows
 
     time_to_results = {}
     cell_set_name_to_column_index = {}
-    for result_dict in sampled_results:  # cell set
-        for p in result_dict['pvecs']:  # time
-            t = p['t']
-            results = time_to_results.get(t)
-            if results is None:
-                results = []
-                time_to_results[t] = results
-            results.append(p)
-            cindex = cell_set_name_to_column_index.get(p['cell_set'])
-            if cindex is None:
-                cindex = len(cell_set_name_to_column_index)
-                cell_set_name_to_column_index[p['cell_set']] = cindex
+    for trajectory in trajectories:  # cell set
+        t = trajectory['t']
+        results = time_to_results.get(t)
+        if results is None:
+            results = []
+            time_to_results[t] = results
+        results.append(trajectory)
+        cindex = cell_set_name_to_column_index.get(trajectory['cell_set'])
+        if cindex is None:
+            cindex = len(cell_set_name_to_column_index)
+            cell_set_name_to_column_index[trajectory['cell_set']] = cindex
 
     data_to_stack = []
     ids_to_stack = []
@@ -60,8 +58,8 @@ def main(argv):
         cell_ids_t = None
         for r in results:
             cell_set = r['cell_set']
-            v = r['v']
-            arrays[cell_set_name_to_column_index[cell_set]] = v
+            p = r['p']
+            arrays[cell_set_name_to_column_index[cell_set]] = p
             cell_ids = r['cell_ids']
             if cell_ids_t is None:
                 cell_ids_t = cell_ids

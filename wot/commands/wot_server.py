@@ -92,7 +92,7 @@ def main(argsv):
         cell_metadata = pd.DataFrame()
 
     if args.cell_set is not None:
-        time_to_cell_sets = wot.ot.TrajectorySampler.group_cell_sets(args.cell_set, cell_metadata)
+        time_to_cell_sets = wot.io.group_cell_sets(args.cell_set, cell_metadata)
     else:
         time_to_cell_sets = {}
     name_to_transport_maps = {}
@@ -227,18 +227,26 @@ def main(argsv):
                         wot.Dataset(ds.x[:, column_indices], ds.row_meta, ds.col_meta.iloc[column_indices]))
                     filtered_dataset_names.append(dataset_names[i])
 
-        data = wot.ot.TrajectorySampler.trajectory_plot(transport_maps=transport_maps, coords=cell_metadata[['x', 'y']],
-                                                        time_to_cell_sets=filtered_time_to_cell_sets,
-                                                        datasets=filtered_datasets,
-                                                        dataset_names=filtered_dataset_names, cache_transport_maps=True,
-                                                        smooth=False)
-        dataset_name_to_traces = data['dataset_name_to_traces']
-        for name in dataset_name_to_traces:
-            traces = dataset_name_to_traces[name]
+        trajectories = wot.ot.Trajectory.trajectory_for_cell_sets(transport_maps=transport_maps,
+                                                                  time_to_cell_sets=filtered_time_to_cell_sets,
+                                                                  cache_transport_maps=True)
+
+        cell_set_to_trajectory_embedding = wot.ot.Trajectory.trajectory_embedding(trajectories,
+                                                                                  cell_metadata[['x', 'y']])
+        ancestry_similarity_traces = wot.ot.Trajectory.ancestry_similarity(trajectories)
+        trajectory_trends = wot.ot.TrajectoryTrends.compute(trajectories, filtered_datasets, filtered_dataset_names)
+
+        # convert to list for jsonify
+        for name in trajectory_trends:
+            traces = trajectory_trends[name]
             for trace in traces:
                 trace['x'] = trace['x'].tolist()
                 trace['y'] = trace['y'].tolist()
                 trace['variance'] = trace['variance'].tolist()
+
+        data = {'cell_set_to_trajectory_embedding': cell_set_to_trajectory_embedding,
+                'ancestry_similarity': ancestry_similarity_traces,
+                'trajectory_trends': trajectory_trends}
         return flask.jsonify(data)
 
     options = {
