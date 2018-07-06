@@ -183,8 +183,8 @@ Dimensionality reduction can be disabled with `--local_pca -1`
 Ancestors and descendants in **wot** are computed through the use of trajectories.
 
 ```sh
-wot trajectory --matrix matrix.txt \
- --cell_days days.txt --out traj
+wot trajectory --tmap . --cell_days days.txt \
+ --cell_set cell_sets.gmt --out traj
 ```
 
 <table class="table table-hover" style="display: table">
@@ -196,8 +196,8 @@ wot trajectory --matrix matrix.txt \
   </thead>
   <tbody>
     <tr>
-      <td><b>--matrix</b></td>
-      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
+      <td><b>--tmap</b></td>
+      <td>Directory containing the transport maps</td>
     </tr>
     <tr>
       <td><b>--cell_days</b></td>
@@ -210,6 +210,10 @@ wot trajectory --matrix matrix.txt \
     <tr>
       <td>--day_pairs</td>
       <td>Target day pairs. See <a href="#day_pairs">formats</a></td>
+    </tr>
+    <tr>
+      <td>--out</td>
+      <td>Output filenames prefix</td>
     </tr>
   </tbody>
 </table>
