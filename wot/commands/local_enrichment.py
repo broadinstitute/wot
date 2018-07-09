@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import os
 import subprocess
 
 import h5py
@@ -19,7 +18,10 @@ def get_scores(ds1, ds2, ds1_time_index, ds2_time_index, score_function):
         m2 = ds2.x[ds2_time_index, feature_idx]
         v1 = ds1.variance[ds1_time_index, feature_idx]
         v2 = ds2.variance[ds2_time_index, feature_idx]
-        scores[feature_idx] = score_function(m1, m2, v1, v2)
+
+        n1 = ds1.row_meta.iloc[ds1_time_index]
+        n2 = ds2.row_meta.iloc[ds2_time_index]
+        scores[feature_idx] = score_function(m1, m2, v1, v2, n1, n1)
     return scores
 
 
@@ -29,9 +31,12 @@ def main(argv):
     parser.add_argument('--matrix1', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--matrix2', help=wot.commands.MATRIX_HELP)
     parser.add_argument('--score',
-                        help='Method to compute differential gene expression score. Choices are signal to noise, mean difference, and fold change',
-                        choices=['s2n', 'mean_difference', 'fold_change'])
-    parser.add_argument('--gsea', help='Run GSEA on the ranked lists', action='store_true')
+                        help='Method to compute differential gene expression score. Choices are signal to noise, mean difference, t-test, and fold change',
+                        choices=['s2n', 'mean_difference', 'fold_change', 't_test'])
+    parser.add_argument('--gsea',
+                        help='Run GSEA on the specified MSigDB collections (http://software.broadinstitute.org/gsea/msigdb/collections.jsp)',
+                        action='append',
+                        choices=['h', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7'], default=['h', 'c2'])
 
     args = parser.parse_args(argv)
     ds1 = wot.io.read_dataset(args.matrix1)
@@ -47,16 +52,19 @@ def main(argv):
         ds2.variance = f['/layers/variance'][()]
         f.close()
 
-    def s2n(m1, m2, v1, v2):
+    def s2n(m1, m2, v1, v2, *varargs):
         denom = (np.sqrt(v1) + np.sqrt(v2))
         s2n = 0.0 if denom == 0.0 else ((m1 - m2) / denom)
         return s2n
 
-    def fold_change(m1, m2, v1, v2):
+    def fold_change(m1, m2, *varargs):
         return m1 / m2
 
-    def mean_difference(m1, m2, v1, v2):
+    def mean_difference(m1, m2, *varargs):
         return m1 - m2
+
+    def t_test(m1, m2, v1, v2, n1, n2):
+        return (m1 - m2) / np.sqrt((v1 / n1) + (v2 / n2));
 
     # dataset has time on rows, genes on columns
     score_function = locals()[args.score]
@@ -77,15 +85,18 @@ def main(argv):
                 name + '.rnk', sep='\t',
                 header=False)
 
-    if args.gsea:
+    if args.gsea is not None and len(args.gsea) > 0:
+        urls = []
+        for c in args.gsea:
+            urls.append('gseaftp.broadinstitute.org://pub/gsea/gene_sets_final/' + c + '.all.v6.1.symbols.gmt')
+        gmx = ','.join(urls)
         for name in names:
             classpath = pkg_resources.resource_filename('wot', 'commands/resources/gsea-3.0.jar')
-            gsea_args = ['java', '-Djava.awt.headless=true', '-cp', classpath, '-Xmx512m', 'xtools.gsea.GseaPreranked',
-                         '-gmx',
-                         'gseaftp.broadinstitute.org://pub/gsea/gene_sets_final/h.all.v6.1.symbols.gmt',
+            gsea_args = ['java', '-Djava.awt.headless=true', '-cp', classpath, '-Xmx4g', 'xtools.gsea.GseaPreranked',
+                         '-gmx', gmx,
                          '-norm', 'meandiv', '-nperm', '1000', '-rnk', name + '.rnk', '-scoring_scheme', 'weighted',
                          '-rpt_label', name, '-create_svgs', 'false',
-                         '-make_sets', 'true', '-plot_top_x', '20', '-rnd_seed', 'timestamp', '-set_max', '500',
+                         '-make_sets', 'true', '-plot_top_x', '50', '-rnd_seed', 'timestamp', '-set_max', '500',
                          '-set_min', '15', '-out',
                          name, '-gui', 'false']
             subprocess.check_call(gsea_args)
