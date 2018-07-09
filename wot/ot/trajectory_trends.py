@@ -13,9 +13,10 @@ class TrajectoryTrends:
         for ds_index in range(len(datasets)):
             ds = datasets[ds_index]
             values = ds.x
-            values = values.toarray() if scipy.sparse.isspmatrix(values) else values
+
             for feature_index in range(ds.x.shape[1]):
                 array = values[:, feature_index]
+                array = array.toarray().flatten() if scipy.sparse.isspmatrix(array) else array
                 if value_transform is not None:
                     array = value_transform(array)
                 mean = np.average(array, weights=weights)
@@ -52,7 +53,6 @@ class TrajectoryTrends:
             cell_set_name = trajectory_result['cell_set']
             time = trajectory_result['t']
             aligned_datasets = []
-
             for ds_index in range(len(unaligned_datasets)):
                 unaligned_ds = unaligned_datasets[ds_index]
                 ds_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids)
@@ -103,15 +103,16 @@ class TrajectoryTrends:
                 for trace_name in trace_name_to_line_trace:
                     trace = trace_name_to_line_trace[trace_name]
                     traces.append(trace)
+                    # sort by time
                     sort_order = np.argsort(trace['x'])
-                    # max_size = max(max_size, np.max(trace['size']))
                     for field in trace_fields_to_concat:
                         trace[field] = trace[field][sort_order]
 
+                    trace['ncells'] = len(p)
                     # if smooth:
                     #     x = trace['x']
                     #     xsmooth, ysmooth = wot.ot.TrajectoryUtil.kernel_smooth(x, trace['y'], stop=x[len(x) - 1])
                     #     trace['x'] = xsmooth
                     #     trace['y'] = ysmooth
 
-            return dataset_name_to_traces
+        return dataset_name_to_traces
