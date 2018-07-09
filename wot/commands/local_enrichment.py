@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import os
+import subprocess
 
 import h5py
 import numpy as np
 import pandas as pd
+import pkg_resources
 import wot.io
 
 
@@ -28,6 +31,7 @@ def main(argv):
     parser.add_argument('--score',
                         help='Method to compute differential gene expression score. Choices are signal to noise, mean difference, and fold change',
                         choices=['s2n', 'mean_difference', 'fold_change'])
+    parser.add_argument('--gsea', help='Run GSEA on the ranked lists', action='store_true')
 
     args = parser.parse_args(argv)
     ds1 = wot.io.read_dataset(args.matrix1)
@@ -56,15 +60,32 @@ def main(argv):
 
     # dataset has time on rows, genes on columns
     score_function = locals()[args.score]
-
+    names = []
     if ds2 is not None:
         for i in range(ds1.x.shape[0]):  # each time
             scores = get_scores(ds1, ds2, i, i, score_function)
-            pd.DataFrame(index=ds1.col_meta.index.values, data={'scores': scores}).to_csv(
-                str(ds1.row_meta.index.values[i]) + '.rnk', sep='\t', header=False)
+            name = str(ds1.row_meta.index.values[i])
+            names.append(name)
+            pd.DataFrame(index=ds1.col_meta.index.str.upper().values, data={'scores': scores}).to_csv(
+                name + '.rnk', sep='\t', header=False)
     else:
         for i in range(1, ds1.x.shape[0]):
             scores = get_scores(ds1, ds1, i - 1, i, score_function)
-            pd.DataFrame(index=ds1.col_meta.index.values, data={'scores': scores}).to_csv(
-                str(ds1.row_meta.index.values[i - 1]) + '_' + str(ds1.row_meta.index.values[i]) + '.rnk', sep='\t',
+            name = str(ds1.row_meta.index.values[i - 1]) + '_' + str(ds1.row_meta.index.values[i])
+            names.append(name)
+            pd.DataFrame(index=ds1.col_meta.index.str.upper().values, data={'scores': scores}).to_csv(
+                name + '.rnk', sep='\t',
                 header=False)
+
+    if args.gsea:
+        for name in names:
+            classpath = pkg_resources.resource_filename('wot', 'commands/resources/gsea-3.0.jar')
+            gsea_args = ['java', '-Djava.awt.headless=true', '-cp', classpath, '-Xmx512m', 'xtools.gsea.GseaPreranked',
+                         '-gmx',
+                         'gseaftp.broadinstitute.org://pub/gsea/gene_sets_final/h.all.v6.1.symbols.gmt',
+                         '-norm', 'meandiv', '-nperm', '1000', '-rnk', name + '.rnk', '-scoring_scheme', 'weighted',
+                         '-rpt_label', name, '-create_svgs', 'false',
+                         '-make_sets', 'true', '-plot_top_x', '20', '-rnd_seed', 'timestamp', '-set_max', '500',
+                         '-set_min', '15', '-out',
+                         name, '-gui', 'false']
+            subprocess.check_call(gsea_args)
