@@ -266,6 +266,7 @@ class OptimalTransportHelper:
         covariate_df = self.covariate_df
         covariate_pairs = self.covariate_pairs
         day_to_indices = self.day_to_indices
+        callback_call_count = 0
         ds = self.ds
         for day_index in range(day_pairs.shape[0]):
             t0 = day_pairs.iloc[day_index, 0]
@@ -372,4 +373,8 @@ class OptimalTransportHelper:
                 callback({'t0': t0, 't1': t1, 'result': result, 'df0': p0.row_meta, 'df1': p1.row_meta,
                           'P0': p0, 'P1': p1, 'P0.5': p0_5_full, 'g': growth_rate ** delta_t,
                           'P0_suffix': '_cv-' + str(cv0) if cv0 is not None else '',
-                          'P1_suffix': '_cv-' + str(cv1) if cv1 is not None else '', 'cv0': cv0, 'cv1': cv1})
+                          'P1_suffix': '_cv-' + str(cv1) if cv1 is not None else '',
+                          'cv0': cv0, 'cv1': cv1,
+                          'call_count': callback_call_count,
+                          'total_call_count': len(day_pairs) * len(covariate_pairs) })
+                callback_call_count += 1
