@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import wot
 import math
+
 import numpy
 import pandas
 import scipy.sparse
+import wot
 
 
 # Compute the z-score for each gene in the set. Truncate these z-scores at 5

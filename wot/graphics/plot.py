@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from matplotlib import pyplot
 from matplotlib import patches
+from matplotlib import pyplot
+
 
 def __make_figure(y = 1, x = 1, projection=None):
     pyplot.clf()

@@ -1,5 +1,5 @@
-import scipy
 import numpy as np
+import scipy
 import wot
 
 
@@ -18,7 +18,7 @@ class TrajectoryTrends:
         return {'mean': mean, 'variance': variance}
 
     @staticmethod
-    def compute(trajectory_results, unaligned_datasets, dataset_names, value_transform=None):
+    def compute_dataset_name_to_trends(trajectory_results, unaligned_datasets, dataset_names, value_transform=None):
         """
 
         Args:
@@ -27,7 +27,7 @@ class TrajectoryTrends:
             dataset_names (list): List of dataset names
             value_transform (function) A function to transform the values in the dataset that takes a numpy array and returns a numpy array of the same shape.
         Return:
-            Dict that maps dataset name to trends
+            Dict that maps dataset name to trends. A trend is a dict of mean, variance, times, ncells, cell_set, and features. Means and variance have time on rows and features on columns.
         """
         cell_set_name_to_trajectories = wot.ot.Trajectory.group_trajectories_by_cell_set(trajectory_results)
         dataset_name_to_trends = {}

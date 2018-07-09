@@ -1,9 +1,9 @@
+import numexpr as ne
 import numpy as np
+import scipy
 import wot.grn
 from scipy.stats import entropy
-import numexpr as ne
 from sklearn.cluster import SpectralClustering
-import scipy
 
 
 def dum(x):

@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import wot.io
+
 import numpy
+import wot.io
+
 
 def get_cells_in_gene_sets(gene_sets, dataset, quantile=.01):
     cell_sets = {}

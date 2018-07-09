@@ -1,13 +1,14 @@
+import argparse
+import io
+import os
+
 import numpy as np
 import pandas as pd
 import scipy
-import sklearn.metrics
 import sklearn.decomposition
-import argparse
-import io
-import wot.ot
+import sklearn.metrics
 import wot.io
-import os
+import wot.ot
 
 
 class OptimalTransportHelper:

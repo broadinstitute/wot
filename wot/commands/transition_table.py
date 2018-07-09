@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import wot.io
+
 import numpy as np
 import pandas as pd
+import wot.io
 
 
 def get_set_id_to_indices(cell_sets, tmap, is_columns):

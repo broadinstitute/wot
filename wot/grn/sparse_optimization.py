@@ -1,7 +1,7 @@
-import numpy as np
-from scipy.stats import entropy
 import numexpr as ne
+import numpy as np
 from scipy.optimize import fmin_tnc
+from scipy.stats import entropy
 from sklearn.metrics.pairwise import pairwise_distances
 
 

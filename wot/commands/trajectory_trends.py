@@ -6,9 +6,9 @@ import os
 
 import h5py
 import numpy as np
+import scipy
 import wot.io
 import wot.ot
-import scipy
 
 
 def main(argv):
@@ -62,9 +62,10 @@ def main(argv):
     trajectories = wot.ot.Trajectory.trajectory_for_cell_sets(transport_maps=transport_maps,
                                                               time_to_cell_sets=time_to_cell_sets)
 
-    dataset_name_to_trends = wot.ot.TrajectoryTrends.compute(trajectories, datasets, dataset_names,
-                                                             value_transform=value_transform if len(
-                                                                 value_transform_functions) > 0 else None)
+    dataset_name_to_trends = wot.ot.TrajectoryTrends.compute_dataset_name_to_trends(trajectories, datasets,
+                                                                                    dataset_names,
+                                                                                    value_transform=value_transform if len(
+                                                                                        value_transform_functions) > 0 else None)
 
     for ds_name in dataset_name_to_trends:
         trends = dataset_name_to_trends[ds_name]  # one trend per cell set

@@ -59,8 +59,8 @@ assemble_multi_index_df method in GCToo.py assembles them.
 
 """
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import wot
 
 __author__ = "Lev Litichevskiy, Oana Enache"

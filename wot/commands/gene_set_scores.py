@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import wot.io
 import os
+
+import wot.io
 
 
 def compute(matrix, gene_sets, no_zscore, out, format, use_dask=False):

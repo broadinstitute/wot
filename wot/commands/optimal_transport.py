@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 
-import wot.ot
 import wot.io
+import wot.ot
 
 
 def main(argv):

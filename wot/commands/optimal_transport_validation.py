@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import wot.ot
-import wot.io
-import pandas as pd
 import numpy as np
-import sklearn.metrics.pairwise
+import pandas as pd
+import wot.io
+import wot.ot
 
 
 def main(argv):

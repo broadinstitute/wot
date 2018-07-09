@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+import numpy as np
 import pandas as pd
 import scipy
-import numpy as np
 
 
 def transport_map_distance(transport_map_1, transport_map_2, column_weights):

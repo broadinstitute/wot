@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-import h5py
-import pandas as pd
-import wot
-import numpy as np
-import sys
-import os
 import glob
-import scipy.sparse
+import os
+import sys
+
+import h5py
+import numpy as np
+import pandas as pd
 import scipy.io
+import scipy.sparse
+import wot
 
 
 def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):

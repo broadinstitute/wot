@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 
 def full_trajectory(transport_maps, time, ids=None, normalize=False):
