@@ -457,9 +457,54 @@ Example:
 <tr><td>4</td><td>6</td></tr>
 </table>
 
+### <a name="geneset_file">Gene sets</a> ###
+
+Gene sets can be in **gmx** (Gene MatriX), or **gmt** (Gene Matrix Transposed) format.
+
+The **gmt** format is convenient to store large databases of gene sets.
+However, for a handful of sets, the **gmx** format might offer better
+excel-editablity.
+
+More information on the gene set formats can be found
+in the [Broad Institute Software Documentation](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#Gene_Set_Database_Formats)
+
+##### GMT #####
+
+The **gmt** format consists of one gene set per line. Each line is a
+tab-separated list composed as follows :
+
+- The gene set name (can contain spaces)
+- A commentary / description of the gene set (may be empty or contain spaces)
+- A tab-separated list of genes
+
+Example:
+
+<table class="table" style="display: table">
+<tr><td>Tip1</td><td>The first tip</td><td>gene_2</td><td>gene_5</td></tr>
+<tr><td>Tip2</td><td>The second tip</td><td>gene_3</td></tr>
+<tr><td>Tip3</td><td>The third tip</td><td>gene_4</td><td>gene_5</td></tr>
+</table>
+
+##### GMX #####
+
+The **gmx** format is the transposed of the **gmx** format.
+Each column represents a gene set. It is also tab-separated.
+
+Example:
+
+<table class="table" style="display: table">
+<tr><td>Tip1</td><td>Tip2</td><td>Tip3</td></tr>
+<tr><td>The first tip</td><td>The second tip</td><td>The third tip</td></tr>
+<tr><td>gene_2</td><td>gene_3</td><td>gene_4</td></tr>
+<tr><td>gene_5</td><td></td><td>gene_5</td></tr>
+</table>
+
+
 ### <a name="cellset_file">Cell sets</a> ###
 
-**TODO**: describe cell sets here
+Cell sets can be described using the same formats as gene sets.
+Simply list the ids of the cell in a set where you would have listed
+the name of the genes in a gene set.
 
 ## More documentation ##
 ------------------------------
