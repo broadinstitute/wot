@@ -65,7 +65,7 @@ def main(argv):
 
     dataset_name_to_traces = wot.ot.TrajectoryTrends.compute(trajectories, datasets, dataset_names,
                                                              value_transform=value_transform if len(
-                                                                 value_transform_functions) else None)
+                                                                 value_transform_functions) > 0 else None)
 
     transport_map_times = list(transport_map_times)
     transport_map_times.sort()

@@ -26,9 +26,9 @@ class TrajectoryTrends:
                     "cell_set_name": cell_set_name,
                     "feature": str(ds.col_meta.index.values[feature_index]),
                     "name": cell_set_name + '_' + str(ds.col_meta.index.values[feature_index]),
+                    "x": t,
                     "y": mean,
-                    "variance": variance,
-                    "x": t
+                    "variance": variance
                 }
                 results.append(trace)
         return results
@@ -90,11 +90,11 @@ class TrajectoryTrends:
                                       'feature': trace['feature']
                                       }
                         for field in trace_fields_to_concat:
-                            line_trace[field] = np.array([trace[field]])
+                            line_trace[field] = [trace[field]]
                         trace_name_to_line_trace[line_trace['name']] = line_trace
                     else:
                         for field in trace_fields_to_concat:
-                            line_trace[field] = np.concatenate((line_trace[field], [trace[field]]))
+                            line_trace[field] += [trace[field]]
             dataset_name_to_traces = {}
             for dataset_name in dataset_name_to_line_traces:
                 trace_name_to_line_trace = dataset_name_to_line_traces[dataset_name]
@@ -104,6 +104,8 @@ class TrajectoryTrends:
                     trace = trace_name_to_line_trace[trace_name]
                     traces.append(trace)
                     # sort by time
+                    for field in trace_fields_to_concat:
+                        trace[field] = np.array(trace[field])
                     sort_order = np.argsort(trace['x'])
                     for field in trace_fields_to_concat:
                         trace[field] = trace[field][sort_order]
