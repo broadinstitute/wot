@@ -248,7 +248,8 @@ at time fraction 0.5, which would result in time point 1 here.
 wot optimal_transport_validation --matrix matrix.txt \
  --cell_days days.txt --day_pairs day_pairs.txt \
  --out val_tmaps --t_interpolate .5 \
- --save_interpolated --local_pca -1
+ --save_interpolated --local_pca -1 \
+ --covariate covariate.txt
 ```
 
 This would create two files : `val_tmaps_I_1.0.txt`
