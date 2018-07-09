@@ -63,9 +63,8 @@ def main(argv):
             pd.DataFrame(index=ds1.col_meta.index.values, data={'scores': scores}).to_csv(
                 str(ds1.row_meta.index.values[i]) + '.rnk', sep='\t', header=False)
     else:
-        for i in range(ds1.x.shape[0]):
-            for j in range(i):
-                scores = get_scores(ds1, ds2, i, j, score_function)
-                pd.DataFrame(index=ds1.col_meta.index.values, data={'scores': scores}).to_csv(
-                    str(ds1.row_meta.index.values[i]) + '_' + str(ds2.row_meta.index.values[j]) + '.rnk', sep='\t',
-                    header=False)
+        for i in range(1, ds1.x.shape[0]):
+            scores = get_scores(ds1, ds1, i - 1, i, score_function)
+            pd.DataFrame(index=ds1.col_meta.index.values, data={'scores': scores}).to_csv(
+                str(ds1.row_meta.index.values[i - 1]) + '_' + str(ds1.row_meta.index.values[i]) + '.rnk', sep='\t',
+                header=False)

@@ -43,7 +43,6 @@ def main(argv):
     dataset_names = []
     dataset_names.append(wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0])
     ds = wot.io.read_dataset(args.matrix)
-    nfeatures = ds.x.shape[1]
     datasets.append(ds)
     value_transform_functions = []
     if args.matrix_transform is not None and len(args.matrix_transform) > 0:
@@ -63,61 +62,34 @@ def main(argv):
     trajectories = wot.ot.Trajectory.trajectory_for_cell_sets(transport_maps=transport_maps,
                                                               time_to_cell_sets=time_to_cell_sets)
 
-    dataset_name_to_traces = wot.ot.TrajectoryTrends.compute(trajectories, datasets, dataset_names,
+    dataset_name_to_trends = wot.ot.TrajectoryTrends.compute(trajectories, datasets, dataset_names,
                                                              value_transform=value_transform if len(
                                                                  value_transform_functions) > 0 else None)
 
-    transport_map_times = list(transport_map_times)
-    transport_map_times.sort()
-    ds_shape = (len(transport_map_times), nfeatures)
-    for ds_name in dataset_name_to_traces:
-        all_traces = dataset_name_to_traces[ds_name]  # each trace is a cell set/feature combo
-        cell_set_name_to_traces = {}
-        for trace in all_traces:
-            cell_set_name = trace['cell_set_name']
-            traces = cell_set_name_to_traces.get(cell_set_name)
-            if traces is None:
-                traces = []
-                cell_set_name_to_traces[cell_set_name] = traces
-            traces.append(trace)
+    for ds_name in dataset_name_to_trends:
+        trends = dataset_name_to_trends[ds_name]  # one trend per cell set
 
-        for cell_set_name in cell_set_name_to_traces:
-            traces = cell_set_name_to_traces[cell_set_name]
-            traces.sort(key=lambda x: x['feature'])
+        for trend in trends:
             # for each dataset, output a matrix with time on rows and features on columns. Values in matrix are mean expression
-            f = h5py.File(ds_name + '_' + cell_set_name + '_' + 'trajectory_trends.loom', 'w')
+            f = h5py.File(ds_name + '_' + trend['cell_set'] + '_' + 'trajectory_trends.loom', 'w')
             f.create_group('/layers')
             f.create_group('/row_graphs')
             f.create_group('/col_graphs')
-            f.create_dataset('/row_attrs/id', data=transport_map_times)
-            features = []
+            f.create_dataset('/row_attrs/id', data=trend['times'])
+            f.create_dataset('/col_attrs/id', data=trend['features'].astype('S'))
+            f.create_dataset('/row_attrs/ncells', data=trend['ncells'])
+            f.create_dataset('/matrix',
+                             chunks=(1000, 1000) if trend['mean'].shape[0] >= 1000 and trend['mean'].shape[
+                                 1] >= 1000 else None,
+                             maxshape=(None, trend['mean'].shape[1]),
+                             compression='gzip', compression_opts=9,
+                             data=trend['mean'])
+            f.create_dataset('/layers/variance',
+                             chunks=(1000, 1000) if trend['mean'].shape[0] >= 1000 and trend['mean'].shape[
+                                 1] >= 1000 else None,
+                             maxshape=(None, trend['mean'].shape[1]),
+                             compression='gzip', compression_opts=9,
+                             data=trend['variance'])
 
-            dset = f.create_dataset('/matrix', shape=ds_shape,
-                                    chunks=(1000, 1000) if ds_shape[0] >= 1000 and ds_shape[1] >= 1000 else None,
-                                    maxshape=(None, ds_shape[1]),
-                                    compression='gzip', compression_opts=9,
-                                    data=None)
-            variance_dset = f.create_dataset('/layers/variance', shape=ds_shape,
-                                             chunks=(1000, 1000) if ds_shape[0] >= 1000 and ds_shape[
-                                                 1] >= 1000 else None,
-                                             maxshape=(None, ds_shape[1]),
-                                             compression='gzip', compression_opts=9,
-                                             data=None)
-
-            ncells = []
-            for i in range(len(traces)):
-                trace = traces[i]
-                # cell_set_name = np.string_(trace['cell_set_name'])
-                feature = np.string_(trace['feature'])
-                # cell_set_names.append(cell_set_name)
-                features.append(feature)
-                dset[:, i] = trace['y']
-                variance_dset[:, i] = trace['variance']
-                ncells.append(trace['ncells'])
-                # cids.append(np.string_(trace['name']))
-                # cids.append()
-
-            f.create_dataset('/col_attrs/id', data=features)
-            f.create_dataset('/row_attrs/ncells', data=ncells)
             # f.create_dataset('/col_attrs/cell_set', data=cell_set_names)
             f.close()

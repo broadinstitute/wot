@@ -6,32 +6,16 @@ import wot
 class TrajectoryTrends:
 
     @staticmethod
-    def __weighted_average(t, weights, cell_set_name, datasets=None, dataset_names=None, value_transform=None):
+    def __weighted_average(weights, ds, value_transform=None):
         if weights is not None:
             weights = weights / np.sum(weights)
-        results = []
-        for ds_index in range(len(datasets)):
-            ds = datasets[ds_index]
-            values = ds.x
-
-            for feature_index in range(ds.x.shape[1]):
-                array = values[:, feature_index]
-                array = array.toarray().flatten() if scipy.sparse.isspmatrix(array) else array
-                if value_transform is not None:
-                    array = value_transform(array)
-                mean = np.average(array, weights=weights)
-                variance = np.average((array - mean) ** 2, weights=weights)
-                trace = {
-                    "dataset": dataset_names[ds_index],
-                    "cell_set_name": cell_set_name,
-                    "feature": str(ds.col_meta.index.values[feature_index]),
-                    "name": cell_set_name + '_' + str(ds.col_meta.index.values[feature_index]),
-                    "x": t,
-                    "y": mean,
-                    "variance": variance
-                }
-                results.append(trace)
-        return results
+        values = ds.x
+        values = values.toarray() if scipy.sparse.isspmatrix(values) else values
+        if value_transform is not None:
+            values = value_transform(values)
+        mean = np.average(values, weights=weights, axis=0)
+        variance = np.average((values - mean) ** 2, weights=weights, axis=0)
+        return {'mean': mean, 'variance': variance}
 
     @staticmethod
     def compute(trajectory_results, unaligned_datasets, dataset_names, value_transform=None):
@@ -43,78 +27,40 @@ class TrajectoryTrends:
             dataset_names (list): List of dataset names
             value_transform (function) A function to transform the values in the dataset that takes a numpy array and returns a numpy array of the same shape.
         Return:
-            Dict that maps dataset name to traces
+            Dict that maps dataset name to trends
         """
+        cell_set_name_to_trajectories = wot.ot.Trajectory.group_trajectories_by_cell_set(trajectory_results)
+        dataset_name_to_trends = {}
+        for ds_index in range(len(unaligned_datasets)):
+            unaligned_ds = unaligned_datasets[ds_index]
+            trends = []
+            for cell_set_name in cell_set_name_to_trajectories:
+                means = []
+                variances = []
+                times = []
+                ncells = []
+                trajectories = cell_set_name_to_trajectories[cell_set_name]
 
-        traces = []
-        for trajectory_result in trajectory_results:
-            p = trajectory_result['p']
-            cell_ids = trajectory_result['cell_ids']
-            cell_set_name = trajectory_result['cell_set']
-            time = trajectory_result['t']
-            aligned_datasets = []
-            for ds_index in range(len(unaligned_datasets)):
-                unaligned_ds = unaligned_datasets[ds_index]
-                ds_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids)
-                ds_order = ds_order[ds_order != -1]
-                aligned_datasets.append(
-                    wot.Dataset(unaligned_ds.x[ds_order], unaligned_ds.row_meta.iloc[ds_order], unaligned_ds.col_meta))
-                traces += TrajectoryTrends.__weighted_average(t=time, weights=p,
-                                                              datasets=aligned_datasets,
-                                                              cell_set_name=cell_set_name,
-                                                              dataset_names=dataset_names,
-                                                              value_transform=value_transform)
-            trace_fields_to_concat = ['x', 'y', 'variance']
-            dataset_name_to_all_traces = {}
-            for trace in traces:
-                dataset_traces = dataset_name_to_all_traces.get(trace['dataset'])
-                if dataset_traces is None:
-                    dataset_traces = []
-                    dataset_name_to_all_traces[trace['dataset']] = dataset_traces
-                dataset_traces.append(trace)
-            dataset_name_to_line_traces = {}
+                # trajectories are sorted by time
+                for trajectory in trajectories:
+                    p = trajectory['p']
+                    cell_ids = trajectory['cell_ids']
+                    times.append(trajectory['t'])
+                    ncells.append(len(cell_ids))
+                    # align dataset with cell_ids
+                    ds_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids)
+                    ds_order = ds_order[ds_order != -1]
+                    aligned_dataset = wot.Dataset(unaligned_ds.x[ds_order], unaligned_ds.row_meta.iloc[ds_order],
+                                                  unaligned_ds.col_meta)
+                    mean_and_variance = TrajectoryTrends.__weighted_average(weights=p, ds=aligned_dataset,
+                                                                            value_transform=value_transform)
+                    means.append(mean_and_variance['mean'])
+                    variances.append(mean_and_variance['variance'])
 
-            for dataset_name in dataset_name_to_all_traces:
-                all_traces = dataset_name_to_all_traces[dataset_name]
-                trace_name_to_line_trace = {}
-                dataset_name_to_line_traces[dataset_name] = trace_name_to_line_trace
-                for trace in all_traces:
-                    line_trace = trace_name_to_line_trace.get(trace['name'])
-                    if line_trace is None:
-                        line_trace = {'name': trace['name'],
-                                      "mode": "lines+markers",
-                                      "showlegend": True,
-                                      "type": 'scatter',
-                                      "dataset": trace['dataset'],
-                                      "cell_set_name": trace['cell_set_name'],
-                                      'feature': trace['feature']
-                                      }
-                        for field in trace_fields_to_concat:
-                            line_trace[field] = [trace[field]]
-                        trace_name_to_line_trace[line_trace['name']] = line_trace
-                    else:
-                        for field in trace_fields_to_concat:
-                            line_trace[field] += [trace[field]]
-            dataset_name_to_traces = {}
-            for dataset_name in dataset_name_to_line_traces:
-                trace_name_to_line_trace = dataset_name_to_line_traces[dataset_name]
-                traces = []
-                dataset_name_to_traces[dataset_name] = traces
-                for trace_name in trace_name_to_line_trace:
-                    trace = trace_name_to_line_trace[trace_name]
-                    traces.append(trace)
-                    # sort by time
-                    for field in trace_fields_to_concat:
-                        trace[field] = np.array(trace[field])
-                    sort_order = np.argsort(trace['x'])
-                    for field in trace_fields_to_concat:
-                        trace[field] = trace[field][sort_order]
-
-                    trace['ncells'] = len(p)
-                    # if smooth:
-                    #     x = trace['x']
-                    #     xsmooth, ysmooth = wot.ot.TrajectoryUtil.kernel_smooth(x, trace['y'], stop=x[len(x) - 1])
-                    #     trace['x'] = xsmooth
-                    #     trace['y'] = ysmooth
-
-        return dataset_name_to_traces
+                mean = np.array(means)
+                variance = np.array(variances)
+                trends.append(
+                    {'mean': mean, 'variance': variance, 'times': times, 'ncells': ncells, 'cell_set': cell_set_name,
+                     'features': unaligned_ds.col_meta.index.values})
+            dataset_name_to_trends[dataset_names[ds_index]] = trends
+        return dataset_name_to_trends
