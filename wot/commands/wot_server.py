@@ -3,16 +3,17 @@
 
 import argparse
 import os
-import wot.io
-import wot.ot
+import sys
+
+import flask
+import gunicorn.app.base
 import numpy as np
 import pandas as pd
-import sys
-import flask
 import scipy
-import gunicorn.app.base
-from gunicorn.six import iteritems
 import simplejson as json
+import wot.io
+import wot.ot
+from gunicorn.six import iteritems
 
 
 class StandaloneApplication(gunicorn.app.base.BaseApplication):
@@ -234,16 +235,21 @@ def main(argsv):
         cell_set_to_trajectory_embedding = wot.ot.Trajectory.trajectory_embedding(trajectories,
                                                                                   cell_metadata[['x', 'y']])
         ancestry_similarity_traces = wot.ot.Trajectory.ancestry_similarity(trajectories)
-        trajectory_trends = wot.ot.TrajectoryTrends.compute(trajectories, filtered_datasets, filtered_dataset_names)
-
-        # convert to list for jsonify
-        for name in trajectory_trends:
-            traces = trajectory_trends[name]
-            for trace in traces:
-                trace['x'] = trace['x'].tolist()
-                trace['y'] = trace['y'].tolist()
-                trace['variance'] = trace['variance'].tolist()
-
+        dataset_name_to_trends = wot.ot.TrajectoryTrends.compute_dataset_name_to_trends(trajectories, filtered_datasets,
+                                                                                        filtered_dataset_names)
+        trajectory_trends = {}
+        for dataset_name in dataset_name_to_trends:
+            trends = dataset_name_to_trends[dataset_name]
+            # mean, variance, times, ncells, cell_set, and features
+            # create a trace for each feature/cell set
+            traces = []
+            trajectory_trends[dataset_name] = traces
+            for trend in trends:
+                features = trend['features']
+                for j in range(len(features)):
+                    trace = {'x': trend['times'], 'y': trend['mean'][:, j].tolist(),
+                             'name': trend['cell_set'] + ' ' + features[j]}
+                    traces.append(trace)
         data = {'cell_set_to_trajectory_embedding': cell_set_to_trajectory_embedding,
                 'ancestry_similarity': ancestry_similarity_traces,
                 'trajectory_trends': trajectory_trends}
