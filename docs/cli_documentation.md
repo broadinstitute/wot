@@ -144,7 +144,7 @@ convenient with the [convert_matrix tool](#matrix_file).
       <td>Target day pairs. See <a href="#day_pairs">formats</a></td>
     </tr>
     <tr>
-      <td>--scaling_iterations</td>
+      <td>--scaling_iter</td>
       <td>Number of iterations performed while scaling &epsilon;<br/>default : 3000</td>
     </tr>
     <tr>
