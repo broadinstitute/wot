@@ -2,7 +2,7 @@
 
 import numpy
 
-def interp(t, tp, fp, left=None, right=None):
+def interp(t, tp, fp, left=None, right=None, method='linear', smooth=0):
     """
     Multi-dimensional linear interpolation.
     Returns the N-dimensional piecewise linear interpolant to a function
@@ -20,6 +20,10 @@ def interp(t, tp, fp, left=None, right=None):
         Value to return for `t < tp[0]`, default is `fp[0]`.
     right : optional float or complex corresponding to fp
         Value to return for `t > tp[-1]`, default is `fp[-1]`.
+    method : either 'linear' or 'quadratic'
+        Spline to use when fitting the points
+    smooth : int
+        If above 0, number of points to use for running average smoothing
 
     Returns
     -------
@@ -60,25 +64,41 @@ def interp(t, tp, fp, left=None, right=None):
         right = fp[-1]
 
     if return_array:
-        return __interp_func(t, tp, fp, left, right)
+        return __interp_func(t, tp, fp, left, right, method, smooth=smooth)
     else:
-        return __interp_func(t, tp, fp, left, right).item()
+        return __interp_func(t, tp, fp, left, right, method).item()
 
 
-def __interp_func(t_seq, tp, fp, left, right):
+def __interp_func(t_seq, tp, fp, left, right, method='linear', smooth=0):
     x = []
     for t in t_seq:
+        z = numpy.zeros_like(fp[0])
         i = 0
         if tp[0] > t:
             x.append(left)
             continue
         while i + 1 < len(tp) and tp[i + 1] < t:
+            z = - z + 2 * (fp[i+1] - fp[i]) / (tp[i+1] - tp[i])
             i += 1
         if i + 1 == len(tp):
             x.append(right)
             continue
-        r = ( t - tp[i] ) / ( tp[i + 1] - tp[i] )
-        x.append(numpy.asarray(fp[i] * (1 - r) + fp[i+1] * r, dtype=numpy.float64))
+        if method == 'linear':
+            r = ( t - tp[i] ) / ( tp[i + 1] - tp[i] )
+            x.append(numpy.asarray(fp[i] * (1 - r) + fp[i+1] * r, dtype=numpy.float64))
+        elif method == 'quadratic':
+            z_1 = 2 * (fp[i+1] - fp[i]) / (tp[i+1] - tp[i]) - z
+            x.append(numpy.asarray(
+                fp[i] + z * (t - tp[i]) + (z_1 - z) * ((t - tp[i]) ** 2) / (2 * (tp[i+1] - tp[i])),
+                dtype=numpy.float64))
+        else:
+            raise ValueError("Unkown interpolation method")
+    # running mean
+    if smooth > 0:
+        smooth += 1 - smooth % 2
+        i = (smooth - 1)//2
+        c = numpy.cumsum(numpy.concatenate([x[:i+1], x, x[-i:]]), axis=0)
+        x = (c[smooth:] - c[:-smooth]) / float(smooth)
     return x
 
 def multivariate_normal_mixture(means, covs, p=None, size=1):

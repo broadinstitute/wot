@@ -11,7 +11,7 @@ def main(argv):
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='loom', choices=wot.commands.FORMAT_CHOICES)
     parser.add_argument('matrix', help='File(s) to convert', nargs='+')
     args = parser.parse_args(argv)
-    files = args.file
+    files = args.matrix
 
     for f in files:
         name = wot.io.get_filename_and_extension(f)[0]

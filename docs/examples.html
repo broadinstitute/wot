@@ -1,0 +1,39 @@
+---
+noheader: true
+layout: base
+location: Examples
+permalink: examples/
+
+examples:
+ - title: Generating data
+   image: generated_pop.png
+   text: Pellentesque sed cursus velit. Cras tristique lectus efficitur arcu lacinia, in placerat justo iaculis. Quisque placerat arcu malesuada, maximus eros et, rutrum lorem. Fusce vitae diam tempus, posuere augue in, tincidunt purus. Nam id iaculis mauris.
+   link: generating_data
+---
+
+<div class="container my-5">
+  <h3 class="text-center my-5">A few examples on how to use <b>wot</b></h3>
+
+  <hr class="featurette-divider">
+
+  {% for example in page.examples %}
+    <div class="row featurette my-5">
+      <div class="col-md-5 {% cycle('order-1', 'order-3') %}">
+        <img class="featurette-image img-responsive mx-auto d-block"
+             src="{{site.baseurl}}/images/{{ example['image'] }}"
+             width=300 height=300 alt="Generic placeholder image">
+      </div>
+
+      <div class="col-md-7 order-2">
+        <a href="{{ example['link'] }}" class="nostyle">
+          <h2 class="featurette-heading my-3">
+            {{ example['title'] }}
+          </h2>
+        </a>
+        <p class="lead my-3">{{ example['text'] }}</p>
+      </div>
+    </div>
+
+    <hr class="featurette-divider">
+  {% endfor %}
+</div>

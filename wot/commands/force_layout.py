@@ -68,9 +68,13 @@ def main(argv):
     if args.out is None:
         args.out = 'wot'
 
+    if not os.path.isfile(args.matrix):
+        print("Input matrix is not a file")
+        exit(1)
     ds = wot.io.read_dataset(args.matrix)
-    df, adata = compute_force_layout(ds, neighbors=args.neighbors, neighbors_diff=args.neighbors_diff,
-                                     n_comps=args.n_comps, n_steps=args.n_steps)
+    df, adata = compute_force_layout(ds, n_neighbors=args.neighbors,
+            neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
+            n_steps=args.n_steps)
     adata.write(args.out + '.h5ad')
     csv_file = args.out if args.out.lower().endswith('.csv') else args.out + '.csv'
     df.to_csv(csv_file, index_label='id')

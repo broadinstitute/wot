@@ -3,6 +3,7 @@ import h5py
 import pandas as pd
 import wot
 import numpy as np
+import sys
 import os
 import glob
 import scipy.sparse
@@ -173,6 +174,7 @@ def read_grp(path, feature_ids=None):
                     set_ids.append(id)
 
         x = np.zeros(shape=(len(row_ids), len(set_names)), dtype=np.int8)
+        # TODO: check that len(members) > 1 otherwise get rid of it
         for j in range(len(members)):
             ids = members[j]
             for id in ids:
@@ -290,6 +292,30 @@ def read_gmx(path, feature_ids=None):
                                 index=set_ids)
         return wot.Dataset(x, row_meta=row_meta, col_meta=col_meta)
 
+def write_gene_sets(gene_sets, path, format=None):
+    path = str(path)
+    basename, ext = get_filename_and_extension(path)
+
+    if path is None or path in ['STDOUT', 'stdout', '/dev/stdout']:
+        f = sys.stdout
+    else:
+        if format is not None and ext != format:
+            path = path + '.' + format
+        f = open(path, 'w')
+
+    if format == 'gmt':
+        write_gmt(gene_sets, f)
+    elif format == 'gmx' or  format == 'txt' or format == 'grp':
+        raise ValueError("Filetype not supported for writing")
+    else:
+        raise ValueError("Unkown file format for gene sets")
+
+    if f is not sys.stdout:
+        f.close()
+
+def write_gmt(gene_sets, f):
+    for gset in gene_sets:
+        f.write('{}\t{}\t{}\n'.format(gset, '-', '\t'.join(gene_sets[gset])))
 
 def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_filter=None, col_filter=None,
                  force_sparse=False, backed=False):

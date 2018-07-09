@@ -2,6 +2,7 @@
 ---
 
 @import "{{ site.theme }}";
+@import url('https://fonts.googleapis.com/css?family=Inconsolata');
 
 nav[data-toggle='toc'] {
   margin-top: 3rem;
@@ -39,3 +40,34 @@ nav[data-toggle='toc'] .nav .nav > li > a {
   }
 }
 
+.nounderline {
+  text-decoration: none !important;
+}
+
+a.nostyle, a.nostyle:hover, a.nostyle:active, a.nostyle:focus {
+  text-decoration: none !important;
+  color: inherit;
+}
+
+.cayman-navbar {
+  color: $header-heading-color;
+  text-align: center;
+  background-color: $header-bg-color-secondary;
+  background-image: linear-gradient(20deg, $header-bg-color-secondary, $header-bg-color);
+}
+
+@media all and (max-width: 768px) {
+  .cayman-navbar {
+    background-image: none;
+  }
+}
+
+.main-content pre > code {
+  font-family: 'Inconsolata', monospace;
+  font-size: 1.2rem;
+  line-height: 1.45rem;
+}
+
+.main-content {
+  padding: 2rem 1rem;
+}
