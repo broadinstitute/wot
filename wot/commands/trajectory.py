@@ -14,6 +14,7 @@ def main(argv):
     parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True, action='append')
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     parser.add_argument('--out', help='Output file name', default='wot_trajectory')
+    parser.add_argument('--progress', action='store_true', help='Print a progress bar while computing')
 
     args = parser.parse_args(argv)
 
@@ -31,8 +32,14 @@ def main(argv):
         transport_map_times.add(tmap['t1'])
         transport_map_times.add(tmap['t2'])
 
-    trajectories = wot.ot.Trajectory.trajectory_for_cell_sets(transport_maps=transport_maps,
-                                                              time_to_cell_sets=time_to_cell_sets)
+    if args.progress:
+        wot.io.output_progress(0)
+    trajectories = \
+            wot.ot.Trajectory.trajectory_for_cell_sets(
+                    transport_maps=transport_maps,
+                    time_to_cell_sets=time_to_cell_sets,
+                    cache_transport_maps=False,
+                    print_progress=args.progress)
 
     # create a matrix with cell set on columns, cell ids on rows
 

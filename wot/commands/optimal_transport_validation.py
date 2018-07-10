@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
 import wot.ot
 import wot.io
 import pandas as pd
 import numpy as np
-from math import log10
 import sklearn.metrics.pairwise
 
 
@@ -21,6 +19,7 @@ def main(argv):
     parser.add_argument('--save_interpolated', action='store_true', help='Save interpolated point clouds')
     parser.add_argument('--save_transport', action='store_true', help='Save transport maps')
     parser.add_argument('--output_param', action='append', help='Parameters to save in output file')
+    parser.add_argument('--progress', action='store_true', help='Print a progress bar while computing')
 
     args = parser.parse_args(argv)
     args_dict = vars(args)
@@ -167,7 +166,8 @@ def main(argv):
             pair_names = pair_names + pair_names_i + pair_names_r
 
         for pair in pair_names:
-            output_progress(cb_args['call_count'], cb_args['total_call_count'])
+            if args.progress:
+                wot.io.output_progress(cb_args['call_count'] / cb_args['total_call_count'])
             point_cloud_s(get_cloud(pair[0]), get_cloud(pair[1]), t0, t1,
                           interval_start_n=interval_start_n,
                           interval_middle_n=interval_middle_n, interval_end_n=interval_end_n,
@@ -250,16 +250,7 @@ def main(argv):
         subsample_writer.write('\n')
         subsample_writer.flush()
 
-    output_progress(0,0)
+    if args.progress:
+        wot.io.output_progress(0)
     ot_helper.compute_transport_maps(transport_map_callback)
     subsample_writer.close()
-
-def output_progress(count, total):
-    p = count / total if total > 0 else 0
-    p = min(p, 1)
-    l = int(log10(max(1, total)) + 1)
-    columns, _ = os.get_terminal_size(0)
-    done = int(columns * p)
-    print('\r[' + '#' * done + ' ' * (columns - 7 - 2*l - done) + ']' +
-            ' {:>{}} / {:>{}}'.format(int(count), l, int(total), l),
-            end='', flush=True)
