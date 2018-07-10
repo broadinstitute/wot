@@ -188,7 +188,7 @@ using the [cells_by_gene_set](#cells_by_gene_set) tool.
 
 ```sh
 wot trajectory --tmap . --cell_days days.txt \
- --cell_set cell_sets.gmt --out traj
+ --cell_set cell_sets.gmt --out traj --progress
 ```
 
 <table class="table table-hover" style="display: table">
@@ -218,6 +218,10 @@ wot trajectory --tmap . --cell_days days.txt \
     <tr>
       <td>--out</td>
       <td>Output filenames prefix</td>
+    </tr>
+    <tr>
+      <td>--progress</td>
+      <td>Display a progress bar while performing the calculation</td>
     </tr>
   </tbody>
 </table>
@@ -253,7 +257,7 @@ wot optimal_transport_validation --matrix matrix.txt \
  --cell_days days.txt --day_pairs day_pairs.txt \
  --out val_tmaps --t_interpolate .5 \
  --save_interpolated --local_pca -1 \
- --covariate covariate.txt
+ --covariate covariate.txt --progress
 ```
 
 This would create two files : `val_tmaps_I_1.0.txt`
@@ -289,6 +293,10 @@ They contain the coordinates of respectively the *interpolated* and the
     <tr>
       <td>--save_interpolated</td>
       <td>Save interpolated population and the summary<br/>By default : save summary, discard populations</td>
+    </tr>
+    <tr>
+      <td>--progress</td>
+      <td>Display a progress bar while performing the calculation</td>
     </tr>
   </tbody>
 </table>
