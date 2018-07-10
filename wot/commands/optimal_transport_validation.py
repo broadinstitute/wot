@@ -18,6 +18,7 @@ def main(argv):
     parser.add_argument('--save_interpolated', action='store_true', help='Save interpolated point clouds')
     parser.add_argument('--save_transport', action='store_true', help='Save transport maps')
     parser.add_argument('--output_param', action='append', help='Parameters to save in output file')
+    parser.add_argument('--progress', action='store_true', help='Print a progress bar while computing')
 
     args = parser.parse_args(argv)
     args_dict = vars(args)
@@ -164,7 +165,8 @@ def main(argv):
             pair_names = pair_names + pair_names_i + pair_names_r
 
         for pair in pair_names:
-            print(pair[0] + ' vs. ' + pair[1])
+            if args.progress:
+                wot.io.output_progress(cb_args['call_count'] / cb_args['total_call_count'])
             point_cloud_s(get_cloud(pair[0]), get_cloud(pair[1]), t0, t1,
                           interval_start_n=interval_start_n,
                           interval_middle_n=interval_middle_n, interval_end_n=interval_end_n,
@@ -247,5 +249,7 @@ def main(argv):
         subsample_writer.write('\n')
         subsample_writer.flush()
 
+    if args.progress:
+        wot.io.output_progress(0)
     ot_helper.compute_transport_maps(transport_map_callback)
     subsample_writer.close()
