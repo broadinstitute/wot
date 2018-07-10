@@ -12,6 +12,8 @@ import scipy.io
 
 def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
     group_to_cell_sets = {}
+    if isinstance(cell_set_paths, str):
+        cell_set_paths = [ cell_set_paths ]
     for path in cell_set_paths:
         cell_set_ds = wot.io.read_gene_sets(path)
         for i in range(cell_set_ds.x.shape[1]):
