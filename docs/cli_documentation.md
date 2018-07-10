@@ -115,7 +115,7 @@ a table containing the core options. Required options are in bold font.
 ### Transport maps ###
 
 ```sh
-wot optimal_tranport --matrix matrix.txt \
+wot optimal_transport --matrix matrix.txt \
  --cell_days days.txt --out tmaps --local_pca -1
 ```
 
@@ -181,6 +181,10 @@ Dimensionality reduction can be disabled with `--local_pca -1`
 ### Trajectories ###
 
 Ancestors and descendants in **wot** are computed through the use of trajectories.
+
+You can select a **cell set** by specifying a [cell set file](#cellset_file).
+You can either manually edit this type of file, or generate it from a gene set file
+using the [cells_by_gene_set](#cells_by_gene_set) tool.
 
 ```sh
 wot trajectory --tmap . --cell_days days.txt \
@@ -506,6 +510,21 @@ Example:
 Cell sets can be described using the same formats as gene sets.
 Simply list the ids of the cell in a set where you would have listed
 the name of the genes in a gene set.
+
+##### <a name="cells_by_gene_set">Cell selecting tool</a> #####
+
+If you want to select a cell sets corresponding to a list of gene sets,
+you may use the **cells_by_gene_set** command-line tool provided byt **wot**.
+
+```sh
+wot cells_by_gene_set --matrix matrix.txt --gene_sets gene_sets.gmt \
+ --out cell_sets.gmt --format gmt --quantile 0.01
+```
+
+You can select which proportion of the cells having each gene to select
+with the `--quantile` option. The default value is 0.01, which would
+select the top 1% of each gene. Choosing 0.5 for instance would
+select every cell that has all genes above the median in the population.
 
 ## More documentation ##
 ------------------------------
