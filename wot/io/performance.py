@@ -33,13 +33,16 @@ def output_progress(count, total = 1.0):
     p = count / total if total > 0 else 0
     p = min(p, 1)
     columns, _ = os.get_terminal_size(0)
-    done = int(columns * p)
     if total > 1:
         l = int(log10(max(1, total)) + 1)
-        print('\r\033[K[' + '#' * done + ' ' * (columns - 7 - 2*l - done) + ']' +
+        columns -= 7 + 2*l
+        done = int(columns * p)
+        print('\r\033[K[' + '#' * done + ' ' * (columns - done) + ']' +
                 ' {:>{}} / {:>{}}'.format(int(count), l, int(total), l),
                 end='', flush=True)
     else:
-        print('\r\033[K[' + '#' * done + ' ' * (columns - 12 - done) + ']' +
+        columns -= 12
+        done = int(columns * p)
+        print('\r\033[K[' + '#' * done + ' ' * (columns - done) + ']' +
                 ' {:>6.2f} %'.format(100 * p),
                 end='', flush=True)
