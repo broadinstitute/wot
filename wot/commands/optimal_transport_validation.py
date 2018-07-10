@@ -6,6 +6,7 @@ import wot.ot
 import wot.io
 import pandas as pd
 import numpy as np
+from math import log10
 import sklearn.metrics.pairwise
 
 
@@ -256,8 +257,9 @@ def main(argv):
 def output_progress(count, total):
     p = count / total if total > 0 else 0
     p = min(p, 1)
+    l = int(log10(max(1, total)) + 1)
     columns, _ = os.get_terminal_size(0)
     done = int(columns * p)
-    print('\r[' + '#' * done + ' ' * (columns - 13 - done) + ']' +
-            ' {:>3} / {:>3}'.format(int(count), int(total)),
+    print('\r[' + '#' * done + ' ' * (columns - 7 - 2*l - done) + ']' +
+            ' {:>{}} / {:>{}}'.format(int(count), l, int(total), l),
             end='', flush=True)
