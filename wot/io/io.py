@@ -11,6 +11,40 @@ import scipy.io
 
 
 def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
+    """
+    Return the cell sets by time points given a cell sets file.
+
+    Parameters
+    ----------
+    cell_set_paths : str or list of str
+        The path(s) to the cell sets file. If several are specified, they are
+        merged into one list of cell sets after being parsed.
+    group_by_df : pandas.DataFrame
+        The dataframe containing the considered cell ids as index.
+        These may be a subset of cell ids mentionned in the cell sets
+        file, in which case only cells in this dataframe appear in the result.
+    group_by_key : str (default: 'day')
+        The name of the column indicating time information in the dataframe.
+
+    Returns
+    -------
+    cs_groups : dict of float: list of cell_set
+        The different cell sets for each time point.
+
+    Notes
+    -----
+    The cell_set type is a dictionary with two keys: 'set' and 'name'
+    cell_set['set'] : set of str
+        The ids of the cells in that cell set.
+    cell_set['name'] : str
+        The name of that cell set, with the time appended to it.
+        For instance, 'cs1' at time 3 would have name 'cs1_3.0'
+
+    Example
+    -------
+    cs_groups[1.0] : [ { 'set': { 'cell_1', 'cell_2' },
+                         'name': 'cell_set_name_1.0' } ]
+    """
     group_to_cell_sets = {}
     if isinstance(cell_set_paths, str):
         cell_set_paths = [ cell_set_paths ]
