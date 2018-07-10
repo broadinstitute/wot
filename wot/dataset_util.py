@@ -67,7 +67,10 @@ def set_cell_metadata(dataset, name, data, indices=None):
     if indices is None:
         dataset.row_meta[name] = data
     else:
-        dataset.row_meta.loc[dataset.row_meta.index[indices], name] = data
+        if isinstance(indices, set):
+            dataset.row_meta.loc[indices, name] = data
+        else:
+            dataset.row_meta.loc[dataset.row_meta.index[indices], name] = data
 
 def merge_datasets(*args):
     datasets = list(args)
