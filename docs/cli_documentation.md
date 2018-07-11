@@ -115,7 +115,7 @@ a table containing the core options. Required options are in bold font.
 ### Transport maps ###
 
 ```sh
-wot optimal_tranport --matrix matrix.txt \
+wot optimal_transport --matrix matrix.txt \
  --cell_days days.txt --out tmaps --local_pca -1
 ```
 
@@ -182,9 +182,13 @@ Dimensionality reduction can be disabled with `--local_pca -1`
 
 Ancestors and descendants in **wot** are computed through the use of trajectories.
 
+You can select a **cell set** by specifying a [cell set file](#cellset_file).
+You can either manually edit this type of file, or generate it from a gene set file
+using the [cells_by_gene_set](#cells_by_gene_set) tool.
+
 ```sh
 wot trajectory --tmap . --cell_days days.txt \
- --cell_set cell_sets.gmt --out traj
+ --cell_set cell_sets.gmt --out traj --progress
 ```
 
 <table class="table table-hover" style="display: table">
@@ -214,6 +218,10 @@ wot trajectory --tmap . --cell_days days.txt \
     <tr>
       <td>--out</td>
       <td>Output filenames prefix</td>
+    </tr>
+    <tr>
+      <td>--progress</td>
+      <td>Display a progress bar while performing the calculation</td>
     </tr>
   </tbody>
 </table>
@@ -248,7 +256,8 @@ at time fraction 0.5, which would result in time point 1 here.
 wot optimal_transport_validation --matrix matrix.txt \
  --cell_days days.txt --day_pairs day_pairs.txt \
  --out val_tmaps --t_interpolate .5 \
- --save_interpolated --local_pca -1
+ --save_interpolated --local_pca -1 \
+ --covariate covariate.txt --progress
 ```
 
 This would create two files : `val_tmaps_I_1.0.txt`
@@ -284,6 +293,10 @@ They contain the coordinates of respectively the *interpolated* and the
     <tr>
       <td>--save_interpolated</td>
       <td>Save interpolated population and the summary<br/>By default : save summary, discard populations</td>
+    </tr>
+    <tr>
+      <td>--progress</td>
+      <td>Display a progress bar while performing the calculation</td>
     </tr>
   </tbody>
 </table>
@@ -505,6 +518,21 @@ Example:
 Cell sets can be described using the same formats as gene sets.
 Simply list the ids of the cell in a set where you would have listed
 the name of the genes in a gene set.
+
+##### <a name="cells_by_gene_set">Cell selecting tool</a> #####
+
+If you want to select a cell sets corresponding to a list of gene sets,
+you may use the **cells_by_gene_set** command-line tool provided byt **wot**.
+
+```sh
+wot cells_by_gene_set --matrix matrix.txt --gene_sets gene_sets.gmt \
+ --out cell_sets.gmt --format gmt --quantile 0.01
+```
+
+You can select which proportion of the cells having each gene to select
+with the `--quantile` option. The default value is 0.01, which would
+select the top 1% of each gene. Choosing 0.5 for instance would
+select every cell that has all genes above the median in the population.
 
 ## More documentation ##
 ------------------------------

@@ -55,7 +55,8 @@ by the visualization tool.
 ##### Interactive web server #####
 
 ```sh
-wot wot_server --matrix matrix.txt --cell_meta fdlayout.csv --tmaps .
+wot wot_server --matrix matrix.txt --tmaps . \
+ --cell_meta fdlayout.csv --cell_meta days.txt
 ```
 
 This will launch the server of port 8080 of your localhost by default.

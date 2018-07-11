@@ -83,7 +83,7 @@ class Trajectory:
         return cell_set_name_to_traces
 
     @staticmethod
-    def trajectory_for_cell_sets(transport_maps, time_to_cell_sets, cache_transport_maps=True):
+    def trajectory_for_cell_sets(transport_maps, time_to_cell_sets, cache_transport_maps=True, print_progress=False):
         """
         Args:
             transport_maps (list) A list of transport maps
@@ -95,19 +95,23 @@ class Trajectory:
         """
 
         trajectory_results = []
+        progress = 0
+        progress_step = 1 / len(time_to_cell_sets)
         for t in time_to_cell_sets:
             cell_sets = time_to_cell_sets[t]
             trajectory_result = Trajectory.__trajectory_for_cell_sets_at_time_t(
                 cell_sets=cell_sets,
                 transport_maps=transport_maps,
                 time=t,
-                cache_transport_maps=cache_transport_maps)
+                cache_transport_maps=cache_transport_maps,
+                print_progress=(print_progress, progress, progress_step))
+            progress += progress_step
             trajectory_results += trajectory_result
 
         return trajectory_results
 
     @staticmethod
-    def __trajectory_for_cell_sets_at_time_t(cell_sets, transport_maps, time, cache_transport_maps=True):
+    def __trajectory_for_cell_sets_at_time_t(cell_sets, transport_maps, time, cache_transport_maps=True, print_progress=(False, 0, 0)):
         """
 
         Args:
@@ -159,10 +163,18 @@ class Trajectory:
         if transport_map_t1_index != -1:
             trajectory_ranges.append({'is_back': False, 'range': range(transport_map_t1_index, len(transport_maps))})
 
+        progress_count = 0
+        total_progress_count = sum([ len(t['range']) for t in trajectory_ranges])
+
         for trajectory_range in trajectory_ranges:
             is_back = trajectory_range['is_back']
             pvec_array = pvec_array_at_t  # initialize
             for transport_index in trajectory_range['range']:
+                if print_progress[0]:
+                    p = print_progress[1] + print_progress[2] * \
+                            progress_count / total_progress_count
+                    wot.io.output_progress(p)
+                    progress_count += 1
                 tmap_dict = transport_maps[transport_index]
                 tmap_ds = tmap_dict.get('ds')
                 if tmap_ds is None:
