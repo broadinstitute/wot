@@ -35,22 +35,26 @@ def main(argv):
                         choices=['s2n', 'mean_difference', 'fold_change', 't_test'])
     parser.add_argument('--gsea',
                         help='Run GSEA on the specified MSigDB collections (http://software.broadinstitute.org/gsea/msigdb/collections.jsp)',
-                        action='append',
-                        choices=['h', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7'], default=['h', 'c2'])
+                        action='append', choices=['H', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'])
+    parser.add_argument('--comparisons',
+                        help='Comparisons to generate ranked lists for. By default, for one matrix signatures are created for all consecutive timepoints. For two matrices for all matching timepoints.')
 
     args = parser.parse_args(argv)
+    # dataset has time on rows, genes on columns
     ds1 = wot.io.read_dataset(args.matrix1)
 
     # hack to add variance
     f = h5py.File(args.matrix1, 'r')
     ds1.variance = f['/layers/variance'][()]
     f.close()
-    ds2 = None
+    ds2 = ds1
     if args.matrix2 is not None:
         ds2 = wot.io.read_dataset(args.matrix2)
         f = h5py.File(args.matrix2, 'r')
         ds2.variance = f['/layers/variance'][()]
         f.close()
+
+    #  TODO align with ds1
 
     def s2n(m1, m2, v1, v2, *varargs):
         denom = (np.sqrt(v1) + np.sqrt(v2))
@@ -66,29 +70,39 @@ def main(argv):
     def t_test(m1, m2, v1, v2, n1, n2):
         return (m1 - m2) / np.sqrt((v1 / n1) + (v2 / n2));
 
-    # dataset has time on rows, genes on columns
     score_function = locals()[args.score]
     names = []
-    if ds2 is not None:
-        for i in range(ds1.x.shape[0]):  # each time
-            scores = get_scores(ds1, ds2, i, i, score_function)
-            name = str(ds1.row_meta.index.values[i])
+    if args.comparisons is not None:
+        comparisons = pd.read_table(args.comparisons, header=None, index_col=False, engine='python', sep=None)
+        for comparison_idx in range(comparisons.shape[0]):
+            i = np.where(ds1.row_meta.index.values == comparisons.iloc[comparison_idx, 0])[0][0]
+            j = np.where(ds2.row_meta.index.values == comparisons.iloc[comparison_idx, 1])[0][0]
+            name = str(ds1.row_meta.index.values[i]) + '_' + str(ds2.row_meta.index.values[j])
+            scores = get_scores(ds1, ds2, i, j, score_function)
             names.append(name)
             pd.DataFrame(index=ds1.col_meta.index.str.upper().values, data={'scores': scores}).to_csv(
                 name + '.rnk', sep='\t', header=False)
     else:
-        for i in range(1, ds1.x.shape[0]):
-            scores = get_scores(ds1, ds1, i - 1, i, score_function)
-            name = str(ds1.row_meta.index.values[i - 1]) + '_' + str(ds1.row_meta.index.values[i])
-            names.append(name)
-            pd.DataFrame(index=ds1.col_meta.index.str.upper().values, data={'scores': scores}).to_csv(
-                name + '.rnk', sep='\t',
-                header=False)
+        if ds2 is not None:
+            for i in range(ds1.x.shape[0]):  # each time
+                scores = get_scores(ds1, ds2, i, i, score_function)
+                name = str(ds1.row_meta.index.values[i])
+                names.append(name)
+                pd.DataFrame(index=ds1.col_meta.index.str.upper().values, data={'scores': scores}).to_csv(
+                    name + '.rnk', sep='\t', header=False)
+        else:
+            for i in range(1, ds1.x.shape[0]):
+                scores = get_scores(ds1, ds1, i - 1, i, score_function)
+                name = str(ds1.row_meta.index.values[i - 1]) + '_' + str(ds1.row_meta.index.values[i])
+                names.append(name)
+                pd.DataFrame(index=ds1.col_meta.index.str.upper().values, data={'scores': scores}).to_csv(
+                    name + '.rnk', sep='\t',
+                    header=False)
 
     if args.gsea is not None and len(args.gsea) > 0:
         urls = []
         for c in args.gsea:
-            urls.append('gseaftp.broadinstitute.org://pub/gsea/gene_sets_final/' + c + '.all.v6.1.symbols.gmt')
+            urls.append('gseaftp.broadinstitute.org://pub/gsea/gene_sets_final/' + c.lower() + '.all.v6.1.symbols.gmt')
         gmx = ','.join(urls)
         for name in names:
             classpath = pkg_resources.resource_filename('wot', 'commands/resources/gsea-3.0.jar')
