@@ -1,11 +1,20 @@
-import unittest
-import wot.io
-import numpy as np
 import os
+import unittest
+
+import numpy as np
 import pandas as pd
+import wot.io
 
 
 class TestIO(unittest.TestCase):
+
+    def test_read_grp(self):
+        gs = wot.io.read_gene_sets(os.path.abspath('inputs/io/test.grp'))
+        self.assertTrue(np.sum(gs.x) == 4)
+
+    def test_read_grp_subset(self):
+        gs = wot.io.read_gene_sets(os.path.abspath('inputs/io/test.grp'), ['a', 'e', 'c', 'f'])
+        self.assertTrue(gs.x[0, 0] == 1 and gs.x[2, 0] == 1)
 
     def test_read_gmx(self):
         gs = wot.io.read_gene_sets(os.path.abspath(

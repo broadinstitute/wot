@@ -48,7 +48,7 @@ def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
     """
     group_to_cell_sets = {}
     if isinstance(cell_set_paths, str):
-        cell_set_paths = [ cell_set_paths ]
+        cell_set_paths = [cell_set_paths]
     for path in cell_set_paths:
         cell_set_ds = wot.io.read_gene_sets(path)
         for i in range(cell_set_ds.x.shape[1]):
@@ -182,44 +182,43 @@ def read_gene_sets(path, feature_ids=None):
 
 def read_grp(path, feature_ids=None):
     with open(path) as fp:
-        row_id_to_index = {}
+        row_id_lc_to_index = {}
+        row_id_lc_to_row_id = {}
         if feature_ids is not None:
             for i in range(len(feature_ids)):
-                row_id_to_index[feature_ids[i]] = i
-            row_ids = feature_ids
-        else:
-            row_ids = []
+                fid = feature_ids[i].lower()
+                row_id_lc_to_index[fid] = i
+                row_id_lc_to_row_id[fid] = feature_ids[i]
 
-        set_ids = []
-        members = [set_ids]
-        set_descriptions = ['']
-        set_names = [wot.io.get_filename_and_extension(os.path.basename(path))[0]]
+        ids_in_set = set()
         for line in fp:
             if line == '' or line[0] == '#':
                 continue
-
-            id = line.strip()
-            if id != '':
-                row_index = row_id_to_index.get(id)
+            value = line.strip()
+            if value != '':
+                value_lc = value.lower()
+                row_index = row_id_lc_to_index.get(value_lc)
                 if feature_ids is None:
-                    set_ids.append(id)
                     if row_index is None:
-                        row_index = len(row_id_to_index)
-                        row_id_to_index[id] = row_index
-                        row_ids.append(id)
-                elif row_index is not None:
-                    set_ids.append(id)
+                        row_id_lc_to_row_id[value_lc] = value
+                        row_index = len(row_id_lc_to_index)
+                        row_id_lc_to_index[value_lc] = row_index
 
-        x = np.zeros(shape=(len(row_ids), len(set_names)), dtype=np.int8)
-        # TODO: check that len(members) > 1 otherwise get rid of it
-        for j in range(len(members)):
-            ids = members[j]
-            for id in ids:
-                row_index = row_id_to_index.get(id)
-                x[row_index, j] = 1
+                if row_index is not None:
+                    ids_in_set.add(value)
 
-        row_meta = pd.DataFrame(index=row_ids)
-        col_meta = pd.DataFrame(data={'description': set_descriptions}, index=set_names)
+        if feature_ids is None:
+            feature_ids = np.empty(len(row_id_lc_to_index), dtype='object')
+            for rid_lc in row_id_lc_to_index:
+                feature_ids[row_id_lc_to_index[rid_lc]] = row_id_lc_to_row_id[rid_lc]
+
+        x = np.zeros(shape=(len(feature_ids), 1), dtype=np.int8)
+        for id in ids_in_set:
+            row_index = row_id_lc_to_index.get(id.lower())
+            x[row_index, 0] = 1
+
+        row_meta = pd.DataFrame(index=feature_ids)
+        col_meta = pd.DataFrame(index=[wot.io.get_filename_and_extension(os.path.basename(path))[0]])
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
 
 
@@ -329,6 +328,7 @@ def read_gmx(path, feature_ids=None):
                                 index=set_ids)
         return wot.Dataset(x, row_meta=row_meta, col_meta=col_meta)
 
+
 def write_gene_sets(gene_sets, path, format=None):
     path = str(path)
     basename, ext = get_filename_and_extension(path)
@@ -342,7 +342,7 @@ def write_gene_sets(gene_sets, path, format=None):
 
     if format == 'gmt':
         write_gmt(gene_sets, f)
-    elif format == 'gmx' or  format == 'txt' or format == 'grp':
+    elif format == 'gmx' or format == 'txt' or format == 'grp':
         raise ValueError("Filetype not supported for writing")
     else:
         raise ValueError("Unkown file format for gene sets")
@@ -350,9 +350,11 @@ def write_gene_sets(gene_sets, path, format=None):
     if f is not sys.stdout:
         f.close()
 
+
 def write_gmt(gene_sets, f):
     for gset in gene_sets:
         f.write('{}\t{}\t{}\n'.format(gset, '-', '\t'.join(gene_sets[gset])))
+
 
 def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_filter=None, col_filter=None,
                  force_sparse=False, backed=False):
