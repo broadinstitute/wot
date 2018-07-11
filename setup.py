@@ -30,7 +30,9 @@ test_requirements = [
 
 extensions = [
         Extension("wot.cython_speedup.simulate",
-            [ "cython_speedup/simulate.pyx" ])
+            [ "cython_speedup/simulate.pyx" ]),
+        Extension("wot.cython_speedup.ot",
+            [ "cython_speedup/ot.pyx" ])
         ]
 
 setuptools.setup(

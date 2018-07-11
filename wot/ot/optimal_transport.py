@@ -4,6 +4,8 @@ import numpy as np
 import scipy.stats
 import ot as pot
 
+from wot.cython_speedup.ot import __cy__transport_stablev3
+
 
 def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
                                  epsilon0=None, extra_iter=1000, growth_iters=3):
@@ -97,6 +99,16 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerIt
         b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
 
     return (K.T * a).T * b
+
+def transport_stablev3(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
+                       epsilon0=None, extra_iter=1000):
+    if C is None:
+        raise ValueError("C must not be None")
+    if g is None:
+        raise ValueError("g must not be None")
+    return __cy__transport_stablev3(C, g,
+            float(lambda1), float(lambda2), float(epsilon),
+            int(scaling_iter), int(extra_iter))
 
 
 def transport_stable(p, q, C, lambda1, lambda2, epsilon, scaling_iter, g):
