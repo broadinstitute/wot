@@ -5,21 +5,6 @@ cimport numpy
 
 from libc.math cimport exp
 
-cdef double get_reg(double epsilon0, double epsilon_final, int n):  # exponential decreasing
-    return (epsilon0 - epsilon_final) * exp(-n) + epsilon_final
-
-cdef inline numpy.ndarray[double, ndim=1] update(
-        numpy.ndarray[double, ndim=1] g,
-        numpy.ndarray[double, ndim=2] K,
-        numpy.ndarray[double, ndim=1] b,
-        numpy.ndarray[double, ndim=1] d,
-        numpy.ndarray[double, ndim=1] u,
-        double alpha, double l, double e):
-    # equivalent of :
-    # (g / (K.dot(numpy.multiply(b, d)))) ** alpha * numpy.exp(-u / (l + e))
-    return (g / (K.dot(numpy.multiply(b, d)))) ** alpha * numpy.exp(-u / (l + e))
-
-
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
@@ -54,34 +39,28 @@ def __cy__transport_stablev3(
     cdef int num_inner_iter_max = 100
 
 
-    for i in range(scaling_iter):
+    for i in range(scaling_iter + extra_iter):
         # scaling iteration
-        a = update(g, K, b, dy, u, alpha1, lambda1, epsilon_i)
-        b = update(q, K.T, a, dx, v, alpha2, lambda2, epsilon_i)
+        a = (g /   (K.dot(numpy.multiply(b, dy)))) ** alpha1 * numpy.exp(-u / (lambda1 + epsilon_i))
+        b = (q / (K.T.dot(numpy.multiply(a, dx)))) ** alpha2 * numpy.exp(-v / (lambda2 + epsilon_i))
 
         # stabilization
         iterations_since_epsilon_adjusted += 1
-        if (max(max(abs(a)), max(abs(b))) > tau):
-            u = u + epsilon_i * numpy.log(a)
-            v = v + epsilon_i * numpy.log(b)  # absorb
+        if i < scaling_iter and (max(max(abs(a)), max(abs(b))) > tau or iterations_since_epsilon_adjusted == num_inner_iter_max):
+            if iterations_since_epsilon_adjusted == num_inner_iter_max :
+                epsilon_index += 1
+                iterations_since_epsilon_adjusted = 0
+                u = u + epsilon_i * numpy.log(a)
+                v = v + epsilon_i * numpy.log(b)  # absorb
+                epsilon_i = (epsilon0 - epsilon_final) * exp(-epsilon_index) \
+                        + epsilon_final
+                alpha1 = lambda1 / (lambda1 + epsilon_i)
+                alpha2 = lambda2 / (lambda2 + epsilon_i)
+            else :
+                u = u + epsilon_i * numpy.log(a)
+                v = v + epsilon_i * numpy.log(b)  # absorb
             K = numpy.exp((numpy.array([u]).T - C + numpy.array([v])) / epsilon_i)
             a = numpy.ones(len(g))
             b = numpy.ones(len(q))
-
-        if iterations_since_epsilon_adjusted == num_inner_iter_max :
-            epsilon_index += 1
-            iterations_since_epsilon_adjusted = 0
-            u = u + epsilon_i * numpy.log(a)
-            v = v + epsilon_i * numpy.log(b)  # absorb
-            epsilon_i = get_reg(epsilon0, epsilon_final, epsilon_index)
-            alpha1 = lambda1 / (lambda1 + epsilon_i)
-            alpha2 = lambda2 / (lambda2 + epsilon_i)
-            K = numpy.exp((numpy.array([u]).T - C + numpy.array([v])) / epsilon_i)
-            a = numpy.ones(len(g))
-            b = numpy.ones(len(q))
-
-    for i in range(extra_iter):
-        a = update(g, K, b, dy, u, alpha1, lambda1, epsilon_i)
-        b = update(q, K.T, a, dx, v, alpha2, lambda2, epsilon_i)
 
     return (K.T * a).T * b
