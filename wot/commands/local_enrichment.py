@@ -34,8 +34,8 @@ def main(argv):
                         help='Method to compute differential gene expression score. Choices are signal to noise, mean difference, t-test, and fold change',
                         choices=['s2n', 'mean_difference', 'fold_change', 't_test'])
     parser.add_argument('--gsea',
-                        help='Run GSEA on the specified MSigDB collections (http://software.broadinstitute.org/gsea/msigdb/collections.jsp)',
-                        action='append', choices=['H', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'])
+                        help='Run GSEA on the specified MSigDB collections (http://software.broadinstitute.org/gsea/msigdb/collections.jsp). H (hallmark gene sets), C1 (positional gene sets), C2 (curated gene sets), C3 (motif gene sets), C4 (computational gene sets), C5 (GO gene sets), C6 (oncogenic signatures), C7 (immunologic signatures)',
+                        action='append')
     parser.add_argument('--comparisons',
                         help='Comparisons to generate ranked lists for. By default, for one matrix signatures are created for all consecutive timepoints. For two matrices for all matching timepoints.')
 
@@ -102,7 +102,9 @@ def main(argv):
     if args.gsea is not None and len(args.gsea) > 0:
         urls = []
         for c in args.gsea:
-            urls.append('gseaftp.broadinstitute.org://pub/gsea/gene_sets_final/' + c.lower() + '.all.v6.1.symbols.gmt')
+            if c.find('.') == -1:
+                c += '.all'
+            urls.append('gseaftp.broadinstitute.org://pub/gsea/gene_sets_final/' + c.lower() + '.v6.1.symbols.gmt')
         gmx = ','.join(urls)
         for name in names:
             classpath = pkg_resources.resource_filename('wot', 'commands/resources/gsea-3.0.jar')
