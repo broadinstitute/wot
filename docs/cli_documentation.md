@@ -495,9 +495,9 @@ tab-separated list composed as follows :
 Example:
 
 <table class="table" style="display: table">
-<tr><td>Tip1</td><td>The first tip</td><td>gene_2</td><td>gene_5</td></tr>
+<tr><td>Tip1</td><td>The first tip</td><td>gene_2</td><td>gene_1</td></tr>
 <tr><td>Tip2</td><td>The second tip</td><td>gene_3</td></tr>
-<tr><td>Tip3</td><td>The third tip</td><td>gene_4</td><td>gene_5</td></tr>
+<tr><td>Tip3</td><td>The third tip</td><td>gene_4</td><td>gene_1</td></tr>
 </table>
 
 ##### GMX #####
@@ -511,7 +511,7 @@ Example:
 <tr><td>Tip1</td><td>Tip2</td><td>Tip3</td></tr>
 <tr><td>The first tip</td><td>The second tip</td><td>The third tip</td></tr>
 <tr><td>gene_2</td><td>gene_3</td><td>gene_4</td></tr>
-<tr><td>gene_5</td><td></td><td>gene_5</td></tr>
+<tr><td>gene_1</td><td></td><td>gene_1</td></tr>
 </table>
 
 
