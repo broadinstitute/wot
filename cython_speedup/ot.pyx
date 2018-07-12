@@ -42,26 +42,28 @@ def __cy__transport_stablev3(
 
     for i in range(scaling_iter + extra_iter):
         # scaling iteration
-        a = (g / (K.dot(b * dy))) ** alpha1 * numpy.exp(-u / (lambda1 + epsilon_i))
-        b = (q / (K.T.dot(a * dx))) ** alpha2 * numpy.exp(-v / (lambda2 + epsilon_i))
+        # a = (g / (numpy.dot(K, b * dy))) ** alpha1 * numpy.exp(-u / (lambda1 + epsilon_i))
+        a = numpy.multiply(numpy.power(numpy.divide(g, (numpy.dot(K, numpy.multiply(b, dy)))), alpha1), numpy.exp(numpy.divide(numpy.negative(u), (lambda1 + epsilon_i))))
+        # b = (q / (numpy.dot(K.T, a * dx))) ** alpha2 * numpy.exp(-v / (lambda2 + epsilon_i))
+        b = numpy.multiply(numpy.power(numpy.divide(q, (numpy.dot(numpy.transpose(K), numpy.multiply(a, dx)))), alpha2), numpy.exp(numpy.divide(numpy.negative(v), (lambda2 + epsilon_i))))
 
         # stabilization
         iterations_since_epsilon_adjusted += 1
-        if i < scaling_iter and (max(max(abs(a)), max(abs(b))) > tau or iterations_since_epsilon_adjusted == num_inner_iter_max):
+        if i < scaling_iter and (max(max(numpy.absolute(a)), max(numpy.absolute(b))) > tau or iterations_since_epsilon_adjusted == num_inner_iter_max):
             if iterations_since_epsilon_adjusted == num_inner_iter_max :
                 epsilon_index += 1
                 iterations_since_epsilon_adjusted = 0
-                u = u + epsilon_i * numpy.log(a)
-                v = v + epsilon_i * numpy.log(b)  # absorb
+                u = numpy.add(u, numpy.multiply(epsilon_i, numpy.log(a)))
+                v = numpy.add(v, numpy.multiply(epsilon_i, numpy.log(b)))  # absorb
                 epsilon_i = (epsilon0 - epsilon_final) * exp(-epsilon_index) \
                         + epsilon_final
                 alpha1 = lambda1 / (lambda1 + epsilon_i)
                 alpha2 = lambda2 / (lambda2 + epsilon_i)
             else :
-                u = u + epsilon_i * numpy.log(a)
-                v = v + epsilon_i * numpy.log(b)  # absorb
-            K = numpy.exp((numpy.array([u]).T - C + numpy.array([v])) / epsilon_i)
+                u = numpy.add(u, numpy.multiply(epsilon_i, numpy.log(a)))
+                v = numpy.add(v, numpy.multiply(epsilon_i, numpy.log(b)))  # absorb
+            K = numpy.exp(numpy.divide(numpy.add(numpy.subtract(numpy.transpose(numpy.array([u])),C), numpy.array([v])), epsilon_i))
             a = numpy.ones(n)
             b = numpy.ones(m)
 
-    return (K.T * a).T * b
+    return numpy.multiply(numpy.transpose(numpy.multiply(numpy.transpose(K), a)), b)
