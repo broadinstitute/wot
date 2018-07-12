@@ -22,15 +22,15 @@ def __cy__transport_stablev3(
 
 
     cdef double epsilon_i = epsilon
-    cdef numpy.ndarray[double, ndim=1, mode="c"] dx = numpy.ones(n) / n
-    cdef numpy.ndarray[double, ndim=1, mode="c"] dy = numpy.ones(m) / m
-    cdef numpy.ndarray[double, ndim=1, mode="c"] q = numpy.ones(m) * numpy.average(g)
+    cdef double[:] dx = numpy.ones(n) / n
+    cdef double[:] dy = numpy.ones(m) / m
+    cdef double[:] q = numpy.ones(m) * numpy.average(g)
 
-    cdef numpy.ndarray[double, ndim=1, mode="c"] a = numpy.empty(n)
-    cdef numpy.ndarray[double, ndim=1, mode="c"] u = numpy.zeros(n)
-    cdef numpy.ndarray[double, ndim=1, mode="c"] v = numpy.zeros(m)
-    cdef numpy.ndarray[double, ndim=1, mode="c"] b = numpy.ones(m)
-    cdef numpy.ndarray[double, ndim=2, mode="c"] K = numpy.ascontiguousarray(numpy.exp(-C / epsilon_i))
+    cdef double[:] a = numpy.empty(n)
+    cdef double[:] u = numpy.zeros(n)
+    cdef double[:] v = numpy.zeros(m)
+    cdef double[:] b = numpy.ones(m)
+    cdef double[:,:] K = numpy.ascontiguousarray(numpy.exp(-C / epsilon_i))
 
     cdef double alpha1 = lambda1 / (lambda1 + epsilon_i)
     cdef double alpha2 = lambda2 / (lambda2 + epsilon_i)
