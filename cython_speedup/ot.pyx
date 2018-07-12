@@ -22,15 +22,15 @@ def __cy__transport_stablev3(
 
 
     cdef double epsilon_i = epsilon
-    cdef numpy.ndarray[double, ndim=1] dx = numpy.ones(C.shape[0]) / C.shape[0]
-    cdef numpy.ndarray[double, ndim=1] dy = numpy.ones(C.shape[1]) / C.shape[1]
-    cdef numpy.ndarray[double, ndim=1] q = numpy.ones(C.shape[1]) * numpy.average(g)
+    cdef numpy.ndarray[double, ndim=1, mode="c"] dx = numpy.ones(n) / n
+    cdef numpy.ndarray[double, ndim=1, mode="c"] dy = numpy.ones(m) / m
+    cdef numpy.ndarray[double, ndim=1, mode="c"] q = numpy.ones(m) * numpy.average(g)
 
-    cdef numpy.ndarray[double, ndim=1] a
-    cdef numpy.ndarray[double, ndim=1] u = numpy.zeros(len(g))
-    cdef numpy.ndarray[double, ndim=1] v = numpy.zeros(len(q))
-    cdef numpy.ndarray[double, ndim=1] b = numpy.ones(len(q))
-    cdef numpy.ndarray[double, ndim=2] K = numpy.exp(-C / epsilon_i)
+    cdef numpy.ndarray[double, ndim=1, mode="c"] a = numpy.empty(n)
+    cdef numpy.ndarray[double, ndim=1, mode="c"] u = numpy.zeros(n)
+    cdef numpy.ndarray[double, ndim=1, mode="c"] v = numpy.zeros(m)
+    cdef numpy.ndarray[double, ndim=1, mode="c"] b = numpy.ones(m)
+    cdef numpy.ndarray[double, ndim=2, mode="c"] K = numpy.ascontiguousarray(numpy.exp(-C / epsilon_i))
 
     cdef double alpha1 = lambda1 / (lambda1 + epsilon_i)
     cdef double alpha2 = lambda2 / (lambda2 + epsilon_i)
@@ -38,11 +38,12 @@ def __cy__transport_stablev3(
     cdef int iterations_since_epsilon_adjusted = 0
     cdef int num_inner_iter_max = 100
 
+    cdef int i, j, k
 
     for i in range(scaling_iter + extra_iter):
         # scaling iteration
-        a = (g /   (K.dot(numpy.multiply(b, dy)))) ** alpha1 * numpy.exp(-u / (lambda1 + epsilon_i))
-        b = (q / (K.T.dot(numpy.multiply(a, dx)))) ** alpha2 * numpy.exp(-v / (lambda2 + epsilon_i))
+        a = (g / (K.dot(b * dy))) ** alpha1 * numpy.exp(-u / (lambda1 + epsilon_i))
+        b = (q / (K.T.dot(a * dx))) ** alpha2 * numpy.exp(-v / (lambda2 + epsilon_i))
 
         # stabilization
         iterations_since_epsilon_adjusted += 1
@@ -60,7 +61,7 @@ def __cy__transport_stablev3(
                 u = u + epsilon_i * numpy.log(a)
                 v = v + epsilon_i * numpy.log(b)  # absorb
             K = numpy.exp((numpy.array([u]).T - C + numpy.array([v])) / epsilon_i)
-            a = numpy.ones(len(g))
-            b = numpy.ones(len(q))
+            a = numpy.ones(n)
+            b = numpy.ones(m)
 
     return (K.T * a).T * b
