@@ -232,7 +232,7 @@ wot trajectory --tmap . --cell_days days.txt \
 
 ### Shared ancestry ###
 
-### Transition tables ###
+### Trajectory differential expression ###
 
 ### Local regulatory model ###
 
@@ -526,11 +526,11 @@ you may use the **cells_by_gene_set** command-line tool provided byt **wot**.
 
 ```sh
 wot cells_by_gene_set --matrix matrix.txt --gene_sets gene_sets.gmt \
- --out cell_sets.gmt --format gmt --quantile 0.01
+ --out cell_sets.gmt --format gmt --quantile 0.99
 ```
 
 You can select which proportion of the cells having each gene to select
-with the `--quantile` option. The default value is 0.01, which would
+with the `--quantile` option. The default value is 0.99, which would
 select the top 1% of each gene. Choosing 0.5 for instance would
 select every cell that has all genes above the median in the population.
 
