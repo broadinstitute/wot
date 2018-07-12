@@ -46,7 +46,9 @@ The package gets built to `dist/wot-VERSION.tar.gz`, for instance `dist/wot-0.1.
 > ```sh
 > pip install --user h5py docutils msgpack-python --no-cache-dir
 > pip install --user cython --no-cache-dir
-> echo -e "\n# Cython path\nPATH=\"\$PATH:\$HOME/.local/bin\"" >> ~/.bashrc
+> echo "$PATH" | grep -q "$HOME/.local/bin" || \
+>   echo -e "\n# Cython path\nPATH=\"\$PATH:\$HOME/.local/bin\"" \
+>   >> ~/.bash_profile
 > ```
 >
 > *h5py*, *docutils*, and *msgpack-python* have to be installed separately and
