@@ -46,3 +46,11 @@ def output_progress(count, total = 1.0):
         print('\r\033[K[' + '#' * done + ' ' * (columns - done) + ']' +
                 ' {:>6.2f} %'.format(100 * p),
                 end='', flush=True)
+
+def init_progress():
+    output_progress(0)
+
+def finalize_progress():
+    output_progress(1.0)
+    print('')
+
