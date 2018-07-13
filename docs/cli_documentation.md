@@ -9,6 +9,19 @@ Waddington Optimal Transport uses time-course data to infer how the
 probability distribution of cells in gene-expression space evolves
 over time, by using the mathematical approach of Optimal Transport (OT).
 
+> <button class="btn-success rounded border-0 px-3 py-1" disabled>Interactive</button>
+>
+> Alternatively, **wot** features an interactive web interface to visualize
+> your data and perform all the tasks described below.
+>
+> <div class="center-block text-center py-2">
+>   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
+>      role="button" href="{{site.baseurl}}/interactive_documentation">
+>      View documentation &raquo;
+>   </a>
+> </div>
+>
+
 
 ## Installation ##
 ------------------
@@ -101,20 +114,7 @@ a table containing the core options. Required options are in bold font.
 >
 > <div class="center-block text-center py-2"><a class="nounderline btn-outline-secondary btn-lg border px-4 py-2" role="button" href="#">Download .zip</a></div>
 
-<br />
 
-> <button class="btn-success rounded border-0 px-3 py-1" disabled>Interactive</button>
->
-> Alternatively, **wot** features an interactive web interface to visualize
-> your data and perform all the tasks described below.
->
-> <div class="center-block text-center py-2">
->   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
->      role="button" href="{{site.baseurl}}/interactive_documentation">
->      View documentation &raquo;
->   </a>
-> </div>
->
 
 ### Transport maps ###
 

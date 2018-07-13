@@ -9,6 +9,19 @@ Waddington Optimal Transport uses time-course data to infer how the
 probability distribution of cells in gene-expression space evolves
 over time, by using the mathematical approach of Optimal Transport (OT).
 
+> <button class="btn-success rounded border-0 px-3 py-1" disabled>Command line</button>
+>
+> Alternatively, **wot** features a command line interface that offers fine-grain
+> control over all parameters to perform all the tasks described below.
+>
+> <div class="center-block text-center py-2">
+>   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
+>      role="button" href="{{site.baseurl}}/cli_documentation">
+>      View documentation &raquo;
+>   </a>
+> </div>
+>
+
 ## Installation ##
 ------------------
 
