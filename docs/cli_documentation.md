@@ -17,7 +17,7 @@ over time, by using the mathematical approach of Optimal Transport (OT).
 > <div class="center-block text-center py-2">
 >   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
 >      role="button" href="{{site.baseurl}}/interactive_documentation">
->      View documentation &raquo;
+>      View documentation for web interface &raquo;
 >   </a>
 > </div>
 >
