@@ -284,6 +284,49 @@ for more information.
 
 ### Trajectory trends ###
 
+Given **cell sets**, the mean value of different tips' ancestors at each time point will be calculated through trajectory trends.
+
+You can select a **cell set** by specifying a [cell set file](#cellset_file).
+You can either manually edit this type of file, or generate it from a gene set file
+using the [cells_by_gene_set](#cells_by_gene_set) tool.
+
+```sh
+wot trajectory_trends --tmap . --cell_days days.txt --cell_set cell_sets.gmt --matrix matrix.txt
+```
+
+<table class="table table-hover" style="display: table">
+  <thead class="thead-light">
+    <tr>
+      <th>Option</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>--tmap</b></td>
+      <td>Directory containing the transport maps</td>
+    </tr>
+    <tr>
+      <td><b>--cell_days</b></td>
+      <td>Timestamps for each cell. See <a href="#days_file">formats</a></td>
+    </tr>
+    <tr>
+      <td><b>--cell_set</b></td>
+      <td>Target cell set. See <a href="#cellset_file">formats</a></td>
+    </tr>
+      <tr>
+      <td><b>--matrix</b></td>
+      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
+    </tr>
+    <tr>
+      <td>--matrix_transform</td>
+      <td>Transform matrix values into certain type: choices={expm1,log1p,rank}
+       </td>
+    </tr>
+  </tbody>
+</table>
+
+
 ### Shared ancestry ###
 
 ### Trajectory differential expression ###
