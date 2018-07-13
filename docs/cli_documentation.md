@@ -536,6 +536,30 @@ with the `--quantile` option. The default value is 0.99, which would
 select the top 1% of each gene. Choosing 0.5 for instance would
 select every cell that has all genes above the median in the population.
 
+### <a name="census_file">Census file</a> ###
+
+Census files are datasets files : tab-separated text files with a header.
+The header consists of an "id" field, and then the list of cell sets
+for the census.
+
+Each subsequent row will give the proportion of ancestors that
+pertained in each of the mentionned cell sets.
+
+The id is the time at which the ancestors lived.
+
+Example:
+
+<table class="table" style="display: table">
+<tr><td>id</td><td>tip1</td><td>tip2</td><td>tip3</td></tr>
+<tr><td>0.0</td><td>0.15</td><td>0.05</td><td>0.05</td></tr>
+<tr><td>1.0</td><td>0.28</td><td>0.05</td><td>0.03</td></tr>
+<tr><td>2.0</td><td>0.42</td><td>0.03</td><td>0.02</td></tr>
+<tr><td>3.0</td><td>0.72</td><td>0.02</td><td>0.01</td></tr>
+<tr><td>4.0</td><td>0.89</td><td>0.00</td><td>0.00</td></tr>
+<tr><td>5.0</td><td>0.99</td><td>0.00</td><td>0.00</td></tr>
+</table>
+
+
 ## More documentation ##
 ------------------------------
 
