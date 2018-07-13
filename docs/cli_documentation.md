@@ -228,7 +228,59 @@ wot trajectory --tmap . --cell_days days.txt \
   </tbody>
 </table>
 
+
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="{{site.baseurl}}/examples/ancestor_census">See example code</a>
 ### Ancestor census ###
+
+The census command lets you find out in which cell sets the ancestors
+of a given cell set were located.
+
+
+```sh
+wot census --tmap . --cell_days days.txt \
+ --cell_set cell_sets.gmt --matrix matrix.txt --progress
+```
+![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
+
+This would create several census files named `<prefix>_<cellset>_<timepoint>.txt`,
+for instance `census_tip1_100.0.txt`. See <a href="#census_file">formats</a>
+for more information.
+
+<table class="table table-hover" style="display: table">
+  <thead class="thead-light">
+    <tr>
+      <th>Option</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>--tmap</b></td>
+      <td>Directory containing the transport maps</td>
+    </tr>
+    <tr>
+      <td><b>--cell_days</b></td>
+      <td>Timestamps for each cell. See <a href="#days_file">formats</a></td>
+    </tr>
+    <tr>
+      <td><b>--cell_set</b></td>
+      <td>Target cell sets. See <a href="#cellset_file">formats</a></td>
+    </tr>
+    <tr>
+      <td><b>--matrix</b></td>
+      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
+    </tr>
+    <tr>
+      <td>--out</td>
+      <td>Output filenames prefix.<br/>default : 'census'</td>
+    </tr>
+    <tr>
+      <td>--progress</td>
+      <td>Display a progress bar while performing the calculation</td>
+    </tr>
+  </tbody>
+</table>
 
 ### Trajectory trends ###
 
