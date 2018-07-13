@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from .cells_by_gene_set import *
+from .census import *
 from .convert_matrix import *
 from .force_layout import *
 from .gene_set_scores import *
