@@ -89,3 +89,11 @@ a.nostyle, a.nostyle:hover, a.nostyle:active, a.nostyle:focus {
   float: right;
   display: inline-block;
 }
+
+.nav-pills .nav-link {
+  color: $header-bg-color;
+
+  &.active, &.active:hover {
+    background-color: $header-bg-color;
+  }
+}
