@@ -70,4 +70,22 @@ a.nostyle, a.nostyle:hover, a.nostyle:active, a.nostyle:focus {
 
 .main-content {
   padding: 2rem 1rem;
+
+  h1::after, h2::after, h3::after {
+    content: "";
+    clear: both;
+    display: table;
+  }
+
+  img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+.main-content .btn-example {
+  margin: 1rem 0 0 0;
+  float: right;
+  display: inline-block;
 }
