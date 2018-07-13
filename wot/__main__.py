@@ -9,7 +9,7 @@ import argparse
 
 
 def main():
-    command_list = [convert_matrix, cells_by_gene_set, force_layout,
+    command_list = [convert_matrix, cells_by_gene_set, census, force_layout,
             gene_set_scores, grn, local_enrichment, optimal_transport,
             optimal_transport_validation, trajectory, trajectory_trends,
             trajectory_trends, transition_table, wot_server]

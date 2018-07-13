@@ -46,7 +46,9 @@ The package gets built to `dist/wot-VERSION.tar.gz`, for instance `dist/wot-0.1.
 > ```sh
 > pip install --user h5py docutils msgpack-python --no-cache-dir
 > pip install --user cython --no-cache-dir
-> echo -e "\n# Cython path\nPATH=\"\$PATH:\$HOME/.local/bin\"" >> ~/.bashrc
+> echo "$PATH" | grep -q "$HOME/.local/bin" || \
+>   echo -e "\n# Cython path\nPATH=\"\$PATH:\$HOME/.local/bin\"" \
+>   >> ~/.bash_profile
 > ```
 >
 > *h5py*, *docutils*, and *msgpack-python* have to be installed separately and
@@ -226,13 +228,65 @@ wot trajectory --tmap . --cell_days days.txt \
   </tbody>
 </table>
 
+
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="{{site.baseurl}}/examples/ancestor_census">See example code</a>
 ### Ancestor census ###
+
+The census command lets you find out in which cell sets the ancestors
+of a given cell set were located.
+
+
+```sh
+wot census --tmap . --cell_days days.txt \
+ --cell_set cell_sets.gmt --matrix matrix.txt --progress
+```
+![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
+
+This would create several census files named `<prefix>_<cellset>_<timepoint>.txt`,
+for instance `census_tip1_100.0.txt`. See <a href="#census_file">formats</a>
+for more information.
+
+<table class="table table-hover" style="display: table">
+  <thead class="thead-light">
+    <tr>
+      <th>Option</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>--tmap</b></td>
+      <td>Directory containing the transport maps</td>
+    </tr>
+    <tr>
+      <td><b>--cell_days</b></td>
+      <td>Timestamps for each cell. See <a href="#days_file">formats</a></td>
+    </tr>
+    <tr>
+      <td><b>--cell_set</b></td>
+      <td>Target cell sets. See <a href="#cellset_file">formats</a></td>
+    </tr>
+    <tr>
+      <td><b>--matrix</b></td>
+      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
+    </tr>
+    <tr>
+      <td>--out</td>
+      <td>Output filenames prefix.<br/>default : 'census'</td>
+    </tr>
+    <tr>
+      <td>--progress</td>
+      <td>Display a progress bar while performing the calculation</td>
+    </tr>
+  </tbody>
+</table>
 
 ### Trajectory trends ###
 
 ### Shared ancestry ###
 
-### Transition tables ###
+### Trajectory differential expression ###
 
 ### Local regulatory model ###
 
@@ -493,9 +547,9 @@ tab-separated list composed as follows :
 Example:
 
 <table class="table" style="display: table">
-<tr><td>Tip1</td><td>The first tip</td><td>gene_2</td><td>gene_5</td></tr>
+<tr><td>Tip1</td><td>The first tip</td><td>gene_2</td><td>gene_1</td></tr>
 <tr><td>Tip2</td><td>The second tip</td><td>gene_3</td></tr>
-<tr><td>Tip3</td><td>The third tip</td><td>gene_4</td><td>gene_5</td></tr>
+<tr><td>Tip3</td><td>The third tip</td><td>gene_4</td><td>gene_1</td></tr>
 </table>
 
 ##### GMX #####
@@ -509,7 +563,7 @@ Example:
 <tr><td>Tip1</td><td>Tip2</td><td>Tip3</td></tr>
 <tr><td>The first tip</td><td>The second tip</td><td>The third tip</td></tr>
 <tr><td>gene_2</td><td>gene_3</td><td>gene_4</td></tr>
-<tr><td>gene_5</td><td></td><td>gene_5</td></tr>
+<tr><td>gene_1</td><td></td><td>gene_1</td></tr>
 </table>
 
 
@@ -526,13 +580,37 @@ you may use the **cells_by_gene_set** command-line tool provided byt **wot**.
 
 ```sh
 wot cells_by_gene_set --matrix matrix.txt --gene_sets gene_sets.gmt \
- --out cell_sets.gmt --format gmt --quantile 0.01
+ --out cell_sets.gmt --format gmt --quantile 0.99
 ```
 
 You can select which proportion of the cells having each gene to select
-with the `--quantile` option. The default value is 0.01, which would
+with the `--quantile` option. The default value is 0.99, which would
 select the top 1% of each gene. Choosing 0.5 for instance would
 select every cell that has all genes above the median in the population.
+
+### <a name="census_file">Census file</a> ###
+
+Census files are datasets files : tab-separated text files with a header.
+The header consists of an "id" field, and then the list of cell sets
+for the census.
+
+Each subsequent row will give the proportion of ancestors that
+pertained in each of the mentionned cell sets.
+
+The id is the time at which the ancestors lived.
+
+Example:
+
+<table class="table" style="display: table">
+<tr><td>id</td><td>tip1</td><td>tip2</td><td>tip3</td></tr>
+<tr><td>0.0</td><td>0.15</td><td>0.05</td><td>0.05</td></tr>
+<tr><td>1.0</td><td>0.28</td><td>0.05</td><td>0.03</td></tr>
+<tr><td>2.0</td><td>0.42</td><td>0.03</td><td>0.02</td></tr>
+<tr><td>3.0</td><td>0.72</td><td>0.02</td><td>0.01</td></tr>
+<tr><td>4.0</td><td>0.89</td><td>0.00</td><td>0.00</td></tr>
+<tr><td>5.0</td><td>0.99</td><td>0.00</td><td>0.00</td></tr>
+</table>
+
 
 ## More documentation ##
 ------------------------------

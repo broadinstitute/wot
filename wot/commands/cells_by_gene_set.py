@@ -7,12 +7,12 @@ import numpy
 import wot.io
 
 
-def get_cells_in_gene_sets(gene_sets, dataset, quantile=.01):
+def get_cells_in_gene_sets(gene_sets, dataset, quantile=.99):
     cell_sets = {}
     for gene_set_index in range(gene_sets.x.shape[1]):
         gene_indices = list(numpy.where(gene_sets.x[:,gene_set_index] == 1)[0])
         extracted = dataset.x[:, gene_indices]
-        thresholds = numpy.percentile(extracted, axis=0, q=(1-quantile) * 100)
+        thresholds = numpy.percentile(extracted, axis=0, q=quantile * 100)
         selected = []
         for i in range(extracted.shape[0]):
             if all(extracted[i] > thresholds):
