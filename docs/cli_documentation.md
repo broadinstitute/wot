@@ -238,12 +238,12 @@ wot trajectory --tmap . --cell_days days.txt \
 The census command lets you find out in which cell sets the ancestors
 of a given cell set were located.
 
+![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
 
 ```sh
 wot census --tmap . --cell_days days.txt \
  --cell_set cell_sets.gmt --matrix matrix.txt --progress
 ```
-![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
 
 This would create several census files named `<prefix>_<cellset>_<timepoint>.txt`,
 for instance `census_tip1_100.0.txt`. See <a href="#census_file">formats</a>
@@ -294,9 +294,14 @@ for more information.
 
 ### Global regulatory model ###
 
+
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="{{site.baseurl}}/examples/plotting_validation_summary">See example code</a>
 ### Validation ###
 
 You can easily validate the transport maps that have been computed above.
+
+![Validation summary plot]({{site.baseurl}}/images/validation_summary.png)
 
 Say, for instance, that you have data at time points 0, 1, and 2.
 You could compute the transport map from 0 to 2, and then interpolate with
