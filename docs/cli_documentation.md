@@ -50,7 +50,7 @@ The package gets built to `dist/wot-VERSION.tar.gz`, for instance `dist/wot-0.1.
 > pip install --user cython --no-cache-dir
 > echo "$PATH" | grep -q "$HOME/.local/bin" || \
 >   echo -e "\n# Cython path\nPATH=\"\$PATH:\$HOME/.local/bin\"" \
->   >> ~/.bash_profile
+>   >> ~/.bash_profile && source ~/.bash_profile
 > ```
 >
 > *h5py*, *docutils*, and *msgpack-python* have to be installed separately and
@@ -111,7 +111,7 @@ a table containing the core options. Required options are in bold font.
 > <div class="center-block text-center py-2">
 >   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
 >      role="button" href="{{site.baseurl}}/interactive_documentation">
->      Learn more &raquo;
+>      View documentation &raquo;
 >   </a>
 > </div>
 >
