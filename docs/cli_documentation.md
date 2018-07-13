@@ -231,14 +231,10 @@ wot trajectory --tmap . --cell_days days.txt \
 </table>
 
 
-<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="{{site.baseurl}}/examples/ancestor_census">See example code</a>
 ### Ancestor census ###
 
 The census command lets you find out in which cell sets the ancestors
 of a given cell set were located.
-
-![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
 
 ```sh
 wot census --tmap . --cell_days days.txt \
@@ -284,24 +280,25 @@ for more information.
   </tbody>
 </table>
 
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="{{site.baseurl}}/examples/ancestor_census">See example code</a>
+##### Plot for ancestor census #####
+
+![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
+
+
 ### Trajectory trends ###
 
 ### Shared ancestry ###
 
-### Trajectory differential expression ###
-
-### Local regulatory model ###
+### Local regulatory model via differential expression ###
 
 ### Global regulatory model ###
 
 
-<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="{{site.baseurl}}/examples/plotting_validation_summary">See example code</a>
 ### Validation ###
 
 You can easily validate the transport maps that have been computed above.
-
-![Validation summary plot]({{site.baseurl}}/images/validation_summary.png)
 
 Say, for instance, that you have data at time points 0, 1, and 2.
 You could compute the transport map from 0 to 2, and then interpolate with
@@ -399,6 +396,12 @@ Each line contains information about the relation between two cell sets :
    - **R0.5** is the randomly generated population at that timepoint
    - **P1** is the population of the dataset at the second timepoint of the day pair
  - **distance** is the Wasserstein distance between the two sets considered
+
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="{{site.baseurl}}/examples/plotting_validation_summary">See example code</a>
+##### Plot validation summary #####
+
+![Validation summary plot]({{site.baseurl}}/images/validation_summary.png)
 
 
 ### Force-directed Layout Embedding ###
@@ -619,7 +622,7 @@ Example:
 </table>
 
 
-## More documentation ##
+## Sphinx-generated documentation ##
 ------------------------------
 
 This document and the [examples]({{site.baseurl}}/examples) section should be more than enough to use **wot**.
@@ -630,7 +633,7 @@ the package with the [Sphinx](http://www.sphinx-doc.org/en/master/) tool :
 ```sh
 pip install --user sphinx
 cd sdocs/
-make
+make html
 ```
 
 
