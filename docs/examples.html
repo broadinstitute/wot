@@ -21,14 +21,14 @@ examples:
   <hr class="featurette-divider">
 
   {% for example in page.examples %}
-    <div class="row featurette my-5">
+    <div class="row featurette my-2">
       <div class="col-md-5 {% cycle('order-1', 'order-3') %}">
         <img class="featurette-image img-responsive mx-auto d-block"
              src="{{site.baseurl}}/images/{{ example['image'] }}"
              width=300 height=300 alt="Generic placeholder image">
       </div>
 
-      <div class="col-md-7 order-2">
+      <div class="col-md-7 order-2 my-5">
         <a href="{{ example['link'] }}" class="nostyle">
           <h2 class="featurette-heading my-3">
             {{ example['title'] }}
