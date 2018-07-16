@@ -412,6 +412,13 @@ def write_gmt(gene_sets, f):
     for gset in gene_sets:
         f.write('{}\t{}\t{}\n'.format(gset, '-', '\t'.join(gene_sets[gset])))
 
+def read_cell_sets(path):
+    ds = read_gene_sets(path)
+    cell_sets = {}
+    for i in range(ds.x.shape[1]):
+        selected = np.where(ds.x[:,i] == 1)
+        cell_sets[ds.col_meta.index[i]] = list(ds.row_meta.index[selected])
+    return cell_sets
 
 def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_filter=None, col_filter=None,
                  force_sparse=False, backed=False):
@@ -636,6 +643,7 @@ def check_file_extension(name, output_format):
 
 
 def get_filename_and_extension(name):
+    name = os.path.basename(name)
     dot_index = name.rfind('.')
     ext = ''
     basename = name
