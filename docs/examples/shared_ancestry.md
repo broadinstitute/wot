@@ -100,5 +100,7 @@ pyplot.show()
 
 ## Results
 
-Here is one of the plot!
+Here is one of the plot.
+
+![Shared Ancestry]({{site.baseurl}}/images/shared_ancestry.png)
 
