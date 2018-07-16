@@ -117,6 +117,49 @@ class Core:
         """
         return wot.core.load_transport_map(self, t1, t2)
 
+    def can_push_forward(self, *populations):
+        """
+        Checks if the populations can be pushed forward.
+
+        Parameters
+        ----------
+        *populations : wot.Population
+            Measure over the cells at a given timepoint to be pushed forward.
+
+        Returns
+        -------
+        result : bool
+            True if the populations can be pushed forward
+
+        Raises
+        ------
+        ValueError
+            If all populations are not in the same timepoint
+        """
+        return self.timepoints.index(wot.core.unique_timepoint(*populations)) \
+                < len(self.timepoints) - 1
+
+    def can_pull_back(self, *populations):
+        """
+        Checks if the populations can be pulled back.
+
+        Parameters
+        ----------
+        *populations : wot.Population
+            Measure over the cells at a given timepoint to be pulled back.
+
+        Returns
+        -------
+        result : bool
+            True if the populations can be pulled back.
+
+        Raises
+        ------
+        ValueError
+            If all populations are not in the same timepoint
+        """
+        return self.timepoints.index(wot.core.unique_timepoint(*populations)) > 0
+
     def push_forward(self, *populations, to_time = None):
         """
         Pushes the population forward through the computed transport maps
@@ -151,10 +194,7 @@ class Core:
         # Same, but several populations at once
         core.pull_back(* core.push_forward(pop1, pop2, pop3))
         """
-        times = set([ pop.time for pop in populations ])
-        if len(times) > 1:
-            raise ValueError("Several populations were given, but they do not all live in the same timepoint")
-        i = self.timepoints.index(list(times)[0])
+        i = self.timepoints.index(wot.core.unique_timepoint(*populations))
         j = i + 1 if to_time is None else self.timepoints.index(to_time)
 
         if i == -1:
@@ -214,10 +254,7 @@ class Core:
         # Same, but several populations at once
         core.pull_back(* core.push_forward(pop1, pop2, pop3))
         """
-        times = set([ pop.time for pop in populations ])
-        if len(times) > 1:
-            raise ValueError("Several populations were given, but they do not all live in the same timepoint")
-        i = self.timepoints.index(list(times)[0])
+        i = self.timepoints.index(wot.core.unique_timepoint(*populations))
         j = i - 1 if to_time is None else self.timepoints.index(to_time)
 
         if i == -1:
@@ -421,11 +458,7 @@ class Core:
         -----
         If several populations are given, they must all live in the same timepoint.
         """
-        times = set([ pop.time for pop in populations])
-        if len(times) > 1:
-            raise ValueError("All populations must live in the same timepoint")
-
-        day = list(times)[0]
+        day = wot.core.unique_timepoint(*populations)
         all_ids_at_t = self.matrix.row_meta.index[self.matrix.row_meta['day'] == day]
         inter_ids = cell_set_matrix.row_meta.index.intersection(all_ids_at_t)
         if len(inter_ids) == 0:
@@ -436,7 +469,7 @@ class Core:
             def get_census(p):
                 c = np.dot(p[pop_indexer], cell_set_matrix.x[csm_indexer,:])
                 return c / np.sum(c)
-            census = [ get_census(pop.p) for pop in populations ]
+            census = np.asarray([ get_census(pop.p) for pop in populations ], dtype=np.float64)
 
         if len(census) == 1:
             return census[0]
