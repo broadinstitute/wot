@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from wot.population import Population
+import wot.core
 import numpy as np
 import pandas as pd
 
@@ -32,7 +33,7 @@ class Core:
         self.matrix = matrix
         self.tmap_dir = transport_maps_directory
         self.tmap_prefix = transport_maps_prefix
-        self.tmaps = {}
+        self.tmaps = wot.core.scan_transport_map_directory(self)
 
     def compute_all_transport_maps(self):
         """
