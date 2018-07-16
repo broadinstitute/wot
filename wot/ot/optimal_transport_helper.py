@@ -261,6 +261,50 @@ class OptimalTransportHelper:
     def compute_cost_matrix(self, a, b):
         return OptimalTransportHelper.compute_default_cost_matrix(a, b, self.eigenvals)
 
+    @staticmethod
+    def compute_single_transport_map(ds, config):
+        """
+        Computes a single transport map
+
+        Parameters
+        ----------
+        ds : wot.Dataset
+            The gene expression matrix to consider.
+            It is assumed to have a valid day column for each cell.
+        config : dict
+            Configuration to use for all parameters for the couplings :
+            - t0, t1
+            - lambda1, lambda2, epsilon, g
+        """
+        t0 = config.get('t0', None)
+        t1 = config.get('t1', None)
+        if t0 is None or t1 is None:
+            raise ValueError("config must have a both t0 and t1, indicating target timepoints")
+        t0_indices = np.where(ds.row_meta['day'] == float(t0))[0]
+        t1_indices = np.where(ds.row_meta['day'] == float(t1))[0]
+
+        local_pca = config.get('local_pca', None)
+        if local_pca is not None and local_pca > 0:
+            import scipy.parse
+            x = np.vstack([ ds.x[t0_indices], ds.x[t1_indices] ])
+            x = x - x.mean(axis = 0)
+            pca = sklearn.decomposition.PCA(n_components = local_pca)
+            pca.fit(x.T)
+            x = pca.components_.T
+            p0 = x[0:len(t0_indices)]
+            p1 = x[len(t0_indices):len(t0_indices) + len(t1_indices)]
+        else:
+            p0 = ds.x[t0_indices]
+            p1 = ds.x[t1_indices]
+
+        C = OptimalTransportHelper.compute_default_cost_matrix(p0, p1)
+        ot_defaults = { 'epsilon': .05, 'lambda1': 10, 'lambda2': 80, 'solver': 'unbalanced' }
+        args = { x: config[x] if x in config else ot_defaults[x] for x in ot_defaults }
+        g = np.ones(C.shape[0])
+        tmap = wot.ot.optimal_transport(C, g, **args)['transport']
+        return wot.Dataset(tmap, ds.row_meta.iloc[t0_indices], ds.row_meta.iloc[t1_indices])
+
+
     def compute_transport_maps(self, callback):
         day_pairs = self.day_pairs
         args = self.args
