@@ -143,9 +143,9 @@ class Core:
         Examples
         --------
         # Basic example
-        core.push_forward(pop, to_time = 0)
+        core.push_forward(pop, to_time = 2) # -> wot.Population
         # Pushing several populations at once
-        core.push_forward(pop1, pop2, pop3)
+        core.push_forward(pop1, pop2, pop3) # -> list of wot.Population
         # Pulling back after pushing forward
         core.pull_back(core.push_forward(pop))
         # Same, but several populations at once
@@ -206,9 +206,9 @@ class Core:
         Examples
         --------
         # Basic example
-        core.pull_back(pop, to_time = 0)
+        core.pull_back(pop, to_time = 0) # -> wot.Population
         # Pushing several populations at once
-        core.pull_back(pop1, pop2, pop3)
+        core.pull_back(pop1, pop2, pop3) # -> list of wot.Population
         # Pulling back after pushing forward
         core.pull_back(core.push_forward(pop))
         # Same, but several populations at once
@@ -243,13 +243,13 @@ class Core:
         else:
             return result
 
-    def ancestors(self, population, at_time=None):
+    def ancestors(self, *populations, at_time=None):
         """
         Computes the ancestors of a given population by pulling back through transport maps
 
         Parameters
         ----------
-        population : wot.Population
+        *populations : wot.Population
             Measure over the cells at a given timepoint to compute ancestors for.
         at_time : int or float, optional
             Timepoint for which to compute the ancestors.
@@ -257,9 +257,10 @@ class Core:
 
         Returns
         -------
-        ancestors : wot.Population
+        ancestors : wot.Population or list of wot.Population
             A population of cells, at the destination timepoint, most likely to
              be the ancestors of the input population.
+            List if several populations were given, single population otherwise.
 
         Raises
         ------
@@ -267,19 +268,32 @@ class Core:
             If the selected destination timepoint does not exist.
             If the selected destination is after the original timepoint.
 
+        Examples
+        --------
+        # Basic example
+        core.ancestors(pop, at_time = 0) # -> wot.Population
+        # Using several populations at once
+        core.ancestors(pop1, pop2, pop3) # -> list of wot.Population
+        # Chaining ancestors and descendants
+        core.ancestors(core.descendants(pop))
+        # Same, but several populations at once
+        core.ancestors(* core.descendants(pop1, pop2, pop3))
+
         Notes
         -----
         If population.time is 7 and at_time is 5, the Core would pull back through two transport maps.
-        """
-        return self.pull_back(population, to_time = at_time)
 
-    def descendants(self, population, at_time=None):
+        This method is only and alias to Core.pull_back
+        """
+        return self.pull_back(*populations, to_time = at_time)
+
+    def descendants(self, *populations, at_time=None):
         """
         Computes the descendants of a given population by pushing forward through transport maps
 
         Parameters
         ----------
-        population : wot.Population
+        *populations : wot.Population
             Measure over the cells at a given timepoint to compute ancestors for.
         at_time : int or float, optional
             Timepoint for which to compute the ancestors.
@@ -287,9 +301,10 @@ class Core:
 
         Returns
         -------
-        descendants : wot.Population
+        descendants : wot.Population or list of wot.Population
             A population of cells at the destination timepoint, most likely to
              be the descendants of the input population.
+            List if several populations were given, single population otherwise.
 
         Raises
         ------
@@ -297,19 +312,32 @@ class Core:
             If the selected destination timepoint does not exist.
             If the selected destination is before the original timepoint.
 
+        Examples
+        --------
+        # Basic example
+        core.descendants(pop, at_time = 2) # -> wot.Population
+        # Using several populations at once
+        core.descendants(pop1, pop2, pop3) # -> list of wot.Population
+        # Chaining ancestors and descendants
+        core.ancestors(core.descendants(pop))
+        # Same, but several populations at once
+        core.ancestors(* core.descendants(pop1, pop2, pop3))
+
         Notes
         -----
         If population.time is 5 and at_time is 7, the Core would push forward through two transport maps.
-        """
-        return self.push_forward(population, to_time = at_time)
 
-    def population_from_ids(self, ids, at_time=None):
+        This method is only and alias to Core.push_forward
+        """
+        return self.push_forward(*populations, to_time = at_time)
+
+    def population_from_ids(self, *ids, at_time=None):
         """
         Constructs a population uniformly distributed among the ids given as input.
 
         Parameters
         ----------
-        ids : list of str
+        *ids : list of str
             The list of cell ids that belong to that population.
         at_time : int or float, optional
             The time at which to construct the population.
@@ -317,14 +345,27 @@ class Core:
 
         Returns
         -------
-        population : wot.Population
+        *populations : wot.Population
             A population, uniformly distributed over the cells given as input.
+            List if several lists of ids were given, single population otherwise.
 
         Raises
         ------
         ValueError
             If at_time is not specified and all cells do not live in the same timepoint.
             If the generated population would be empty.
+
+        Examples
+        --------
+        # Single population
+        cell_set = [ 'cell_1', 'cell_2', 'cell_3' ]
+        core.population_from_ids(cell_set) # -> wot.Population
+        # Multiple populations at once
+        multi_cell_sets = {
+          'set_a': [ 'cell_a1', 'cell_a2'],
+          'set_b': [ 'cell_b1', 'cell_b2'],
+        }
+        core.population_from_ids(* multi_cell_sets.values()) # -> list of wot.Population
 
         Notes
         -----
@@ -333,16 +374,25 @@ class Core:
           a probability distribution over the cells of that time point.
         """
         day = at_time
-        cell_inds = self.matrix.row_meta.index.get_indexer_for(ids)
+        all_ids = [ i for ids_el in ids for i in ids_el ]
+        cell_inds = self.matrix.row_meta.index.get_indexer_for(all_ids)
 
         if at_time is None:
-            day = self.matrix.row_meta.loc[ids[0], 'day']
+            day = self.matrix.row_meta.loc[ids[0][0], 'day']
             if not all(self.matrix.row_meta.iloc[cell_inds]['day'] == day):
                 raise ValueError("All cells do not live in the same timepoint. Please choose one")
 
         day_query = self.matrix.row_meta['day'] == day
         all_inds = np.where(day_query)[0]
 
-        p = [ 1 if id in cell_inds else 0 for id in all_inds ]
-        p = np.asarray(p, dtype=np.float64)
-        return Population(day, p / np.sum(p))
+        def get_population(ids_el):
+            cell_inds = self.matrix.row_meta.index.get_indexer_for(ids_el)
+            p = [ 1 if id in cell_inds else 0 for id in all_inds ]
+            p = np.asarray(p, dtype=np.float64)
+            return Population(day, p / np.sum(p))
+
+        result = [ get_population(ids_el) for ids_el in ids ]
+        if len(result) == 1:
+            return result[0]
+        else:
+            return result
