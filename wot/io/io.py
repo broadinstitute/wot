@@ -168,16 +168,24 @@ def read_transport_maps(input_dir, ids=None, time=None):
 
 def read_gene_sets(path, feature_ids=None):
     path = str(path)
-    basename_and_extension = get_filename_and_extension(path)
-    ext = basename_and_extension[1]
+    hash_index = path.rfind('#')
+    set_name = None
+    if hash_index != -1:
+        set_name = path[hash_index + 1:].split(',')
+        path = path[0:hash_index]
+    ext = get_filename_and_extension(path)[1]
     if ext == 'gmt':
-        return read_gmt(path, feature_ids)
+        gs = read_gmt(path, feature_ids)
     elif ext == 'gmx':
-        return read_gmx(path, feature_ids)
+        gs = read_gmx(path, feature_ids)
     elif ext == 'txt' or ext == 'grp':
-        return read_grp(path, feature_ids)
+        gs = read_grp(path, feature_ids)
     else:
         raise ValueError('Unknown file format')
+    if set_name is not None:
+        gs_filter = gs.col_meta.index.isin(set_name)
+        gs = wot.Dataset(gs.x[:, gs_filter], gs.row_meta, gs.col_meta.iloc[gs_filter])
+    return gs
 
 
 def read_grp(path, feature_ids=None):
@@ -584,9 +592,11 @@ def get_filename_and_extension(name):
     basename = name
     if dot_index != -1:
         ext = name[dot_index + 1:]
-        if ext == 'gz':
-            return get_filename_and_extension(name[0:dot_index])
-
+        if ext == 'gz' or ext == 'txt':
+            new_name = name[0:dot_index]
+            second_dot_index = new_name.rfind('.')
+            if second_dot_index != -1:
+                return get_filename_and_extension(name[0:dot_index])
     if dot_index != -1:
         basename = name[0:dot_index]
     return basename, ext
