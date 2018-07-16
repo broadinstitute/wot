@@ -35,10 +35,33 @@ class Core:
         self.tmap_prefix = transport_maps_prefix
         self.tmaps = wot.core.scan_transport_map_directory(self)
         self.timepoints = sorted(set(matrix.row_meta['day']))
+        self.ot_config = {}
 
-    def compute_all_transport_maps(self):
+    def set_ot_config(self, **kwargs):
+        """
+        Set parameters for the Optimal Transport computation
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Dictionnary of parameters. Will be inserted as is into OT configuration.
+
+        Example
+        -------
+        core.set_ot_config(epsilon = .01)
+        core.set_ot_config(lambda1 = 50, lambda2 = 80)
+        """
+        for k in kwargs.keys():
+            self.ot_config[k] = kwargs[k]
+
+    def compute_all_transport_maps(self, force = False):
         """
         Computes all required transport maps and caches everything for future use.
+
+        Parameters
+        ----------
+        force : bool, optional, default : False
+            Force recomputation of each transport map, after config update for instance.
 
         Returns
         -------
@@ -47,7 +70,7 @@ class Core:
         """
         t = self.timepoints
         for i in range(len(t) - 1):
-            if self.tmaps.get((t[i], t[i+1]), None) is None:
+            if force or self.tmaps.get((t[i], t[i+1]), None) is None:
                 self.compute_transport_map(t[i], t[i+1])
 
     def compute_transport_map(self, t1, t2):
