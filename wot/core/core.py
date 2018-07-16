@@ -396,3 +396,49 @@ class Core:
             return result[0]
         else:
             return result
+
+    def population_census(self, cell_set_matrix, *populations):
+        """
+        Get a census for a population with respect to a given cell set matrix
+
+        Parameters
+        ----------
+        cell_set_matrix : wot.Dataset
+            Dataset of 0s and 1s denoting membership in each cell set.
+            Cells as rows, cell sets as columns.
+        *populations : wot.Population or list of wot.Population
+            The population to be considered
+
+        Returns
+        -------
+        census : 1D-array or list of 1D-array
+            The census for the population.
+            census[i] is the probabiliy that a cell from that population belongs
+             to cell set number i from the cell_set_matrix.
+            List of censuses if a several populations were given as input, single census otherwise.
+
+        Notes
+        -----
+        If several populations are given, they must all live in the same timepoint.
+        """
+        times = set([ pop.time for pop in populations])
+        if len(times) > 1:
+            raise ValueError("All populations must live in the same timepoint")
+
+        day = list(times)[0]
+        all_ids_at_t = self.matrix.row_meta.index[self.matrix.row_meta['day'] == day]
+        inter_ids = cell_set_matrix.row_meta.index.intersection(all_ids_at_t)
+        if len(inter_ids) == 0:
+            census = [ [0] * cell_set_matrix.x.shape[1] ] * len(populations)
+        else:
+            pop_indexer = all_ids_at_t.get_indexer_for(inter_ids)
+            csm_indexer = cell_set_matrix.row_meta.index.get_indexer_for(inter_ids)
+            def get_census(p):
+                c = np.dot(p[pop_indexer], cell_set_matrix.x[csm_indexer,:])
+                return c / np.sum(c)
+            census = [ get_census(pop.p) for pop in populations ]
+
+        if len(census) == 1:
+            return census[0]
+        else:
+            return census
