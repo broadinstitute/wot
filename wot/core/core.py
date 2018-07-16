@@ -117,13 +117,13 @@ class Core:
         """
         return wot.core.load_transport_map(self, t1, t2)
 
-    def push_forward(self, population, to_time = None):
+    def push_forward(self, *populations, to_time = None):
         """
         Pushes the population forward through the computed transport maps
 
         Parameters
         ----------
-        population : wot.Population
+        *populations : wot.Population
             Measure over the cells at a given timepoint to be pushed forward.
         to_time : int or float, optional
             Destination timepoint to push forward to.
@@ -132,13 +132,29 @@ class Core:
         -------
         result : wot.Population
             The push forward of the input population through the proper transport map.
+            Array of populations if several populations were given as input.
 
         Raises
         ------
         ValueError
             If there is no further timepoint to push the population forward.
+            If several populations are given as input but dot live in the same timepoint.
+
+        Examples
+        --------
+        # Basic example
+        core.push_forward(pop, to_time = 0)
+        # Pushing several populations at once
+        core.push_forward(pop1, pop2, pop3)
+        # Pulling back after pushing forward
+        core.pull_back(core.push_forward(pop))
+        # Same, but several populations at once
+        core.pull_back(* core.push_forward(pop1, pop2, pop3))
         """
-        i = self.timepoints.index(population.time)
+        times = set([ pop.time for pop in populations ])
+        if len(times) > 1:
+            raise ValueError("Several populations were given, but they do not all live in the same timepoint")
+        i = self.timepoints.index(list(times)[0])
         j = i + 1 if to_time is None else self.timepoints.index(to_time)
 
         if i == -1:
@@ -150,23 +166,27 @@ class Core:
         if i > j :
             raise ValueError("Destination timepoint is before source. Unable to push forward")
 
-        p = population.p
+        p = np.vstack([ pop.p for pop in populations ])
         while i < j:
             t0 = self.timepoints[i]
             t1 = self.timepoints[i+1]
             tmap = self.transport_map(t0, t1)
-            p = np.dot(population.p, tmap.x)
+            p = np.dot(p, tmap.x)
             i += 1
 
-        return Population(self.timepoints[i], p)
+        result = [ Population(self.timepoints[i], p[k,:]) for k in range(p.shape[0]) ]
+        if len(result) == 1:
+            return result[0]
+        else:
+            return result
 
-    def pull_back(self, population, to_time = None):
+    def pull_back(self, *populations, to_time = None):
         """
         Pulls the population back through the computed transport maps
 
         Parameters
         ----------
-        population : wot.Population
+        *populations : wot.Population
             Measure over the cells at a given timepoint to be pushed forward.
         to_time : int or float, optional
             Destination timepoint to pull back to.
@@ -175,13 +195,29 @@ class Core:
         -------
         result : wot.Population
             The pull back of the input population through the proper transport map.
+            Array of populations if several populations were given as input.
 
         Raises
         ------
         ValueError
             If there is no previous timepoint to pull the population back.
+            If several populations are given as input but dot live in the same timepoint.
+
+        Examples
+        --------
+        # Basic example
+        core.pull_back(pop, to_time = 0)
+        # Pushing several populations at once
+        core.pull_back(pop1, pop2, pop3)
+        # Pulling back after pushing forward
+        core.pull_back(core.push_forward(pop))
+        # Same, but several populations at once
+        core.pull_back(* core.push_forward(pop1, pop2, pop3))
         """
-        i = self.timepoints.index(population.time)
+        times = set([ pop.time for pop in populations ])
+        if len(times) > 1:
+            raise ValueError("Several populations were given, but they do not all live in the same timepoint")
+        i = self.timepoints.index(list(times)[0])
         j = i - 1 if to_time is None else self.timepoints.index(to_time)
 
         if i == -1:
@@ -193,15 +229,19 @@ class Core:
         if i < j :
             raise ValueError("Destination timepoint is after source. Unable to pull back")
 
-        p = population.p
+        p = np.vstack([ pop.p for pop in populations ])
         while i > j:
             t1 = self.timepoints[i]
             t0 = self.timepoints[i-1]
             tmap = self.transport_map(t0, t1)
-            p = np.dot(tmap.x, p)
+            p = np.dot(tmap.x, p.T).T
             i -= 1
 
-        return Population(self.timepoints[i], p)
+        result = [ Population(self.timepoints[i], p[k,:]) for k in range(p.shape[0]) ]
+        if len(result) == 1:
+            return result[0]
+        else:
+            return result
 
     def ancestors(self, population, at_time=None):
         """
