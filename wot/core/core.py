@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from wot.population import Population
 import numpy as np
 import pandas as pd
 
@@ -193,4 +194,17 @@ class Core:
           It does not necessarily sum to 1. However, this method always returns
           a probability distribution over the cells of that time point.
         """
-        raise ValueError("Not implemented")
+        day = at_time
+        cell_inds = self.matrix.row_meta.index.get_indexer_for(ids)
+
+        if at_time is None:
+            day = self.matrix.row_meta.loc[ids[0], 'day']
+            if not all(self.matrix.row_meta.iloc[cell_inds]['day'] == day):
+                raise ValueError("All cells do not live in the same timepoint. Please choose one")
+
+        day_query = self.matrix.row_meta['day'] == day
+        all_inds = np.where(day_query)[0]
+
+        p = [ 1 if id in cell_inds else 0 for id in all_inds ]
+        p = np.asarray(p, dtype=np.float64)
+        return Population(day, p / np.sum(p))
