@@ -53,4 +53,8 @@ def load_transport_map(core, t1, t2):
     tmap : wot.Dataset
         The given transport map
     """
-    raise ValueError("Not implemented")
+    if core.tmaps.get((t1, t2), None) is None:
+        core.compute_transport_map(t1, t2)
+
+    path = core.tmaps.get((t1, t2))
+    return wot.io.read_dataset(path)

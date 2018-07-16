@@ -62,7 +62,15 @@ class Core:
         None
             Only computes and caches the transport maps, does not return it.
         """
-        raise ValueError("Not implemented")
+        if self.tmap_prefix is None:
+            path = self.default_tmap_prefix
+        else:
+            path = self.tmap_prefix
+        path += "_{}_{}.loom".format(t1, t2)
+        config = { 't0': t1, 't1': t2 }
+        tmap = wot.ot.OptimalTransportHelper.compute_single_transport_map(self.matrix, config)
+        wot.io.write_dataset(tmap, path, output_format="loom", txt_full=False)
+        self.tmaps[(t1, t2)] = path
 
     def push_forward(self, population):
         """
