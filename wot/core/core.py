@@ -34,6 +34,7 @@ class Core:
         self.tmap_dir = transport_maps_directory
         self.tmap_prefix = transport_maps_prefix
         self.tmaps = wot.core.scan_transport_map_directory(self)
+        self.timepoints = sorted(set(matrix.row_meta['day']))
 
     def compute_all_transport_maps(self):
         """
@@ -44,7 +45,10 @@ class Core:
         None
             Only computes and caches all transport maps, does not return them.
         """
-        raise ValueError("Not implemented")
+        t = self.timepoints
+        for i in range(len(t) - 1):
+            if self.tmaps.get((t[i], t[i+1]), None) is None:
+                self.compute_transport_map(t[i], t[i+1])
 
     def compute_transport_map(self, t1, t2):
         """
@@ -72,7 +76,25 @@ class Core:
         wot.io.write_dataset(tmap, path, output_format="loom", txt_full=False)
         self.tmaps[(t1, t2)] = path
 
-    def push_forward(self, population):
+    def transport_map(self, t1, t2):
+        """
+        Loads a transport map for a given pair of timepoints.
+
+        Parameters
+        ----------
+        t1 : int or float
+            Source timepoint of the transport map.
+        t2 : int of float
+            Destination timepoint of the transport map.
+
+        Returns
+        -------
+        tmap : wot.Dataset
+            The transport map from t1 to t2
+        """
+        return wot.core.load_transport_map(self, t1, t2)
+
+    def push_forward(self, population, to_time = None):
         """
         Pushes the population forward through the computed transport maps
 
@@ -80,6 +102,8 @@ class Core:
         ----------
         population : wot.Population
             Measure over the cells at a given timepoint to be pushed forward.
+        to_time : int or float, optional
+            Destination timepoint to push forward to.
 
         Returns
         -------
@@ -91,9 +115,29 @@ class Core:
         ValueError
             If there is no further timepoint to push the population forward.
         """
-        raise ValueError("Not implemented")
+        i = self.timepoints.index(population.time)
+        j = i + 1 if to_time is None else self.timepoints.index(to_time)
 
-    def pull_back(self, population):
+        if i == -1:
+            raise ValueError("Timepoint not found")
+        if j == -1:
+            raise ValueError("Destination timepoint not found")
+        if j >= len(self.timepoints):
+            raise ValueError("No further timepoints. Unable to push forward")
+        if i > j :
+            raise ValueError("Destination timepoint is before source. Unable to push forward")
+
+        p = population.p
+        while i < j:
+            t0 = self.timepoints[i]
+            t1 = self.timepoints[i+1]
+            tmap = self.transport_map(t0, t1)
+            p = np.dot(population.p, tmap.x)
+            i += 1
+
+        return Population(self.timepoints[i], p)
+
+    def pull_back(self, population, to_time = None):
         """
         Pulls the population back through the computed transport maps
 
@@ -101,6 +145,8 @@ class Core:
         ----------
         population : wot.Population
             Measure over the cells at a given timepoint to be pushed forward.
+        to_time : int or float, optional
+            Destination timepoint to pull back to.
 
         Returns
         -------
@@ -112,7 +158,27 @@ class Core:
         ValueError
             If there is no previous timepoint to pull the population back.
         """
-        raise ValueError("Not implemented")
+        i = self.timepoints.index(population.time)
+        j = i - 1 if to_time is None else self.timepoints.index(to_time)
+
+        if i == -1:
+            raise ValueError("Timepoint not found")
+        if i == 0:
+            raise ValueError("No previous timepoints. Unable to pull back")
+        if j == -1:
+            raise ValueError("Destination timepoint not found")
+        if i < j :
+            raise ValueError("Destination timepoint is after source. Unable to pull back")
+
+        p = population.p
+        while i > j:
+            t1 = self.timepoints[i]
+            t0 = self.timepoints[i-1]
+            tmap = self.transport_map(t0, t1)
+            p = np.dot(tmap.x, p)
+            i -= 1
+
+        return Population(self.timepoints[i], p)
 
     def ancestors(self, population, at_time=None):
         """
@@ -142,7 +208,7 @@ class Core:
         -----
         If population.time is 7 and at_time is 5, the Core would pull back through two transport maps.
         """
-        raise ValueError("Not implemented")
+        return self.pull_back(population, to_time = at_time)
 
     def descendants(self, population, at_time=None):
         """
@@ -172,7 +238,7 @@ class Core:
         -----
         If population.time is 5 and at_time is 7, the Core would push forward through two transport maps.
         """
-        raise ValueError("Not implemented")
+        return self.push_forward(population, to_time = at_time)
 
     def population_from_ids(self, ids, at_time=None):
         """
