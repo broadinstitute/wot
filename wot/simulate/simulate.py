@@ -34,7 +34,7 @@ def interp(t, tp, fp, left=None, right=None, method='linear', smooth=0):
     ------
     ValueError
         If `tp` and `fp` have different length
-        If all items in fp do not have the same dimension
+        If all items in `fp` do not have the same dimension
         If `tp` is not a 1-D sequence
 
     Notes
