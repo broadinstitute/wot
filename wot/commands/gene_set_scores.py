@@ -7,17 +7,25 @@ import os
 import wot.io
 
 
-def compute(matrix, gene_sets, no_zscore, out, format, use_dask=False):
+def compute(matrix, gene_sets, out, format, background_cell_set=None, use_dask=False):
     ds = wot.io.read_dataset(matrix, use_dask=use_dask, chunks=(10000, None))
+    background_ds = None
+    if background_cell_set is not None:
+        import numpy as np
+        background_cells_ds = wot.io.read_gene_sets(background_cell_set)
+        background_cells_ids = background_cells_ds.row_meta.index.values[np.where(background_cells_ds.x[:, 0] > 0)[0]]
+        cell_filter = ds.row_meta.index.isin(background_cells_ids)
+        background_ds = wot.Dataset(ds.x[cell_filter], ds.row_meta.iloc[cell_filter], ds.col_meta)
+
     gs = wot.io.read_gene_sets(gene_sets, ds.col_meta.index.values)
     if gs.x.shape[1] is 0:
         raise ValueError('No overlap of genes in gene sets and dataset')
 
     # scores contains cells on rows, gene sets on columns
-    result = wot.score_gene_sets(ds=ds, gs=gs, z_score_ds=not no_zscore, use_dask=use_dask)
+    result = wot.score_gene_sets(dataset_to_score=ds, background_ds=background_ds, gs=gs, use_dask=use_dask)
     # import dask.array as da
     # da.to_npy_stack('/Users/jgould/git/wot/bin/data/', result.x, axis=0)
-    wot.io.write_dataset(ds=result, path=out, output_format=format)
+    wot.io.write_dataset(ds=result, path=out, output_format=format, txt_full=False)
 
 
 def main(argv):
@@ -25,11 +33,8 @@ def main(argv):
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--gene_sets',
                         help='Gene sets in gmx or gmt format. If not specified gene sets for apoptosis and cell cycle are used')
+    # parser.add_argument('--cell_set', help='Background cell set')
     parser.add_argument('--out', help='Output file name prefix')
-    parser.add_argument('--no_zscore', action='store_true',
-                        help='Do not z-score genes')
-    parser.add_argument('--verbose', action='store_true',
-                        help='Print progress information')
     # parser.add_argument('--dask', help='Dask scheduler URL')
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='loom', choices=wot.commands.FORMAT_CHOICES)
 
@@ -52,5 +57,5 @@ def main(argv):
     if gene_sets is None:
         import sys
         gene_sets = os.path.join(os.path.dirname(sys.argv[0]), 'resources', 'growth_scores_gene_sets.gmx')
-    compute(matrix=args.matrix, gene_sets=gene_sets, no_zscore=args.no_zscore, out=args.out,
+    compute(matrix=args.matrix, gene_sets=gene_sets, out=args.out,
             format=args.format)
