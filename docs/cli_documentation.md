@@ -631,10 +631,22 @@ functions in this package, it is available and can be generated from the sources
 the package with the [Sphinx](http://www.sphinx-doc.org/en/master/) tool :
 
 ```sh
-pip install --user sphinx
+pip install --user sphinx sphinx_rtd_theme
 cd sdocs/
+sphinx-apidoc -o . ../wot/ -F
 make html
 ```
 
+<br />
+
+> <button class="btn-info rounded border-0 px-3 py-1" disabled>Known issue</button>
+>
+> If you have installed pygments system-wide, sphinx will not have permission
+> to access it. You will need to uninstall it as root and reinstall it after :
+>
+> ```sh
+> sudo pip uninstall pygments
+> pip install --user pygments
+> ```
 
 [pip-install]: https://pip.pypa.io/en/stable/installing/
