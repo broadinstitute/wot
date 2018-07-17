@@ -3,8 +3,8 @@
 
 import argparse
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import wot
 import wot.io
 
@@ -33,9 +33,9 @@ def main(argv):
         populations = core.pull_back(*populations)
         timepoints.append(wot.core.unique_timepoint(*populations))
         ancestor_census.append(core.population_census(cell_sets_matrix, *populations))
-    ancestor_census = numpy.asarray(ancestor_census)
+    ancestor_census = np.asarray(ancestor_census)
 
-    row_meta = pandas.DataFrame([], index=timepoints[::-1], columns=[])
+    row_meta = pd.DataFrame([], index=timepoints[::-1], columns=[])
     for i in range(ancestor_census.shape[1]):
         cs_name = keys[i]
         res = wot.Dataset(ancestor_census[::-1, i, :], row_meta, cell_sets_matrix.col_meta)

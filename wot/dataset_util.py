@@ -2,8 +2,8 @@
 
 import math
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import scipy.sparse
 import wot
 
@@ -54,7 +54,7 @@ def cell_indices_by_day(dataset):
     unique_days = list_of_days_in_dataset(dataset)
     for day in unique_days:
         day_query = dataset.row_meta['day'] == day
-        indices = numpy.where(day_query)[0]
+        indices = np.where(day_query)[0]
         day_to_indices[day] = indices
     return day_to_indices
 
@@ -75,11 +75,11 @@ def set_cell_metadata(dataset, name, data, indices=None):
 
 def merge_datasets(*args):
     datasets = list(args)
-    merged_x = numpy.concatenate([ d.x for d in datasets ])
+    merged_x = np.concatenate([ d.x for d in datasets ])
     row_columns = set(datasets[0].row_meta.columns)
     if not all([ set(d.row_meta.columns) == row_columns for d in datasets ]):
         raise ValueError("Unable to merge: incompatible metadata between datasets")
-    merged_row_meta = pandas.concat([ d.row_meta for d in datasets ], sort=True)
+    merged_row_meta = pd.concat([ d.row_meta for d in datasets ], sort=True)
     if merged_row_meta.index.duplicated().any():
         raise ValueError("Unable to merge: duplicate rows between datasets, cannot lose information")
     col_index = datasets[0].col_meta.index
@@ -97,6 +97,6 @@ def dataset_from_x(x, rows=None, columns=None,
         col_count_len = math.floor(math.log10(x.shape[1])) + 1
         columns = [ "{}{:0{}}".format(column_prefix, i, col_count_len) for i in range(x.shape[1]) ]
     return wot.Dataset(x,
-            pandas.DataFrame([], index=rows, columns=[]),
-            pandas.DataFrame([], index=columns, columns=[])
+            pd.DataFrame([], index=rows, columns=[]),
+            pd.DataFrame([], index=columns, columns=[])
             )

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import numpy
+import numpy as np
 
 def interp(t, tp, fp, left=None, right=None, method='linear', smooth=0):
     """
@@ -50,9 +50,9 @@ def interp(t, tp, fp, left=None, right=None, method='linear', smooth=0):
     if isinstance(t, (float, int)):
         return_array = False
         t = [t]
-    t  = numpy.asarray(t,  dtype = numpy.float64)
-    tp = numpy.asarray(tp, dtype = numpy.float64)
-    fp = numpy.asarray(fp, dtype = numpy.float64)
+    t  = np.asarray(t,  dtype = np.float64)
+    tp = np.asarray(tp, dtype = np.float64)
+    fp = np.asarray(fp, dtype = np.float64)
 
     if tp.ndim != 1:
         raise ValueError("Timepoint sequence tp must be a 1-D sequence")
@@ -73,7 +73,7 @@ def interp(t, tp, fp, left=None, right=None, method='linear', smooth=0):
 def __interp_func(t_seq, tp, fp, left, right, method='linear', smooth=0):
     x = []
     for t in t_seq:
-        z = numpy.zeros_like(fp[0])
+        z = np.zeros_like(fp[0])
         i = 0
         if tp[0] > t:
             x.append(left)
@@ -86,19 +86,19 @@ def __interp_func(t_seq, tp, fp, left, right, method='linear', smooth=0):
             continue
         if method == 'linear':
             r = ( t - tp[i] ) / ( tp[i + 1] - tp[i] )
-            x.append(numpy.asarray(fp[i] * (1 - r) + fp[i+1] * r, dtype=numpy.float64))
+            x.append(np.asarray(fp[i] * (1 - r) + fp[i+1] * r, dtype=np.float64))
         elif method == 'quadratic':
             z_1 = 2 * (fp[i+1] - fp[i]) / (tp[i+1] - tp[i]) - z
-            x.append(numpy.asarray(
+            x.append(np.asarray(
                 fp[i] + z * (t - tp[i]) + (z_1 - z) * ((t - tp[i]) ** 2) / (2 * (tp[i+1] - tp[i])),
-                dtype=numpy.float64))
+                dtype=np.float64))
         else:
             raise ValueError("Unkown interpolation method")
     # running mean
     if smooth > 0:
         smooth += 1 - smooth % 2
         i = (smooth - 1)//2
-        c = numpy.cumsum(numpy.concatenate([x[:i+1], x, x[-i:]]), axis=0)
+        c = np.cumsum(np.concatenate([x[:i+1], x, x[-i:]]), axis=0)
         x = (c[smooth:] - c[:-smooth]) / float(smooth)
     return x
 
@@ -132,31 +132,31 @@ def multivariate_normal_mixture(means, covs, p=None, size=1):
         If `size` is not positive
 
     """
-    means = numpy.asarray(means, dtype=numpy.float64)
+    means = np.asarray(means, dtype=np.float64)
     if isinstance(covs, (int, float)):
-        covs = [ covs * numpy.identity(means.shape[1]) ] * len(means)
-    covs = numpy.asarray(covs, dtype=numpy.float64)
+        covs = [ covs * np.identity(means.shape[1]) ] * len(means)
+    covs = np.asarray(covs, dtype=np.float64)
     if covs.ndim == 1:
-        covs = numpy.asarray([ c * numpy.identity(means.shape[1]) for c in covs ])
+        covs = np.asarray([ c * np.identity(means.shape[1]) for c in covs ])
     elif covs.ndim == 2:
-        covs = numpy.asarray([ numpy.diag(cov) for cov in covs])
+        covs = np.asarray([ np.diag(cov) for cov in covs])
 
     if p is None:
-        p = numpy.ones(len(means)) / len(means)
-    p = numpy.asarray(p, dtype=numpy.float64)
+        p = np.ones(len(means)) / len(means)
+    p = np.asarray(p, dtype=np.float64)
 
     if means.shape[0] != covs.shape[0]:
         raise ValueError("means and covs are not of the same length")
     if means.shape[0] != p.shape[0]:
         raise ValueError("means and p are not of the same length")
-    if not numpy.isclose(sum(p), 1):
+    if not np.isclose(sum(p), 1):
         raise ValueError("p does not sum to 1")
     if not size > 0:
         raise ValueError("size is not positive")
 
-    picks = numpy.random.choice(means.shape[0], p=p, size=size)
-    generate = lambda i : numpy.random.multivariate_normal(means[i], covs[i])
-    generator = numpy.vectorize(generate, signature='()->(n)')
+    picks = np.random.choice(means.shape[0], p=p, size=size)
+    generate = lambda i : np.random.multivariate_normal(means[i], covs[i])
+    generator = np.vectorize(generate, signature='()->(n)')
     result = generator(picks)
 
     if size == 1:
