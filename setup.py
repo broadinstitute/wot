@@ -9,9 +9,9 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 requirements = [
-    'Cython', 'h5py', 'numpy', 'scipy',
-    'scikit-learn', 'pandas', 'pypandoc', 'pot', 'Flask',
-    'gunicorn', 'numexpr', 'simplejson', 'psutil', 'scanpy'
+    'Cython', 'h5py', 'numpy', 'scipy', 'scanpy',
+    'scikit-learn', 'pandas', 'pypandoc', 'Flask',
+    'gunicorn', 'numexpr', 'simplejson', 'psutil',
 ]
 
 extras_require = {
