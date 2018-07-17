@@ -29,22 +29,19 @@ def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
 
     Returns
     -------
-    cs_groups : dict of float: list of cell_set
+    cs_groups : dict of float: list of { 'set': set  of str, 'name': str }
         The different cell sets for each time point.
 
     Notes
     -----
-    The cell_set type is a dictionary with two keys: 'set' and 'name'
-    cell_set['set'] : set of str
-        The ids of the cells in that cell set.
-    cell_set['name'] : str
-        The name of that cell set, with the time appended to it.
-        For instance, 'cs1' at time 3 would have name 'cs1_3.0'
+    cell_set['name'] is a str, the name and time of that cell set.
+
+    For instance, 'cs1' at time 3 would have name 'cs1_3.0'
 
     Example
     -------
-    cs_groups[1.0] : [ { 'set': { 'cell_1', 'cell_2' },
-                         'name': 'cell_set_name_1.0' } ]
+    >>> cs_groups[1.0]
+    [ { 'set': { 'cell_1', 'cell_2' }, 'name': 'cell_set_name_1.0' } ]
     """
     group_to_cell_sets = {}
     if isinstance(cell_set_paths, str):
@@ -150,14 +147,8 @@ def read_transport_maps(input_dir, ids=None, time=None):
 
     Returns
     -------
-    transport_maps : list of tmap
-        The tmap type is a dictionnary with three keys : 'transport_map', 't1' and 't2'
-        tmap['t1'] : float
-            Start point for the transport map.
-        tmap['t2'] : float
-            End point for the trasnport map.
-        tmap['transport_map'] : wot.Dataset
-            Transport map between t1 and t2.
+    transport_maps : list of { 't1': float, 't2': float, 'transport_map': wot.Dataset }
+        The list of all transport maps
 
     Raises
     ------
@@ -169,10 +160,13 @@ def read_transport_maps(input_dir, ids=None, time=None):
     Notes
     -----
     Time points are determined by the filename.
-    Filenames must end in "_{t1}_{t2}.extension". Any transport map not following
-     this convention will be ignored. If any other dataset file is present in the
-     listed directories and uses this naming convention, it might be interpreted
-     as a transport maps, yielding unpredictable results.
+
+    Filenames must end in `_{t1}_{t2}.extension`.
+    Any transport map not following this convention will be ignored.
+    If any other dataset file is present in the listed directories and
+    uses this naming convention, it might be interpreted as a transport
+    map, yielding unpredictable results.
+
     All wot commands are guaranteed to enforce this naming convention.
     """
     transport_maps_inputs = []  # file, start, end

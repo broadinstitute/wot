@@ -34,15 +34,16 @@ def interp(t, tp, fp, left=None, right=None, method='linear', smooth=0):
     ------
     ValueError
         If `tp` and `fp` have different length
+    ValueError
         If all items in `fp` do not have the same dimension
+    ValueError
         If `tp` is not a 1-D sequence
 
     Notes
     -----
     Does not check that the x-coordinate sequence `tp` is increasing.
     If `tp` is not increasing, the results are nonsense.
-    A simple check for increasing is :
-        np.all(np.diff(tp) > 0)
+    A simple check for increasing is : np.all(np.diff(tp) > 0)
     """
 
     return_array = True

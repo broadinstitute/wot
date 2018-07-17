@@ -189,18 +189,18 @@ class Core:
         ------
         ValueError
             If there is no further timepoint to push the population forward.
+        ValueError
             If several populations are given as input but dot live in the same timepoint.
 
         Examples
         --------
-        # Basic example
-        core.push_forward(pop, to_time = 2) # -> wot.Population
-        # Pushing several populations at once
-        core.push_forward(pop1, pop2, pop3) # -> list of wot.Population
-        # Pulling back after pushing forward
-        core.pull_back(core.push_forward(pop))
-        # Same, but several populations at once
-        core.pull_back(* core.push_forward(pop1, pop2, pop3))
+        >>> core.push_forward(pop, to_time = 2) # -> wot.Population
+        Pushing several populations at once
+        >>> core.push_forward(pop1, pop2, pop3) # -> list of wot.Population
+        Pulling back after pushing forward
+        >>> core.pull_back(core.push_forward(pop))
+        Same, but several populations at once
+        >>> core.pull_back(* core.push_forward(pop1, pop2, pop3))
         """
         i = self.timepoints.index(wot.core.unique_timepoint(*populations))
         j = i + 1 if to_time is None else self.timepoints.index(to_time)
@@ -249,18 +249,18 @@ class Core:
         ------
         ValueError
             If there is no previous timepoint to pull the population back.
+        ValueError
             If several populations are given as input but dot live in the same timepoint.
 
         Examples
         --------
-        # Basic example
-        core.pull_back(pop, to_time = 0) # -> wot.Population
-        # Pushing several populations at once
-        core.pull_back(pop1, pop2, pop3) # -> list of wot.Population
-        # Pulling back after pushing forward
-        core.pull_back(core.push_forward(pop))
-        # Same, but several populations at once
-        core.pull_back(* core.push_forward(pop1, pop2, pop3))
+        >>> core.pull_back(pop, to_time = 0) # -> wot.Population
+        Pushing several populations at once
+        >>> core.pull_back(pop1, pop2, pop3) # -> list of wot.Population
+        Pulling back after pushing forward
+        >>> core.pull_back(core.push_forward(pop))
+        Same, but several populations at once
+        >>> core.pull_back(* core.push_forward(pop1, pop2, pop3))
         """
         i = self.timepoints.index(wot.core.unique_timepoint(*populations))
         j = i - 1 if to_time is None else self.timepoints.index(to_time)
@@ -303,31 +303,29 @@ class Core:
         Returns
         -------
         ancestors : wot.Population or list of wot.Population
-            A population of cells, at the destination timepoint, most likely to
-             be the ancestors of the input population.
+            A population of cells, at the destination timepoint, most likely to be the ancestors of the input population.
             List if several populations were given, single population otherwise.
 
         Raises
         ------
         ValueError
             If the selected destination timepoint does not exist.
+        ValueError
             If the selected destination is after the original timepoint.
 
         Examples
         --------
-        # Basic example
-        core.ancestors(pop, at_time = 0) # -> wot.Population
+        >>> core.ancestors(pop, at_time = 0) # -> wot.Population
         # Using several populations at once
-        core.ancestors(pop1, pop2, pop3) # -> list of wot.Population
+        >>> core.ancestors(pop1, pop2, pop3) # -> list of wot.Population
         # Chaining ancestors and descendants
-        core.ancestors(core.descendants(pop))
+        >>> core.ancestors(core.descendants(pop))
         # Same, but several populations at once
-        core.ancestors(* core.descendants(pop1, pop2, pop3))
+        >>> core.ancestors(* core.descendants(pop1, pop2, pop3))
 
         Notes
         -----
         If population.time is 7 and at_time is 5, the Core would pull back through two transport maps.
-
         This method is only and alias to Core.pull_back
         """
         return self.pull_back(*populations, to_time = at_time)
@@ -347,31 +345,29 @@ class Core:
         Returns
         -------
         descendants : wot.Population or list of wot.Population
-            A population of cells at the destination timepoint, most likely to
-             be the descendants of the input population.
+            A population of cells at the destination timepoint, most likely to be the descendants of the input population.
             List if several populations were given, single population otherwise.
 
         Raises
         ------
         ValueError
             If the selected destination timepoint does not exist.
+        ValueError
             If the selected destination is before the original timepoint.
 
         Examples
         --------
-        # Basic example
-        core.descendants(pop, at_time = 2) # -> wot.Population
+        >>> core.descendants(pop, at_time = 2) # -> wot.Population
         # Using several populations at once
-        core.descendants(pop1, pop2, pop3) # -> list of wot.Population
+        >>> core.descendants(pop1, pop2, pop3) # -> list of wot.Population
         # Chaining ancestors and descendants
-        core.ancestors(core.descendants(pop))
+        >>> core.ancestors(core.descendants(pop))
         # Same, but several populations at once
-        core.ancestors(* core.descendants(pop1, pop2, pop3))
+        >>> core.ancestors(* core.descendants(pop1, pop2, pop3))
 
         Notes
         -----
         If population.time is 5 and at_time is 7, the Core would push forward through two transport maps.
-
         This method is only and alias to Core.push_forward
         """
         return self.push_forward(*populations, to_time = at_time)
@@ -398,25 +394,24 @@ class Core:
         ------
         ValueError
             If at_time is not specified and all cells do not live in the same timepoint.
+        ValueError
             If the generated population would be empty.
 
         Examples
         --------
-        # Single population
-        cell_set = [ 'cell_1', 'cell_2', 'cell_3' ]
-        core.population_from_ids(cell_set) # -> wot.Population
-        # Multiple populations at once
-        multi_cell_sets = {
-          'set_a': [ 'cell_a1', 'cell_a2'],
-          'set_b': [ 'cell_b1', 'cell_b2'],
-        }
-        core.population_from_ids(* multi_cell_sets.values()) # -> list of wot.Population
+        >>> cell_set = [ 'cell_1', 'cell_2', 'cell_3' ]
+        >>> core.population_from_ids(cell_set) # -> wot.Population
+        Multiple populations at once
+        >>> multi_cell_sets = {
+        >>>   'set_a': [ 'cell_a1', 'cell_a2'],
+        >>>   'set_b': [ 'cell_b1', 'cell_b2'],
+        >>> }
+        >>> core.population_from_ids(* multi_cell_sets.values()) # -> list of wot.Population
 
         Notes
         -----
         The Population class is a measure over the cells at a given timepoint.
-          It does not necessarily sum to 1. However, this method always returns
-          a probability distribution over the cells of that time point.
+        It does not necessarily sum to 1. However, this method always returns a probability distribution over the cells of that time point.
         """
         day = at_time
         all_ids = [ i for ids_el in ids for i in ids_el ]
@@ -458,8 +453,7 @@ class Core:
         -------
         census : 1D-array or list of 1D-array
             The census for the population.
-            census[i] is the probabiliy that a cell from that population belongs
-             to cell set number i from the cell_set_matrix.
+            census[i] is the probabiliy that a cell from that population belongs to cell set number i from the cell_set_matrix.
             List of censuses if a several populations were given as input, single census otherwise.
 
         Notes
