@@ -55,12 +55,15 @@ class Core:
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
 
-    def compute_all_transport_maps(self, force = False):
+    def compute_all_transport_maps(self, day_pairs = None, force = False):
         """
         Computes all required transport maps and caches everything for future use.
 
         Parameters
         ----------
+        day_pairs : list of (float, float), optional
+            Day pairs to compute the transport maps for.
+            If None, maps for all consecutive days will be computed.
         force : bool, optional, default : False
             Force recomputation of each transport map, after config update for instance.
 
@@ -70,9 +73,12 @@ class Core:
             Only computes and caches all transport maps, does not return them.
         """
         t = self.timepoints
-        for i in range(len(t) - 1):
-            if force or self.tmaps.get((t[i], t[i+1]), None) is None:
-                self.compute_transport_map(t[i], t[i+1])
+        if day_pairs is None:
+            day_pairs = [ (t[i], t[i+1]) for i in range(len(t) - 1) ]
+
+        for s, d in day_pairs:
+            if force or self.tmaps.get((s, d), None) is None:
+                self.compute_transport_map((s, d))
 
     def compute_transport_map(self, t0, t1):
         """
