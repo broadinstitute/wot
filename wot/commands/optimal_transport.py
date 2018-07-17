@@ -1,49 +1,49 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
+import os
+import argparse
 import wot.io
 import wot.ot
-
+import wot.commands
 
 def main(argv):
-    parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute transport maps between pairs of time points')
-    parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='loom', choices=wot.commands.FORMAT_CHOICES)
+    parser = argparse.ArgumentParser('Compute transport maps between pairs of time points')
+    wot.commands.add_core_arguments(parser)
+    wot.commands.add_ot_parameters_arguments(parser)
+    parser.add_argument('--day_pairs',
+            help='Two column file without header with '
+            'pairs of days to compute transport maps for')
+    parser.add_argument('--out', default='./tmaps',
+            help='Prefix for ouput file names')
 
     args = parser.parse_args(argv)
-    ot_helper = wot.ot.OptimalTransportHelper(args)
 
-    params_writer = None
-    # if args.solver is 'floating_epsilon':
-    #     params_writer = open(args.out + '_params.txt', 'w')
-    #     params_writer.write('t1' + '\t' + 't2' + '\t' + 'epsilon' + '\t' + 'lambda1' + '\t' + 'lambda2' +
-    #                         '\n')
+    # TODO: add support for the following arguments :
+    # '--cell_growth_rates'
+    # '--gene_filter'
+    # '--cell_filter'
+    # '--ncells'
+    # '--ncounts'
+    # '--numInnerItermax'
 
-    def callback(cb_args):
-        result = cb_args['result']
-        # if args.solver is 'floating_epsilon':
-        #     params_writer.write(
-        #         str(cb_args['t0']) + '\t' + str(cb_args['t1']) + '\t' + str(result['epsilon']) + '\t' + str(
-        #             result['lambda1']) + '\t' + str(
-        #             result['lambda2']) + '\n')
+    tmap_dir, tmap_prefix = os.path.split(args.out)
+    core = wot.initialize_core(args.matrix, args.cell_days,
+            transport_maps_directory = tmap_dir,
+            transport_maps_prefix = tmap_prefix,
+            local_pca = args.local_pca,
+            growth_iters = args.growth_iters,
+            epsilon = args.epsilon,
+            lambda1 = args.lambda1,
+            lambda2 = args.lambda2,
+            scaling_iter = args.scaling_iter,
+            epsilon0 = args.epsilon0,
+            tau = args.tau
+            )
 
-        # save the tranport map
+    if args.day_pairs is None:
+        day_pairs = None
+    else:
+        day_pairs = wot.io.read_day_pairs(args.day_pairs).values
 
-        if args.verbose:
-            print('Saving transport map')
-
-        filename = args.out + '_' + str(cb_args['t0']) + '_' + str(cb_args['t1'])
-
-        row_meta = cb_args['df0'].copy()
-        row_meta.drop(['cell_growth_rate', 'day'], axis=1, inplace=True)
-        row_meta['g'] = cb_args['g']
-
-        col_meta = cb_args['df1'].copy()
-        col_meta.drop(['cell_growth_rate', 'day'], axis=1, inplace=True)
-        wot.io.write_dataset(wot.Dataset(result['transport'], row_meta, col_meta), filename,
-                             output_format=args.format)
-
-    ot_helper.compute_transport_maps(callback)
-
-    if params_writer is not None:
-        params_writer.close()
+    core.compute_all_transport_maps(day_pairs, force = True)
