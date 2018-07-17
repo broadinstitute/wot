@@ -476,8 +476,9 @@ class Core:
             csm_indexer = cell_set_matrix.row_meta.index.get_indexer_for(inter_ids)
             def get_census(p):
                 return np.dot(p[pop_indexer], cell_set_matrix.x[csm_indexer,:])
-            census = np.asarray([ get_census(pop.p / np.sum(pop.p))
-                for pop in populations ], dtype=np.float64)
+            norm = lambda p : p if np.sum(p) == 0 else p / np.sum(p)
+            census = np.asarray([get_census(norm(pop.p)) for pop in populations],
+                    dtype=np.float64)
 
         if len(census) == 1:
             return census[0]
