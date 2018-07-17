@@ -790,4 +790,14 @@ def read_days_data_frame(path):
 def incorporate_days_information_in_dataset(dataset, path):
     days_data_frame = read_days_data_frame(path)
     dataset.row_meta = dataset.row_meta.join(days_data_frame)
-    return dataset
+
+def read_day_pairs(day_pairs):
+    if os.path.isfile(day_pairs):
+        target = day_pairs
+        args = { 'engine': 'python', 'sep': None }
+    else:
+        target = io.StringIO(day_pairs)
+        args = { 'sep': ',', 'lineterminator': ';' }
+    return pd.read_table(target, header=None, names=['t0', 't1'],
+            index_col = False, **args,
+            dtype = { 't0': np.float64, 't1': np.float64 })
