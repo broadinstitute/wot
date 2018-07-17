@@ -298,9 +298,20 @@ class OptimalTransportHelper:
             p1 = ds.x[t1_indices]
 
         C = OptimalTransportHelper.compute_default_cost_matrix(p0, p1)
-        ot_defaults = { 'epsilon': .05, 'lambda1': 10, 'lambda2': 80, 'solver': 'unbalanced' }
+        # WARNING: Any value in config that does not appear in the following dict will be ignored
+        ot_defaults = {
+                'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
+                'epsilon0': 1, 'tau': 10e3,
+                'growth_iters': 3, 'scaling_iter': 3000,
+                'solver': 'unbalanced'
+                }
+        # TODO: add support for extra_iter or equivalent in optimal transport
+        # TODO: parse cell growth rates files
+        # TODO: support gene_filter and cell_filter
+        # TODO: support ncells and ncounts
+
         args = { x: config[x] if x in config else ot_defaults[x] for x in ot_defaults }
-        g = np.ones(C.shape[0])
+        g = config.get('g', np.ones(C.shape[0]))
         tmap = wot.ot.optimal_transport(C, g, **args)['transport']
         return wot.Dataset(tmap, ds.row_meta.iloc[t0_indices], ds.row_meta.iloc[t1_indices])
 

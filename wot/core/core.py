@@ -2,6 +2,7 @@
 
 from wot.population import Population
 import wot.core
+import os
 import numpy as np
 import pandas as pd
 
@@ -22,7 +23,7 @@ class Core:
         Prefix to use for the transport maps. This can highly speed up
         initialization if the directory is filled with other non-tmap files,
         and allows to have several transport maps not overriding each other.
-        If None, all files named `{prefix}_{t1}_{t2}.{extension}` will be
+        If None, all files named `{prefix}_{t0}_{t1}.{extension}` will be
         considered as transport maps.
         The default prefix for cached transport maps is 'tmaps'
     """
@@ -73,15 +74,15 @@ class Core:
             if force or self.tmaps.get((t[i], t[i+1]), None) is None:
                 self.compute_transport_map(t[i], t[i+1])
 
-    def compute_transport_map(self, t1, t2):
+    def compute_transport_map(self, t0, t1):
         """
-        Computes the transport map from time t1 to time t2
+        Computes the transport map from time t0 to time t1
 
         Parameters
         ----------
-        t1 : float
+        t0 : float
             Source timepoint for the transport map
-        t2 : float
+        t1 : float
             Destination timepoint for the transport map
 
         Returns
@@ -93,29 +94,30 @@ class Core:
             path = self.default_tmap_prefix
         else:
             path = self.tmap_prefix
-        path += "_{}_{}.loom".format(t1, t2)
-        config = { 't0': t1, 't1': t2 }
+        path += "_{}_{}.loom".format(t0, t1)
+        config = { **self.ot_config, 't0': t0, 't1': t1 }
         tmap = wot.ot.OptimalTransportHelper.compute_single_transport_map(self.matrix, config)
-        wot.io.write_dataset(tmap, path, output_format="loom", txt_full=False)
-        self.tmaps[(t1, t2)] = path
+        wot.io.write_dataset(tmap, os.path.join(self.tmap_dir, path),
+                output_format="loom", txt_full=False)
+        self.tmaps[(t0, t1)] = path
 
-    def transport_map(self, t1, t2):
+    def transport_map(self, t0, t1):
         """
         Loads a transport map for a given pair of timepoints.
 
         Parameters
         ----------
-        t1 : int or float
+        t0 : int or float
             Source timepoint of the transport map.
-        t2 : int of float
+        t1 : int of float
             Destination timepoint of the transport map.
 
         Returns
         -------
         tmap : wot.Dataset
-            The transport map from t1 to t2
+            The transport map from t0 to t1
         """
-        return wot.core.load_transport_map(self, t1, t2)
+        return wot.core.load_transport_map(self, t0, t1)
 
     def can_push_forward(self, *populations):
         """
