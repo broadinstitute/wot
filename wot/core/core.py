@@ -78,7 +78,7 @@ class Core:
 
         for s, d in day_pairs:
             if force or self.tmaps.get((s, d), None) is None:
-                self.compute_transport_map((s, d))
+                self.compute_transport_map(s, d)
 
     def compute_transport_map(self, t0, t1):
         """
