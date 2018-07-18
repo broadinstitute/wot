@@ -20,9 +20,9 @@ def interp(t, tp, fp, left=None, right=None, method='linear', smooth=0):
         Value to return for `t < tp[0]`, default is `fp[0]`.
     right : optional float or complex corresponding to fp
         Value to return for `t > tp[-1]`, default is `fp[-1]`.
-    method : either 'linear' or 'quadratic'
+    method : either 'linear' or 'quadratic', optional
         Spline to use when fitting the points
-    smooth : int
+    smooth : int, optional
         If above 0, number of points to use for running average smoothing
 
     Returns
@@ -34,7 +34,7 @@ def interp(t, tp, fp, left=None, right=None, method='linear', smooth=0):
     ------
     ValueError
         If `tp` and `fp` have different length
-        If all items in fp do not have the same dimension
+        If all items in `fp` do not have the same dimension
         If `tp` is not a 1-D sequence
 
     Notes

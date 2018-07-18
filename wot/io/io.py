@@ -130,11 +130,60 @@ def list_transport_maps(input_dir):
 
 
 def read_transport_maps(input_dir, ids=None, time=None):
+    """
+    Find and parse all transport maps in a directory.
+    Returns a list containing the transport maps and start/end timepoints.
+
+    Parameters
+    ----------
+    input_dir : str
+        The directory in which to look for transport maps.
+        Alternatively, a pattern may be given, resulting in shell expansion
+        before each directory is processed.
+    ids : list of str, optional
+        Ids to keep the transport maps for.
+        If not None, any id not in this list will be filtered out of the maps.
+        The order of ids in the resulting transport maps is also guaranteed
+        to be the same as this parameter.
+    time : int or float, optional
+        If ids is not None, specifies the time at which the ids were measured.
+
+    Returns
+    -------
+    transport_maps : list of tmap
+        The tmap type is a dictionnary with three keys : 'transport_map', 't1' and 't2'
+        tmap['t1'] : float
+            Start point for the transport map.
+        tmap['t2'] : float
+            End point for the trasnport map.
+        tmap['transport_map'] : wot.Dataset
+            Transport map between t1 and t2.
+
+    Raises
+    ------
+    ValueError
+        If exactly one of (ids, time) is None. Must be both or none.
+        If no transport map is found in the given directory.
+        If several transport maps are found for the same timepoints.
+
+    Notes
+    -----
+    Time points are determined by the filename.
+    Filenames must end in "_{t1}_{t2}.extension". Any transport map not following
+     this convention will be ignored. If any other dataset file is present in the
+     listed directories and uses this naming convention, it might be interpreted
+     as a transport maps, yielding unpredictable results.
+    All wot commands are guaranteed to enforce this naming convention.
+    """
     transport_maps_inputs = []  # file, start, end
     is_pattern = not os.path.isdir(input_dir)
 
     files = os.listdir(input_dir) if not is_pattern else glob.glob(input_dir)
 
+    if (ids is None) != (time is None):
+        raise ValueError("Only one of time and ids is None. Must be both or none")
+
+    tmap_times = set()
     for path in files:
         path = os.path.join(os.path.dirname(input_dir), path) if not is_pattern else path
         if os.path.isfile(path):
@@ -159,8 +208,16 @@ def read_transport_maps(input_dir, ids=None, time=None):
                 # subset columns
                 indices = ds.col_meta.index.isin(ids)
                 ds = wot.Dataset(ds.x[:, indices], ds.row_meta, ds.col_meta.iloc[indices])
+
+            if (t1, t2) in tmap_times:
+                raise ValueError("Multiple transport maps found for times ({},{})".format(t1, t2))
+            else:
+                tmap_times.add((t1, t2))
             transport_maps_inputs.append(
                 {'transport_map': ds, 't1': t1, 't2': t2})
+
+    if not transport_maps_inputs:
+        raise ValueError("No transport maps found in the given directories")
 
     transport_maps_inputs.sort(key=lambda x: x['t1'])  # sort by t1 (start time)
     return transport_maps_inputs

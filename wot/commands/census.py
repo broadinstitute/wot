@@ -14,7 +14,6 @@ def main(argv):
     parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True)
-    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--out', help='Output files prefix', default='census')
     parser.add_argument('--progress', action='store_true', help='Print a progress bar while computing')
 
@@ -37,7 +36,6 @@ def main(argv):
         transport_map_times.add(tmap['t1'])
         transport_map_times.add(tmap['t2'])
 
-    ds = wot.io.read_dataset(args.matrix)
     if args.progress:
         wot.io.init_progress()
     trajectories = wot.ot.Trajectory.trajectory_for_cell_sets(transport_maps, time_to_cell_sets,
