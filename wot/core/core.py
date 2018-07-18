@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from multiprocessing import Process
 from wot.population import Population
 import wot.core
 import os
@@ -30,13 +31,17 @@ class Core:
 
     default_tmap_prefix = "tmaps"
 
-    def __init__(self, matrix, transport_maps_directory, transport_maps_prefix = None):
+    def __init__(self, matrix, transport_maps_directory, transport_maps_prefix = None, max_threads = None):
         self.matrix = matrix
         self.tmap_dir = transport_maps_directory
         self.tmap_prefix = transport_maps_prefix
         self.tmaps = wot.core.scan_transport_map_directory(self)
         self.timepoints = sorted(set(matrix.row_meta['day']))
         self.ot_config = {}
+        if max_threads is None:
+            self.max_threads = 8
+        else:
+            self.max_threads = max_threads
 
     def set_ot_config(self, **kwargs):
         """
@@ -76,8 +81,23 @@ class Core:
         if day_pairs is None:
             day_pairs = [ (t[i], t[i+1]) for i in range(len(t) - 1) ]
 
-        for s, d in day_pairs:
-            if force or self.tmaps.get((s, d), None) is None:
+        # TODO: filter day pairs already present here, unless `force`
+
+        m = self.max_threads
+
+        if m > 1 :
+            procs = []
+            for s, d in day_pairs:
+                p = Process(target=self.compute_transport_map, args=(s,d,))
+                procs.append(p)
+
+            for i in range(len(procs) + m):
+                if i >= m :
+                    procs[i - m].join()
+                if i < len(procs):
+                    procs[i].start()
+        else:
+            for s, d in day_pairs :
                 self.compute_transport_map(s, d)
 
     def compute_transport_map(self, t0, t1):
