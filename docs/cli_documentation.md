@@ -12,7 +12,7 @@ over time, by using the mathematical approach of Optimal Transport (OT).
 > <button class="btn-success rounded border-0 px-3 py-1" disabled>Interactive</button>
 >
 > Alternatively, **wot** features an interactive web interface to visualize
-> your data and perform all the tasks described below.
+> your data and perform many of the tasks described below.
 >
 > <div class="center-block text-center py-2">
 >   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
@@ -92,7 +92,7 @@ And then **wot** is installed and ready to use.
 ## Usage ##
 -----------
 
-**wot** is decomposed into several tools. Each tool can be used with the syntax `wot <tool>`.
+**wot** consists of several tools. Each tool can be used with the syntax `wot <tool>`.
 
 Help is available for each tool with `wot <tool> -h`. For instance:
 
@@ -148,8 +148,20 @@ convenient with the [convert_matrix tool](#matrix_file).
       <td>Target day pairs. See <a href="#day_pairs">formats</a></td>
     </tr>
     <tr>
+      <td>--epsilon</td>
+      <td>Regularization parameter that controls the entropy of the transport map<br/>default : 0.05</td>
+    </tr>
+    <tr>
+      <td>--lambda1</td>
+      <td>Regularization parameter that controls the fidelity of the constraint on p<br/>default : 1</td>
+    </tr>
+    <tr>
+      <td>--lambda2</td>
+      <td>Regularization parameter that controls the fidelity of the constraint on q<br/>default : 50</td>
+    </tr>
+    <tr>
       <td>--scaling_iter</td>
-      <td>Number of iterations performed while scaling &epsilon;<br/>default : 3000</td>
+      <td>Number of iterations performed while scaling epsilon<br/>default : 3000</td>
     </tr>
     <tr>
       <td>--local_pca</td>
@@ -162,9 +174,9 @@ convenient with the [convert_matrix tool](#matrix_file).
 
 The convergence of the calculation of the transport maps can be
 accelerated by gradually increasing the entropy regularization
-parameter &epsilon;. Iteration count is thus split between those
-that use a scaled &epsilon; (scaling iterations) and those that
-use the final value of &epsilon; (extra iterations).
+parameter epsilon. Iteration count is thus split between those
+that use a scaled epsilon (scaling iterations) and those that
+use the final value of epsilon (extra iterations).
 
 By default, **wot** performs 3000 scaling iterations and 1000 extra iterations.
 While this is acceptable to ensure convergence in all cases when computing
@@ -173,18 +185,16 @@ fewer iterations to get an approximate result faster.
 
 ##### Local PCA #####
 
-Dimensionality reduction is used when computing distances between cells.
-The algorithm used for this purpose is Principal Component Analysis.
-While using more dimensions for this purpose will make it more precise,
-it will also slow the algorithm down. **wot** chooses by default
-to use 30 dimensions.
+The default transport cost uses Principal Component Analysis to reduce the
+dimension of the data before computing distances between cells.
+By default, **wot** uses 30 dimensions.
 
 Dimensionality reduction can be disabled with `--local_pca -1`
 
 
 ### Trajectories ###
 
-Ancestors and descendants in **wot** are computed through the use of trajectories.
+Ancestors and descendants in **wot** are computed through the `trajectory` tool.
 
 You can select a **cell set** by specifying a [cell set file](#cellset_file).
 You can either manually edit this type of file, or generate it from a gene set file
@@ -359,6 +369,7 @@ wot optimal_transport_validation --matrix matrix.txt \
 
 This would create two files : `val_tmaps_I_1.0.txt`
 and `val_tmaps_random_1.0.txt`.
+Additionnaly, a validation summary is generated, as a text file.
 
 They contain the coordinates of respectively the *interpolated* and the
 *randomly generated* cells at that time point.
@@ -416,15 +427,10 @@ The covariate values may be specified in a tab-separated text file.
 It must have exactly two headers : "id" and "covariate".
 Each subsequent line must consist of a cell name, a tab, and a covariate value.
 
-> <button class="btn-warning rounded border-0 px-3 py-1" disabled>Warning</button>
->
-> While a higher number of batches will greatly enhance the quality of the
-> validation performed, the computation time required will increase as the
-> square of the number of batches per timepoint.
 
 #### Validation summary ####
 
-Additionally, a validation summary is generated, as a text file.
+The validation summary, generated as text file, is organized as follows :
 
 Each line contains information about the relation between two cell sets :
  - **interval_start** and **interval_end** indicate which day pair is being considered.
