@@ -43,6 +43,9 @@ def score_gene_sets(ds, gs, z_score_ds=True, use_dask=False):
     scores = scores / ngenes_in_set  # scores contains cells on rows, gene sets on columns
     return wot.Dataset(x=scores, row_meta=ds.row_meta, col_meta=gs.col_meta)
 
+def cell_names(dataset):
+    return dataset.col_meta.index.values
+
 def list_of_days_in_dataset(dataset):
     if 'day' not in dataset.row_meta.columns:
         raise ValueError("No day information available for this dataset")
@@ -68,7 +71,7 @@ def set_cell_metadata(dataset, name, data, indices=None):
     if indices is None:
         dataset.row_meta[name] = data
     else:
-        if isinstance(indices, set):
+        if isinstance(indices, set) or isinstance(indices[0], str):
             dataset.row_meta.loc[indices, name] = data
         else:
             dataset.row_meta.loc[dataset.row_meta.index[indices], name] = data
