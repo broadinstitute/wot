@@ -168,7 +168,7 @@ class Core:
         """
         return self.timepoints.index(wot.core.unique_timepoint(*populations)) > 0
 
-    def push_forward(self, *populations, to_time = None):
+    def push_forward(self, *populations, to_time = None, normalize=True):
         """
         Pushes the population forward through the computed transport maps
 
@@ -178,6 +178,8 @@ class Core:
             Measure over the cells at a given timepoint to be pushed forward.
         to_time : int or float, optional
             Destination timepoint to push forward to.
+        normalize : bool, optional, default: True
+            Wether to normalize to a probability distribution or keep growth.
 
         Returns
         -------
@@ -220,6 +222,8 @@ class Core:
             t1 = self.timepoints[i+1]
             tmap = self.transport_map(t0, t1)
             p = np.dot(p, tmap.x)
+            if normalize:
+                p = (p.T / np.sum(p, axis=1)).T
             i += 1
 
         result = [ Population(self.timepoints[i], p[k,:]) for k in range(p.shape[0]) ]
@@ -228,7 +232,7 @@ class Core:
         else:
             return result
 
-    def pull_back(self, *populations, to_time = None):
+    def pull_back(self, *populations, to_time = None, normalize=True):
         """
         Pulls the population back through the computed transport maps
 
@@ -238,6 +242,8 @@ class Core:
             Measure over the cells at a given timepoint to be pushed forward.
         to_time : int or float, optional
             Destination timepoint to pull back to.
+        normalize : bool, optional, default: True
+            Wether to normalize to a probability distribution or keep growth.
 
         Returns
         -------
@@ -280,6 +286,8 @@ class Core:
             t0 = self.timepoints[i-1]
             tmap = self.transport_map(t0, t1)
             p = np.dot(tmap.x, p.T).T
+            if normalize:
+                p = (p.T / np.sum(p, axis=1)).T
             i -= 1
 
         result = [ Population(self.timepoints[i], p[k,:]) for k in range(p.shape[0]) ]
@@ -470,7 +478,7 @@ class Core:
             csm_indexer = cell_set_matrix.row_meta.index.get_indexer_for(inter_ids)
             def get_census(p):
                 return np.dot(p[pop_indexer], cell_set_matrix.x[csm_indexer,:])
-            norm = lambda p : p if np.sum(p) == 0 else p / np.sum(p)
+            norm = lambda p : p if np.isclose(np.sum(p), 0) else p / np.sum(p)
             census = np.asarray([get_census(norm(pop.p)) for pop in populations],
                     dtype=np.float64)
 
