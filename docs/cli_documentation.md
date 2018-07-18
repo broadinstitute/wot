@@ -332,11 +332,7 @@ wot trajectory_trends --tmap . --cell_days days.txt --cell_set cell_sets.gmt --m
 </table>
 
 
-### Shared ancestry ###
-
 ### Local regulatory model via differential expression ###
-
-### Global regulatory model ###
 
 
 ### Validation ###
