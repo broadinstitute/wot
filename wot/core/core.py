@@ -465,6 +465,10 @@ class Core:
         else:
             return result
 
+    def cell_ids(self, population):
+        day = population.time
+        return list(self.matrix.row_meta.index[self.matrix.row_meta['day'] == day])
+
     def population_census(self, cell_set_matrix, *populations):
         """
         Get a census for a population with respect to a given cell set matrix
