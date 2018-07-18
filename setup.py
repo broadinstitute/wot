@@ -4,6 +4,8 @@
 """The setup script."""
 
 import setuptools
+from setuptools.extension import Extension
+from Cython.Build import cythonize
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -25,6 +27,13 @@ setup_requirements = [
 test_requirements = [
     'unittest'
 ]
+
+extensions = [
+        Extension("wot.cython_speedup.simulate",
+            [ "cython_speedup/simulate.pyx" ]),
+        Extension("wot.cython_speedup.ot",
+            [ "cython_speedup/ot.pyx" ])
+        ]
 
 setuptools.setup(
     name='wot',
@@ -63,5 +72,6 @@ setuptools.setup(
         'console_scripts': [
             'wot=wot.__main__:main'
         ]
-    }
+    },
+    ext_modules = cythonize(extensions)
 )
