@@ -39,7 +39,7 @@ class Core:
         self.timepoints = sorted(set(matrix.row_meta['day']))
         self.ot_config = {}
         if max_threads is None:
-            self.max_threads = 8
+            self.max_threads = 1
         else:
             self.max_threads = max_threads
 
