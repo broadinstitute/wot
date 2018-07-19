@@ -35,7 +35,7 @@ notebook. Just click the button below to download the whole archive.
 
 <a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
  href="01_generating_data.py">Download python code</a>
-## Generating data ##
+## Simulating data ##
 ---------------------
 
 ```python

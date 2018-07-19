@@ -123,7 +123,7 @@ wot optimal_transport --matrix matrix.txt \
  --cell_days days.txt --out tmaps --local_pca -1
 ```
 
-This command will create a file `tmaps_{F}_{T}.loom` for each pair `{F}`, `{T}`
+This command will create a file `tmaps_{A}_{B}.loom` for each pair `{A}`, `{B}`
 in the day pairs file. These maps can then be translated to any format you find
 convenient with the [convert_matrix tool](#matrix_file).
 
@@ -243,8 +243,8 @@ wot trajectory --tmap . --cell_days days.txt \
 
 ### Ancestor census ###
 
-The ancestor census command computes the amount of mass an
-ancestor distribution has in each cell set.
+The ancestor census command computes the amount of mass of an
+ancestor distribution falls into each cell set.
 
 ```sh
 wot census --tmap . --cell_days days.txt \
@@ -306,7 +306,8 @@ You can either manually edit this type of file, or generate it from a gene set f
 using the [cells_by_gene_set](#cells_by_gene_set) tool.
 
 ```sh
-wot trajectory_trends --tmap . --cell_days days.txt --cell_set cell_sets.gmt --matrix matrix.txt
+wot trajectory_trends --tmap . --cell_days days.txt \
+ --cell_set cell_sets.gmt --matrix matrix.txt
 ```
 
 <table class="table table-hover" style="display: table">
@@ -415,13 +416,8 @@ reproduced here for convenience.
 
 ##### Covariate #####
 
-To enhance the results obtained when performing validation with few timepoints,
-a covariate value may be assigned to each cell from each timepoint.
-
-The interpolation can then occur for each pair of batches, and the distance
-between the interpolated cells and the real population can be compared
-to the distance between real batches at the interpolated time point, to
-obtain more meaningful results.
+To measure the quality of interpolation, we compare the distance between
+batches of cells at the same time point.
 
 The covariate values may be specified in a tab-separated text file.
 It must have exactly two headers : "id" and "covariate".
