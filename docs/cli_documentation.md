@@ -243,8 +243,8 @@ wot trajectory --tmap . --cell_days days.txt \
 
 ### Ancestor census ###
 
-The census command lets you find out in which cell sets the ancestors
-of a given cell set were located.
+The ancestor census command computes the amount of mass an
+ancestor distribution has in each cell set.
 
 ```sh
 wot census --tmap . --cell_days days.txt \
@@ -369,7 +369,7 @@ wot optimal_transport_validation --matrix matrix.txt \
 
 This would create two files : `val_tmaps_I_1.0.txt`
 and `val_tmaps_random_1.0.txt`.
-Additionnaly, a validation summary is generated, as a text file.
+Additionally, a validation summary is generated, as a text file.
 
 They contain the coordinates of respectively the *interpolated* and the
 *randomly generated* cells at that time point.
