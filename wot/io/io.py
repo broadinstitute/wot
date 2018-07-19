@@ -431,22 +431,18 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
         # look for .barcodes.txt and .genes.txt
         sp = os.path.split(path)
         row_meta = None
-        for f in (
-                os.path.join(sp[0],
-                             basename_and_extension[0] + '.barcodes.tsv'),
-                os.path.join(sp[0],
-                             basename_and_extension[0] + '.barcodes.txt'),
-                os.path.join(sp[0], 'barcodes.tsv')):
+        import itertools
+        sep_exts = itertools.product(['.', '_', '-'], ['tsv', 'txt'])
+        for sep_ext in sep_exts:
+            f = os.path.join(sp[0],
+                             basename_and_extension[0] + sep_ext[0] + 'barcodes.' + sep_ext[1])
             if os.path.isfile(f) or os.path.isfile(f + '.gz'):
                 row_meta = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
                                          header=None)
                 break
         col_meta = None
-        for f in (os.path.join(sp[0], basename_and_extension[0] +
-                                      '.genes.tsv'),
-                  os.path.join(sp[0], basename_and_extension[0] +
-                                      '.genes.txt'),
-                  os.path.join(sp[0], 'genes.tsv')):
+        for sep_ext in sep_exts:
+            f = os.path.join(sp[0], basename_and_extension[0] + sep_ext[0] + 'genes.' + sep_ext[1])
             if os.path.isfile(f) or os.path.isfile(f + '.gz'):
                 col_meta = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
                                          header=None)
@@ -649,13 +645,14 @@ def get_filename_and_extension(name):
     basename = name
     if dot_index != -1:
         ext = name[dot_index + 1:]
-        if ext == 'gz' or ext == 'txt':
-            new_name = name[0:dot_index]
-            second_dot_index = new_name.rfind('.')
-            if second_dot_index != -1:
-                return get_filename_and_extension(name[0:dot_index])
-    if dot_index != -1:
         basename = name[0:dot_index]
+        if ext == 'txt':  # check for .gmt.txt e.g.
+            dot_index2 = basename.rfind('.')
+            if dot_index2 != -1:
+                ext2 = basename[dot_index2 + 1:]
+                if ext2 in set(['gmt', 'grp', 'gct', 'gmx']):
+                    basename = basename[0:dot_index2]
+                    return basename, ext2
     return basename, ext
 
 
