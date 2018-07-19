@@ -644,12 +644,12 @@ def get_filename_and_extension(name):
     ext = ''
     basename = name
     if dot_index != -1:
-        ext = name[dot_index + 1:]
+        ext = name[dot_index + 1:].lower()
         basename = name[0:dot_index]
         if ext == 'txt':  # check for .gmt.txt e.g.
             dot_index2 = basename.rfind('.')
             if dot_index2 != -1:
-                ext2 = basename[dot_index2 + 1:]
+                ext2 = basename[dot_index2 + 1:].lower()
                 if ext2 in set(['gmt', 'grp', 'gct', 'gmx']):
                     basename = basename[0:dot_index2]
                     return basename, ext2
