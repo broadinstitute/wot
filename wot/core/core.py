@@ -81,7 +81,8 @@ class Core:
         if day_pairs is None:
             day_pairs = [ (t[i], t[i+1]) for i in range(len(t) - 1) ]
 
-        # TODO: filter day pairs already present here, unless `force`
+        if not force:
+            day_pairs = [ x for x in day_pairs if self.tmaps.get(x, None) is None ]
 
         m = self.max_threads
 
@@ -96,6 +97,7 @@ class Core:
                     procs[i - m].join()
                 if i < len(procs):
                     procs[i].start()
+            self.tmaps = wot.core.scan_transport_map_directory(self)
         else:
             for s, d in day_pairs :
                 self.compute_transport_map(s, d)
