@@ -419,13 +419,12 @@ class Core:
         *populations : wot.Population
             A population, uniformly distributed over the cells given as input.
             List if several lists of ids were given, single population otherwise.
+            Returns None if the generated population would be empty
 
         Raises
         ------
         ValueError
             If at_time is not specified and all cells do not live in the same timepoint.
-        ValueError
-            If the generated population would be empty.
 
         Examples
         --------
@@ -459,7 +458,10 @@ class Core:
             cell_inds = self.matrix.row_meta.index.get_indexer_for(ids_el)
             p = [ 1 if id in cell_inds else 0 for id in all_inds ]
             p = np.asarray(p, dtype=np.float64)
-            return Population(day, p / np.sum(p))
+            if np.isclose(np.sum(p), 0):
+                return None
+            else:
+                return Population(day, p / np.sum(p))
 
         result = [ get_population(ids_el) for ids_el in ids ]
         if len(result) == 1:
