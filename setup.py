@@ -4,6 +4,7 @@
 """The setup script."""
 
 import setuptools
+import numpy
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 
@@ -30,9 +31,11 @@ test_requirements = [
 
 extensions = [
         Extension("wot.cython_speedup.simulate",
-            [ "cython_speedup/simulate.pyx" ]),
+            [ "cython_speedup/simulate.pyx" ],
+            include_dirs=[numpy.get_include()]),
         Extension("wot.cython_speedup.ot",
-            [ "cython_speedup/ot.pyx" ])
+            [ "cython_speedup/ot.pyx" ],
+            include_dirs=[numpy.get_include()])
         ]
 
 setuptools.setup(
