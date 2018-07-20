@@ -3,7 +3,6 @@
 
 import matplotlib
 
-matplotlib.use('Agg')
 from wot.commands import *
 import argparse
 
