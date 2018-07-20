@@ -93,6 +93,9 @@ def merge_datasets(*args):
 
 def dataset_from_x(x, rows=None, columns=None,
         row_prefix="cell_", column_prefix="gene_"):
+    x = np.asarray(x, dtype=np.float64)
+    if x.ndim == 1:
+        x = np.asarray([x]).T
     if rows is None:
         row_count_len = math.floor(math.log10(x.shape[0])) + 1
         rows = [ "{}{:0{}}".format(row_prefix, i, row_count_len) for i in range(x.shape[0]) ]
