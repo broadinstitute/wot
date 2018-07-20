@@ -8,6 +8,17 @@ import pandas as pd
 import wot
 import wot.io
 
+def ancestor_census(core, cset_matrix, *populations):
+    timepoints = [wot.core.unique_timepoint(*populations)]
+    census = []
+    census.append(core.population_census(cset_matrix, *populations))
+    while core.can_pull_back(*populations):
+        populations = core.pull_back(*populations)
+        timepoints.append(wot.core.unique_timepoint(*populations))
+        census.append(core.population_census(cset_matrix, *populations))
+    census = np.asarray(census)[::-1,:,:]
+    return timepoints[::-1], [ census[:,i,:] for i in range(census.shape[1]) ]
+
 def main(argv):
     parser = argparse.ArgumentParser(
             description='Generate ancestor census for each time point given an initial cell set')
@@ -22,21 +33,17 @@ def main(argv):
 
     core = wot.initialize_core(args.matrix, args.cell_days, transport_maps_directory = args.tmap)
     cell_sets = wot.io.read_cell_sets(args.cell_set)
+    cell_sets_matrix = wot.io.read_gene_sets(args.cell_set)
     keys = list(cell_sets.keys())
     populations = core.population_from_ids(*[ cell_sets[name] for name in keys ], at_time = float(args.time))
-    cell_sets_matrix = wot.io.read_gene_sets(args.cell_set)
+    # Get rid of empty populations : just ignore them
+    keys = [ keys[i] for i in range(len(keys)) if populations[i] is not None ]
+    populations = [ p for p in populations if p is not None ]
 
-    timepoints = [float(args.time)]
-    ancestor_census = []
-    ancestor_census.append(core.population_census(cell_sets_matrix, *populations))
-    while core.can_pull_back(*populations):
-        populations = core.pull_back(*populations)
-        timepoints.append(wot.core.unique_timepoint(*populations))
-        ancestor_census.append(core.population_census(cell_sets_matrix, *populations))
-    ancestor_census = np.asarray(ancestor_census)
+    timepoints, census = ancestor_census(core, cell_sets_matrix, *populations)
 
-    row_meta = pd.DataFrame([], index=timepoints[::-1], columns=[])
-    for i in range(ancestor_census.shape[1]):
+    row_meta = pd.DataFrame([], index=timepoints, columns=[])
+    for i in range(len(census)):
         cs_name = keys[i]
-        res = wot.Dataset(ancestor_census[::-1, i, :], row_meta, cell_sets_matrix.col_meta)
+        res = wot.Dataset(census[i], row_meta, cell_sets_matrix.col_meta)
         wot.io.write_dataset(res, args.out + '_' + cs_name, output_format='txt', txt_full=False)
