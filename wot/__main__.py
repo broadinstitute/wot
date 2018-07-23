@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import matplotlib
-
 from wot.commands import *
 import argparse
 
