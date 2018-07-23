@@ -47,7 +47,7 @@ datasets_simulated:
  - false
 ---
 
-<ul class="nav nav-pills my-4 mx-5 float-right" role="tablist">
+<ul class="nav nav-pills my-5 mx-5 float-right" role="tablist">
   <li class="nav-item"><a href="#simulated" class="mx-2 py-3 nav-link active" data-toggle="pill">Simulated data</a></li>
   <li class="nav-item"><a href="#real" class="mx-2 py-3 nav-link" data-toggle="pill">Real data</a></li>
 </ul>
@@ -56,7 +56,7 @@ datasets_simulated:
 {% for simulated in page.datasets_simulated %}
 <div class="container my-5 tab-pane {% if forloop.first %}show active{% endif %}"
      {% if simulated %} id="simulated" {% else %} id="real" {% endif %}>
-  <h3 class="text-center mt-5">Running example on how to use <b>wot</b> on {% if simulated %} simulated data {% else %} real data (currently unavailable){% endif %}</h3>
+  <h3 class="text-center mt-5">Running example on how to use <b>wot</b> on {% if simulated %} simulated data {% else %} real data <br/>(currently unavailable){% endif %}</h3>
 
   <h5 class="text-center mb-5">These examples are also available as a <a class="nounderline" href="{{site.baseurl}}/notebook">python notebook</a></h5>
 
