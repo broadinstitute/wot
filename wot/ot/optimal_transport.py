@@ -28,10 +28,119 @@ def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, 
             rowSums = Tmap.sum(axis=1) / Tmap.shape[1]
 
         Tmap = transport_stablev2(C, lambda1, lambda2, epsilon,
-                                  scaling_iter, rowSums, numInnerItermax=numInnerItermax, tau=tau,
+                                  scaling_iter, rowSums, numInnerItermax=20, tau=tau,
                                   epsilon0=epsilon0)
     return Tmap
 
+# @ Lénaïc Chizat 2015 - optimal transport
+def fdiv(l, x, p, dx):
+    return l * np.sum( dx * (x * (np.log(x / p)) - x + p))
+
+def fdivstar(l, u, p, dx):
+    return l * np.sum((p * dx) * (np.exp(u / l) - 1))
+
+def primal(K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
+    I = len(p)
+    J = len(q)
+    F1 = lambda x, y : fdiv(lambda1, x, p, y)
+    F2 = lambda x, y : fdiv(lambda2, x, q, y)
+    return F1(np.dot(R, dy), dx) + F2(np.dot(R.T, dx), dy) \
+            + epsilon * np.sum(R * (np.log(R / K)) - R + K) / (I * J)
+
+def dual(K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
+    I = len(p)
+    J = len(q)
+    F1c = lambda u, v : fdivstar(lambda1, u, p, v)
+    F2c = lambda u, v : fdivstar(lambda2, u, q, v)
+    return - F1c(- epsilon * np.log(a), dx) - F2c( - epsilon * np.log(b), dy) \
+            - epsilon * np.sum(R - K) / (I * J)
+# end @ Lénaïc Chizat
+
+def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau=10e100, epsilon0=1.):
+    """
+    Compute the optimal transport with stabilized numerics, with the guarantee that the duality gap is at most `tolerance`
+
+    Parameters
+    ----------
+    C : 2-D ndarray
+        The cost matrix. C[i][j] is the cost to transport cell i to cell j
+    g : 1-D array_like
+        Growth value for input cells.
+    lambda1 : float, optional
+        Regularization parameter for the marginal constraint on p
+    lambda2 : float, optional
+        Regularization parameter for the marginal constraint on q
+    epsilon : float, optional
+        Entropy regularization parameter.
+    batch_size : int, optional
+        Number of iterations to perform between each duality gap check
+    tolerance : float, optional
+        Upper bound on the duality gap that the resulting transport map must guarantee.
+    tau : float, optional
+        Threshold at which to perform numerical stabilization
+    epsilon0 : float, optional
+        Starting value for exponentially-decreasing epsilon
+
+    Returns
+    -------
+    transport_map : 2-D ndarray
+        The entropy-regularized unbalanced transport map
+    """
+    # TODO: set this to number of epsilon scaling instead and enforce final epsilon
+    numInnerIterMax = 50
+
+    def get_reg(n):  # exponential decreasing
+        return (epsilon0 - epsilon) * np.exp(-n) + epsilon
+
+    epsilon_i = epsilon0
+    dx = np.ones(C.shape[0]) / C.shape[0]
+    dy = np.ones(C.shape[1]) / C.shape[1]
+    p = g
+    q = np.ones(C.shape[1]) * np.average(g)
+
+    u = np.zeros(len(p))
+    v = np.zeros(len(q))
+    b = np.ones(len(q))
+    K = np.exp(-C / epsilon_i)
+
+    alpha1 = lambda1 / (lambda1 + epsilon_i)
+    alpha2 = lambda2 / (lambda2 + epsilon_i)
+    epsilon_index = 0
+    iterations_since_epsilon_adjusted = 0
+    duality_gap = np.inf
+
+    while duality_gap > tolerance :
+        for i in range(batch_size):
+            a = (p / (K.dot(np.multiply(b, dy)))) ** alpha1 * np.exp(-u / (lambda1 + epsilon_i))
+            b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
+
+            # stabilization
+            iterations_since_epsilon_adjusted += 1
+            if (max(max(abs(a)), max(abs(b))) > tau):
+                u = u + epsilon_i * np.log(a)
+                v = v + epsilon_i * np.log(b)  # absorb
+                K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
+                a = np.ones(len(p))
+                b = np.ones(len(q))
+
+            if iterations_since_epsilon_adjusted == numInnerItermax :
+                epsilon_index += 1
+                iterations_since_epsilon_adjusted = 0
+                u = u + epsilon_i * np.log(a)
+                v = v + epsilon_i * np.log(b)  # absorb
+                epsilon_i = get_reg(epsilon_index)
+                alpha1 = lambda1 / (lambda1 + epsilon_i)
+                alpha2 = lambda2 / (lambda2 + epsilon_i)
+                K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
+                a = np.ones(len(p))
+                b = np.ones(len(q))
+
+        R = (K.T * a).T * b
+        pri = primal(K, R, dx, dy, p, q, a, b, epsilon_i, lambda1, lambda2)
+        dua = dual(K, R, dx, dy, p, q, a, b, epsilon_i, lambda1, lambda2)
+        duality_gap = pri - dua
+
+    return R
 
 def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
                        epsilon0=None, extra_iter=1000):
