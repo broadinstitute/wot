@@ -35,6 +35,5 @@ def initialize_ot_model(matrix, days, tmap_dir = '.', tmap_prefix = None, **kwar
     """
     ds = wot.io.read_dataset(matrix)
     wot.io.incorporate_days_information_in_dataset(ds, days)
-    ot_model = OTModel(ds, tmap_dir, tmap_prefix)
-    ot_model.set_ot_config(**kwargs)
+    ot_model = OTModel(ds, tmap_dir, tmap_prefix, **kwargs)
     return ot_model

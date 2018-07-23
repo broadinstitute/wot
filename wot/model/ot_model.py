@@ -69,7 +69,6 @@ class OTModel:
         # TODO: parse cell growth rates files
         # TODO: support gene_filter and cell_filter
         # TODO: support ncells and ncounts
-
         config = self.ot_config
 
         return { x: config[x] if x in config else ot_defaults[x] for x in ot_defaults }

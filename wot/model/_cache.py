@@ -3,6 +3,67 @@
 import os
 import glob
 import wot.io
+import hashlib
+import yaml
+
+def get_configuration(ot_model):
+    """
+    Gets the configuration of a given model
+
+    Parameters
+    ----------
+    ot_model : wot.OTModel
+        The OTModel whose configuration to extract
+
+    Returns
+    -------
+    config : dict of str
+        The configuration for each parameter
+    """
+    matrix_hash = hashlib.sha256(ot_model.matrix.x.data.tobytes()).hexdigest()
+
+    return {
+            'matrix_hash': matrix_hash,
+            ** ot_model.get_ot_config(),
+           }
+
+
+def write_config_file(ot_model):
+    """
+    Writes the current configuration to the tmap prefix file
+
+    Parameters
+    ----------
+    ot_model : wot.OTModel
+        The OTModel whose configurations needs to be written
+    """
+    config = get_configuration(ot_model)
+
+    config_file = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix) + '.yml'
+    with open(config_file, "w") as outfile:
+        yaml.dump(config, outfile, default_flow_style=False)
+
+def purge_invalidated_caches(ot_model):
+    """
+    Removes all cached transport maps that do not match the current setting
+
+    Parameters
+    ----------
+    ot_model : wot.OTModel
+        The OTModel whose cache needs to be checked
+    """
+    config_file = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix) + '.yml'
+    try:
+        with open(config_file, "r") as stream:
+            cached_config = yaml.load(stream)
+            # TODO: choose wether or not to purge here
+            purge = True
+    except:
+        # File not present or not a valid YAML file, purge prefix
+        purge = True
+
+    write_config_file(ot_model)
+    pass
 
 def scan_transport_map_directory(ot_model):
     """
@@ -18,8 +79,10 @@ def scan_transport_map_directory(ot_model):
     cached_tmaps : dict of (float, float): str
         The path to each transport map that was found in the directory.
     """
+    purge_invalidated_caches(ot_model)
+
     cached_tmaps = {}
-    pattern = "*" if ot_model.tmap_prefix is None else ot_model.tmap_prefix
+    pattern = ot_model.tmap_prefix
     pattern += '_[0-9]*.[0-9]*_[0-9]*.[0-9]*.*'
     files = glob.glob(os.path.join(ot_model.tmap_dir, pattern))
     for path in files:
