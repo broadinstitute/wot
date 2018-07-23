@@ -56,7 +56,9 @@ datasets_simulated:
 {% for simulated in page.datasets_simulated %}
 <div class="container my-5 tab-pane {% if forloop.first %}show active{% endif %}"
      {% if simulated %} id="simulated" {% else %} id="real" {% endif %}>
-  <h3 class="text-center my-5">Running example on how to use <b>wot</b> on {% if simulated %} simulated data {% else %} real data (currently unavailable){% endif %}</h3>
+  <h3 class="text-center mt-5">Running example on how to use <b>wot</b> on {% if simulated %} simulated data {% else %} real data (currently unavailable){% endif %}</h3>
+
+  <h5 class="text-center mb-5">These examples are also available as a <a class="nounderline" href="{{site.baseurl}}/notebook">python notebook</a></h5>
 
   <hr class="featurette-divider">
 
