@@ -276,8 +276,8 @@ class OptimalTransportHelper:
             - t0, t1
             - lambda1, lambda2, epsilon, g
         """
-        t0 = config.get('t0', None)
-        t1 = config.get('t1', None)
+        t0 = config.pop('t0', None)
+        t1 = config.pop('t1', None)
         if t0 is None or t1 is None:
             raise ValueError("config must have a both t0 and t1, indicating target timepoints")
         t0_indices = np.where(ds.row_meta['day'] == float(t0))[0]
@@ -298,21 +298,8 @@ class OptimalTransportHelper:
             p1 = ds.x[t1_indices]
 
         C = OptimalTransportHelper.compute_default_cost_matrix(p0, p1)
-        # WARNING: Any value in config that does not appear in the following dict will be ignored
-        ot_defaults = {
-                'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
-                'epsilon0': 1, 'tau': 10e3,
-                'growth_iters': 3, 'scaling_iter': 3000,
-                'solver': 'unbalanced'
-                }
-        # TODO: add support for extra_iter or equivalent in optimal transport
-        # TODO: parse cell growth rates files
-        # TODO: support gene_filter and cell_filter
-        # TODO: support ncells and ncounts
-
-        args = { x: config[x] if x in config else ot_defaults[x] for x in ot_defaults }
-        g = config.get('g', np.ones(C.shape[0]))
-        tmap = wot.ot.optimal_transport(C, g, **args)['transport']
+        config['g'] = config.get('g', None) or np.ones(C.shape[0])
+        tmap = wot.ot.optimal_transport(C, **config)['transport']
         return wot.Dataset(tmap, ds.row_meta.iloc[t0_indices], ds.row_meta.iloc[t1_indices])
 
 

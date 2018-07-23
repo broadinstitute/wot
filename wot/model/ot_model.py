@@ -27,38 +27,52 @@ class OTModel:
         If None, all files named `{prefix}_{t0}_{t1}.{extension}` will be
         considered as transport maps.
         The default prefix for cached transport maps is 'tmaps'
+    max_threads : int, optional
+        Maximum number of threads to use when computing transport maps
+    **kwargs : dict
+        Dictionnary of parameters. Will be inserted as is into OT configuration.
     """
 
     default_tmap_prefix = "tmaps"
 
-    def __init__(self, matrix, transport_maps_directory, transport_maps_prefix = None, max_threads = None):
+    def __init__(self, matrix, transport_maps_directory = None, transport_maps_prefix = None, max_threads = None, **kwargs):
         self.matrix = matrix
-        self.tmap_dir = transport_maps_directory
-        self.tmap_prefix = transport_maps_prefix
-        self.tmaps = wot.model.scan_transport_map_directory(self)
-        self.timepoints = sorted(set(matrix.row_meta['day']))
+        self.tmap_dir = transport_maps_directory or '.'
+        self.tmap_prefix = transport_maps_prefix or self.default_tmap_prefix
         self.ot_config = {}
+        for k in kwargs.keys():
+            self.ot_config[k] = kwargs[k]
+        self.timepoints = sorted(set(matrix.row_meta['day']))
+        self.tmaps = wot.model.scan_transport_map_directory(self)
         if max_threads is None:
             self.max_threads = 1
         else:
             self.max_threads = max_threads
 
-    def set_ot_config(self, **kwargs):
+    def get_ot_config(self):
         """
-        Set parameters for the Optimal Transport computation
+        Get valid parameters for the Optimal Transport computation.
 
-        Parameters
-        ----------
-        **kwargs : dict
-            Dictionnary of parameters. Will be inserted as is into OT configuration.
-
-        Example
+        Returns
         -------
-        ot_model.set_ot_config(epsilon = .01)
-        ot_model.set_ot_config(lambda1 = 50, lambda2 = 80)
+        ot_config : dict
+            Dictionnary of valid parameters, or defaults if unspecified.
         """
-        for k in kwargs.keys():
-            self.ot_config[k] = kwargs[k]
+        # WARNING: Any value in ot_config that does not appear in the following dict will be ignored
+        ot_defaults = {
+                'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
+                'epsilon0': 1, 'tau': 10e3,
+                'growth_iters': 3, 'scaling_iter': 3000,
+                'solver': 'unbalanced', 'g': None
+                }
+        # TODO: add support for extra_iter or equivalent in optimal transport
+        # TODO: parse cell growth rates files
+        # TODO: support gene_filter and cell_filter
+        # TODO: support ncells and ncounts
+
+        config = self.ot_config
+
+        return { x: config[x] if x in config else ot_defaults[x] for x in ot_defaults }
 
     def compute_all_transport_maps(self, day_pairs = None, force = False):
         """
@@ -123,7 +137,7 @@ class OTModel:
         else:
             path = self.tmap_prefix
         path += "_{}_{}.loom".format(t0, t1)
-        config = { **self.ot_config, 't0': t0, 't1': t1 }
+        config = { **self.get_ot_config(), 't0': t0, 't1': t1 }
         tmap = wot.ot.OptimalTransportHelper.compute_single_transport_map(self.matrix, config)
         wot.io.write_dataset(tmap, os.path.join(self.tmap_dir, path),
                 output_format="loom", txt_full=False)

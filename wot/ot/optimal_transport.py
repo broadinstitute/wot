@@ -148,13 +148,18 @@ def transport_stable(p, q, C, lambda1, lambda2, epsilon, scaling_iter, g):
     return (K.T * a).T * b
 
 
-def optimal_transport(cost_matrix, growth_rate, p=None, q=None, solver=None,
+def optimal_transport(cost_matrix, g=None, p=None, q=None, solver=None,
                       delta_days=1, epsilon=0.1, lambda1=1.,
                       lambda2=1., min_transport_fraction=0.05,
                       max_transport_fraction=0.4, min_growth_fit=0.9,
                       l0_max=100, scaling_iter=250, epsilon_adjust=1.1,
                       lambda_adjust=1.5, numItermax=100, epsilon0=100.0, numInnerItermax=10, tau=1000.0, stopThr=1e-06,
                       growth_iters=3):
+    if g is None:
+        growth_rate = np.ones(len(cost_matrix))
+    else:
+        growth_rate = g
+
     if solver == 'unbalanced':
 
         g = growth_rate ** delta_days
