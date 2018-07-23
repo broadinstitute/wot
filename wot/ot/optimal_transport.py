@@ -46,6 +46,7 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerIt
         scaling_iter: number of scaling iterations
         g: growth value for input cells
     """
+    extra_iter = min(extra_iter, scaling_iter)
     warm_start = tau is not None
     epsilon_final = epsilon
 
