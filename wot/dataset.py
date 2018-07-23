@@ -16,6 +16,16 @@ class Dataset:
         self.row_meta = row_meta
         self.col_meta = col_meta
         self.layers = {}
+        row_duplicates = row_meta.index.duplicated()
+        if any(row_duplicates):
+            raise Exception('Duplicates in row indices : ',
+                    list(row_meta.index[row_duplicates])[:25],
+                    '(list may be truncated)')
+        col_duplicates = col_meta.index.duplicated()
+        if any(col_duplicates):
+            raise Exception('Duplicates in column indices : ',
+                    list(col_meta.index[col_duplicates])[:25],
+                    '(list may be truncated)')
         if type(row_meta) == pd.DataFrame and x.shape[0] != row_meta.shape[0]:
             raise Exception('Row dimensions do not match: ' + str(x.shape[0]) +
                             '!=' + str(row_meta.shape[0]))
