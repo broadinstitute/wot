@@ -290,12 +290,6 @@ for more information.
   </tbody>
 </table>
 
-<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="{{site.baseurl}}/examples/ancestor_census">See example code</a>
-##### Plot for ancestor census #####
-
-![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
-
 
 ### Trajectory trends ###
 
@@ -437,12 +431,6 @@ Each line contains information about the relation between two cell sets :
    - **R0.5** is the randomly generated population at that timepoint
    - **P1** is the population of the dataset at the second timepoint of the day pair
  - **distance** is the Wasserstein distance between the two sets considered
-
-<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="{{site.baseurl}}/examples/plotting_validation_summary">See example code</a>
-##### Plot validation summary #####
-
-![Validation summary plot]({{site.baseurl}}/images/validation_summary.png)
 
 
 ### Force-directed Layout Embedding ###
