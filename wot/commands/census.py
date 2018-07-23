@@ -8,14 +8,14 @@ import pandas as pd
 import wot
 import wot.io
 
-def ancestor_census(core, cset_matrix, *populations):
-    timepoints = [wot.core.unique_timepoint(*populations)]
+def ancestor_census(ot_model, cset_matrix, *populations):
+    timepoints = [wot.model.unique_timepoint(*populations)]
     census = []
-    census.append(core.population_census(cset_matrix, *populations))
-    while core.can_pull_back(*populations):
-        populations = core.pull_back(*populations)
-        timepoints.append(wot.core.unique_timepoint(*populations))
-        census.append(core.population_census(cset_matrix, *populations))
+    census.append(ot_model.population_census(cset_matrix, *populations))
+    while ot_model.can_pull_back(*populations):
+        populations = ot_model.pull_back(*populations)
+        timepoints.append(wot.model.unique_timepoint(*populations))
+        census.append(ot_model.population_census(cset_matrix, *populations))
     census = np.asarray(census)[::-1,:,:]
     return timepoints[::-1], [ census[:,i,:] for i in range(census.shape[1]) ]
 
@@ -31,16 +31,16 @@ def main(argv):
 
     args = parser.parse_args(argv)
 
-    core = wot.initialize_core(args.matrix, args.cell_days, transport_maps_directory = args.tmap)
+    ot_model = wot.initialize_ot_model(args.matrix, args.cell_days, transport_maps_directory = args.tmap)
     cell_sets = wot.io.read_cell_sets(args.cell_set)
     cell_sets_matrix = wot.io.read_gene_sets(args.cell_set)
     keys = list(cell_sets.keys())
-    populations = core.population_from_ids(*[ cell_sets[name] for name in keys ], at_time = float(args.time))
+    populations = ot_model.population_from_ids(*[ cell_sets[name] for name in keys ], at_time = float(args.time))
     # Get rid of empty populations : just ignore them
     keys = [ keys[i] for i in range(len(keys)) if populations[i] is not None ]
     populations = [ p for p in populations if p is not None ]
 
-    timepoints, census = ancestor_census(core, cell_sets_matrix, *populations)
+    timepoints, census = ancestor_census(ot_model, cell_sets_matrix, *populations)
 
     row_meta = pd.DataFrame([], index=timepoints, columns=[])
     for i in range(len(census)):

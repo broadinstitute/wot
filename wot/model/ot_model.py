@@ -2,21 +2,21 @@
 
 from multiprocessing import Process
 from wot.population import Population
-import wot.core
+import wot.model
 import os
 import numpy as np
 import pandas as pd
 
-class Core:
+class OTModel:
     """
-    The Core takes care of computing and properly caching the transport maps
+    The OTModel takes care of computing and properly caching the transport maps
     needed when necessary. All computations using transport maps should be
-    performed through the Core.
+    performed through the OTModel.
 
     Parameters
     ----------
     matrix : wot.Dataset
-        The gene expression matrix for this core
+        The gene expression matrix for this OTModel
     transport_maps_directory : str
         Path to the transport map directory, where already computed transport
         maps are stored and future transport maps may be cached.
@@ -35,7 +35,7 @@ class Core:
         self.matrix = matrix
         self.tmap_dir = transport_maps_directory
         self.tmap_prefix = transport_maps_prefix
-        self.tmaps = wot.core.scan_transport_map_directory(self)
+        self.tmaps = wot.model.scan_transport_map_directory(self)
         self.timepoints = sorted(set(matrix.row_meta['day']))
         self.ot_config = {}
         if max_threads is None:
@@ -54,8 +54,8 @@ class Core:
 
         Example
         -------
-        core.set_ot_config(epsilon = .01)
-        core.set_ot_config(lambda1 = 50, lambda2 = 80)
+        ot_model.set_ot_config(epsilon = .01)
+        ot_model.set_ot_config(lambda1 = 50, lambda2 = 80)
         """
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
@@ -97,7 +97,7 @@ class Core:
                     procs[i - m].join()
                 if i < len(procs):
                     procs[i].start()
-            self.tmaps = wot.core.scan_transport_map_directory(self)
+            self.tmaps = wot.model.scan_transport_map_directory(self)
         else:
             for s, d in day_pairs :
                 self.compute_transport_map(s, d)
@@ -145,7 +145,7 @@ class Core:
         tmap : wot.Dataset
             The transport map from t0 to t1
         """
-        return wot.core.load_transport_map(self, t0, t1)
+        return wot.model.load_transport_map(self, t0, t1)
 
     def can_push_forward(self, *populations):
         """
@@ -166,7 +166,7 @@ class Core:
         ValueError
             If all populations are not in the same timepoint
         """
-        return self.timepoints.index(wot.core.unique_timepoint(*populations)) \
+        return self.timepoints.index(wot.model.unique_timepoint(*populations)) \
                 < len(self.timepoints) - 1
 
     def can_pull_back(self, *populations):
@@ -188,7 +188,7 @@ class Core:
         ValueError
             If all populations are not in the same timepoint
         """
-        return self.timepoints.index(wot.core.unique_timepoint(*populations)) > 0
+        return self.timepoints.index(wot.model.unique_timepoint(*populations)) > 0
 
     def push_forward(self, *populations, to_time = None, normalize=True):
         """
@@ -218,15 +218,15 @@ class Core:
 
         Examples
         --------
-        >>> core.push_forward(pop, to_time = 2) # -> wot.Population
+        >>> ot_model.push_forward(pop, to_time = 2) # -> wot.Population
         Pushing several populations at once
-        >>> core.push_forward(pop1, pop2, pop3) # -> list of wot.Population
+        >>> ot_model.push_forward(pop1, pop2, pop3) # -> list of wot.Population
         Pulling back after pushing forward
-        >>> core.pull_back(core.push_forward(pop))
+        >>> ot_model.pull_back(ot_model.push_forward(pop))
         Same, but several populations at once
-        >>> core.pull_back(* core.push_forward(pop1, pop2, pop3))
+        >>> ot_model.pull_back(* ot_model.push_forward(pop1, pop2, pop3))
         """
-        i = self.timepoints.index(wot.core.unique_timepoint(*populations))
+        i = self.timepoints.index(wot.model.unique_timepoint(*populations))
         j = i + 1 if to_time is None else self.timepoints.index(to_time)
 
         if i == -1:
@@ -282,15 +282,15 @@ class Core:
 
         Examples
         --------
-        >>> core.pull_back(pop, to_time = 0) # -> wot.Population
+        >>> ot_model.pull_back(pop, to_time = 0) # -> wot.Population
         Pushing several populations at once
-        >>> core.pull_back(pop1, pop2, pop3) # -> list of wot.Population
+        >>> ot_model.pull_back(pop1, pop2, pop3) # -> list of wot.Population
         Pulling back after pushing forward
-        >>> core.pull_back(core.push_forward(pop))
+        >>> ot_model.pull_back(ot_model.push_forward(pop))
         Same, but several populations at once
-        >>> core.pull_back(* core.push_forward(pop1, pop2, pop3))
+        >>> ot_model.pull_back(* ot_model.push_forward(pop1, pop2, pop3))
         """
-        i = self.timepoints.index(wot.core.unique_timepoint(*populations))
+        i = self.timepoints.index(wot.model.unique_timepoint(*populations))
         j = i - 1 if to_time is None else self.timepoints.index(to_time)
 
         if i == -1:
@@ -345,18 +345,18 @@ class Core:
 
         Examples
         --------
-        >>> core.ancestors(pop, at_time = 0) # -> wot.Population
+        >>> ot_model.ancestors(pop, at_time = 0) # -> wot.Population
         # Using several populations at once
-        >>> core.ancestors(pop1, pop2, pop3) # -> list of wot.Population
+        >>> ot_model.ancestors(pop1, pop2, pop3) # -> list of wot.Population
         # Chaining ancestors and descendants
-        >>> core.ancestors(core.descendants(pop))
+        >>> ot_model.ancestors(ot_model.descendants(pop))
         # Same, but several populations at once
-        >>> core.ancestors(* core.descendants(pop1, pop2, pop3))
+        >>> ot_model.ancestors(* ot_model.descendants(pop1, pop2, pop3))
 
         Notes
         -----
-        If population.time is 7 and at_time is 5, the Core would pull back through two transport maps.
-        This method is only and alias to Core.pull_back
+        If population.time is 7 and at_time is 5, the OTModel would pull back through two transport maps.
+        This method is only and alias to OTModel.pull_back
         """
         return self.pull_back(*populations, to_time = at_time)
 
@@ -387,18 +387,18 @@ class Core:
 
         Examples
         --------
-        >>> core.descendants(pop, at_time = 2) # -> wot.Population
+        >>> ot_model.descendants(pop, at_time = 2) # -> wot.Population
         # Using several populations at once
-        >>> core.descendants(pop1, pop2, pop3) # -> list of wot.Population
+        >>> ot_model.descendants(pop1, pop2, pop3) # -> list of wot.Population
         # Chaining ancestors and descendants
-        >>> core.ancestors(core.descendants(pop))
+        >>> ot_model.ancestors(ot_model.descendants(pop))
         # Same, but several populations at once
-        >>> core.ancestors(* core.descendants(pop1, pop2, pop3))
+        >>> ot_model.ancestors(* ot_model.descendants(pop1, pop2, pop3))
 
         Notes
         -----
-        If population.time is 5 and at_time is 7, the Core would push forward through two transport maps.
-        This method is only and alias to Core.push_forward
+        If population.time is 5 and at_time is 7, the OTModel would push forward through two transport maps.
+        This method is only and alias to OTModel.push_forward
         """
         return self.push_forward(*populations, to_time = at_time)
 
@@ -429,13 +429,13 @@ class Core:
         Examples
         --------
         >>> cell_set = [ 'cell_1', 'cell_2', 'cell_3' ]
-        >>> core.population_from_ids(cell_set) # -> wot.Population
+        >>> ot_model.population_from_ids(cell_set) # -> wot.Population
         Multiple populations at once
         >>> multi_cell_sets = {
         >>>   'set_a': [ 'cell_a1', 'cell_a2'],
         >>>   'set_b': [ 'cell_b1', 'cell_b2'],
         >>> }
-        >>> core.population_from_ids(* multi_cell_sets.values()) # -> list of wot.Population
+        >>> ot_model.population_from_ids(* multi_cell_sets.values()) # -> list of wot.Population
 
         Notes
         -----
@@ -496,7 +496,7 @@ class Core:
         -----
         If several populations are given, they must all live in the same timepoint.
         """
-        day = wot.core.unique_timepoint(*populations)
+        day = wot.model.unique_timepoint(*populations)
         all_ids_at_t = self.matrix.row_meta.index[self.matrix.row_meta['day'] == day]
         inter_ids = cell_set_matrix.row_meta.index.intersection(all_ids_at_t)
         if len(inter_ids) == 0:

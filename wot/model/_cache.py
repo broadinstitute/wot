@@ -4,14 +4,14 @@ import os
 import glob
 import wot.io
 
-def scan_transport_map_directory(core):
+def scan_transport_map_directory(ot_model):
     """
     Scan the transport map directory for cached transport maps.
 
     Parameters
     ----------
-    core : wot.Core
-        The Core that is scanning for transport maps
+    ot_model : wot.OTModel
+        The OTModel that is scanning for transport maps
 
     Returns
     -------
@@ -19,9 +19,9 @@ def scan_transport_map_directory(core):
         The path to each transport map that was found in the directory.
     """
     cached_tmaps = {}
-    pattern = "*" if core.tmap_prefix is None else core.tmap_prefix
+    pattern = "*" if ot_model.tmap_prefix is None else ot_model.tmap_prefix
     pattern += '_[0-9]*.[0-9]*_[0-9]*.[0-9]*.*'
-    files = glob.glob(os.path.join(core.tmap_dir, pattern))
+    files = glob.glob(os.path.join(ot_model.tmap_dir, pattern))
     for path in files:
         if not os.path.isfile(path):
             continue
@@ -35,14 +35,14 @@ def scan_transport_map_directory(core):
         cached_tmaps[(t1, t2)] = path
     return cached_tmaps
 
-def load_transport_map(core, t1, t2):
+def load_transport_map(ot_model, t1, t2):
     """
     Load the given transport map, either from cache or compute it.
 
     Parameters
     ----------
-    core : wot.Core
-        The Core that is trying to load a transport map.
+    ot_model : wot.OTModel
+        The OTModel that is trying to load a transport map.
     t1 : int or float
         The source timepoint of the transport map.
     t2 : int or float
@@ -53,8 +53,8 @@ def load_transport_map(core, t1, t2):
     tmap : wot.Dataset
         The given transport map
     """
-    if core.tmaps.get((t1, t2), None) is None:
-        core.compute_transport_map(t1, t2)
+    if ot_model.tmaps.get((t1, t2), None) is None:
+        ot_model.compute_transport_map(t1, t2)
 
-    path = core.tmaps.get((t1, t2))
+    path = ot_model.tmaps.get((t1, t2))
     return wot.io.read_dataset(path)

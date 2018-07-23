@@ -2,11 +2,11 @@
 import matplotlib
 matplotlib.use('Agg')
 
-from .core import initialize_core
+from .model import initialize_ot_model
 from .dataset import *
 from .dataset_util import *
 import wot.io
-import wot.core
+import wot.model
 import wot.graphics
 import wot.simulate
 import wot.commands

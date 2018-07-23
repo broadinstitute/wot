@@ -9,7 +9,7 @@ import wot.commands
 
 def main(argv):
     parser = argparse.ArgumentParser('Compute transport maps between pairs of time points')
-    wot.commands.add_core_arguments(parser)
+    wot.commands.add_model_arguments(parser)
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--day_pairs',
             help='Two column file without header with '
@@ -28,7 +28,7 @@ def main(argv):
     # '--numInnerItermax'
 
     tmap_dir, tmap_prefix = os.path.split(args.out)
-    core = wot.initialize_core(args.matrix, args.cell_days,
+    ot_model = wot.initialize_ot_model(args.matrix, args.cell_days,
             transport_maps_directory = tmap_dir,
             transport_maps_prefix = tmap_prefix,
             local_pca = args.local_pca,
@@ -46,4 +46,4 @@ def main(argv):
     else:
         day_pairs = wot.io.read_day_pairs(args.day_pairs).values
 
-    core.compute_all_transport_maps(day_pairs, force = True)
+    ot_model.compute_all_transport_maps(day_pairs, force = True)

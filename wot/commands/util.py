@@ -5,7 +5,7 @@ MATRIX_HELP = 'A matrix with cells on rows and features, such as genes or pathwa
 FORMAT_HELP = 'Output file format'
 FORMAT_CHOICES = ['gct', 'loom', 'txt']
 
-def add_core_arguments(parser):
+def add_model_arguments(parser):
     parser.add_argument('--matrix', help=MATRIX_HELP, required=True)
     parser.add_argument('--cell_days', help=CELL_DAYS_HELP, required=True)
 
