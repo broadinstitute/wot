@@ -662,20 +662,4 @@ Example:
 <tr><td>5.0</td><td>0.99</td><td>0.00</td><td>0.00</td></tr>
 </table>
 
-
-## Sphinx-generated documentation ##
-------------------------------
-
-This document and the [examples]({{site.baseurl}}/examples) section should be more than enough to use **wot**.
-However, if you feel the need for a more in-depth documentation about each of the python
-functions in this package, it is available and can be generated from the sources of
-the package with the [Sphinx](http://www.sphinx-doc.org/en/master/) tool :
-
-```sh
-pip install --user sphinx
-cd sdocs/
-make html
-```
-
-
 [pip-install]: https://pip.pypa.io/en/stable/installing/
