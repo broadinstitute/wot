@@ -2,60 +2,10 @@
 
 import math
 
-import numpy
+import numpy as np
 import pandas
-import scipy.sparse
-import scipy.stats
-
 import wot
-
-
-# Compute the z-score for each gene in the set. Truncate these z-scores at 5
-# or −5, and define the signature of the cell to be the mean z-score over
-# all genes in the gene set.
-# ds and gs must be in the same order
-def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_score', use_dask=False):
-    if use_dask:
-        import dask.array as np
-    else:
-        import numpy as np
-    # gene sets has genes on rows, sets on columns
-    # ds has cells on rows, genes on columns
-    gs_x = gs.x
-    if background_ds is None:
-        background_ds = dataset_to_score
-
-    if method == 'mean_z_score':
-        background_x = background_ds.x.toarray() if scipy.sparse.isspmatrix(background_ds.x) else background_ds.x
-        gene_indices = (gs_x.sum(axis=1) > 0) & (
-                background_x.std(axis=0) > 0)  # keep genes that are in gene sets and have standard deviation > 0
-        gs_x = gs_x[gene_indices]
-        background_x = background_x[:, gene_indices]
-        dataset_to_score.x = dataset_to_score.x[:, gene_indices]
-        std = np.std(background_x, axis=0)
-        mean = np.mean(background_x, axis=0)
-
-        dataset_to_score.x = (dataset_to_score.x - mean) / std
-        dataset_to_score.x[dataset_to_score.x < -5] = -5
-        dataset_to_score.x[dataset_to_score.x > 5] = 5
-        dataset_to_score.x[dataset_to_score.x == np.nan] = 0
-
-        scores = dataset_to_score.x.dot(gs_x)
-        ngenes_in_set = gs_x.sum(axis=0)
-        ngenes_in_set[ngenes_in_set == 0] = 1  # avoid divide by zero
-        scores = scores / ngenes_in_set  # scores contains cells on rows, gene sets on columns
-        return wot.Dataset(x=scores, row_meta=dataset_to_score.row_meta, col_meta=gs.col_meta)
-    elif method == 'mean_rank':
-        ranks = np.zeros(dataset_to_score.x.shape)
-        x = dataset_to_score.x.toarray() if scipy.sparse.isspmatrix(dataset_to_score.x) else dataset_to_score.x
-        for i in range(dataset_to_score.x.shape[0]):
-            ranks[i] = scipy.stats.rankdata(x[i, :])
-        scores = ranks.dot(gs_x)
-        ngenes_in_set = gs_x.sum(axis=0)
-        ngenes_in_set[ngenes_in_set == 0] = 1  # avoid divide by zero
-        scores /= ngenes_in_set  # scores contains cells on rows, gene sets on columns
-        scores /= dataset_to_score.x.shape[1]
-        return wot.Dataset(x=scores, row_meta=dataset_to_score.row_meta, col_meta=gs.col_meta)
+import scipy.sparse
 
 
 def list_of_days_in_dataset(dataset):
@@ -70,9 +20,22 @@ def cell_indices_by_day(dataset):
     unique_days = list_of_days_in_dataset(dataset)
     for day in unique_days:
         day_query = dataset.row_meta['day'] == day
-        indices = numpy.where(day_query)[0]
+        indices = np.where(day_query)[0]
         day_to_indices[day] = indices
     return day_to_indices
+
+
+def mean_and_variance(X):
+    mean = X.mean(axis=0)
+    if scipy.sparse.issparse(X):
+        mean_sq = X.multiply(X).mean(axis=0)
+        mean = mean.A1
+        mean_sq = mean_sq.A1
+    else:
+        mean_sq = np.multiply(X, X).mean(axis=0)
+    # R convention (unbiased estimator) for variance
+    var = (mean_sq - mean ** 2) * (X.shape[0] / (X.shape[0] - 1))
+    return mean, var
 
 
 def extract_cells_at_indices(ds, indices):
@@ -95,7 +58,7 @@ def set_cell_metadata(dataset, name, data, indices=None):
 
 def merge_datasets(*args):
     datasets = list(args)
-    merged_x = numpy.concatenate([d.x for d in datasets])
+    merged_x = np.concatenate([d.x for d in datasets])
     row_columns = set(datasets[0].row_meta.columns)
     if not all([set(d.row_meta.columns) == row_columns for d in datasets]):
         raise ValueError("Unable to merge: incompatible metadata between datasets")
