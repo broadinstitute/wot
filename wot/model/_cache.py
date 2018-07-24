@@ -43,6 +43,24 @@ def write_config_file(ot_model):
     with open(config_file, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
 
+def list_cached_transport_maps(tmap_dir, tmap_prefix):
+    valid_tmaps = []
+    pattern = tmap_prefix
+    pattern += '_[0-9]*.[0-9]*_[0-9]*.[0-9]*.*'
+    files = glob.glob(os.path.join(tmap_dir, pattern))
+    for path in files:
+        if not os.path.isfile(path):
+            continue
+        basename, ext = wot.io.get_filename_and_extension(path)
+        tokens = basename.split('_')
+        try :
+            t1 = float(tokens[-2])
+            t2 = float(tokens[-1])
+            valid_tmaps.append(path)
+        except ValueError:
+            continue
+    return valid_tmaps
+
 def purge_invalidated_caches(ot_model):
     """
     Removes all cached transport maps that do not match the current setting
@@ -62,8 +80,12 @@ def purge_invalidated_caches(ot_model):
         # File not present or not a valid YAML file, purge prefix
         purge = True
 
+    if purge:
+        if os.path.isfile(config_file):
+            os.remove(config_file)
+        for path in list_cached_transport_maps(ot_model.tmap_dir, ot_model.tmap_prefix):
+            os.remove(path)
     write_config_file(ot_model)
-    pass
 
 def scan_transport_map_directory(ot_model):
     """
@@ -82,19 +104,11 @@ def scan_transport_map_directory(ot_model):
     purge_invalidated_caches(ot_model)
 
     cached_tmaps = {}
-    pattern = ot_model.tmap_prefix
-    pattern += '_[0-9]*.[0-9]*_[0-9]*.[0-9]*.*'
-    files = glob.glob(os.path.join(ot_model.tmap_dir, pattern))
-    for path in files:
-        if not os.path.isfile(path):
-            continue
+    for path in list_cached_transport_maps(ot_model.tmap_dir, ot_model.tmap_prefix):
         basename, ext = wot.io.get_filename_and_extension(path)
         tokens = basename.split('_')
-        try :
-            t1 = float(tokens[-2])
-            t2 = float(tokens[-1])
-        except ValueError:
-            continue
+        t1 = float(tokens[-2])
+        t2 = float(tokens[-1])
         cached_tmaps[(t1, t2)] = path
     return cached_tmaps
 
