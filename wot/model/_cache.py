@@ -8,12 +8,16 @@ import yaml
 
 def serialize_day_pairs(day_pairs):
     """Return a YAML-friendly serialized object reprensenting the day_pairs dict"""
+    if day_pairs is None:
+        return None
     serialize = lambda x: '->'.join(str(z) for z in x)
     serializable = { serialize(x): day_pairs[x] for x in day_pairs }
     return yaml.dump(serializable).rstrip().split('\n')
 
 def deserialize_day_pairs(serialized):
     """Rebuild the day_pairs dict from the YAML-friendly serialized object"""
+    if serialized == 'null':
+        return None
     deserialize = lambda x: tuple(float(z) for z in x.split('->'))
     deserializable = yaml.load('\n'.join(serialized))
     return { deserialize(x): deserializable[x] for x in deserializable }
