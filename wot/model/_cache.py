@@ -15,7 +15,7 @@ def serialize_day_pairs(day_pairs):
 def deserialize_day_pairs(serialized):
     """Rebuild the day_pairs dict from the YAML-friendly serialized object"""
     deserialize = lambda x: tuple(float(z) for z in x.split('->'))
-    deserializable = '\n'.join(yaml.load(serialized))
+    deserializable = yaml.load('\n'.join(serialized))
     return { deserialize(x): deserializable[x] for x in deserializable }
 
 def get_ot_configuration(ot_model):
@@ -44,7 +44,6 @@ def parse_ot_configuration_from_stream(stream):
     """Parse the OT configuration from the YAML stream"""
     config = yaml.load(stream)
     config['day_pairs'] = deserialize_day_pairs(config.get('day_pairs', 'null'))
-    print(config)
     return config
 
 def write_config_file(ot_model):
