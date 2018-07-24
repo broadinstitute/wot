@@ -22,7 +22,7 @@ def deserialize_day_pairs(serialized):
     deserializable = yaml.load('\n'.join(serialized))
     return { deserialize(x): deserializable[x] for x in deserializable }
 
-def get_ot_configuration(ot_model):
+def get_full_ot_configuration(ot_model, serialized=True):
     """
     Gets the OT configuration of a given model
 
@@ -37,10 +37,14 @@ def get_ot_configuration(ot_model):
         The configuration for each parameter
     """
     matrix_hash = hashlib.sha256(ot_model.matrix.x.data.tobytes()).hexdigest()
+    if serialized:
+        day_pairs = serialize_day_pairs(ot_model.day_pairs)
+    else:
+        day_pairs = ot_model.day_pairs
 
     return {
+            'day_pairs': day_pairs,
             'matrix_hash': matrix_hash,
-            'day_pairs': serialize_day_pairs(ot_model.day_pairs),
             ** ot_model.get_ot_config(),
            }
 
@@ -57,7 +61,11 @@ def are_ot_configurations_compatible(ot_model, cache_config):
     A cache configuration is compatible if all scalar variables match,
     and the cached day_pairs is a subset of the OTModel day_pairs.
     """
-    current_config = ot_model.get_ot_config()
+    current_config = get_full_ot_configuration(ot_model, serialized=False)
+
+    wot.io.verbose("## Current config dump ##\n", current_config, "\n## end of current config dump ##")
+    wot.io.verbose("## Cache config dump ##\n", cache_config, "\n## end of cache config dump ##")
+
     for key in current_config:
         if key == 'day_pairs':
             # If no collision is present, keep the caches
@@ -65,17 +73,18 @@ def are_ot_configurations_compatible(ot_model, cache_config):
                 # Both day_pairs are None. No collisions
                 continue
             elif current_config[key] is None or cache_config[key] is None:
-                # One of the two day_pairs is None. Not compatible
+                wot.io.verbose("One of the two day_pairs is None. Not compatible")
                 return False
             # Now both are not None, check if they are compatible
             for x in cache_config[key]:
                 if x not in current_config[key]:
-                    # A Transport map is no longer present
+                    wot.io.verbose("Tmap", x, "is no longer present")
                     return False
                 if current_config[key][x] != cache_config[key][x]:
-                    # Configuration for a transport map has changed
+                    wot.io.verbose("Tmap configuration for", x, "has changed")
                     return False
         elif key in cache_config and current_config[key] != cache_config[key]:
+            wot.io.verbose("Configuration value for", key, "not compatible")
             return False
     return True
 
@@ -89,7 +98,7 @@ def write_config_file(ot_model):
     ot_model : wot.OTModel
         The OTModel whose configurations needs to be written
     """
-    config = get_ot_configuration(ot_model)
+    config = get_full_ot_configuration(ot_model)
 
     config_file = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix) + '.yml'
     with open(config_file, "w") as outfile:
@@ -128,14 +137,21 @@ def purge_invalidated_caches(ot_model):
         with open(config_file, "r") as stream:
             cached_config = parse_ot_configuration_from_stream(stream)
             purge = not are_ot_configurations_compatible(ot_model, cached_config)
+            if purge:
+                wot.io.verbose("Configuration incompatible with cache. Triggering purge")
+            else:
+                wot.io.verbose("Cache configuration OK")
     except:
         # File not present or not a valid YAML file, purge prefix
+        wot.io.verbose("Cache description not present or not a valid YAML file :", config_file)
         purge = True
 
     if purge:
+        wot.io.verbose("Purging ({},{})".format(ot_model.tmap_dir, ot_model.tmap_prefix))
         if os.path.isfile(config_file):
             os.remove(config_file)
         for path in list_cached_transport_maps(ot_model.tmap_dir, ot_model.tmap_prefix):
+            wot.io.verbose("Removing tmap", path)
             os.remove(path)
     write_config_file(ot_model)
 
@@ -153,8 +169,7 @@ def scan_transport_map_directory(ot_model):
     cached_tmaps : dict of (float, float): str
         The path to each transport map that was found in the directory.
     """
-    purge_invalidated_caches(ot_model)
-
+    wot.io.verbose("Scanning transport map directory")
     cached_tmaps = {}
     for path in list_cached_transport_maps(ot_model.tmap_dir, ot_model.tmap_prefix):
         basename, ext = wot.io.get_filename_and_extension(path)
@@ -162,6 +177,7 @@ def scan_transport_map_directory(ot_model):
         t1 = float(tokens[-2])
         t2 = float(tokens[-1])
         cached_tmaps[(t1, t2)] = path
+    wot.io.verbose("Cached tmaps found:", cached_tmaps)
     return cached_tmaps
 
 def load_transport_map(ot_model, t1, t2):

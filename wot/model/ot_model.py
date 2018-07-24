@@ -3,6 +3,7 @@
 from multiprocessing import Process
 from wot.population import Population
 import wot.model
+import wot.io
 import os
 import numpy as np
 import pandas as pd
@@ -40,15 +41,25 @@ class OTModel:
         self.timepoints = sorted(set(matrix.row_meta['day']))
         self.tmap_dir = transport_maps_directory or '.'
         self.tmap_prefix = transport_maps_prefix or self.default_tmap_prefix
+
+        wot.io.verbose("Initializing OTModel ({},{})".format(transport_maps_directory, transport_maps_prefix))
+        wot.io.verbose("Additional arguments :", kwargs)
+        wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
+
         self.day_pairs = wot.model.parse_day_pairs(kwargs.pop('day_pairs', None))
+
         self.ot_config = {}
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
+        wot.model.purge_invalidated_caches(self)
         self.tmaps = wot.model.scan_transport_map_directory(self)
+
         if max_threads is None:
+            wot.io.verbose("Argument max_threads not set. Using default")
             self.max_threads = 1
         else:
             self.max_threads = max_threads
+        wot.io.verbose("Using", self.max_threads, "thread(s) at most")
 
     def get_ot_config(self):
         """
