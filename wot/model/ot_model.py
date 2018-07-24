@@ -85,15 +85,12 @@ class OTModel:
 
         return { x: config[x] if x in config else ot_defaults[x] for x in ot_defaults }
 
-    def compute_all_transport_maps(self, day_pairs = None, force = False):
+    def compute_all_transport_maps(self, force = False):
         """
         Computes all required transport maps and caches everything for future use.
 
         Parameters
         ----------
-        day_pairs : list of (float, float), optional
-            Day pairs to compute the transport maps for.
-            If None, maps for all consecutive days will be computed.
         force : bool, optional, default : False
             Force recomputation of each transport map, after config update for instance.
 
@@ -103,6 +100,7 @@ class OTModel:
             Only computes and caches all transport maps, does not return them.
         """
         t = self.timepoints
+        day_pairs = self.day_pairs
         if day_pairs is None:
             day_pairs = [ (t[i], t[i+1]) for i in range(len(t) - 1) ]
 
@@ -142,13 +140,27 @@ class OTModel:
         -------
         None
             Only computes and caches the transport maps, does not return it.
+
+        Raises
+        ------
+        ValueError
+            If the OTModel was initialized with day_pairs and the given pair is not present.
         """
         if self.tmap_prefix is None:
             path = self.default_tmap_prefix
         else:
             path = self.tmap_prefix
+
+        # If day_pairs is not None, its configuration takes precedence
+        if self.day_pairs is not None:
+            if (t0, t1) not in self.day_pairs:
+                raise ValueError("Transport map ({},{}) is not present in day_pairs".format(t0, t1))
+            local_config = self.day_pairs[(t0, t1)]
+        else:
+            local_config = {}
+
         path += "_{}_{}.loom".format(t0, t1)
-        config = { **self.get_ot_config(), 't0': t0, 't1': t1 }
+        config = { **self.get_ot_config(), **local_config, 't0': t0, 't1': t1 }
         tmap = wot.ot.OptimalTransportHelper.compute_single_transport_map(self.matrix, config)
         wot.io.write_dataset(tmap, os.path.join(self.tmap_dir, path),
                 output_format="loom", txt_full=False)
