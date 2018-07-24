@@ -63,6 +63,7 @@ def write_config_file(ot_model):
         yaml.dump(config, outfile, default_flow_style=False)
 
 def list_cached_transport_maps(tmap_dir, tmap_prefix):
+    """Get the list of paths to valid transport map names (complex regexp not available in Python)"""
     valid_tmaps = []
     pattern = tmap_prefix
     pattern += '_[0-9]*.[0-9]*_[0-9]*.[0-9]*.*'
