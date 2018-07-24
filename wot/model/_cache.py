@@ -50,6 +50,36 @@ def parse_ot_configuration_from_stream(stream):
     config['day_pairs'] = deserialize_day_pairs(config.get('day_pairs', 'null'))
     return config
 
+def are_ot_configurations_compatible(ot_model, cache_config):
+    """
+    Check that the current configuration of an OTModel is compatible with a cache configuration
+
+    A cache configuration is compatible if all scalar variables match,
+    and the cached day_pairs is a subset of the OTModel day_pairs.
+    """
+    current_config = ot_model.get_ot_config()
+    for key in current_config:
+        if key == 'day_pairs':
+            # If no collision is present, keep the caches
+            if current_config[key] is None and cache_config[key] is None:
+                # Both day_pairs are None. No collisions
+                continue
+            elif current_config[key] is None or cache_config[key] is None:
+                # One of the two day_pairs is None. Not compatible
+                return False
+            # Now both are not None, check if they are compatible
+            for x in cache_config[key]:
+                if x not in current_config[key]:
+                    # A Transport map is no longer present
+                    return False
+                if current_config[key][x] != cache_config[key][x]:
+                    # Configuration for a transport map has changed
+                    return False
+        elif key in cache_config and current_config[key] != cache_config[key]:
+            return False
+    return True
+
+
 def write_config_file(ot_model):
     """
     Writes the current configuration to the tmap prefix file
@@ -97,8 +127,7 @@ def purge_invalidated_caches(ot_model):
     try:
         with open(config_file, "r") as stream:
             cached_config = parse_ot_configuration_from_stream(stream)
-            # TODO: choose wether or not to purge here
-            purge = True
+            purge = not are_ot_configurations_compatible(ot_model, cached_config)
     except:
         # File not present or not a valid YAML file, purge prefix
         purge = True
