@@ -792,6 +792,4 @@ def read_day_pairs(day_pairs):
     else:
         target = io.StringIO(day_pairs)
         args = { 'sep': ',', 'lineterminator': ';' }
-    return pd.read_table(target, header=None, names=['t0', 't1'],
-            index_col = False, **args,
-            dtype = { 't0': np.float64, 't1': np.float64 })
+    return pd.read_table(target, **args)

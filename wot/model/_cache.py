@@ -6,9 +6,21 @@ import wot.io
 import hashlib
 import yaml
 
-def get_configuration(ot_model):
+def serialize_day_pairs(day_pairs):
+    """Return a YAML-friendly serialized object reprensenting the day_pairs dict"""
+    serialize = lambda x: '->'.join(str(z) for z in x)
+    serializable = { serialize(x): day_pairs[x] for x in day_pairs }
+    return yaml.dump(serializable).rstrip().split('\n')
+
+def deserialize_day_pairs(serialized):
+    """Rebuild the day_pairs dict from the YAML-friendly serialized object"""
+    deserialize = lambda x: tuple(float(z) for z in x.split('->'))
+    deserializable = '\n'.join(yaml.load(serialized))
+    return { deserialize(x): deserializable[x] for x in deserializable }
+
+def get_ot_configuration(ot_model):
     """
-    Gets the configuration of a given model
+    Gets the OT configuration of a given model
 
     Parameters
     ----------
@@ -24,9 +36,16 @@ def get_configuration(ot_model):
 
     return {
             'matrix_hash': matrix_hash,
+            'day_pairs': serialize_day_pairs(ot_model.day_pairs),
             ** ot_model.get_ot_config(),
            }
 
+def parse_ot_configuration_from_stream(stream):
+    """Parse the OT configuration from the YAML stream"""
+    config = yaml.load(stream)
+    config['day_pairs'] = deserialize_day_pairs(config.get('day_pairs', 'null'))
+    print(config)
+    return config
 
 def write_config_file(ot_model):
     """
@@ -37,7 +56,7 @@ def write_config_file(ot_model):
     ot_model : wot.OTModel
         The OTModel whose configurations needs to be written
     """
-    config = get_configuration(ot_model)
+    config = get_ot_configuration(ot_model)
 
     config_file = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix) + '.yml'
     with open(config_file, "w") as outfile:
@@ -73,7 +92,7 @@ def purge_invalidated_caches(ot_model):
     config_file = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix) + '.yml'
     try:
         with open(config_file, "r") as stream:
-            cached_config = yaml.load(stream)
+            cached_config = parse_ot_configuration_from_stream(stream)
             # TODO: choose wether or not to purge here
             purge = True
     except:

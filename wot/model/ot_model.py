@@ -37,12 +37,13 @@ class OTModel:
 
     def __init__(self, matrix, transport_maps_directory = None, transport_maps_prefix = None, max_threads = None, **kwargs):
         self.matrix = matrix
+        self.timepoints = sorted(set(matrix.row_meta['day']))
         self.tmap_dir = transport_maps_directory or '.'
         self.tmap_prefix = transport_maps_prefix or self.default_tmap_prefix
+        self.day_pairs = wot.model.parse_day_pairs(kwargs.pop('day_pairs', None))
         self.ot_config = {}
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
-        self.timepoints = sorted(set(matrix.row_meta['day']))
         self.tmaps = wot.model.scan_transport_map_directory(self)
         if max_threads is None:
             self.max_threads = 1

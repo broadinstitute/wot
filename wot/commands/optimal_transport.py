@@ -38,12 +38,8 @@ def main(argv):
             lambda2 = args.lambda2,
             scaling_iter = args.scaling_iter,
             epsilon0 = args.epsilon0,
-            tau = args.tau
+            tau = args.tau,
+            day_pairs = args.day_pairs
             )
 
-    if args.day_pairs is None:
-        day_pairs = None
-    else:
-        day_pairs = wot.io.read_day_pairs(args.day_pairs).values
-
-    ot_model.compute_all_transport_maps(day_pairs, force = True)
+    ot_model.compute_all_transport_maps(force = True)
