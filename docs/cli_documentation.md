@@ -3,24 +3,9 @@ layout: documentation
 location: Documentation
 ---
 
-<b class="py-3 text-center" style="font-size: 150%; display: block">Command line interface documentation</b>
-
 Waddington Optimal Transport uses time-course data to infer how the
 probability distribution of cells in gene-expression space evolves
 over time, by using the mathematical approach of Optimal Transport (OT).
-
-> <button class="btn-success rounded border-0 px-3 py-1" disabled>Interactive</button>
->
-> Alternatively, **wot** features an interactive web interface to visualize
-> your data and perform all the tasks described below.
->
-> <div class="center-block text-center py-2">
->   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
->      role="button" href="{{site.baseurl}}/interactive_documentation">
->      View documentation for web interface &raquo;
->   </a>
-> </div>
->
 
 
 ## Installation ##
@@ -63,7 +48,7 @@ The package gets built to `dist/wot-VERSION.tar.gz`, for instance `dist/wot-0.1.
 > pip install --user cython --no-cache-dir
 > echo "$PATH" | grep -q "$HOME/.local/bin" || \
 >   echo -e "\n# Cython path\nPATH=\"\$PATH:\$HOME/.local/bin\"" \
->   >> ~/.bash_profile && source ~/.bash_profile
+>   >> ~/.bash_profile
 > ```
 >
 > *h5py*, *docutils*, and *msgpack-python* have to be installed separately and
@@ -114,7 +99,20 @@ a table containing the core options. Required options are in bold font.
 >
 > <div class="center-block text-center py-2"><a class="nounderline btn-outline-secondary btn-lg border px-4 py-2" role="button" href="#">Download .zip</a></div>
 
+<br />
 
+> <button class="btn-success rounded border-0 px-3 py-1" disabled>Interactive</button>
+>
+> Alternatively, **wot** features an interactive web interface to visualize
+> your data and perform all the tasks described below.
+>
+> <div class="center-block text-center py-2">
+>   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
+>      role="button" href="{{site.baseurl}}/interactive_documentation">
+>      Learn more &raquo;
+>   </a>
+> </div>
+>
 
 ### Transport maps ###
 
@@ -231,15 +229,19 @@ wot trajectory --tmap . --cell_days days.txt \
 </table>
 
 
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="{{site.baseurl}}/examples/ancestor_census">See example code</a>
 ### Ancestor census ###
 
 The census command lets you find out in which cell sets the ancestors
 of a given cell set were located.
 
+
 ```sh
 wot census --tmap . --cell_days days.txt \
  --cell_set cell_sets.gmt --matrix matrix.txt --progress
 ```
+![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
 
 This would create several census files named `<prefix>_<cellset>_<timepoint>.txt`,
 for instance `census_tip1_100.0.txt`. See <a href="#census_file">formats</a>
@@ -279,13 +281,6 @@ for more information.
     </tr>
   </tbody>
 </table>
-
-<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="{{site.baseurl}}/examples/ancestor_census">See example code</a>
-##### Plot for ancestor census #####
-
-![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
-
 
 ### Trajectory trends ###
 
@@ -334,10 +329,65 @@ wot trajectory_trends --tmap . --cell_days days.txt --cell_set cell_sets.gmt --m
 
 ### Shared ancestry ###
 
-### Local regulatory model via differential expression ###
+### Trajectory differential expression ###
+you can compare two ancestor distributions through local enrichment. 
+
+The ancestor distributions can be two tips' or one tip's but at different time point. Now we have different ways to give the score that measures the difference between two distributions. Besides, the `matrix.txt` and `matrix1.txt`  should be the form of the result of trajectory trends.
+```sh
+wot optimal_local_enrichment --matrix1 matrix.txt \
+(--matrix2 matrix2.txt) --score t_test \
+--comparisons comapre.txt (--gsea C1)
+```
+When we run the cmd, we can get the file like `timepoint.rnk` or `timepoint1_timepoint2.rnk` including each gene 's score.
+
+<table class="table table-hover" style="display: table">
+  <thead class="thead-light">
+    <tr>
+      <th>Option</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>--matrix1</b></td>
+      <td>A matrix with cells on rows and features, such as
+                        genes or pathways on columns See <a href="#matrix_file">formats</a></td>
+    </tr> 
+    <tr>
+      <td><b>--score</b></td>
+      <td>Method to compute differential gene expression score.
+                        Choices are signal to noise, mean difference, t-test,
+                        and fold change.{s2n,mean_difference,fold_change,t_test}
+    </tr>
+           <tr>
+      <td>--matrix2</td>
+      <td>A matrix with cells on rows and features, such as
+                        genes or pathways on columns See <a href="#matrix_file">formats</a></td>
+    </tr>
+          <td>--gsea</td>
+      <td>Run (<a href="http://s
+                        oftware.broadinstitute">GSEA</a> on the specified MSigDB collections.<br/>
+                         H (hallmark gene sets), C1 (positional gene sets),
+                        C2 (curated gene sets), C3 (motif gene sets), C4
+                        (computational gene sets), C5 (GO gene sets), C6
+                        (oncogenic signatures), C7 (immunologic signatures)
+      </td>
+    </tr>
+       </tr>
+           <tr>
+      <td>--comparisons</td>
+      <td>Comparisons to generate ranked lists for. By default,
+                        for one matrix signatures are created for all
+                        consecutive timepoints. For two matrices for all
+                        matching timepoints.</td>
+    </tr>
+
+  </tbody>
+</table>
+
+### Local regulatory model ###
 
 ### Global regulatory model ###
-
 
 ### Validation ###
 
@@ -439,12 +489,6 @@ Each line contains information about the relation between two cell sets :
    - **R0.5** is the randomly generated population at that timepoint
    - **P1** is the population of the dataset at the second timepoint of the day pair
  - **distance** is the Wasserstein distance between the two sets considered
-
-<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="{{site.baseurl}}/examples/plotting_validation_summary">See example code</a>
-##### Plot validation summary #####
-
-![Validation summary plot]({{site.baseurl}}/images/validation_summary.png)
 
 
 ### Force-directed Layout Embedding ###
@@ -665,7 +709,7 @@ Example:
 </table>
 
 
-## Sphinx-generated documentation ##
+## More documentation ##
 ------------------------------
 
 This document and the [examples]({{site.baseurl}}/examples) section should be more than enough to use **wot**.
@@ -676,7 +720,7 @@ the package with the [Sphinx](http://www.sphinx-doc.org/en/master/) tool :
 ```sh
 pip install --user sphinx
 cd sdocs/
-make html
+make
 ```
 
 
