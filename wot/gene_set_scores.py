@@ -132,7 +132,7 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
         observed_scores = observed_scores.toarray()
     ngenes_in_set = gs_1_0.sum(axis=0)
     # ngenes_in_set[ngenes_in_set == 0] = 1  # avoid divide by zero
-    p_low = None
+    p_value_ci = None
     if permutations is not None and permutations > 0:
         if random_state:
             np.random.seed(random_state)
@@ -182,7 +182,8 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
                 n = npermutations
                 n_s = p_values
                 n_f = n - n_s
-                p_low = n_s / n - (z / n) * np.sqrt((n_s * n_f) / n)
+                p_value_ci = (z / n) * np.sqrt((n_s * n_f) / n)
+                p_low = n_s / n - p_value_ci
                 cells_to_keep = cells_to_keep & (p_low < drop_p_value_threshold)
                 ncells = np.sum(cells_to_keep)
                 print(
@@ -200,6 +201,8 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
             p_values = (p_values + 1) / (npermutations + 2)
         else:
             p_values /= npermutations
+        if p_value_ci is not None:
+            p_value_ci[p_value_ci > 1] = 1
         return {'score': observed_scores, 'p_value': p_values, 'fdr': fdr(p_values), 'k': k, 'n': npermutations,
-                'p_value_low': p_low}
+                'p_value_ci': p_value_ci}
     return {'score': observed_scores}
