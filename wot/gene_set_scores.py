@@ -28,7 +28,6 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
     # gene_indices = (gs_x.sum(axis=1) > 0) & (
     #         background_x.std(axis=0) > 0)  # keep genes that are in gene sets and have standard deviation > 0
 
-
     x = dataset_to_score.x
     if background_ds is None:
         background = x
@@ -94,8 +93,6 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
         observed_scores = observed_scores.toarray()
     ngenes_in_set = gs_1_0.sum(axis=0)
     # ngenes_in_set[ngenes_in_set == 0] = 1  # avoid divide by zero
-    p_values = None
-    fdr = None
     if permutations is not None and permutations > 0:
         if random_state:
             np.random.seed(random_state)
@@ -112,9 +109,10 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
         for bin_index in range(nbins):
             subset = gs_1_0[bin_index_to_gene_indices[bin_index]]
             bin_sizes.append(subset.shape[0])
-
+        total_permutations = 0
         for i in range(0, permutations, block_size):
             current_block_size = min(i + block_size, permutations) - i
+            total_permutations += current_block_size
             npermutations[cells_to_keep] += current_block_size
             permuted_gs = np.zeros((x.shape[1], current_block_size))
             bin_start = 0
@@ -147,8 +145,15 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
                 n_f = n - n_s
                 p_low = n_s / n - (z / n) * np.sqrt((n_s * n_f) / n)
                 cells_to_keep = cells_to_keep & (p_low < drop_p_value_threshold)
-                if np.sum(cells_to_keep) == 0:
+                ncells = np.sum(cells_to_keep)
+                print(
+                    'permutation ' + str(total_permutations) + '/' + str(permutations) + ', ' + str(ncells) + '/' + str(
+                        x.shape[0]) + ' cells')
+                if ncells == 0:
                     break
+            else:
+                print(
+                    'permutation ' + str(total_permutations) + '/' + str(permutations))
 
         observed_scores = observed_scores / ngenes_in_set
         k = p_values
