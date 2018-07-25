@@ -73,11 +73,10 @@ class OTModel:
         # WARNING: Any value in ot_config that does not appear in the following dict will be ignored
         ot_defaults = {
                 'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
-                'epsilon0': 1, 'tau': 10e3,
-                'growth_iters': 3, 'scaling_iter': 3000,
-                'solver': 'unbalanced', 'g': None
+                'epsilon0': 1, 'tau': 1e4,
+                'growth_iters': 3, 'batch_size': 50,
+                'tolerance': 1e-2, 'g': None
                 }
-        # TODO: add support for extra_iter or equivalent in optimal transport
         # TODO: parse cell growth rates files
         # TODO: support gene_filter and cell_filter
         # TODO: support ncells and ncounts
@@ -164,6 +163,7 @@ class OTModel:
         tmap = wot.ot.OptimalTransportHelper.compute_single_transport_map(self.matrix, config)
         wot.io.write_dataset(tmap, os.path.join(self.tmap_dir, path),
                 output_format="loom", txt_full=False)
+        wot.io.verbose("Cached tmap ({}, {}) : {}".format(t0, t1, path))
         self.tmaps[(t0, t1)] = path
 
     def transport_map(self, t0, t1):

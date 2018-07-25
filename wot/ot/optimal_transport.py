@@ -33,6 +33,39 @@ def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, 
                                   epsilon0=epsilon0)
     return Tmap
 
+def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau, epsilon0, growth_iters):
+    """
+    Compute the optimal transport with stabilized numerics and duality gap guarantee.
+
+    Parameters
+    ----------
+    C : 2D array
+    g : 1D array
+    lambda1 : float
+    lambda2 : float
+    epsilon : float
+    batch_size : int
+    tolerance : float
+    tau : float
+    epsilon0 : float
+    growth_iters : int
+
+    Returns
+    -------
+    tmap : 2D array
+        Transport map
+
+    Notes
+    -----
+    It is guaranteed that the duality gap for the result is under the given threshold.
+    """
+    row_sums = g
+    for i in range(growth_iters):
+        tmap = transport_stablev1(C, row_sums, lambda1, lambda2, epsilon,
+                batch_size, tolerance, tau, epsilon0)
+        row_sums = tmap.sum(axis=1) / tmap.shape[1]
+    return tmap
+
 # @ Lénaïc Chizat 2015 - optimal transport
 def fdiv(l, x, p, dx):
     return l * np.sum( dx * (x * (np.log(x / p)) - x + p))
@@ -124,7 +157,7 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
                 a = np.ones(len(p))
                 b = np.ones(len(q))
 
-            if iterations_since_epsilon_adjusted == numInnerItermax :
+            if iterations_since_epsilon_adjusted == numInnerIterMax :
                 epsilon_index += 1
                 iterations_since_epsilon_adjusted = 0
                 u = u + epsilon_i * np.log(a)

@@ -283,7 +283,7 @@ class OptimalTransportHelper:
         t0_indices = np.where(ds.row_meta['day'] == float(t0))[0]
         t1_indices = np.where(ds.row_meta['day'] == float(t1))[0]
 
-        local_pca = config.get('local_pca', None)
+        local_pca = config.pop('local_pca', None)
         if local_pca is not None and local_pca > 0:
             import scipy.parse
             x = np.vstack([ ds.x[t0_indices], ds.x[t1_indices] ])
@@ -299,7 +299,7 @@ class OptimalTransportHelper:
 
         C = OptimalTransportHelper.compute_default_cost_matrix(p0, p1)
         config['g'] = config.get('g', None) or np.ones(C.shape[0])
-        tmap = wot.ot.optimal_transport(C, **config)['transport']
+        tmap = wot.ot.transport_stablev1_learnGrowth(C, **config)
         return wot.Dataset(tmap, ds.row_meta.iloc[t0_indices], ds.row_meta.iloc[t1_indices])
 
 
