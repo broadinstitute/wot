@@ -10,6 +10,7 @@ def _ecdf(x):
     nobs = len(x)
     return np.arange(1, nobs + 1) / float(nobs)
 
+
 # from http://www.statsmodels.org/dev/_modules/statsmodels/stats/multitest.html
 def fdr(pvals, is_sorted=False, method='indep'):
     if not is_sorted:
@@ -124,13 +125,14 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
     # ds has cells on rows, genes on columns
     # scores contains cells on rows, gene sets on columns
     is_sparse = scipy.sparse.issparse(x)
-    if is_sparse:
+    if not scipy.sparse.issparse(gs_1_0):
         gs_1_0 = scipy.sparse.csr_matrix(gs_1_0)
-    observed_scores = x.dot(gs_1_0)
+    observed_scores = x @ gs_1_0
     if is_sparse:
         observed_scores = observed_scores.toarray()
     ngenes_in_set = gs_1_0.sum(axis=0)
     # ngenes_in_set[ngenes_in_set == 0] = 1  # avoid divide by zero
+    p_low = None
     if permutations is not None and permutations > 0:
         if random_state:
             np.random.seed(random_state)
@@ -169,9 +171,8 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
                 bin_start = bin_end
                 # shuffle each column independently
             # permuted scores has cells on rows, gene set on columns repeated current_block_size times
-            if is_sparse:
-                permuted_gs = scipy.sparse.csr_matrix(permuted_gs)
-            permuted_scores = x[cells_to_keep].dot(permuted_gs)
+            permuted_gs = scipy.sparse.csr_matrix(permuted_gs)
+            permuted_scores = x[cells_to_keep] @ permuted_gs
             # count number of times permuted score is >= than observed score
             if is_sparse:
                 permuted_scores = permuted_scores.toarray()
@@ -199,5 +200,6 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
             p_values = (p_values + 1) / (npermutations + 2)
         else:
             p_values /= npermutations
-        return {'score': observed_scores, 'p_value': p_values, 'fdr': fdr(p_values), 'k': k, 'n': npermutations}
+        return {'score': observed_scores, 'p_value': p_values, 'fdr': fdr(p_values), 'k': k, 'n': npermutations,
+                'p_value_low': p_low}
     return {'score': observed_scores}

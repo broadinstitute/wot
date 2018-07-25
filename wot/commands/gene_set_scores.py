@@ -50,7 +50,14 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
             column_names.append('FRD(BH)')
             column_names.append('k')
             column_names.append('n')
-            x = np.hstack((result['score'], np.vstack((result['p_value'], result['fdr'], result['k'], result['n'])).T))
+            if drop_frequency > 0:
+                column_names.append('p_value_low')
+                x = np.hstack((result['score'], np.vstack(
+                    (result['p_value'], result['fdr'], result['k'], result['n'], result['p_value_low'])).T))
+            else:
+                x = np.hstack((result['score'], np.vstack(
+                    (result['p_value'], result['fdr'], result['k'], result['n'])).T))
+
         else:
             x = result['score']
         wot.io.write_dataset(ds=wot.Dataset(x=x, row_meta=ds.row_meta, col_meta=pd.DataFrame(index=column_names)),

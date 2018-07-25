@@ -58,7 +58,7 @@ class TestGeneSetScores(unittest.TestCase):
                                      random_state=1234, drop_frequency=0)
         self.assertTrue(result['p_value'][0] == 108.0 / 1002.0)
 
-    def test_score_gene_sets_sparse_matrix(self):
+    def test_score_gene_sets_sparse_ds(self):
         ds = wot.Dataset(
             x=scipy.sparse.csr_matrix(np.array([[0, 0, 0, 4, 5, 6, 7, 8, 9, 10]])),
             row_meta=None,
@@ -71,21 +71,29 @@ class TestGeneSetScores(unittest.TestCase):
 
         self.assertTrue(result['p_value'][0] == 8.0 / 100.0)
 
+    def test_score_gene_sets_sparse_gs(self):
+        ds = wot.Dataset(
+            x=np.array([[0, 0, 0, 4, 5, 6, 7, 8, 9, 10]]),
+            row_meta=None,
+            col_meta=None)
+
+        gs = wot.Dataset(x=scipy.sparse.csr_matrix(np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]], dtype=np.uint8).T), row_meta=None, col_meta=None)
+        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=100, nbins=1,
+                                     random_state=1234, drop_frequency=100, drop_p_value_threshold=1,
+                                     smooth_p_values=False)
+
+        self.assertTrue(result['p_value'][0] == 8.0 / 100.0)
+
+
     def test_score_gene_sets_basic(self):
-        ds = wot.Dataset(x=np.array([[1.0, 2.0, 3, 0],
-                                     [4, 5, 6.0, 0]]),
+        ds = wot.Dataset(x=np.array([[1.0, 2.0, 3, 0], [4, 5, 6.0, 0]]),
                          row_meta=pd.DataFrame(
                              index=['c1', 'c2']),
                          col_meta=pd.DataFrame(
                              index=['g1', 'g2',
                                     'g3', 'g4']))
 
-        gs = wot.Dataset(x=np.array([[1, 0, 1],
-                                     [0, 0, 1],
-                                     [0, 0, 0],
-                                     [0, 1, 0]
-                                     ],
-                                    dtype=np.uint8),
+        gs = wot.Dataset(x=np.array([[1, 0, 1],[0, 0, 1],[0, 0, 0],[0, 1, 0]],dtype=np.uint8),
                          row_meta=pd.DataFrame(
                              index=['g1', 'g2', 'g3', 'g4']),
                          col_meta=pd.DataFrame(
