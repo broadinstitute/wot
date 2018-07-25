@@ -1,9 +1,10 @@
+import numpy as np
 import scipy.sparse
 import scipy.stats
 import wot
 
 
-def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_score', use_dask=False, permutations=None,
+def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_score', permutations=None,
                     nbins=25, bin_by='mean', random_state=0, drop_frequency=1000, drop_p_value_threshold=0.05,
                     smooth_p_values=True):
     """Score gene sets.
@@ -14,7 +15,7 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
 
     Parameters
     ----------
-    nbins : `int`, optional (default: 10)
+    nbins : `int`, optional
         Number of bins for sampling.
     random_state : `int`, optional (default: 0)
         The random seed for sampling.
@@ -27,10 +28,7 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
     # gene_indices = (gs_x.sum(axis=1) > 0) & (
     #         background_x.std(axis=0) > 0)  # keep genes that are in gene sets and have standard deviation > 0
 
-    if use_dask:
-        import dask.array as np
-    else:
-        import numpy as np
+
     x = dataset_to_score.x
     if background_ds is None:
         background = x
@@ -149,10 +147,11 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
                 n_f = n - n_s
                 p_low = n_s / n - (z / n) * np.sqrt((n_s * n_f) / n)
                 cells_to_keep = cells_to_keep & (p_low < drop_p_value_threshold)
-                print('Keeping ' + str(np.sum(cells_to_keep)) + '/' + str(x.shape[0]))
+                if np.sum(cells_to_keep) == 0:
+                    break
 
         observed_scores = observed_scores / ngenes_in_set
-        # smooth p-values
+        k = p_values
         if smooth_p_values:
             p_values = (p_values + 1) / (npermutations + 2)
         else:
@@ -161,4 +160,5 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
         sorted_p_values = np.sort(p_values)
         n_features = len(p_values)
         fdr = sorted_p_values / n_features * np.arange(1, n_features + 1)
-    return {'scores': observed_scores, 'p_values': p_values, 'fdr': fdr}
+        return {'score': observed_scores, 'p_value': p_values, 'fdr': fdr, 'k': k, 'n': npermutations}
+    return {'score': observed_scores}
