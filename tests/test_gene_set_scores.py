@@ -30,7 +30,6 @@ class TestGeneSetScores(unittest.TestCase):
             output_file = 'test_gene_set_test_output_' + set_names[i] + '.txt'
             output = pd.read_table(output_file, index_col=0)
             np.testing.assert_array_equal(output[set_names[i]].values, scores[:, i])
-
             os.remove(output_file)
 
     def test_score_gene_sets_drop(self):
@@ -77,13 +76,13 @@ class TestGeneSetScores(unittest.TestCase):
             row_meta=None,
             col_meta=None)
 
-        gs = wot.Dataset(x=scipy.sparse.csr_matrix(np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]], dtype=np.uint8).T), row_meta=None, col_meta=None)
+        gs = wot.Dataset(x=scipy.sparse.csr_matrix(np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]], dtype=np.uint8).T),
+                         row_meta=None, col_meta=None)
         result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=100, nbins=1,
                                      random_state=1234, drop_frequency=100, drop_p_value_threshold=1,
                                      smooth_p_values=False)
 
         self.assertTrue(result['p_value'][0] == 8.0 / 100.0)
-
 
     def test_score_gene_sets_basic(self):
         ds = wot.Dataset(x=np.array([[1.0, 2.0, 3, 0], [4, 5, 6.0, 0]]),
@@ -93,7 +92,7 @@ class TestGeneSetScores(unittest.TestCase):
                              index=['g1', 'g2',
                                     'g3', 'g4']))
 
-        gs = wot.Dataset(x=np.array([[1, 0, 1],[0, 0, 1],[0, 0, 0],[0, 1, 0]],dtype=np.uint8),
+        gs = wot.Dataset(x=np.array([[1, 0, 1], [0, 0, 1], [0, 0, 0], [0, 1, 0]], dtype=np.uint8),
                          row_meta=pd.DataFrame(
                              index=['g1', 'g2', 'g3', 'g4']),
                          col_meta=pd.DataFrame(

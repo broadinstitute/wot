@@ -124,11 +124,10 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
     # gene sets has genes on rows, sets on columns
     # ds has cells on rows, genes on columns
     # scores contains cells on rows, gene sets on columns
-    is_sparse = scipy.sparse.issparse(x)
     if not scipy.sparse.issparse(gs_1_0):
         gs_1_0 = scipy.sparse.csr_matrix(gs_1_0)
     observed_scores = x @ gs_1_0
-    if is_sparse:
+    if hasattr(observed_scores, 'toarray'):
         observed_scores = observed_scores.toarray()
     ngenes_in_set = gs_1_0.sum(axis=0)
     # ngenes_in_set[ngenes_in_set == 0] = 1  # avoid divide by zero
@@ -174,7 +173,7 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
             permuted_gs = scipy.sparse.csr_matrix(permuted_gs)
             permuted_scores = x[cells_to_keep] @ permuted_gs
             # count number of times permuted score is >= than observed score
-            if is_sparse:
+            if hasattr(permuted_scores, 'toarray'):
                 permuted_scores = permuted_scores.toarray()
             p_values[cells_to_keep] += (permuted_scores >= observed_scores[cells_to_keep]).sum(axis=1)
 
