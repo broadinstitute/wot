@@ -165,5 +165,6 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
         sorted_p_values = np.sort(p_values)
         n_features = len(p_values)
         fdr = sorted_p_values / n_features * np.arange(1, n_features + 1)
+        fdr = np.min(1.0, fdr)
         return {'score': observed_scores, 'p_value': p_values, 'fdr': fdr, 'k': k, 'n': npermutations}
     return {'score': observed_scores}
