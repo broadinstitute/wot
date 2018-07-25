@@ -24,13 +24,14 @@ class TestGeneSetScores(unittest.TestCase):
                               '--method', 'mean', '--format', 'txt'],
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
-        output_file = 'test_gene_set_test_output_score.txt'
-        output = pd.read_table(output_file, index_col=0)
-        np.testing.assert_array_equal(output.values,
-                                      np.array([[1, 0.5, 1.5], [4, 2,
-                                                                4.5]]))
+        set_names = ['s1', 's2', 's3']
+        scores = np.array([[1, 0, 1.5], [4, 0, 4.5]])
+        for i in range(len(set_names)):
+            output_file = 'test_gene_set_test_output_' + set_names[i] + '.txt'
+            output = pd.read_table(output_file, index_col=0)
+            np.testing.assert_array_equal(output[set_names[i]].values, scores[:, i])
 
-        # os.remove(output_file)
+            os.remove(output_file)
 
     def test_score_gene_sets_drop(self):
         ds = wot.Dataset(x=np.array([[1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10]]), row_meta=None,

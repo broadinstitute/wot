@@ -4,12 +4,14 @@
 import argparse
 import os
 
-import wot.io
 import numpy as np
+import pandas as pd
+import wot.io
 
 
 def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_set=None,
-            permutations=None, method='mean_z_score', nbins=None):
+            permutations=None, method='mean_z_score', nbins=None, drop_frequency=None, drop_p_value_threshold=None,
+            gene_set_filter=None):
     use_dask = False
     ds = wot.io.read_dataset(matrix, use_dask=use_dask, chunks=(10000, None))
     if cell_filter is not None:
@@ -28,37 +30,33 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
     gs = wot.io.read_gene_sets(gene_sets, ds.col_meta.index.values)
     if gs.x.shape[1] is 0:
         raise ValueError('No overlap of genes in gene sets and dataset')
+    if gene_set_filter is not None:
+        if os.path.exists(gene_set_filter):
+            set_names = pd.read_table(gene_set_filter, header=None, index_col=0, engine='python', sep=None).index.values
+        else:
+            set_names = gene_set_filter.split(',')
+        gs_filter = gs.col_meta.index.isin(set_names)
+        gs = wot.Dataset(gs.x[:, gs_filter], gs.row_meta, gs.col_meta.iloc[gs_filter])
 
     # scores contains cells on rows, gene sets on columns
-    scores = []
-    p_vals = []
-    fdrs = []
-    k = []
-    n = []
     for j in range(gs.x.shape[1]):
         result = wot.score_gene_sets(dataset_to_score=ds, background_ds=background_ds,
                                      gs=wot.Dataset(gs.x[:, [j]], gs.row_meta, gs.col_meta.iloc[[j]]),
-                                     permutations=permutations, method=method, nbins=nbins)
-        scores.append(result['score'])
+                                     permutations=permutations, method=method, nbins=nbins,
+                                     drop_frequency=drop_frequency, drop_p_value_threshold=drop_p_value_threshold)
+        column_names = [str(gs.col_meta.index.values[j])]
         if permutations is not None and permutations > 0:
-            p_vals.append(result['p_value'])
-            fdrs.append(result['fdr'])
-            k.append(result['k'])
-            n.append(result['n'])
-
+            column_names.append('p_value')
+            column_names.append('FRD(BH)')
+            column_names.append('k')
+            column_names.append('n')
+            x = np.hstack((result['score'], np.vstack((result['p_value'], result['fdr'], result['k'], result['n'])).T))
+        else:
+            x = result['score']
+        wot.io.write_dataset(ds=wot.Dataset(x=x, row_meta=ds.row_meta, col_meta=pd.DataFrame(index=column_names)),
+                             path=out + '_' + column_names[0], output_format=format, txt_full=False)
     # import dask.array as da
     # da.to_npy_stack('/Users/jgould/git/wot/bin/data/', result.x, axis=0)
-    scores = wot.Dataset(x=np.hstack(scores), row_meta=ds.row_meta, col_meta=gs.col_meta)
-    wot.io.write_dataset(ds=scores, path=out + '_score', output_format=format, txt_full=False)
-    if permutations is not None and permutations > 0:
-        wot.io.write_dataset(ds=wot.Dataset(x=np.vstack(p_vals).T, row_meta=ds.row_meta, col_meta=gs.col_meta),
-                             path=out + '_p_value', output_format=format, txt_full=False)
-        wot.io.write_dataset(ds=wot.Dataset(x=np.vstack(fdrs).T, row_meta=ds.row_meta, col_meta=gs.col_meta),
-                             path=out + '_fdr', output_format=format, txt_full=False)
-        wot.io.write_dataset(ds=wot.Dataset(x=np.vstack(k).T, row_meta=ds.row_meta, col_meta=gs.col_meta),
-                             path=out + '_k', output_format=format, txt_full=False)
-        wot.io.write_dataset(ds=wot.Dataset(x=np.vstack(n).T, row_meta=ds.row_meta, col_meta=gs.col_meta),
-                             path=out + '_n', output_format=format, txt_full=False)
 
 
 def main(argv):
@@ -67,6 +65,7 @@ def main(argv):
     parser.add_argument('--gene_sets',
                         help='Gene sets in gmx or gmt format. If not specified gene sets for apoptosis and cell cycle are used')
     parser.add_argument('--cell_filter', help='Cells to include')
+    parser.add_argument('--gene_set_filter', help='Gene sets to include')
     parser.add_argument('--out', help='Output file name prefix')
     # parser.add_argument('--dask', help='Dask scheduler URL')
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='loom', choices=wot.commands.FORMAT_CHOICES)
@@ -74,6 +73,12 @@ def main(argv):
     parser.add_argument('--method', help='Method to compute gene set scores',
                         choices=['mean_z_score', 'mean', 'mean_rank'])
     parser.add_argument('--nbins', help='Number of bins for sampling', default=25, type=int)
+    parser.add_argument('--drop_p_value_threshold',
+                        help='Exclude cells from further permutations when the estimated lower bound of the nominal p-value is >= drop_p_value_threshold',
+                        default=0.05, type=float)
+    parser.add_argument('--drop_frequency',
+                        help='Check the estimated lower bound of the nominal p-value every drop_frequency permutations',
+                        default=1000, type=int)
 
     args = parser.parse_args(argv)
     if args.out is None:
@@ -95,4 +100,6 @@ def main(argv):
         import sys
         gene_sets = os.path.join(os.path.dirname(sys.argv[0]), 'resources', 'growth_scores_gene_sets.gmx')
     compute(matrix=args.matrix, cell_filter=args.cell_filter, gene_sets=gene_sets, out=args.out,
-            format=args.format, permutations=args.nperm, method=args.method, nbins=args.nbins)
+            format=args.format, permutations=args.nperm, method=args.method, nbins=args.nbins,
+            drop_frequency=args.drop_frequency, drop_p_value_threshold=args.drop_p_value_threshold,
+            gene_set_filter=args.gene_set_filter)

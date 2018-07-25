@@ -226,9 +226,9 @@ def read_transport_maps(input_dir, ids=None, time=None):
 def read_gene_sets(path, feature_ids=None):
     path = str(path)
     hash_index = path.rfind('#')
-    set_name = None
+    set_names = None
     if hash_index != -1:
-        set_name = path[hash_index + 1:].split(',')
+        set_names = path[hash_index + 1:].split(',')
         path = path[0:hash_index]
     ext = get_filename_and_extension(path)[1]
     if ext == 'gmt':
@@ -239,8 +239,8 @@ def read_gene_sets(path, feature_ids=None):
         gs = read_grp(path, feature_ids)
     else:
         raise ValueError('Unknown file format')
-    if set_name is not None:
-        gs_filter = gs.col_meta.index.isin(set_name)
+    if set_names is not None:
+        gs_filter = gs.col_meta.index.isin(set_names)
         gs = wot.Dataset(gs.x[:, gs_filter], gs.row_meta, gs.col_meta.iloc[gs_filter])
     return gs
 
