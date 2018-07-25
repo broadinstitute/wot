@@ -16,7 +16,7 @@ def serialize_day_pairs(day_pairs):
 
 def deserialize_day_pairs(serialized):
     """Rebuild the day_pairs dict from the YAML-friendly serialized object"""
-    if serialized == 'null':
+    if serialized is None or serialized == 'null':
         return None
     deserialize = lambda x: tuple(float(z) for z in x.split('->'))
     deserializable = yaml.load('\n'.join(serialized))
@@ -141,6 +141,7 @@ def purge_invalidated_caches(ot_model):
                 wot.io.verbose("Configuration incompatible with cache. Triggering purge")
             else:
                 wot.io.verbose("Cache configuration OK")
+    # FIXME: This except is catching all errors, should be restricted to YAML/IO
     except:
         # File not present or not a valid YAML file, purge prefix
         wot.io.verbose("Cache description not present or not a valid YAML file :", config_file)
