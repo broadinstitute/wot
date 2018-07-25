@@ -336,7 +336,8 @@ wot trajectory_trends --tmap . --cell_days days.txt \
 </table>
 
 
-### Trajectory differential expression ###
+### Local regulatory model via differential expression ###
+
 you can compare two ancestor distributions through local enrichment.
 
 The ancestor distributions can be two tips' or one tip's but at different time point. Now we have different ways to give the score that measures the difference between two distributions. Besides, the `matrix.txt` and `matrix1.txt`  should be the form of the result of trajectory trends.
@@ -382,8 +383,6 @@ When we run the cmd, we can get the file like `timepoint.rnk` or `timepoint1_tim
     </tr>
   </tbody>
 </table>
-
-### Local regulatory model via differential expression ###
 
 
 ### Validation ###
