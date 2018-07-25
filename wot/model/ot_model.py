@@ -182,7 +182,17 @@ class OTModel:
         tmap : wot.Dataset
             The transport map from t0 to t1
         """
-        return wot.model.load_transport_map(self, t0, t1)
+        if t0 not in self.timepoints or t1 not in self.timepoints:
+            raise ValueError("Timepoints {}, {} not found".format(t0, t1))
+
+        atomic = (self.day_pairs is not None and (t0,t1) in self.day_pairs)\
+                or self.timepoints.index(t1) == self.timepoints.index(t0) + 1
+
+        if atomic:
+            return wot.model.load_transport_map(self, t0, t1)
+        else:
+            path = wot.model.find_path(t0, t1, self.day_pairs, self.timepoints)
+            return wot.model.chain_transport_maps(self, path)
 
     def can_push_forward(self, *populations):
         """

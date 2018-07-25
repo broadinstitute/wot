@@ -3,6 +3,7 @@
 import numpy as np
 import ot as pot
 import scipy.stats
+import wot
 
 from wot.cython_speedup.ot import __cy__transport_stablev3
 
@@ -411,3 +412,25 @@ def optimal_transport_with_entropy(cost_matrix, growth_rate, p=None, q=None,
             e0 /= epsilon_adjust
     return {'transport': transport, 'lambda1': lambda1 * l0,
             'lambda2': lambda2 * l0, 'epsilon': epsilon * e0}
+
+def glue_transport_maps(tmap_0, tmap_1):
+    """
+    Glue two transport maps together
+
+    Parameters
+    ----------
+    tmap_0 : wot.Dataset
+        The first transport map (from t0 to t1)
+    tmap_1 : wot.Dataset
+        The second transport map (from t1 to t2)
+
+    Returns
+    -------
+    result : wot.Dataset
+        The resulting transport map (from t0 to t2)
+    """
+    # FIXME: Column sum normalization is needed before gluing. Can be skipped only if lambda2 is high enough
+    cells_at_intermediate_tpt = tmap_0.col_meta.index
+    cait_index = tmap_1.row_meta.index.get_indexer_for(cells_at_intermediate_tpt)
+    result_x = np.dot(tmap_0.x, tmap_1.x[cait_index,:])
+    return wot.Dataset(result_x, tmap_0.row_meta.copy(), tmap_1.col_meta.copy())
