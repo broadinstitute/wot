@@ -4,6 +4,44 @@ import scipy.stats
 import wot
 
 
+def _ecdf(x):
+    '''no frills empirical cdf used in fdrcorrection
+    '''
+    nobs = len(x)
+    return np.arange(1, nobs + 1) / float(nobs)
+
+# from http://www.statsmodels.org/dev/_modules/statsmodels/stats/multitest.html
+def fdr(pvals, is_sorted=False, method='indep'):
+    if not is_sorted:
+        pvals_sortind = np.argsort(pvals)
+        pvals_sorted = np.take(pvals, pvals_sortind)
+    else:
+        pvals_sorted = pvals  # alias
+
+    if method in ['i', 'indep', 'p', 'poscorr']:
+        ecdffactor = _ecdf(pvals_sorted)
+    elif method in ['n', 'negcorr']:
+        cm = np.sum(1. / np.arange(1, len(pvals_sorted) + 1))  # corrected this
+        ecdffactor = _ecdf(pvals_sorted) / cm
+    ##    elif method in ['n', 'negcorr']:
+    ##        cm = np.sum(np.arange(len(pvals)))
+    ##        ecdffactor = ecdf(pvals_sorted)/cm
+    else:
+        raise ValueError('only indep and negcorr implemented')
+
+    pvals_corrected_raw = pvals_sorted / ecdffactor
+    pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
+    del pvals_corrected_raw
+    pvals_corrected[pvals_corrected > 1] = 1
+    if not is_sorted:
+        pvals_corrected_ = np.empty_like(pvals_corrected)
+        pvals_corrected_[pvals_sortind] = pvals_corrected
+        del pvals_corrected
+        return pvals_corrected_
+    else:
+        return pvals_corrected
+
+
 def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_score', permutations=None,
                     nbins=25, bin_by='mean', random_state=0, drop_frequency=1000, drop_p_value_threshold=0.05,
                     smooth_p_values=True):
@@ -161,10 +199,5 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
             p_values = (p_values + 1) / (npermutations + 2)
         else:
             p_values /= npermutations
-        # FDR
-        sorted_p_values = np.sort(p_values)
-        n_features = len(p_values)
-        fdr = sorted_p_values / n_features * np.arange(1, n_features + 1)
-        fdr = np.min(1.0, fdr)
-        return {'score': observed_scores, 'p_value': p_values, 'fdr': fdr, 'k': k, 'n': npermutations}
+        return {'score': observed_scores, 'p_value': p_values, 'fdr': fdr(p_values), 'k': k, 'n': npermutations}
     return {'score': observed_scores}
