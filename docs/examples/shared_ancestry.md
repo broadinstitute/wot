@@ -1,4 +1,11 @@
-# Shared Ancestry
+---
+noheader: true
+layout: documentation
+location: Examples
+---
+
+# Plotting shared ancestry
+-------------------------
 
 We can get a plot of different cells' ancestors through shared ancestry.  Before we get the ancestors, we need cell sets only on the day 100. Assume we already have cell cets, let's filter cells not on day 100.
 

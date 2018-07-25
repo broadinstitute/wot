@@ -7,6 +7,19 @@ Waddington Optimal Transport uses time-course data to infer how the
 probability distribution of cells in gene-expression space evolves
 over time, by using the mathematical approach of Optimal Transport (OT).
 
+> <button class="btn-success rounded border-0 px-3 py-1" disabled>Interactive</button>
+>
+> Alternatively, **wot** features an interactive web interface to visualize
+> your data and perform many of the tasks described below.
+>
+> <div class="center-block text-center py-2">
+>   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
+>      role="button" href="{{site.baseurl}}/interactive_documentation">
+>      View documentation for web interface &raquo;
+>   </a>
+> </div>
+>
+
 
 ## Installation ##
 ------------------
@@ -77,7 +90,7 @@ And then **wot** is installed and ready to use.
 ## Usage ##
 -----------
 
-**wot** is decomposed into several tools. Each tool can be used with the syntax `wot <tool>`.
+**wot** consists of several tools. Each tool can be used with the syntax `wot <tool>`.
 
 Help is available for each tool with `wot <tool> -h`. For instance:
 
@@ -99,20 +112,7 @@ a table containing the core options. Required options are in bold font.
 >
 > <div class="center-block text-center py-2"><a class="nounderline btn-outline-secondary btn-lg border px-4 py-2" role="button" href="#">Download .zip</a></div>
 
-<br />
 
-> <button class="btn-success rounded border-0 px-3 py-1" disabled>Interactive</button>
->
-> Alternatively, **wot** features an interactive web interface to visualize
-> your data and perform all the tasks described below.
->
-> <div class="center-block text-center py-2">
->   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
->      role="button" href="{{site.baseurl}}/interactive_documentation">
->      Learn more &raquo;
->   </a>
-> </div>
->
 
 ### Transport maps ###
 
@@ -121,7 +121,7 @@ wot optimal_transport --matrix matrix.txt \
  --cell_days days.txt --out tmaps --local_pca -1
 ```
 
-This command will create a file `tmaps_{F}_{T}.loom` for each pair `{F}`, `{T}`
+This command will create a file `tmaps_{A}_{B}.loom` for each pair `{A}`, `{B}`
 in the day pairs file. These maps can then be translated to any format you find
 convenient with the [convert_matrix tool](#matrix_file).
 
@@ -146,8 +146,20 @@ convenient with the [convert_matrix tool](#matrix_file).
       <td>Target day pairs. See <a href="#day_pairs">formats</a></td>
     </tr>
     <tr>
+      <td>--epsilon</td>
+      <td>Regularization parameter that controls the entropy of the transport map<br/>default : 0.05</td>
+    </tr>
+    <tr>
+      <td>--lambda1</td>
+      <td>Regularization parameter that controls the fidelity of the constraint on p<br/>default : 1</td>
+    </tr>
+    <tr>
+      <td>--lambda2</td>
+      <td>Regularization parameter that controls the fidelity of the constraint on q<br/>default : 50</td>
+    </tr>
+    <tr>
       <td>--scaling_iter</td>
-      <td>Number of iterations performed while scaling &epsilon;<br/>default : 3000</td>
+      <td>Number of iterations performed while scaling epsilon<br/>default : 3000</td>
     </tr>
     <tr>
       <td>--local_pca</td>
@@ -160,9 +172,9 @@ convenient with the [convert_matrix tool](#matrix_file).
 
 The convergence of the calculation of the transport maps can be
 accelerated by gradually increasing the entropy regularization
-parameter &epsilon;. Iteration count is thus split between those
-that use a scaled &epsilon; (scaling iterations) and those that
-use the final value of &epsilon; (extra iterations).
+parameter epsilon. Iteration count is thus split between those
+that use a scaled epsilon (scaling iterations) and those that
+use the final value of epsilon (extra iterations).
 
 By default, **wot** performs 3000 scaling iterations and 1000 extra iterations.
 While this is acceptable to ensure convergence in all cases when computing
@@ -171,18 +183,16 @@ fewer iterations to get an approximate result faster.
 
 ##### Local PCA #####
 
-Dimensionality reduction is used when computing distances between cells.
-The algorithm used for this purpose is Principal Component Analysis.
-While using more dimensions for this purpose will make it more precise,
-it will also slow the algorithm down. **wot** chooses by default
-to use 30 dimensions.
+The default transport cost uses Principal Component Analysis to reduce the
+dimension of the data before computing distances between cells.
+By default, **wot** uses 30 dimensions.
 
 Dimensionality reduction can be disabled with `--local_pca -1`
 
 
 ### Trajectories ###
 
-Ancestors and descendants in **wot** are computed through the use of trajectories.
+Ancestors and descendants in **wot** are computed through the `trajectory` tool.
 
 You can select a **cell set** by specifying a [cell set file](#cellset_file).
 You can either manually edit this type of file, or generate it from a gene set file
@@ -229,19 +239,16 @@ wot trajectory --tmap . --cell_days days.txt \
 </table>
 
 
-<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="{{site.baseurl}}/examples/ancestor_census">See example code</a>
 ### Ancestor census ###
 
-The census command lets you find out in which cell sets the ancestors
-of a given cell set were located.
+The ancestor census command computes the amount of mass of an
+ancestor distribution falls into each cell set.
 
 
 ```sh
 wot census --tmap . --cell_days days.txt \
  --cell_set cell_sets.gmt --matrix matrix.txt --progress
 ```
-![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
 
 This would create several census files named `<prefix>_<cellset>_<timepoint>.txt`,
 for instance `census_tip1_100.0.txt`. See <a href="#census_file">formats</a>
@@ -282,6 +289,7 @@ for more information.
   </tbody>
 </table>
 
+
 ### Trajectory trends ###
 
 Given **cell sets**, the mean value of different tips' ancestors at each time point will be calculated through trajectory trends.
@@ -291,7 +299,8 @@ You can either manually edit this type of file, or generate it from a gene set f
 using the [cells_by_gene_set](#cells_by_gene_set) tool.
 
 ```sh
-wot trajectory_trends --tmap . --cell_days days.txt --cell_set cell_sets.gmt --matrix matrix.txt
+wot trajectory_trends --tmap . --cell_days days.txt \
+ --cell_set cell_sets.gmt --matrix matrix.txt
 ```
 
 <table class="table table-hover" style="display: table">
@@ -326,8 +335,6 @@ wot trajectory_trends --tmap . --cell_days days.txt --cell_set cell_sets.gmt --m
   </tbody>
 </table>
 
-
-### Shared ancestry ###
 
 ### Trajectory differential expression ###
 you can compare two ancestor distributions through local enrichment. 
@@ -385,9 +392,8 @@ When we run the cmd, we can get the file like `timepoint.rnk` or `timepoint1_tim
   </tbody>
 </table>
 
-### Local regulatory model ###
+### Local regulatory model via differential expression ###
 
-### Global regulatory model ###
 
 ### Validation ###
 
@@ -413,6 +419,7 @@ wot optimal_transport_validation --matrix matrix.txt \
 
 This would create two files : `val_tmaps_I_1.0.txt`
 and `val_tmaps_random_1.0.txt`.
+Additionally, a validation summary is generated, as a text file.
 
 They contain the coordinates of respectively the *interpolated* and the
 *randomly generated* cells at that time point.
@@ -458,27 +465,17 @@ reproduced here for convenience.
 
 ##### Covariate #####
 
-To enhance the results obtained when performing validation with few timepoints,
-a covariate value may be assigned to each cell from each timepoint.
-
-The interpolation can then occur for each pair of batches, and the distance
-between the interpolated cells and the real population can be compared
-to the distance between real batches at the interpolated time point, to
-obtain more meaningful results.
+To measure the quality of interpolation, we compare the distance between
+batches of cells at the same time point.
 
 The covariate values may be specified in a tab-separated text file.
 It must have exactly two headers : "id" and "covariate".
 Each subsequent line must consist of a cell name, a tab, and a covariate value.
 
-> <button class="btn-warning rounded border-0 px-3 py-1" disabled>Warning</button>
->
-> While a higher number of batches will greatly enhance the quality of the
-> validation performed, the computation time required will increase as the
-> square of the number of batches per timepoint.
 
 #### Validation summary ####
 
-Additionally, a validation summary is generated, as a text file.
+The validation summary, generated as text file, is organized as follows :
 
 Each line contains information about the relation between two cell sets :
  - **interval_start** and **interval_end** indicate which day pair is being considered.
@@ -707,21 +704,5 @@ Example:
 <tr><td>4.0</td><td>0.89</td><td>0.00</td><td>0.00</td></tr>
 <tr><td>5.0</td><td>0.99</td><td>0.00</td><td>0.00</td></tr>
 </table>
-
-
-## More documentation ##
-------------------------------
-
-This document and the [examples]({{site.baseurl}}/examples) section should be more than enough to use **wot**.
-However, if you feel the need for a more in-depth documentation about each of the python
-functions in this package, it is available and can be generated from the sources of
-the package with the [Sphinx](http://www.sphinx-doc.org/en/master/) tool :
-
-```sh
-pip install --user sphinx
-cd sdocs/
-make
-```
-
 
 [pip-install]: https://pip.pypa.io/en/stable/installing/
