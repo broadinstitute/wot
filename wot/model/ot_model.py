@@ -36,13 +36,13 @@ class OTModel:
 
     default_tmap_prefix = "tmaps"
 
-    def __init__(self, matrix, transport_maps_directory = None, transport_maps_prefix = None, max_threads = None, **kwargs):
+    def __init__(self, matrix, tmap_dir = None, tmap_prefix = None, max_threads = None, **kwargs):
         self.matrix = matrix
         self.timepoints = sorted(set(matrix.row_meta['day']))
-        self.tmap_dir = transport_maps_directory or '.'
-        self.tmap_prefix = transport_maps_prefix or self.default_tmap_prefix
+        self.tmap_dir = tmap_dir or '.'
+        self.tmap_prefix = tmap_prefix or self.default_tmap_prefix
 
-        wot.io.verbose("Initializing OTModel ({},{})".format(transport_maps_directory, transport_maps_prefix))
+        wot.io.verbose("Initializing OTModel ({},{})".format(tmap_dir, tmap_prefix))
         wot.io.verbose("Additional arguments :", kwargs)
         wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
 
