@@ -52,8 +52,11 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
             column_names.append('n')
             if drop_frequency > 0:
                 column_names.append('p_value_ci')
+                column_names.append('FDR(BH)_low')
+                column_names.append('FDR(BH)_high')
                 x = np.hstack((result['score'], np.vstack(
-                    (result['p_value'], result['fdr'], result['k'], result['n'], result['p_value_ci'])).T))
+                    (result['p_value'], result['fdr'], result['k'], result['n'], result['p_value_ci'],
+                     result['fdr_low'], result['fdr_high'])).T))
             else:
                 x = np.hstack((result['score'], np.vstack(
                     (result['p_value'], result['fdr'], result['k'], result['n'])).T))

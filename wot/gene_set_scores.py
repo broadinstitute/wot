@@ -43,6 +43,12 @@ def fdr(pvals, is_sorted=False, method='indep'):
         return pvals_corrected
 
 
+def get_p_value_ci(n, n_s, z):
+    n_f = n - n_s
+    ci = (z / n) * np.sqrt((n_s * n_f) / n)
+    return ci
+
+
 def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_score', permutations=None,
                     nbins=25, bin_by='mean', random_state=0, drop_frequency=1000, drop_p_value_threshold=0.05,
                     smooth_p_values=True):
@@ -178,11 +184,9 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
             p_values[cells_to_keep] += (permuted_scores >= observed_scores[cells_to_keep]).sum(axis=1)
 
             if do_drop:
-                n = npermutations
+                p_value_ci = get_p_value_ci(npermutations, p_values, z)
                 n_s = p_values
-                n_f = n - n_s
-                p_value_ci = (z / n) * np.sqrt((n_s * n_f) / n)
-                p_low = n_s / n - p_value_ci
+                p_low = n_s / npermutations - p_value_ci
                 cells_to_keep = cells_to_keep & (p_low < drop_p_value_threshold)
                 ncells = np.sum(cells_to_keep)
                 print(
@@ -200,8 +204,16 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
             p_values = (p_values + 1) / (npermutations + 2)
         else:
             p_values /= npermutations
+        fdr_low = None
+        fdr_high = None
         if p_value_ci is not None:
             p_value_ci[p_value_ci > 1] = 1
+            p_low = k / npermutations - p_value_ci
+            p_low[p_low < 0] = 0
+            fdr_low = fdr(p_low)
+            p_high = k / npermutations + p_value_ci
+            p_high[p_high > 1] = 1
+            fdr_high = fdr(p_high)
         return {'score': observed_scores, 'p_value': p_values, 'fdr': fdr(p_values), 'k': k, 'n': npermutations,
-                'p_value_ci': p_value_ci}
+                'p_value_ci': p_value_ci, 'fdr_low': fdr_low, 'fdr_high': fdr_high}
     return {'score': observed_scores}
