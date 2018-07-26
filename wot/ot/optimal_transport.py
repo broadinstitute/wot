@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import time
 import numpy as np
 import ot as pot
 import scipy.stats
@@ -145,6 +146,8 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
     epsilon_index = 0
     iterations_since_epsilon_adjusted = 0
     duality_gap = np.inf
+    start_time = time.time()
+    duality_time = 0
 
     while duality_gap > tolerance :
         for i in range(batch_size):
@@ -172,11 +175,16 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
                 a = np.ones(len(p))
                 b = np.ones(len(q))
 
+        duality_tmp_time = time.time()
         R = (K.T * a).T * b
         pri = primal(K, R, dx, dy, p, q, a, b, epsilon_i, lambda1, lambda2)
         dua = dual(K, R, dx, dy, p, q, a, b, epsilon_i, lambda1, lambda2)
         duality_gap = pri - dua
+        duality_time += time.time() - duality_tmp_time
 
+    total_time = time.time() - start_time
+    wot.io.verbose("Computed tmap in {:.3f}s. Duality gap: {:.3E} ({:.2f}% of computing time)"\
+            .format(total_time, duality_gap, 100 * duality_time / total_time))
     return R
 
 def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
