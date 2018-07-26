@@ -63,8 +63,8 @@ def are_ot_configurations_compatible(ot_model, cache_config):
     """
     current_config = get_full_ot_configuration(ot_model, serialized=False)
 
-    wot.io.verbose("## Current config dump ##", current_config, "## end of current config dump ##")
-    wot.io.verbose("## Cache config dump ##", cache_config, "## end of cache config dump ##")
+    wot.io.verbose("Current configuration :", current_config)
+    wot.io.verbose("Cache configuration :", cache_config)
 
     for key in current_config:
         if key == 'day_pairs':
