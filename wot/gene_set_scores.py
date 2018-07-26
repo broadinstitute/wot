@@ -96,7 +96,7 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
         missing_bins = False
         for bin_index in range(nbins):
             gene_indices = np.where(bin_assignments == bin_index)[0]
-            if len(gene_indices) > 0 and np.sum(gs_1_0[gene_indices]) > 0:
+            if len(gene_indices) > np.sum(gs_1_0[gene_indices]):
                 bin_index_to_gene_indices.append(gene_indices)
                 all_gene_indices.append(gene_indices)
             else:
