@@ -20,7 +20,7 @@ else:
     def verbose(*args):
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
                 "{}-{}".format(pid, uid),
-                "V/wot:", *args)
+                "V/wot:", *args, flush=True)
 
 def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
     """
