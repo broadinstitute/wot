@@ -59,6 +59,9 @@ def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, 
     -----
     It is guaranteed that the duality gap for the result is under the given threshold.
     """
+    if batch_size <= 0:
+        raise ValueError("Batch size must be positive")
+
     row_sums = g
     for i in range(growth_iters):
         tmap = transport_stablev1(C, row_sums, lambda1, lambda2, epsilon,
