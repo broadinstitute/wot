@@ -11,7 +11,7 @@ import wot.io
 
 def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_set=None,
             permutations=None, method='mean_z_score', nbins=None, drop_frequency=None, drop_p_value_threshold=None,
-            gene_set_filter=None):
+            gene_set_filter=None, progress=False):
     use_dask = False
     ds = wot.io.read_dataset(matrix, use_dask=use_dask, chunks=(10000, None))
     if cell_filter is not None:
@@ -32,18 +32,23 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
         raise ValueError('No overlap of genes in gene sets and dataset')
     if gene_set_filter is not None:
         if os.path.exists(gene_set_filter):
-            set_names = pd.read_table(gene_set_filter, header=None, index_col=0, engine='python', sep=None).index.values
+            set_names = pd.read_table(gene_set_filter, header=None, index_col=0, engine='python', sep='\n').index.values
         else:
             set_names = gene_set_filter.split(',')
         gs_filter = gs.col_meta.index.isin(set_names)
         gs = wot.Dataset(gs.x[:, gs_filter], gs.row_meta, gs.col_meta.iloc[gs_filter])
+    if gs.x.shape[1] is 0:
+        raise ValueError('No gene sets')
 
     # scores contains cells on rows, gene sets on columns
     for j in range(gs.x.shape[1]):
+        if progress and gs.x.shape[1] > 1:
+            print(gs.col_meta.index.values[j])
         result = wot.score_gene_sets(dataset_to_score=ds, background_ds=background_ds,
                                      gs=wot.Dataset(gs.x[:, [j]], gs.row_meta, gs.col_meta.iloc[[j]]),
                                      permutations=permutations, method=method, nbins=nbins,
-                                     drop_frequency=drop_frequency, drop_p_value_threshold=drop_p_value_threshold)
+                                     drop_frequency=drop_frequency, drop_p_value_threshold=drop_p_value_threshold,
+                                     progress=progress)
         column_names = [str(gs.col_meta.index.values[j])]
         if permutations is not None and permutations > 0:
             column_names.append('p_value')
@@ -89,6 +94,7 @@ def main(argv):
     parser.add_argument('--drop_frequency',
                         help='Check the estimated lower bound of the nominal p-value every drop_frequency permutations',
                         default=1000, type=int)
+    parser.add_argument('--progress', action='store_true', help='Print progress information')
 
     args = parser.parse_args(argv)
     if args.out is None:
@@ -112,4 +118,4 @@ def main(argv):
     compute(matrix=args.matrix, cell_filter=args.cell_filter, gene_sets=gene_sets, out=args.out,
             format=args.format, permutations=args.nperm, method=args.method, nbins=args.nbins,
             drop_frequency=args.drop_frequency, drop_p_value_threshold=args.drop_p_value_threshold,
-            gene_set_filter=args.gene_set_filter)
+            gene_set_filter=args.gene_set_filter, progress=args.progress)

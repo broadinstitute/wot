@@ -51,7 +51,7 @@ def get_p_value_ci(n, n_s, z):
 
 def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_score', permutations=None,
                     nbins=25, bin_by='mean', random_state=0, drop_frequency=1000, drop_p_value_threshold=0.05,
-                    smooth_p_values=True):
+                    smooth_p_values=True, progress=False):
     """Score gene sets.
 
     Note that datasets and gene sets must be aligned prior to invoking this method. No check is done.
@@ -96,10 +96,13 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
         missing_bins = False
         for bin_index in range(nbins):
             gene_indices = np.where(bin_assignments == bin_index)[0]
-            if len(gene_indices) > np.sum(gs_1_0[gene_indices]):
+            ngenes = np.sum(gs_1_0[gene_indices])
+            if len(gene_indices) > ngenes:
                 bin_index_to_gene_indices.append(gene_indices)
                 all_gene_indices.append(gene_indices)
             else:
+                if ngenes > 0:
+                    print('Unable to use bin ' + str(bin_index))
                 missing_bins = True
         # permute each bin separately
         input_nbins = nbins
@@ -189,12 +192,14 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
                 p_low = n_s / npermutations - p_value_ci
                 cells_to_keep = cells_to_keep & (p_low < drop_p_value_threshold)
                 ncells = np.sum(cells_to_keep)
-                print(
-                    'permutation ' + str(total_permutations) + '/' + str(permutations) + ', ' + str(ncells) + '/' + str(
-                        x.shape[0]) + ' cells')
+                if progress:
+                    print(
+                        'permutation ' + str(total_permutations) + '/' + str(permutations) + ', ' + str(
+                            ncells) + '/' + str(
+                            x.shape[0]) + ' cells')
                 if ncells == 0:
                     break
-            else:
+            elif progress:
                 print(
                     'permutation ' + str(total_permutations) + '/' + str(permutations))
 
