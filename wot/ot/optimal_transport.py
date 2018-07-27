@@ -77,15 +77,15 @@ def fdiv(l, x, p, dx):
 def fdivstar(l, u, p, dx):
     return l * np.sum((p * dx) * (np.exp(u / l) - 1))
 
-def primal(K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
+def primal(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
     I = len(p)
     J = len(q)
     F1 = lambda x, y : fdiv(lambda1, x, p, y)
     F2 = lambda x, y : fdiv(lambda2, x, q, y)
     return F1(np.dot(R, dy), dx) + F2(np.dot(R.T, dx), dy) \
-            + epsilon * np.sum(R * (np.log(R / K)) - R + K) / (I * J)
+            + (epsilon * np.sum(R * np.log(R) - R + K) + np.sum(R * C)) / (I * J)
 
-def dual(K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
+def dual(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
     I = len(p)
     J = len(q)
     F1c = lambda u, v : fdivstar(lambda1, u, p, v)
@@ -124,63 +124,53 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
     transport_map : 2-D ndarray
         The entropy-regularized unbalanced transport map
     """
-    # TODO: set this to number of epsilon scaling instead and enforce final epsilon
-    numInnerIterMax = 50
+    epsilon_scalings = 5
+    scale_factor = np.exp(- np.log(epsilon) / 10 )
 
-    def get_reg(n):  # exponential decreasing
-        return (epsilon0 - epsilon) * np.exp(-n) + epsilon
-
-    epsilon_i = epsilon0
-    dx = np.ones(C.shape[0]) / C.shape[0]
-    dy = np.ones(C.shape[1]) / C.shape[1]
+    I, J = C.shape
+    dx, dy = np.ones(I) / I, np.ones(J) / J
     p = g
-    q = np.ones(C.shape[1]) * np.average(g)
+    q = np.ones(J) * np.average(g)
 
-    u = np.zeros(len(p))
-    v = np.zeros(len(q))
-    b = np.ones(len(q))
-    K = np.exp(-C / epsilon_i)
+    u, v = np.zeros(I), np.zeros(J)
+    a, b = np.ones(I), np.ones(J)
 
-    alpha1 = lambda1 / (lambda1 + epsilon_i)
-    alpha2 = lambda2 / (lambda2 + epsilon_i)
-    epsilon_index = 0
-    iterations_since_epsilon_adjusted = 0
-    duality_gap = np.inf
     start_time = time.time()
     duality_time = 0
+    epsilon_i = epsilon0 * scale_factor
+    duality_gap = np.inf
 
-    while duality_gap > tolerance :
-        for i in range(batch_size):
-            a = (p / (K.dot(np.multiply(b, dy)))) ** alpha1 * np.exp(-u / (lambda1 + epsilon_i))
-            b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
+    for e in range(epsilon_scalings + 1):
+        duality_gap = np.inf
+        u = u + epsilon_i * np.log(a)
+        v = v + epsilon_i * np.log(b)  # absorb
+        epsilon_i = epsilon_i / scale_factor
+        _K = np.exp(-C / epsilon_i)
+        alpha1 = lambda1 / (lambda1 + epsilon_i)
+        alpha2 = lambda2 / (lambda2 + epsilon_i)
+        K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
+        a, b = np.ones(I), np.ones(J)
 
-            # stabilization
-            iterations_since_epsilon_adjusted += 1
-            if (max(max(abs(a)), max(abs(b))) > tau):
-                u = u + epsilon_i * np.log(a)
-                v = v + epsilon_i * np.log(b)  # absorb
-                K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
-                a = np.ones(len(p))
-                b = np.ones(len(q))
+        while duality_gap > tolerance :
+            for i in range(batch_size):
+                a = (p / (K.dot(np.multiply(b, dy)))) ** alpha1 * np.exp(-u / (lambda1 + epsilon_i))
+                b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
 
-            if iterations_since_epsilon_adjusted == numInnerIterMax :
-                epsilon_index += 1
-                iterations_since_epsilon_adjusted = 0
-                u = u + epsilon_i * np.log(a)
-                v = v + epsilon_i * np.log(b)  # absorb
-                epsilon_i = get_reg(epsilon_index)
-                alpha1 = lambda1 / (lambda1 + epsilon_i)
-                alpha2 = lambda2 / (lambda2 + epsilon_i)
-                K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
-                a = np.ones(len(p))
-                b = np.ones(len(q))
+                # stabilization
+                if (max(max(abs(a)), max(abs(b))) > tau):
+                    wot.io.verbose("Stabilizing...")
+                    u = u + epsilon_i * np.log(a)
+                    v = v + epsilon_i * np.log(b)  # absorb
+                    K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
+                    a, b = np.ones(I), np.ones(J)
 
-        duality_tmp_time = time.time()
-        R = (K.T * a).T * b
-        pri = primal(K, R, dx, dy, p, q, a, b, epsilon_i, lambda1, lambda2)
-        dua = dual(K, R, dx, dy, p, q, a, b, epsilon_i, lambda1, lambda2)
-        duality_gap = pri - dua
-        duality_time += time.time() - duality_tmp_time
+            duality_tmp_time = time.time()
+            R = (K.T * a).T * b
+            pri = primal(C, _K, R, dx, dy, p, q, a * np.exp(u / epsilon_i), b * np.exp(v / epsilon_i), epsilon_i, lambda1, lambda2)
+            dua = dual(C, _K, R, dx, dy, p, q, a * np.exp(u / epsilon_i), b * np.exp(v / epsilon_i), epsilon_i, lambda1, lambda2)
+            duality_gap = (pri - dua) / abs(pri)
+            duality_time += time.time() - duality_tmp_time
+            # wot.io.verbose("Current (gap, primal, dual) : {:020.18f} {:020.18f} {:020.18f}".format(duality_gap, pri, dua))
 
     total_time = time.time() - start_time
     wot.io.verbose("Computed tmap in {:.3f}s. Duality gap: {:.3E} ({:.2f}% of computing time)"\
