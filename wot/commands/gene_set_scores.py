@@ -44,7 +44,7 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
     for j in range(gs.x.shape[1]):
         if progress and gs.x.shape[1] > 1:
             print(gs.col_meta.index.values[j])
-        result = wot.score_gene_sets(dataset_to_score=ds, background_ds=background_ds,
+        result = wot.score_gene_sets(dataset_to_score=ds,
                                      gs=wot.Dataset(gs.x[:, [j]], gs.row_meta, gs.col_meta.iloc[[j]]),
                                      permutations=permutations, method=method, nbins=nbins,
                                      drop_frequency=drop_frequency, drop_p_value_threshold=drop_p_value_threshold,
