@@ -49,9 +49,9 @@ def get_p_value_ci(n, n_s, z):
     return ci
 
 
-def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_score', permutations=None,
+def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=None,
                     nbins=25, bin_by='mean', random_state=0, drop_frequency=1000, drop_p_value_threshold=0.05,
-                    smooth_p_values=True, progress=False):
+                    smooth_p_values=True, progress=False, quantile_bins=False):
     """Score gene sets.
 
     Note that datasets and gene sets must be aligned prior to invoking this method. No check is done.
@@ -74,48 +74,12 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
     #         background_x.std(axis=0) > 0)  # keep genes that are in gene sets and have standard deviation > 0
 
     x = dataset_to_score.x
-    if background_ds is None:
-        background = x
-    else:
-        background = background_ds.x
-    if gs.x.shape[1] > 1:
-        raise ValueError('Only one gene set allowed as input')
-    gs_1_0 = gs.x
-    if permutations is not None and permutations > 0:
-        if bin_by == 'mean' and method == 'mean_z_score':
-            bin_by = 'std'
-        bin_values = background.mean(axis=0) if bin_by == 'mean' else np.sqrt(wot.mean_and_variance(background)[1])
-        # ranks go from 1 to len(bin_values)
-        bin_ranks = scipy.stats.rankdata(bin_values, method='ordinal')
-        bin_min = 1
-        bin_max = 1 + len(bin_ranks)
-        bin_width = (bin_max - bin_min) / nbins
-        bin_assignments = np.floor((bin_ranks - bin_min) / bin_width)
-        bin_index_to_gene_indices = []
-        all_gene_indices = []
-        missing_bins = False
-        for bin_index in range(nbins):
-            gene_indices = np.where(bin_assignments == bin_index)[0]
-            ngenes = np.sum(gs_1_0[gene_indices])
-            if len(gene_indices) > ngenes:
-                bin_index_to_gene_indices.append(gene_indices)
-                all_gene_indices.append(gene_indices)
-            else:
-                if ngenes > 0:
-                    print('Unable to use bin ' + str(bin_index))
-                missing_bins = True
-        # permute each bin separately
-        input_nbins = nbins
-        nbins = len(bin_index_to_gene_indices)
-        if nbins != input_nbins:
-            print('Using ' + str(nbins) + ' out of ' + str(input_nbins) + ' bins')
-
     # preprocess the dataset
     if method == 'mean_z_score':
         # gs_x = gs_x[gene_indices]
         # background_x = background_x[:, gene_indices]
         # dataset_to_score.x = dataset_to_score.x[:, gene_indices]
-        mean, var = wot.mean_and_variance(background.x)
+        mean, var = wot.mean_and_variance(x)
         std = np.sqrt(var)
         x = (x - mean) / std
         x[np.isnan(x)] = 0
@@ -130,6 +94,50 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
                 row = row.toarray()
             ranks[i] = scipy.stats.rankdata(row)
         x = ranks
+
+    if gs.x.shape[1] > 1:
+        raise ValueError('Only one gene set allowed as input')
+    gs_1_0 = gs.x
+    if permutations is not None and permutations > 0:
+        if bin_by == 'mean' and method == 'mean_z_score':
+            bin_by = 'std'
+        bin_values = x.mean(axis=0) if bin_by == 'mean' else np.sqrt(wot.mean_and_variance(x)[1])
+        if quantile_bins:
+            # ranks go from 1 to len(bin_values)
+            bin_ranks = scipy.stats.rankdata(bin_values, method='ordinal')
+            bin_min = 1
+            bin_max = 1 + len(bin_ranks)
+            bin_width = (bin_max - bin_min) / nbins
+            bin_assignments = np.floor((bin_ranks - bin_min) / bin_width)
+        else:
+            bin_min = np.min(bin_values)
+            bin_max = np.max(bin_values)
+            bin_width = (bin_max - bin_min) / nbins
+            bin_assignments = np.floor((bin_values - bin_min) / bin_width)
+            bin_assignments[bin_assignments == nbins] = nbins - 1
+        bin_index_to_gene_indices = []
+        all_gene_indices = []
+        missing_bins = False
+        for bin_index in range(nbins):
+            gene_indices = np.where(bin_assignments == bin_index)[0]
+            ngenes_in_set_bin = np.sum(gs_1_0[gene_indices])
+            if progress:
+                print('bin ' + str(bin_index) + ' ' + str(ngenes_in_set_bin) + '/' + str(
+                    len(gene_indices)) + ', bin range: ' + str(np.min(bin_values[:, gene_indices])) + ' ' + str(
+                    np.max(bin_values[:, gene_indices])))
+            if len(gene_indices) > ngenes_in_set_bin:
+                bin_index_to_gene_indices.append(gene_indices)
+                all_gene_indices.append(gene_indices)
+            else:
+                if ngenes_in_set_bin > 0:
+                    print('Unable to use bin ' + str(bin_index))
+                missing_bins = True
+        # permute each bin separately
+        input_nbins = nbins
+        nbins = len(bin_index_to_gene_indices)
+        if nbins != input_nbins:
+            print('Using ' + str(nbins) + ' out of ' + str(input_nbins) + ' bins')
+
     # gene sets has genes on rows, sets on columns
     # ds has cells on rows, genes on columns
     # scores contains cells on rows, gene sets on columns
@@ -139,6 +147,8 @@ def score_gene_sets(dataset_to_score, gs, background_ds=None, method='mean_z_sco
     if hasattr(observed_scores, 'toarray'):
         observed_scores = observed_scores.toarray()
     ngenes_in_set = gs_1_0.sum(axis=0)
+    if progress:
+        print('# of genes ' + str(ngenes_in_set))
     # ngenes_in_set[ngenes_in_set == 0] = 1  # avoid divide by zero
     p_value_ci = None
     if permutations is not None and permutations > 0:
