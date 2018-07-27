@@ -46,7 +46,7 @@ class OTModel:
         wot.io.verbose("Additional arguments :", kwargs)
         wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
 
-        self.day_pairs = wot.model.parse_day_pairs(kwargs.pop('day_pairs', None))
+        self.day_pairs = wot.model.parse_configuration(kwargs.pop('day_pairs', None))
 
         self.ot_config = {}
         for k in kwargs.keys():
