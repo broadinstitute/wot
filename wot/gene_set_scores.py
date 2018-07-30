@@ -86,13 +86,13 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
         x[x < -5] = -5
         x[x > 5] = 5
     elif method == 'mean_rank':
-        ranks = np.zeros(dataset_to_score.x.shape)
+        ranks = np.zeros(x.shape)
         is_sparse = scipy.sparse.issparse(x)
-        for i in range(dataset_to_score.x.shape[0]):
+        for i in range(dataset_to_score.x.shape[0]):  # rank each cell separately
             row = x[i, :]
             if is_sparse:
                 row = row.toarray()
-            ranks[i] = scipy.stats.rankdata(row)
+            ranks[i] = scipy.stats.rankdata(row, method='min')
         x = ranks
 
     if gs.x.shape[1] > 1:
@@ -101,20 +101,17 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
     if permutations is not None and permutations > 0:
         if bin_by == 'mean' and method == 'mean_z_score':
             bin_by = 'std'
-        bin_values = x.mean(axis=0) if bin_by == 'mean' else np.sqrt(wot.mean_and_variance(x)[1])
+        _bin_values = x.mean(axis=0) if bin_by == 'mean' else np.sqrt(wot.mean_and_variance(x)[1])
+        bin_values = _bin_values
         if quantile_bins:
             # ranks go from 1 to len(bin_values)
-            bin_ranks = scipy.stats.rankdata(bin_values, method='ordinal')
-            bin_min = 1
-            bin_max = 1 + len(bin_ranks)
-            bin_width = (bin_max - bin_min) / nbins
-            bin_assignments = np.floor((bin_ranks - bin_min) / bin_width)
-        else:
-            bin_min = np.min(bin_values)
-            bin_max = np.max(bin_values)
-            bin_width = (bin_max - bin_min) / nbins
-            bin_assignments = np.floor((bin_values - bin_min) / bin_width)
-            bin_assignments[bin_assignments == nbins] = nbins - 1
+            bin_values = scipy.stats.rankdata(bin_values, method='min')
+
+        bin_min = np.min(bin_values)
+        bin_max = np.max(bin_values)
+        bin_width = (bin_max - bin_min) / nbins
+        bin_assignments = np.floor((bin_values - bin_min) / bin_width)
+        bin_assignments[bin_assignments == nbins] = nbins - 1
         bin_index_to_gene_indices = []
         all_gene_indices = []
         missing_bins = False
@@ -123,8 +120,8 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
             ngenes_in_set_bin = np.sum(gs_1_0[gene_indices])
             if progress:
                 print('bin ' + str(bin_index) + ' ' + str(ngenes_in_set_bin) + '/' + str(
-                    len(gene_indices)) + ', bin range: ' + str(np.min(bin_values[:, gene_indices])) + ' ' + str(
-                    np.max(bin_values[:, gene_indices])))
+                    len(gene_indices)) + ', bin range: ' + str(np.min(_bin_values[:, gene_indices])) + ' ' + str(
+                    np.max(_bin_values[:, gene_indices])))
             if len(gene_indices) > ngenes_in_set_bin:
                 bin_index_to_gene_indices.append(gene_indices)
                 all_gene_indices.append(gene_indices)
