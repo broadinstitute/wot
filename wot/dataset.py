@@ -42,3 +42,34 @@ class Dataset:
 
     def __len__(self):
         return len(self.x)
+
+    def where(self, **kwargs):
+        """
+        Get subset of cells that match required metadata
+
+        Parameters
+        ----------
+        **kwargs : dict
+            The dictionnary of  metadata to match
+
+        Returns
+        -------
+        result : wot.Dataset
+            The subset of cells
+
+        Examples
+        --------
+        >>> ds.where(day=1.2) # -> only cells that have a metadata for 'day' of 1.2
+        >>> ds.where(day=1, covariate=3) # -> only cells at day 1 that have a covariate value of 3
+        """
+        if not kwargs:
+            return wot.Dataset(self.x, self.row_meta.copy(), self.col_meta.copy())
+
+        for key in kwargs:
+            if key not in self.row_meta.columns:
+                raise ValueError("No such metadata in dataset : \"{}\"".format(key))
+        query = lambda s : all(s[k] == kwargs[k] for k in kwargs)
+
+        all_ids = self.row_meta.index[self.row_meta.apply(query, axis=1)]
+        all_indices = self.row_meta.index.get_indexer_for(all_ids)
+        return Dataset(self.x[all_indices], self.row_meta.iloc[all_indices].copy(), self.col_meta.copy())
