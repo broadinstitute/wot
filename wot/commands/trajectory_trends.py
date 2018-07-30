@@ -6,91 +6,86 @@ import os
 
 import h5py
 import numpy as np
+import pandas as pd
 import scipy
 import wot.io
 import wot.ot
 
+def compute_trajectories(ot_model, *populations):
+    """
+    Computes the average and variance of each gene over time for the given populations
+
+    Parameters
+    ----------
+    ot_model : wot.OTModel
+        The OTModel used to find ancestors and descendants of the population
+    *populations : wot.Population
+        The target populations
+
+    Returns
+    -------
+    timepoints : 1-D array
+        The list of timepoints indexing the other two return values
+    means : ndarray
+        The list of the means of each gene at each timepoint
+    variances : ndarray
+        The list of the variances of each gene at each timepoint
+
+    Notes
+    -----
+    If only one population is given, means and variances will have two dimensions, otherwise three
+
+    Examples
+    --------
+    >>> timepoints, means, variances = compute_trajectories(ot_model, pop1, pop2, pop3)
+    >>> means[i][j][k] # -> the mean value of the ancestors of population i at time j for gene k
+    """
+    timepoints = [wot.model.unique_timepoint(*populations)]
+    traj, variances = [], []
+    def update(*populations):
+        m, v = ot_model.population_mean_and_variance(*populations)
+        traj.append(m); variances.append(v)
+
+    update(*populations)
+    while ot_model.can_pull_back(*populations):
+        populations = ot_model.pull_back(*populations)
+        timepoints.append(wot.model.unique_timepoint(*populations))
+        update(*populations)
+    def unpack(arr):
+        arr = [ arr[::-1,i,:] for i in range(arr.shape[1]) ]
+        return arr if len(arr) > 1 else arr[0]
+    return timepoints[::-1], unpack(np.asarray(traj)), unpack(np.asarray(variances))
 
 def main(argv):
-    parser = argparse.ArgumentParser(
-        description='Generate mean expression profiles given a starting cell cet and transport maps.')
-    parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
-    parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
-    parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True, action='append')
+    parser = argparse.ArgumentParser(description='Generate mean expression profiles for '\
+            'ancestors and descendants of each cell set at the given timepoint')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
-    parser.add_argument('--matrix_transform', help='Transform matrix values', action='append',
-                        choices=['expm1', 'log1p', 'rank'])
+    parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
+    parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
+    parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True)
+    parser.add_argument('--time', help='Timepoint to consider', required=True)
+    parser.add_argument('--out', help='Prefix for output file names', default='wot_trajectory')
 
     args = parser.parse_args(argv)
-    time_to_cell_sets = wot.io.group_cell_sets(args.cell_set, wot.io.read_days_data_frame(args.cell_days))
-    if len(time_to_cell_sets) == 0:
-        print('No cell sets found')
-        exit(1)
 
-    nsets = 0
-    for t in time_to_cell_sets:
-        nsets += len(time_to_cell_sets[t])
+    ot_model = wot.initialize_ot_model(args.matrix, args.cell_days, tmap_dir = args.tmap)
+    # TODO: refactor the following with census
+    cell_sets = wot.io.read_cell_sets(args.cell_set)
+    keys = list(cell_sets.keys())
+    populations = ot_model.population_from_ids(*[cell_sets[name] for name in keys], at_time=float(args.time))
+    # Get rid of empty populations : just ignore them
+    keys = [ keys[i] for i in range(len(keys)) if populations[i] is not None ]
+    populations = [ p for p in populations if p is not None ]
 
-    transport_maps = wot.io.list_transport_maps(args.tmap)
-    if len(transport_maps) == 0:
-        print('No transport maps found in ' + args.tmap)
-        exit(1)
-    transport_map_times = set()
-    for tmap in transport_maps:
-        transport_map_times.add(tmap['t1'])
-        transport_map_times.add(tmap['t2'])
-    datasets = []
-    dataset_names = []
-    dataset_names.append(wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0])
-    ds = wot.io.read_dataset(args.matrix)
-    datasets.append(ds)
-    value_transform_functions = []
-    if args.matrix_transform is not None and len(args.matrix_transform) > 0:
-        for matrix_transform in args.matrix_transform:
-            if matrix_transform == 'expm1':
-                value_transform_functions.append(np.expm1)
-            elif matrix_transform == 'log1p':
-                value_transform_functions.append(np.log1p)
-            elif matrix_transform == 'rank':
-                value_transform_functions.append(scipy.stats.rankdata)
+    if len(populations) == 0:
+        raise ValueError("No cells from the given cell sets are present at that time")
 
-        def value_transform(values):
-            for op in value_transform_functions:
-                values = op(values)
-            return values
+    timepoints, trajectories, variances = compute_trajectories(ot_model, *populations)
 
-    trajectories = wot.ot.Trajectory.trajectory_for_cell_sets(transport_maps=transport_maps,
-                                                              time_to_cell_sets=time_to_cell_sets)
-
-    dataset_name_to_trends = wot.ot.TrajectoryTrends.compute_dataset_name_to_trends(trajectories, datasets,
-                                                                                    dataset_names,
-                                                                                    value_transform=value_transform if len(
-                                                                                        value_transform_functions) > 0 else None)
-
-    for ds_name in dataset_name_to_trends:
-        trends = dataset_name_to_trends[ds_name]  # one trend per cell set
-
-        for trend in trends:
-            # for each dataset, output a matrix with time on rows and features on columns. Values in matrix are mean expression
-            f = h5py.File(ds_name + '_' + trend['cell_set'] + '_' + 'trajectory_trends.loom', 'w')
-            f.create_group('/layers')
-            f.create_group('/row_graphs')
-            f.create_group('/col_graphs')
-            f.create_dataset('/row_attrs/id', data=trend['times'])
-            f.create_dataset('/col_attrs/id', data=trend['features'].astype('S'))
-            f.create_dataset('/row_attrs/ncells', data=trend['ncells'])
-            f.create_dataset('/matrix',
-                             chunks=(1000, 1000) if trend['mean'].shape[0] >= 1000 and trend['mean'].shape[
-                                 1] >= 1000 else None,
-                             maxshape=(None, trend['mean'].shape[1]),
-                             compression='gzip', compression_opts=9,
-                             data=trend['mean'])
-            f.create_dataset('/layers/variance',
-                             chunks=(1000, 1000) if trend['mean'].shape[0] >= 1000 and trend['mean'].shape[
-                                 1] >= 1000 else None,
-                             maxshape=(None, trend['mean'].shape[1]),
-                             compression='gzip', compression_opts=9,
-                             data=trend['variance'])
-
-            # f.create_dataset('/col_attrs/cell_set', data=cell_set_names)
-            f.close()
+    row_meta = pd.DataFrame([], index=timepoints, columns=[])
+    col_meta = ot_model.matrix.col_meta.copy()
+    for i in range(len(trajectories)):
+        cs_name = keys[i]
+        res = wot.Dataset(trajectories[i], row_meta, col_meta)
+        # TODO: write the variances to a different file if a flag is passed
+        wot.io.write_dataset(res, args.out + '_' + cs_name, output_format='txt', txt_full=False)

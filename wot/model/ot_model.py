@@ -561,3 +561,40 @@ class OTModel:
             return census[0]
         else:
             return census
+
+    def population_mean_and_variance(self, *populations):
+        """
+        Get the mean and variance of each gene for a population
+
+        Parameters
+        ----------
+        *populations : wot.Population or list of wot.Population
+            The population to be considered
+
+        Returns
+        -------
+        mean : 1D-array or list of 1D-array
+            The mean of each gene for the population.
+            List of means if several populations were given as input, 1-D array otherwise.
+        variance : 1D-array or list of 1D-array
+            The variance of each gene for the population.
+            List of variances if several populations were given as input, 1-D array otherwise.
+
+        Notes
+        -----
+        If several populations are given, they must all live in the same timepoint.
+        """
+        day = wot.model.unique_timepoint(*populations)
+        all_ids_at_t = self.matrix.row_meta.index[self.matrix.row_meta['day'] == day]
+        all_indices_at_t = self.matrix.row_meta.index.get_indexer_for(all_ids_at_t)
+        values = self.matrix.x[all_indices_at_t,:]
+        means, variances = [], []
+        for pop in populations:
+            mean = np.average(values, weights=pop.p, axis=0)
+            var  = np.average((values - mean) ** 2, weights=pop.p, axis=0)
+            means.append(mean); variances.append(var)
+
+        if len(means) == 1:
+            return means[0],  variances[0]
+        else:
+            return means, variances
