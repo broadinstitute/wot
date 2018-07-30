@@ -239,7 +239,7 @@ def read_gene_sets(path, feature_ids=None):
     elif ext == 'txt' or ext == 'grp':
         return read_grp(path, feature_ids)
     else:
-        raise ValueError('Unknown file format')
+        raise ValueError('Unknown file format "{}"'.format(ext))
 
 
 def read_grp(path, feature_ids=None):
