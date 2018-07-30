@@ -106,7 +106,6 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
         if quantile_bins:
             # ranks go from 1 to len(bin_values)
             bin_values = scipy.stats.rankdata(bin_values, method='min')
-
         bin_min = np.min(bin_values)
         bin_max = np.max(bin_values)
         bin_width = (bin_max - bin_min) / nbins
@@ -115,14 +114,14 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
         bin_index_to_gene_indices = []
         all_gene_indices = []
         missing_bins = False
+        filter_index = 1 if len(bin_assignments.shape) > 1 else 0
+
         for bin_index in range(nbins):
-            gene_indices = np.where(bin_assignments == bin_index)[0]
+            gene_indices = np.where(bin_assignments == bin_index)[filter_index]
             ngenes_in_set_bin = np.sum(gs_1_0[gene_indices])
-            if progress:
-                print('bin ' + str(bin_index) + ' ' + str(ngenes_in_set_bin) + '/' + str(
-                    len(gene_indices)) + ', bin range: ' + str(np.min(_bin_values[:, gene_indices])) + ' ' + str(
-                    np.max(_bin_values[:, gene_indices])))
-            if len(gene_indices) > ngenes_in_set_bin:
+            if len(gene_indices) > ngenes_in_set_bin and ngenes_in_set_bin > 0:
+                if progress:
+                    print('bin #' + str(bin_index + 1) + ' ' + str(ngenes_in_set_bin) + '/' + str(len(gene_indices)))
                 bin_index_to_gene_indices.append(gene_indices)
                 all_gene_indices.append(gene_indices)
             else:
@@ -132,6 +131,9 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
         # permute each bin separately
         input_nbins = nbins
         nbins = len(bin_index_to_gene_indices)
+        if nbins is 0:
+            permutations = 0
+            print('Unable to find compatible bins')
         if nbins != input_nbins:
             print('Using ' + str(nbins) + ' out of ' + str(input_nbins) + ' bins')
 
