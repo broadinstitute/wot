@@ -15,4 +15,6 @@ def unique_timepoint(*populations):
     times = set([ pop.time for pop in populations ])
     if len(times) > 1:
         raise ValueError("Several populations were given, but they do not all live in the same timepoint")
+    if len(times) < 1:
+        raise ValueError("Empty population list")
     return list(times)[0]
