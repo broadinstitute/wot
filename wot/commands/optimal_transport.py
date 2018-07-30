@@ -11,9 +11,6 @@ def main(argv):
     parser = argparse.ArgumentParser('Compute transport maps between pairs of time points')
     wot.commands.add_model_arguments(parser)
     wot.commands.add_ot_parameters_arguments(parser)
-    parser.add_argument('--day_pairs',
-            help='Two column file without header with '
-            'pairs of days to compute transport maps for')
     parser.add_argument('--out', default='./tmaps',
             help='Prefix for ouput file names')
 
@@ -25,21 +22,20 @@ def main(argv):
     # '--cell_filter'
     # '--ncells'
     # '--ncounts'
-    # '--numInnerItermax'
 
     tmap_dir, tmap_prefix = os.path.split(args.out)
     ot_model = wot.initialize_ot_model(args.matrix, args.cell_days,
-            transport_maps_directory = tmap_dir,
-            transport_maps_prefix = tmap_prefix,
+            tmap_dir = tmap_dir,
+            tmap_prefix = tmap_prefix,
             local_pca = args.local_pca,
             growth_iters = args.growth_iters,
             epsilon = args.epsilon,
             lambda1 = args.lambda1,
             lambda2 = args.lambda2,
-            scaling_iter = args.scaling_iter,
+            max_iter = args.max_iter,
             epsilon0 = args.epsilon0,
             tau = args.tau,
-            day_pairs = args.day_pairs
+            day_pairs = args.config
             )
 
     ot_model.compute_all_transport_maps(force = True)
