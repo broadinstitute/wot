@@ -104,11 +104,14 @@ def write_config_file(ot_model):
     with open(config_file, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
 
-def list_cached_transport_maps(tmap_dir, tmap_prefix):
+def list_cached_transport_maps(tmap_dir, tmap_prefix, with_covariates=False):
     """Get the list of paths to valid transport map names (complex regexp not available in Python)"""
     valid_tmaps = []
     pattern = tmap_prefix
-    pattern += '_[0-9]*.[0-9]*_[0-9]*.[0-9]*.*'
+    if with_covariates:
+        pattern += '_[0-9]*.[0-9]*_[0-9]*.[0-9]*_cv[0-9]*_cv[0-9]*.*'
+    else:
+        pattern += '_[0-9]*.[0-9]*_[0-9]*.[0-9]*.*'
     files = glob.glob(os.path.join(tmap_dir, pattern))
     for path in files:
         if not os.path.isfile(path):
@@ -116,8 +119,14 @@ def list_cached_transport_maps(tmap_dir, tmap_prefix):
         basename, ext = wot.io.get_filename_and_extension(path)
         tokens = basename.split('_')
         try :
-            t1 = float(tokens[-2])
-            t2 = float(tokens[-1])
+            if with_covariates:
+                t1 = float(tokens[-4])
+                t2 = float(tokens[-3])
+                cv1 = int(tokens[-2][2:])
+                cv2 = int(tokens[-1][2:])
+            else:
+                t1 = float(tokens[-2])
+                t2 = float(tokens[-1])
             valid_tmaps.append(path)
         except ValueError:
             continue
@@ -151,9 +160,10 @@ def purge_invalidated_caches(ot_model):
         wot.io.verbose("Purging ({},{})".format(ot_model.tmap_dir, ot_model.tmap_prefix))
         if os.path.isfile(config_file):
             os.remove(config_file)
-        for path in list_cached_transport_maps(ot_model.tmap_dir, ot_model.tmap_prefix):
-            wot.io.verbose("Removing tmap", path)
-            os.remove(path)
+        for cov in [False, True]:
+            for path in list_cached_transport_maps(ot_model.tmap_dir, ot_model.tmap_prefix, with_covariates=cov):
+                wot.io.verbose("Removing tmap", path)
+                os.remove(path)
     write_config_file(ot_model)
 
 def scan_transport_map_directory(ot_model):
@@ -169,6 +179,8 @@ def scan_transport_map_directory(ot_model):
     -------
     cached_tmaps : dict of (float, float): str
         The path to each transport map that was found in the directory.
+    cached_cov_tmaps : dict of (float, float, float, float): str
+        The path to each covariate-restricted transport map that was found in the directory.
     """
     wot.io.verbose("Scanning transport map directory")
     cached_tmaps = {}
@@ -179,7 +191,18 @@ def scan_transport_map_directory(ot_model):
         t2 = float(tokens[-1])
         cached_tmaps[(t1, t2)] = path
     wot.io.verbose("Cached tmaps found:", cached_tmaps)
-    return cached_tmaps
+
+    cov_cached_tmaps = {}
+    for path in list_cached_transport_maps(ot_model.tmap_dir, ot_model.tmap_prefix, with_covariates=True):
+        basename, ext = wot.io.get_filename_and_extension(path)
+        tokens = basename.split('_')
+        t1 = float(tokens[-4])
+        t2 = float(tokens[-3])
+        cv1 = int(tokens[-2][2:])
+        cv2 = int(tokens[-1][2:])
+        cov_cached_tmaps[(t1, t2, cv1, cv2)] = path
+    wot.io.verbose("Cached cov-restricted tmaps found:", cov_cached_tmaps)
+    return cached_tmaps, cov_cached_tmaps
 
 def load_transport_map(ot_model, t1, t2):
     """
@@ -203,4 +226,31 @@ def load_transport_map(ot_model, t1, t2):
         ot_model.compute_transport_map(t1, t2)
 
     path = ot_model.tmaps.get((t1, t2))
+    return wot.io.read_dataset(path)
+
+def load_covariate_restricted_transport_map(ot_model, t0, t1, covariate):
+    """
+    Load the given covariate-restricted transport map, either from cache or compute it
+
+    Parameters
+    ----------
+    ot_model : wot.OTModel
+        The OTModel that is trying to load a transport map
+    t0 : int or float
+        The source timepoint of the transport map
+    t1 : int or float
+        The destination timepoint of the transport map
+    covariate : (int, int)
+        The covariate restriction on cells from t0 and t1
+
+    Returns
+    -------
+    tmap : wot.Dataset
+        The transport map
+    """
+    cv0, cv1 = covariate
+    if ot_model.cov_tmaps.get((t0, t1, cv0, cv1), None) is None:
+        ot_model.compute_transport_map(t0, t1, covariate=(cv0, cv1))
+
+    path = ot_model.cov_tmaps.get((t0, t1, cv0, cv1))
     return wot.io.read_dataset(path)

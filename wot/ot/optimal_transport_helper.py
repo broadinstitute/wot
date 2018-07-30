@@ -279,28 +279,32 @@ class OptimalTransportHelper:
         t0 = config.pop('t0', None)
         t1 = config.pop('t1', None)
         if t0 is None or t1 is None:
-            raise ValueError("config must have a both t0 and t1, indicating target timepoints")
-        t0_indices = np.where(ds.row_meta['day'] == float(t0))[0]
-        t1_indices = np.where(ds.row_meta['day'] == float(t1))[0]
+            raise ValueError("config must have both t0 and t1, indicating target timepoints")
 
+        covariate = config.pop('covariate', None)
         local_pca = config.pop('local_pca', None)
         if local_pca is not None and local_pca > 0:
-            import scipy.parse
-            x = np.vstack([ ds.x[t0_indices], ds.x[t1_indices] ])
-            x = x - x.mean(axis = 0)
-            pca = sklearn.decomposition.PCA(n_components = local_pca)
-            pca.fit(x.T)
-            x = pca.components_.T
-            p0 = x[0:len(t0_indices)]
-            p1 = x[len(t0_indices):len(t0_indices) + len(t1_indices)]
+            raise ValueError("PCA Not supported yet")
+            # import scipy.parse
+            # x = np.vstack([ ds.x[t0_indices], ds.x[t1_indices] ])
+            # x = x - x.mean(axis = 0)
+            # pca = sklearn.decomposition.PCA(n_components = local_pca)
+            # pca.fit(x.T)
+            # x = pca.components_.T
+            # p0 = x[0:len(t0_indices)]
+            # p1 = x[len(t0_indices):len(t0_indices) + len(t1_indices)]
         else:
-            p0 = ds.x[t0_indices]
-            p1 = ds.x[t1_indices]
+            if covariate is None:
+                p0 = ds.where(day=float(t0))
+                p1 = ds.where(day=float(t1))
+            else:
+                p0 = ds.where(day=float(t0), covariate=int(covariate[0]))
+                p1 = ds.where(day=float(t1), covariate=int(covariate[1]))
 
-        C = OptimalTransportHelper.compute_default_cost_matrix(p0, p1)
+        C = OptimalTransportHelper.compute_default_cost_matrix(p0.x, p1.x)
         config['g'] = config.get('g', None) or np.ones(C.shape[0])
         tmap = wot.ot.transport_stablev1_learnGrowth(C, **config)
-        return wot.Dataset(tmap, ds.row_meta.iloc[t0_indices], ds.row_meta.iloc[t1_indices])
+        return wot.Dataset(tmap, p0.row_meta.copy(), p1.row_meta.copy())
 
 
     def compute_transport_maps(self, callback):

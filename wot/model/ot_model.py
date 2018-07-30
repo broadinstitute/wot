@@ -5,6 +5,7 @@ from wot.population import Population
 import wot.model
 import wot.io
 import os
+import itertools
 import numpy as np
 import pandas as pd
 
@@ -47,12 +48,16 @@ class OTModel:
         wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
 
         self.day_pairs = wot.model.parse_configuration(kwargs.pop('day_pairs', None))
+        cov = kwargs.pop('covariate', None)
+        if cov is not None:
+            covariate_data_frame = wot.io.read_covariate_data_frame(cov)
+            self.matrix.row_meta = self.matrix.row_meta.join(covariate_data_frame)
 
         self.ot_config = {}
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
         wot.model.purge_invalidated_caches(self)
-        self.tmaps = wot.model.scan_transport_map_directory(self)
+        self.tmaps, self.cov_tmaps = wot.model.scan_transport_map_directory(self)
 
         if max_threads is None:
             wot.io.verbose("Argument max_threads not set. Using default")
@@ -84,7 +89,16 @@ class OTModel:
 
         return { x: config[x] if x in config else ot_defaults[x] for x in ot_defaults }
 
-    def compute_all_transport_maps(self, force = False):
+    def get_covariate_pairs(self):
+        """Get all covariate pairs in the dataset"""
+        if 'covariate' not in self.matrix.row_meta.columns:
+            raise ValueError("Covariate value not available in dataset")
+        from itertools import product
+        covariate = sorted(set(self.matrix.row_meta['covariate']))
+        return product(covariate, covariate)
+
+
+    def compute_all_transport_maps(self, force = False, with_covariates=False):
         """
         Computes all required transport maps and caches everything for future use.
 
@@ -92,6 +106,8 @@ class OTModel:
         ----------
         force : bool, optional, default : False
             Force recomputation of each transport map, after config update for instance.
+        with_covariates : bool, optional, default : False
+            Compute all covariate-restricted transport maps as well
 
         Returns
         -------
@@ -101,17 +117,24 @@ class OTModel:
         t = self.timepoints
         day_pairs = self.day_pairs
         if day_pairs is None:
-            day_pairs = [ (t[i], t[i+1]) for i in range(len(t) - 1) ]
+            day_pairs = [(t[i], t[i+1]) for i in range(len(t) - 1)]
+
+        if with_covariates:
+            day_pairs = [(*d, c) for d, c in itertools.product(day_pairs, self.get_covariate_pairs())]
 
         if not force:
-            day_pairs = [ x for x in day_pairs if self.tmaps.get(x, None) is None ]
+            if with_covariates:
+                day_pairs = [(t0, t1, cv) for t0, t1, cv in day_pairs
+                        if self.cov_tmaps.get((t0,t1,*cv), None) is None]
+            else:
+                day_pairs = [x for x in day_pairs if self.tmaps.get(x, None) is None]
 
         m = self.max_threads
 
         if m > 1 :
             procs = []
-            for s, d in day_pairs:
-                p = Process(target=self.compute_transport_map, args=(s,d,))
+            for x in day_pairs:
+                p = Process(target=self.compute_transport_map, args=(*x,))
                 procs.append(p)
 
             for i in range(len(procs) + m):
@@ -119,12 +142,12 @@ class OTModel:
                     procs[i - m].join()
                 if i < len(procs):
                     procs[i].start()
-            self.tmaps = wot.model.scan_transport_map_directory(self)
+            self.tmaps, self.cov_tmaps = wot.model.scan_transport_map_directory(self)
         else:
-            for s, d in day_pairs :
-                self.compute_transport_map(s, d)
+            for x in day_pairs :
+                self.compute_transport_map(*x)
 
-    def compute_transport_map(self, t0, t1):
+    def compute_transport_map(self, t0, t1, covariate=None):
         """
         Computes the transport map from time t0 to time t1
 
@@ -134,6 +157,8 @@ class OTModel:
             Source timepoint for the transport map
         t1 : float
             Destination timepoint for the transport map
+        covariate : None or (int, int)
+            The covariate restriction on cells from t0 and t1. None to skip
 
         Returns
         -------
@@ -158,15 +183,20 @@ class OTModel:
         else:
             local_config = {}
 
-        path += "_{}_{}.loom".format(t0, t1)
-        config = { **self.get_ot_config(), **local_config, 't0': t0, 't1': t1 }
+        config = { **self.get_ot_config(), **local_config, 't0': t0, 't1': t1, 'covariate': covariate }
         tmap = wot.ot.OptimalTransportHelper.compute_single_transport_map(self.matrix, config)
+        if covariate is None:
+            path += "_{}_{}.loom".format(t0, t1)
+            self.tmaps[(t0, t1)] = path
+        else:
+            path += "_{}_{}_cv{}_cv{}.loom".format(t0, t1, *covariate)
+            self.cov_tmaps[(t0, t1, *covariate)] = path
+
         wot.io.write_dataset(tmap, os.path.join(self.tmap_dir, path),
                 output_format="loom", txt_full=False)
         wot.io.verbose("Cached tmap ({}, {}) : {}".format(t0, t1, path))
-        self.tmaps[(t0, t1)] = path
 
-    def transport_map(self, t0, t1):
+    def transport_map(self, t0, t1, covariate=None):
         """
         Loads a transport map for a given pair of timepoints.
 
@@ -176,6 +206,8 @@ class OTModel:
             Source timepoint of the transport map.
         t1 : int of float
             Destination timepoint of the transport map.
+        covariate : None or (int, int), optional
+            Restrict to certain covariate values. Do not restrict if None
 
         Returns
         -------
@@ -188,8 +220,14 @@ class OTModel:
         atomic = (self.day_pairs is not None and (t0,t1) in self.day_pairs)\
                 or self.timepoints.index(t1) == self.timepoints.index(t0) + 1
 
+        if not atomic and covariate is not None:
+            raise ValueError("Covariate-restricted transport maps can only be atomic")
+
         if atomic:
-            return wot.model.load_transport_map(self, t0, t1)
+            if covariate is None:
+                return wot.model.load_transport_map(self, t0, t1)
+            else:
+                return wot.model.load_covariate_restricted_transport_map(self, t0, t1, covariate)
         else:
             path = wot.model.find_path(t0, t1, self.day_pairs, self.timepoints)
             return wot.model.chain_transport_maps(self, path)
