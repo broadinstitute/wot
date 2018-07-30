@@ -147,7 +147,7 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
         observed_scores = observed_scores.toarray()
     ngenes_in_set = gs_1_0.sum(axis=0)
     if progress:
-        print('# of genes ' + str(ngenes_in_set))
+        print('# of genes in gene set ' + str(ngenes_in_set))
     # ngenes_in_set[ngenes_in_set == 0] = 1  # avoid divide by zero
     p_value_ci = None
     if permutations is not None and permutations > 0:

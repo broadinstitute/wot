@@ -11,7 +11,7 @@ import wot.io
 
 def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_set=None,
             permutations=None, method='mean_z_score', nbins=None, drop_frequency=None, drop_p_value_threshold=None,
-            gene_set_filter=None, progress=False):
+            gene_set_filter=None, progress=False, quantile_bins=False):
     use_dask = False
     ds = wot.io.read_dataset(matrix, use_dask=use_dask, chunks=(10000, None))
     if cell_filter is not None:
@@ -48,7 +48,7 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
                                      gs=wot.Dataset(gs.x[:, [j]], gs.row_meta, gs.col_meta.iloc[[j]]),
                                      permutations=permutations, method=method, nbins=nbins,
                                      drop_frequency=drop_frequency, drop_p_value_threshold=drop_p_value_threshold,
-                                     progress=progress)
+                                     progress=progress, quantile_bins=quantile_bins)
         column_names = [str(gs.col_meta.index.values[j])]
         if permutations is not None and permutations > 0:
             column_names.append('p_value')
@@ -94,6 +94,7 @@ def main(argv):
     parser.add_argument('--drop_frequency',
                         help='Check the estimated lower bound of the nominal p-value every drop_frequency permutations',
                         default=1000, type=int)
+    parser.add_argument('--quantile_bins', action='store_true', help='Bin using quantiles')
     parser.add_argument('--progress', action='store_true', help='Print progress information')
 
     args = parser.parse_args(argv)
@@ -118,4 +119,4 @@ def main(argv):
     compute(matrix=args.matrix, cell_filter=args.cell_filter, gene_sets=gene_sets, out=args.out,
             format=args.format, permutations=args.nperm, method=args.method, nbins=args.nbins,
             drop_frequency=args.drop_frequency, drop_p_value_threshold=args.drop_p_value_threshold,
-            gene_set_filter=args.gene_set_filter, progress=args.progress)
+            gene_set_filter=args.gene_set_filter, progress=args.progress, quantile_bins=args.quantile_bins)
