@@ -21,7 +21,7 @@ class TestGeneSetScores(unittest.TestCase):
                               '--gene_sets', os.path.abspath(
                 'inputs/score_gene_sets/gene_sets.gmx'),
                               '--out', 'test_gene_set_test_output',
-                              '--method', 'mean', '--format', 'txt'],
+                              '--method', 'mean', '--format', 'txt', '--nbins', '1'],
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
         set_names = ['s1', 's2', 's3']
