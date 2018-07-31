@@ -79,7 +79,10 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
         # gs_x = gs_x[gene_indices]
         # background_x = background_x[:, gene_indices]
         # dataset_to_score.x = dataset_to_score.x[:, gene_indices]
-        mean, var = wot.mean_and_variance(x)
+        if scipy.sparse.issparse(x):
+            x = x.toarray()
+        mean = x.mean(axis=0)
+        var = x.var(axis=0)
         std = np.sqrt(var)
         x = (x - mean) / std
         x[np.isnan(x)] = 0
@@ -100,8 +103,8 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
     gs_1_0 = gs.x
     if permutations is not None and permutations > 0:
         if bin_by == 'mean' and method == 'mean_z_score':
-            bin_by = 'std'
-        _bin_values = x.mean(axis=0) if bin_by == 'mean' else np.sqrt(wot.mean_and_variance(x)[1])
+            bin_by = 'var'
+        _bin_values = x.mean(axis=0) if bin_by == 'mean' else wot.mean_and_variance(x)[1]
         bin_values = _bin_values
         if quantile_bins:
             # ranks go from 1 to len(bin_values)

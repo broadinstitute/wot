@@ -25,17 +25,16 @@ def cell_indices_by_day(dataset):
     return day_to_indices
 
 
-def mean_and_variance(X):
-    mean = X.mean(axis=0)
-    if scipy.sparse.issparse(X):
-        mean_sq = X.multiply(X).mean(axis=0)
-        mean = mean.A1
-        mean_sq = mean_sq.A1
+def mean_and_variance(x):
+    if scipy.sparse.issparse(x):
+        mean = x.mean(axis=0)
+        mean_sq = x.multiply(x).mean(axis=0)
+        mean = np.asarray(mean)
+        mean_sq = np.asarray(mean_sq)
+        var = (mean_sq - mean ** 2)
+        return mean, var
     else:
-        mean_sq = np.multiply(X, X).mean(axis=0)
-    # R convention (unbiased estimator) for variance
-    var = (mean_sq - mean ** 2) * (X.shape[0] / (X.shape[0] - 1))
-    return mean, var
+        return x.mean(axis=0), x.var(axis=0)
 
 
 def extract_cells_at_indices(ds, indices):
