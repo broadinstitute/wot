@@ -1,13 +1,110 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import argparse
 import numpy as np
 import pandas as pd
 import wot.io
 import wot.ot
+import wot
+import os
 
+def compute_validation_summary(ot_model):
+    """
+    Compute the validation summary for the given OTModel
+
+    Parameters
+    ----------
+    ot_model : wot.OTModel
+        The OTModel to validate
+
+    Returns
+    -------
+    validation_summary : pandas.DataFrame
+        The validation summary
+    """
+    times = ot_model.timepoints
+    # Skip a timepoint and validate using the skipped timepoint
+    interp_times = [(times[i], times[i+1], times[i+2]) for i in range(len(times) - 2)]
+    ot_model.day_pairs = { (t0, t1): {} for t0, _, t1 in interp_times }
+    if 'covariate' not in ot_model.matrix.row_meta.columns:
+        wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
+    ot_model.compute_all_transport_maps(force=False, with_covariates=True)
+    # Now validate
+    wot.io.verbose('Generating validation summary for sequences {}, '\
+            'covariates {}'.format(interp_times, list(ot_model.get_covariate_pairs())))
+    summary = []
+    for t0, t05, t1 in interp_times:
+        wot.io.verbose("Considering all covariates for sequence ({}, {}, {})"
+                .format(t0,t05,t1))
+        for cv0, cv1 in ot_model.get_covariate_pairs():
+            tmap = ot_model.transport_map(t0, t1, covariate=(cv0, cv1))
+            p0  = ot_model.matrix.where(day=t0, covariate=cv0).x
+            p05 = ot_model.matrix.where(day=t05).x
+            p1  = ot_model.matrix.where(day=t1, covariate=cv1).x
+            interp_frac = (t05 - t0) / (t1 - t0)
+            interp_size = 5000 # TODO: Add user input for this value
+            # Avoid over-sampling small populations
+            interp_size = min(interp_size, len(p0), len(p05), len(p1))
+
+            # Choose pairs according to OT. Interpolate
+            i05 = wot.ot.interpolate_with_ot(p0, p1, tmap.x, interp_frac, interp_size)
+
+            # Choose pairs randomly. Interpolate
+            r05 = wot.ot.interpolate_randomly(p0, p1, interp_frac, interp_size)
+
+            def update_summary(pop0, pop1, pt0, pt1, type0, type1):
+                distance = wot.ot.earth_mover_distance(pop0, pop1)
+                summary.append([t0, t1, pt0, pt1, cv0, cv1, type0, type1, distance])
+
+            update_summary(p0, p05, t0, t05, 'P0', 'P0.5')
+            update_summary(p05, p1, t05, t1, 'P0.5', 'P1')
+            update_summary(p0, i05, t0, t05, 'P0', 'I0.5')
+            update_summary(i05, p1, t05, t1, 'I0.5', 'P1')
+            update_summary(p0, r05, t0, t05, 'P0', 'R0.5')
+            update_summary(r05, p1, t05, t1, 'R0.5', 'P1')
+
+    # Post-process summary to make it a pandas DataFrame with proper column names
+    cols = ['interval_start', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1', 'distance']
+    return pd.DataFrame(summary, columns = cols)
 
 def main(argv):
+    parser = argparse.ArgumentParser(description='Compute a validation summary for the configuration')
+    wot.commands.add_model_arguments(parser)
+    wot.commands.add_ot_parameters_arguments(parser)
+    parser.add_argument('--covariate', help='Covariate values for each cell')
+    parser.add_argument('--tmap', help='Transport maps prefix', default='val_tmaps')
+    parser.add_argument('--out', help='Output file name', default='validation_summary.txt')
+
+    args = parser.parse_args(argv)
+
+    # TODO: add support for the following arguments :
+    # '--t_interpolate'
+    # '--resample_iter'
+    # '--npair'
+    # '--save_interpolated'
+
+    tmap_dir, tmap_prefix = os.path.split(args.tmap)
+    ot_model = wot.initialize_ot_model(args.matrix, args.cell_days,
+            tmap_dir = tmap_dir,
+            tmap_prefix = tmap_prefix,
+            local_pca = args.local_pca,
+            growth_iters = args.growth_iters,
+            epsilon = args.epsilon,
+            lambda1 = args.lambda1,
+            lambda2 = args.lambda2,
+            max_iter = args.max_iter,
+            epsilon0 = args.epsilon0,
+            tau = args.tau,
+            day_pairs = args.config,
+            covariate = args.covariate
+            )
+    summary = compute_validation_summary(ot_model)
+
+    summary.to_csv(args.out, sep = '\t', index=False)
+    exit(1)
+
+    # old version
     parser = wot.ot.OptimalTransportHelper.create_base_parser('Compute point cloud distances')
     parser.add_argument('--t_interpolate', help='Interpolation fraction between two time points', type=float,
                         required=True)
