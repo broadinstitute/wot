@@ -44,6 +44,9 @@ def fdr(pvals, is_sorted=False, method='indep'):
 
 
 def get_p_value_ci(n, n_s, z):
+    # smooth
+    n += 2
+    n_s += 1
     n_f = n - n_s
     ci = (z / n) * np.sqrt((n_s * n_f) / n)
     return ci
