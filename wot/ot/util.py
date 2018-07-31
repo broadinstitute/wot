@@ -169,11 +169,11 @@ def interpolate_with_ot(p0, p1, tmap, t_interpolate, size):
                 .format(tmap.shape, (len(p0), len(p1))))
     I = len(p0); J = len(p1)
     # Assume growth is exponential and retrieve growth rate at t_interpolate
-    p = tmap / np.power(tmap.sum(axis=0), 1.0 - t)
-    p = p.flatten()
+    p = tmap / np.power(tmap.sum(axis=0), 1. - t)
+    p = p.flatten(order='C')
     p = p / p.sum()
     choices = np.random.choice(I * J, p=p, size=size)
-    return np.asarray([p0[i%I] * (1 - t) + p1[i//I] * t for i in choices], dtype=np.float64)
+    return np.asarray([p0[i//J] * (1 - t) + p1[i%J] * t for i in choices], dtype=np.float64)
 
 def interpolate_randomly(p0, p1, t_interpolate, size):
     """
@@ -202,7 +202,7 @@ def interpolate_randomly(p0, p1, t_interpolate, size):
         raise ValueError("Unable to interpolate. Number of genes do not match")
     I = len(p0); J = len(p1)
     choices = np.random.choice(I * J, size=size)
-    return np.asarray([p0[i%I] * (1 - t) + p1[i//I] * t for i in choices], dtype=np.float64)
+    return np.asarray([p0[i//J] * (1 - t) + p1[i%J] * t for i in choices], dtype=np.float64)
 
 def earth_mover_distance(cloud1, cloud2):
     """
