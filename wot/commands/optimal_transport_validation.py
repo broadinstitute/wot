@@ -8,6 +8,7 @@ import wot.io
 import wot.ot
 import wot
 import os
+from itertools import product
 
 def compute_validation_summary(ot_model):
     """
@@ -31,38 +32,39 @@ def compute_validation_summary(ot_model):
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
     ot_model.compute_all_transport_maps(force=False, with_covariates=True)
     # Now validate
-    wot.io.verbose('Generating validation summary for sequences {}, '\
-            'covariates {}'.format(interp_times, list(ot_model.get_covariate_pairs())))
     summary = []
-    for t0, t05, t1 in interp_times:
-        wot.io.verbose("Considering all covariates for sequence ({}, {}, {})"
-                .format(t0,t05,t1))
-        for cv0, cv1 in ot_model.get_covariate_pairs():
-            tmap = ot_model.transport_map(t0, t1, covariate=(cv0, cv1))
-            p0  = ot_model.matrix.where(day=t0, covariate=cv0).x
-            p05 = ot_model.matrix.where(day=t05).x
-            p1  = ot_model.matrix.where(day=t1, covariate=cv1).x
-            interp_frac = (t05 - t0) / (t1 - t0)
-            interp_size = 5000 # TODO: Add user input for this value
-            # Avoid over-sampling small populations
-            interp_size = min(interp_size, len(p0), len(p05), len(p1))
+    covariates = set(ot_model.matrix.row_meta['covariate'])
+    params = product(interp_times, covariates, covariates)
+    wot.io.verbose('Generating validation summary for sequences {}, '\
+            'covariates {}'.format(interp_times, covariates)
 
-            # Choose pairs according to OT. Interpolate
-            i05 = wot.ot.interpolate_with_ot(p0, p1, tmap.x, interp_frac, interp_size)
+    for (t0, t05, t1), cv0, cv1 in params:
+        interp_frac = (t05 - t0) / (t1 - t0)
 
-            # Choose pairs randomly. Interpolate
-            r05 = wot.ot.interpolate_randomly(p0, p1, interp_frac, interp_size)
+        tmap = ot_model.transport_map(t0, t1, covariate=(cv0, cv1))
+        p0  = ot_model.matrix.where(day=t0, covariate=cv0)
+        p1  = ot_model.matrix.where(day=t1, covariate=cv1)
+        interp_size = (len(p0) + len(p1)) // 2
+        i05 = wot.ot.interpolate_with_ot(p0.x, p1.x, tmap.x, interp_frac, interp_size)
+        r05 = wot.ot.interpolate_randomly(p0.x, p1.x, interp_frac, interp_size)
 
-            def update_summary(pop0, pop1, pt0, pt1, type0, type1):
-                distance = wot.ot.earth_mover_distance(pop0, pop1)
-                summary.append([t0, t1, pt0, pt1, cv0, cv1, type0, type1, distance])
+        for cv05 in covariates:
+            p05 = ot_model.matrix.where(day=t05, covariate=cv05)
 
-            update_summary(p0, p05, t0, t05, 'P0', 'P0.5')
-            update_summary(p05, p1, t05, t1, 'P0.5', 'P1')
-            update_summary(p0, i05, t0, t05, 'P0', 'I0.5')
-            update_summary(i05, p1, t05, t1, 'I0.5', 'P1')
-            update_summary(p0, r05, t0, t05, 'P0', 'R0.5')
-            update_summary(r05, p1, t05, t1, 'R0.5', 'P1')
+            def update_summary(pop, time, name):
+                name_05 = 'P_cv{}'.format(cv05)
+                dist = wot.ot.earth_mover_distance(pop, p05.x)
+                summary.append([t0, t1, time, t05, cv0, cv1, name, name_05, dist])
+
+            if cv0 == cv1:
+                update_summary(p0.x, t0, 'F_cv{}'.format(cv0))
+                update_summary(p1.x, t1, 'L_cv{}'.format(cv1))
+            if cv0 == cv1 and cv0 < cv05:
+                p05b = ot_model.matrix.where(day=t05, covariate=cv0)
+                update_summary(p05b.x, t05, 'P_cv{}'.format(cv0))
+
+            update_summary(i05, t05, 'I_cv{}_cv{}'.format(cv0,cv1))
+            update_summary(r05, t05, 'R_cv{}_cv{}'.format(cv0,cv1))
 
     # Post-process summary to make it a pandas DataFrame with proper column names
     cols = ['interval_start', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1', 'distance']
