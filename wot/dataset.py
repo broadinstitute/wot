@@ -73,3 +73,31 @@ class Dataset:
         all_ids = self.row_meta.index[self.row_meta.apply(query, axis=1)]
         all_indices = self.row_meta.index.get_indexer_for(all_ids)
         return Dataset(self.x[all_indices], self.row_meta.iloc[all_indices].copy(), self.col_meta.copy())
+
+    def split_by(self, metadata):
+        """
+        Split Dataset into sub-datasets according to a metadata
+
+        Parameters
+        ----------
+        metadata : str
+            The metadata to use for the split
+
+        Returns
+        -------
+        splits : dict of t: wot.Dataset
+            Dictionnary of datasets. t is the type of the 'metadata' column.
+            Each cell in splits[k] has its 'metadata' column constant to k.
+
+        Raises
+        ------
+        ValueError
+            If the metadata is not present
+        """
+        if metadata not in self.row_meta.columns:
+            raise ValueError("Cannot split on '{}' : column not present".format(metadata))
+
+        def extract(group):
+            indices = self.row_meta.index.get_indexer_for(group.index)
+            return Dataset(self.x[indices], self.row_meta.iloc[indices].copy(), self.col_meta.copy())
+        return { name: extract(group) for name, group in self.row_meta.groupby(metadata) }
