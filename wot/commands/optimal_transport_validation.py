@@ -27,54 +27,52 @@ def compute_validation_summary(ot_model):
     """
     times = ot_model.timepoints
     # Skip a timepoint and validate using the skipped timepoint
-    interp_times = [(times[i], times[i+1], times[i+2]) for i in range(len(times) - 2)]
-    ot_model.day_pairs = { (t0, t1): {} for t0, _, t1 in interp_times }
+    ot_model.day_pairs = { (times[i], times[i+2]): {} for i in range(len(times) - 2) }
     if 'covariate' not in ot_model.matrix.row_meta.columns:
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
     ot_model.compute_all_transport_maps(force=False, with_covariates=True)
     # Now validate
     summary = []
-    covariates = set(ot_model.matrix.row_meta['covariate'])
-    wot.io.verbose('Generating validation summary for sequences {}, '\
-            'covariates {}'.format(interp_times, covariates))
 
-    for t0, t05, t1 in interp_times:
+    t05, t1 = times[:2]
+    p05 = ot_model.matrix.where(day=t05).split_by('covariate')
+    p1  = ot_model.matrix.where(day=t1 ).split_by('covariate')
+    for t in times[2:]:
         start_time = time.time()
         emd_time = 0
         int_time = 0
         load_time = 0
+
+        t0, t05, t1 = t05, t1, t
+        load_tmp = time.time()
+        p0, p05, p1 = p05, p1, ot_model.matrix.where(day=t1).split_by('covariate')
+        load_time += time.time() - load_tmp
         interp_frac = (t05 - t0) / (t1 - t0)
 
-        for cv0, cv1 in product(covariate, covariate):
+        for cv0, cv1 in product(p0.keys(), p1.keys()):
             load_tmp = time.time()
             tmap = ot_model.transport_map(t0, t1, covariate=(cv0, cv1))
-            p0  = ot_model.matrix.where(day=t0, covariate=cv0)
-            p1  = ot_model.matrix.where(day=t1, covariate=cv1)
             load_time += time.time() - load_tmp
             interp_size = (len(p0) + len(p1)) // 2
             int_tmp = time.time()
-            i05 = wot.ot.interpolate_with_ot(p0.x, p1.x, tmap.x, interp_frac, interp_size)
-            r05 = wot.ot.interpolate_randomly(p0.x, p1.x, interp_frac, interp_size)
+            i05 = wot.ot.interpolate_with_ot(p0[cv0].x, p1[cv1].x, tmap.x, interp_frac, interp_size)
+            r05 = wot.ot.interpolate_randomly(p0[cv0].x, p1[cv1].x, interp_frac, interp_size)
             int_time += time.time() - int_tmp
 
-            for cv05 in covariates:
-                load_tmp = time.time()
-                p05 = ot_model.matrix.where(day=t05, covariate=cv05)
-                load_time += time.time() - load_tmp
+            for cv05 in p05.keys():
 
                 def update_summary(pop, t, name):
                     name_05 = 'P_cv{}'.format(cv05)
                     emd_tmp = time.time()
-                    dist = wot.ot.earth_mover_distance(pop, p05.x)
+                    dist = wot.ot.earth_mover_distance(pop, p05[cv05].x)
                     summary.append([t0, t1, t, t05, cv0, cv1, name, name_05, dist])
                     return time.time() - emd_tmp
 
                 if cv0 == cv1:
-                    emd_time += update_summary(p0.x, t0, 'F_cv{}'.format(cv0))
-                    emd_time += update_summary(p1.x, t1, 'L_cv{}'.format(cv1))
+                    emd_time += update_summary(p0[cv0].x, t0, 'F_cv{}'.format(cv0))
+                    emd_time += update_summary(p1[cv1].x, t1, 'L_cv{}'.format(cv1))
                 if cv0 == cv1 and cv0 < cv05:
-                    p05b = ot_model.matrix.where(day=t05, covariate=cv0)
-                    emd_time += update_summary(p05b.x, t05, 'P_cv{}'.format(cv0))
+                    emd_time += update_summary(p05[cv0].x, t05, 'P_cv{}'.format(cv0))
 
                 emd_time += update_summary(i05, t05, 'I_cv{}_cv{}'.format(cv0,cv1))
                 emd_time += update_summary(r05, t05, 'R_cv{}_cv{}'.format(cv0,cv1))
