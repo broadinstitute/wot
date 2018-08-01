@@ -64,6 +64,8 @@ class OTModel:
         else:
             self.max_threads = max_threads
         wot.io.verbose("Using", self.max_threads, "thread(s) at most")
+        if self.max_threads > 1:
+            wot.io.verbose("Warning : Multiple threads are being used. Time estimates will be inaccurate")
 
         self.ot_config = {}
         for k in kwargs.keys():
