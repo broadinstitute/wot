@@ -10,6 +10,8 @@ import pandas as pd
 import scipy.sparse
 import wot
 
+import itertools
+
 
 class TestGeneSetScores(unittest.TestCase):
 
@@ -21,7 +23,7 @@ class TestGeneSetScores(unittest.TestCase):
                               '--gene_sets', os.path.abspath(
                 'inputs/score_gene_sets/gene_sets.gmx'),
                               '--out', 'test_gene_set_test_output',
-                              '--method', 'mean', '--format', 'txt', '--nbins', '1'],
+                              '--method', 'mean', '--format', 'txt'],
                         cwd=os.getcwd(),
                         stderr=subprocess.STDOUT)
         set_names = ['s1', 's2', 's3']
@@ -37,25 +39,33 @@ class TestGeneSetScores(unittest.TestCase):
                          col_meta=None)
 
         gs = wot.Dataset(x=np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]], dtype=np.uint8).T, row_meta=None, col_meta=None)
-        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=100, nbins=1,
-                                     random_state=1234, drop_frequency=100, drop_p_value_threshold=1,
-                                     smooth_p_values=False)
-        self.assertTrue(result['p_value'][0] == 8.0 / 100.0)
+        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=100,
+                                     random_state=1234, drop_frequency=100, drop_p_value_threshold=1)
+        self.assertEqual(result['k'][0], 15)
 
     def test_p_value1(self):
         ds = wot.Dataset(x=np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]), row_meta=None, col_meta=None)
         gs = wot.Dataset(x=np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8).T, row_meta=None, col_meta=None)
-        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=10, nbins=1,
-                                     drop_frequency=0)
+        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=10,
+                                     drop_frequency=0, random_state=1234)
         np.testing.assert_array_equal(result['p_value'][0], 11.0 / 12.0)
+
+    def test_p_value2(self):
+        ds = wot.Dataset(x=np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]), row_meta=None, col_meta=None)
+        gs = wot.Dataset(x=np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 1]], dtype=np.uint8).T, row_meta=None, col_meta=None)
+        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=45,
+                                     drop_frequency=0, random_state=1234)
+        np.testing.assert_array_equal(result['k'][0], (
+                np.mean(np.array(list(itertools.combinations([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 2))),
+                        axis=1) >= 5.5).sum())
 
     def test_score_gene_sets_no_drop(self):
         ds = wot.Dataset(x=np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]), row_meta=None, col_meta=None)
 
         gs = wot.Dataset(x=np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]], dtype=np.uint8).T, row_meta=None, col_meta=None)
-        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=1000, nbins=1,
+        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=1000,
                                      random_state=1234, drop_frequency=0)
-        self.assertTrue(result['p_value'][0] == 108.0 / 1002.0)
+        self.assertEqual(result['k'][0], 116)
 
     def test_score_gene_sets_sparse_ds(self):
         ds = wot.Dataset(
@@ -64,11 +74,23 @@ class TestGeneSetScores(unittest.TestCase):
             col_meta=None)
 
         gs = wot.Dataset(x=np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]], dtype=np.uint8).T, row_meta=None, col_meta=None)
-        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=100, nbins=1,
+        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=100,
+                                     random_state=1234, drop_frequency=100, drop_p_value_threshold=1,
+                                     smooth_p_values=False)
+        self.assertEqual(result['k'][0], 15)
+
+    def test_score_gene_sets_sparse_ds_zscore(self):
+        ds = wot.Dataset(
+            x=scipy.sparse.csr_matrix(np.array([[0, 0, 0, 4, 5, 6, 7, 8, 9, 10], [1, 2, 3, 5, 6, 7, 9, 9, 19, 11]])),
+            row_meta=None,
+            col_meta=None)
+
+        gs = wot.Dataset(x=np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]], dtype=np.uint8).T, row_meta=None, col_meta=None)
+        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method='mean_z_score', permutations=100,
                                      random_state=1234, drop_frequency=100, drop_p_value_threshold=1,
                                      smooth_p_values=False)
 
-        self.assertTrue(result['p_value'][0] == 8.0 / 100.0)
+        self.assertEqual(result['k'][0], 100)
 
     def test_score_gene_sets_sparse_gs(self):
         ds = wot.Dataset(
@@ -78,11 +100,11 @@ class TestGeneSetScores(unittest.TestCase):
 
         gs = wot.Dataset(x=scipy.sparse.csr_matrix(np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]], dtype=np.uint8).T),
                          row_meta=None, col_meta=None)
-        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=100, nbins=1,
+        result = wot.score_gene_sets(dataset_to_score=ds, gs=gs, method=None, permutations=100,
                                      random_state=1234, drop_frequency=100, drop_p_value_threshold=1,
                                      smooth_p_values=False)
 
-        self.assertTrue(result['p_value'][0] == 8.0 / 100.0)
+        self.assertEqual(result['k'][0], 15)
 
     def test_score_gene_sets_basic(self):
         ds = wot.Dataset(x=np.array([[1.0, 2.0, 3, 0], [4, 5, 6.0, 0]]),
@@ -103,7 +125,7 @@ class TestGeneSetScores(unittest.TestCase):
         for j in range(gs.x.shape[1]):
             result = wot.score_gene_sets(dataset_to_score=ds,
                                          gs=wot.Dataset(gs.x[:, [j]], gs.row_meta, gs.col_meta.iloc[[j]]), method=None,
-                                         permutations=10, nbins=1)
+                                         permutations=10)
             scores.append(result['score'])
         np.testing.assert_array_equal(np.hstack(scores), expected)
 
