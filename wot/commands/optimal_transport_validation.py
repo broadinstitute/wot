@@ -40,24 +40,16 @@ def compute_validation_summary(ot_model):
     for t in times[2:]:
         start_time = time.time()
         emd_time = 0
-        int_time = 0
-        load_time = 0
 
         t0, t05, t1 = t05, t1, t
-        load_tmp = time.time()
         p0, p05, p1 = p05, p1, ot_model.matrix.where(day=t1).split_by('covariate')
-        load_time += time.time() - load_tmp
         interp_frac = (t05 - t0) / (t1 - t0)
 
         for cv0, cv1 in product(p0.keys(), p1.keys()):
-            load_tmp = time.time()
             tmap = ot_model.transport_map(t0, t1, covariate=(cv0, cv1))
-            load_time += time.time() - load_tmp
             interp_size = (len(p0) + len(p1)) // 2
-            int_tmp = time.time()
             i05 = wot.ot.interpolate_with_ot(p0[cv0].x, p1[cv1].x, tmap.x, interp_frac, interp_size)
             r05 = wot.ot.interpolate_randomly(p0[cv0].x, p1[cv1].x, interp_frac, interp_size)
-            int_time += time.time() - int_tmp
 
             for cv05 in p05.keys():
 
@@ -77,8 +69,9 @@ def compute_validation_summary(ot_model):
                 emd_time += update_summary(i05, t05, 'I_cv{}_cv{}'.format(cv0,cv1))
                 emd_time += update_summary(r05, t05, 'R_cv{}_cv{}'.format(cv0,cv1))
 
-        wot.io.verbose("Processed ({}, {}, {}) in {:.2f}s [{:.2f}s] ({:.2f}s) <{:.2f}s>"\
-                .format(t0, t05, t1, time.time() - start_time, emd_time, int_time, load_time))
+        total_time = time.time() - start_time
+        wot.io.verbose("Processed ({}, {}, {}) in {:.2f}s ({:.2f}% on EMD)"\
+                .format(t0, t05, t1, total_time, 100 * emd_time / total_time))
 
     # Post-process summary to make it a pandas DataFrame with proper column names
     cols = ['interval_start', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1', 'distance']
