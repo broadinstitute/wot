@@ -93,9 +93,9 @@ def main(argv):
     parser.add_argument('--nperm', help='Number of permutations', default=10000, type=int)
     parser.add_argument('--method', help='Method to compute gene set scores',
                         choices=['mean_z_score', 'mean', 'mean_rank'])
-    parser.add_argument('--n_neighbors', help='Number of neighbors for sampling', default=25, type=int)
+    parser.add_argument('--n_neighbors', help='Number of neighbors for sampling', default=20, type=int)
     parser.add_argument('--neighbors_method', help='Method to find nearest neighbors',
-                        choices=['mean', 'variance', 'mean_variance'], required=True)
+                        choices=['mean', 'variance', 'mean_variance'], default='mean')
     parser.add_argument('--drop_p_value_threshold',
                         help='Exclude cells from further permutations when the estimated lower bound of the nominal p-value is >= drop_p_value_threshold',
                         default=0.05, type=float)
