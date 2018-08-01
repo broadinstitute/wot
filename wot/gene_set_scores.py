@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.sparse
 import scipy.stats
+import sklearn.neighbors
+
 import wot
 
 
@@ -45,16 +47,16 @@ def fdr(pvals, is_sorted=False, method='indep'):
 
 def get_p_value_ci(n, n_s, z):
     # smooth
-    n += 2
-    n_s += 1
+    n = n + 2
+    n_s = n_s + 1
     n_f = n - n_s
     ci = (z / n) * np.sqrt((n_s * n_f) / n)
     return ci
 
 
-def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=None,
-                    nbins=25, bin_by='mean', random_state=0, drop_frequency=1000, drop_p_value_threshold=0.05,
-                    smooth_p_values=True, progress=False, quantile_bins=False):
+def score_gene_sets(dataset_to_score, gs, method='mean', permutations=None, n_neighbors=20, neighbors_method='mean',
+                    random_state=0, drop_frequency=1000, drop_p_value_threshold=0.05,
+                    smooth_p_values=True, progress=False):
     """Score gene sets.
 
     Note that datasets and gene sets must be aligned prior to invoking this method. No check is done.
@@ -63,8 +65,8 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
 
     Parameters
     ----------
-    nbins : `int`, optional
-        Number of bins for sampling.
+    n_neighbors : `int`, optional
+        Number of neighbors for sampling.
     random_state : `int`, optional (default: 0)
         The random seed for sampling.
 
@@ -73,8 +75,6 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
     Observed scores and permuted p-values if permutations > 0
 
     """
-    # gene_indices = (gs_x.sum(axis=1) > 0) & (
-    #         background_x.std(axis=0) > 0)  # keep genes that are in gene sets and have standard deviation > 0
 
     x = dataset_to_score.x
     # preprocess the dataset
@@ -104,57 +104,46 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
     if gs.x.shape[1] > 1:
         raise ValueError('Only one gene set allowed as input')
     gs_1_0 = gs.x
-    if permutations is not None and permutations > 0:
-        if bin_by == 'mean' and method == 'mean_z_score':
-            bin_by = 'var'
-        _bin_values = x.mean(axis=0) if bin_by == 'mean' else wot.mean_and_variance(x)[1]
-        bin_values = _bin_values
-        if quantile_bins:
-            # ranks go from 1 to len(bin_values)
-            bin_values = scipy.stats.rankdata(bin_values, method='min')
-        bin_min = np.min(bin_values)
-        bin_max = np.max(bin_values)
-        bin_width = (bin_max - bin_min) / nbins
-        bin_assignments = np.floor((bin_values - bin_min) / bin_width)
-        bin_assignments[bin_assignments == nbins] = nbins - 1
-        bin_index_to_gene_indices = []
-        all_gene_indices = []
-        missing_bins = False
-        filter_index = 1 if len(bin_assignments.shape) > 1 else 0
 
-        for bin_index in range(nbins):
-            gene_indices = np.where(bin_assignments == bin_index)[filter_index]
-            ngenes_in_set_bin = np.sum(gs_1_0[gene_indices])
-            if len(gene_indices) > ngenes_in_set_bin and ngenes_in_set_bin > 0:
-                if progress:
-                    print('bin #' + str(bin_index + 1) + ' ' + str(ngenes_in_set_bin) + '/' + str(len(gene_indices)))
-                bin_index_to_gene_indices.append(gene_indices)
-                all_gene_indices.append(gene_indices)
-            else:
-                if ngenes_in_set_bin > 0:
-                    print('Unable to use bin ' + str(bin_index))
-                missing_bins = True
-        # permute each bin separately
-        input_nbins = nbins
-        nbins = len(bin_index_to_gene_indices)
-        if nbins is 0:
-            permutations = 0
-            print('Unable to find compatible bins')
-        if nbins != input_nbins:
-            print('Using ' + str(nbins) + ' out of ' + str(input_nbins) + ' bins')
-
-    # gene sets has genes on rows, sets on columns
-    # ds has cells on rows, genes on columns
-    # scores contains cells on rows, gene sets on columns
     if not scipy.sparse.issparse(gs_1_0):
         gs_1_0 = scipy.sparse.csr_matrix(gs_1_0)
+
     observed_scores = x @ gs_1_0
     if hasattr(observed_scores, 'toarray'):
         observed_scores = observed_scores.toarray()
     ngenes_in_set = gs_1_0.sum(axis=0)
     if progress:
         print('# of genes in gene set ' + str(ngenes_in_set))
-    # ngenes_in_set[ngenes_in_set == 0] = 1  # avoid divide by zero
+
+    if permutations is not None and permutations > 0:
+        if neighbors_method == 'mean' and method == 'mean_z_score':
+            neighbors_method = 'var'
+        if neighbors_method is 'mean':
+            bin_values = x.mean(axis=0)
+            if len(bin_values.shape) > 1:
+                bin_values = bin_values[0]
+            bin_values = bin_values.reshape(-1, 1)  # n_genes by 1
+        else:
+            mean, var = wot.mean_and_variance(x)
+            if neighbors_method is 'var':
+                bin_values = var.reshape(-1, 1)
+            else:
+                bin_values = np.array([mean, var]).T
+
+        # if quantile_bins:
+        #     bin_values = scipy.stats.rankdata(bin_values, method='min')
+
+        nbrs = sklearn.neighbors.NearestNeighbors(algorithm='ball_tree',
+                                                  n_neighbors=min(n_neighbors, bin_values.shape[0]),
+                                                  metric='euclidean').fit(bin_values)
+
+        gene_indices = np.where((gs_1_0 > 0).toarray())[0]
+        nn_matrix = nbrs.kneighbors_graph(bin_values[gene_indices], mode='connectivity')
+        # nn_matrix is binary matrix of n_genes by n_neighbors
+
+    # gene sets has genes on rows, sets on columns
+    # ds has cells on rows, genes on columns
+    # scores contains cells on rows, gene sets on columns
     p_value_ci = None
     if permutations is not None and permutations > 0:
         if random_state:
@@ -162,36 +151,28 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
         p_values = np.zeros(x.shape[0])
         z = scipy.stats.norm.ppf(0.99)
         npermutations = np.zeros(x.shape[0])  # number of permutations per cell
-        if missing_bins:  # keep genes in bins only
-            x = x[:, np.concatenate(all_gene_indices)]
         # keep track of cells that have low p-values
         cells_to_keep = np.ones(x.shape[0], dtype=bool)
         do_drop = drop_frequency > 0
         block_size = drop_frequency if do_drop else min(1000, permutations)
-        bin_sizes = []
-        for bin_index in range(nbins):
-            subset = gs_1_0[bin_index_to_gene_indices[bin_index]]
-            bin_sizes.append(subset.shape[0])
         total_permutations = 0
+
         for i in range(0, permutations, block_size):
             current_block_size = min(i + block_size, permutations) - i
             total_permutations += current_block_size
             npermutations[cells_to_keep] += current_block_size
-            permuted_gs = np.zeros((x.shape[1], current_block_size))
-            bin_start = 0
-            bin_end = 0
-            for bin_index in range(nbins):
-                subset = gs_1_0[bin_index_to_gene_indices[bin_index]]
-                bin_size = subset.shape[0]
-                nchoose = subset.sum()
-                bin_end += bin_size
+            permuted_gs = np.zeros(shape=(x.shape[1], current_block_size), dtype=np.uint8)  # genes by permutations
+            for nn_gene_index in range(nn_matrix.shape[0]):  # each gene
+                compatible_gene_indices = np.random.choice(np.where((nn_matrix[nn_gene_index] > 0).toarray())[1],
+                                                           current_block_size,
+                                                           replace=True)
                 for j in range(current_block_size):
-                    # np.random.shuffle(subset)
-                    # permuted_gs[:, j] = subset[:, 0]
-                    s = np.zeros(bin_size)
-                    s[np.random.choice(bin_size, nchoose, replace=False)] = 1
-                    permuted_gs[bin_start:bin_end, j] = s
-                bin_start = bin_end
+                    permuted_gs[compatible_gene_indices[j], j] += 1
+                # for j in range(current_block_size):
+                #     # np.random.shuffle(subset)
+                #     # permuted_gs[:, j] = subset[:, 0]
+                #
+                #     permuted_gs[bin_start:bin_end, j] = s
                 # shuffle each column independently
             # permuted scores has cells on rows, gene set on columns repeated current_block_size times
             permuted_gs = scipy.sparse.csr_matrix(permuted_gs)
@@ -200,7 +181,6 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
             if hasattr(permuted_scores, 'toarray'):
                 permuted_scores = permuted_scores.toarray()
             p_values[cells_to_keep] += (permuted_scores >= observed_scores[cells_to_keep]).sum(axis=1)
-
             if do_drop:
                 p_value_ci = get_p_value_ci(npermutations, p_values, z)
                 n_s = p_values
@@ -223,7 +203,7 @@ def score_gene_sets(dataset_to_score, gs, method='mean_z_score', permutations=No
         if smooth_p_values:
             p_values = (p_values + 1) / (npermutations + 2)
         else:
-            p_values /= npermutations
+            p_values = p_values / npermutations
         fdr_low = None
         fdr_high = None
         if p_value_ci is not None:

@@ -10,10 +10,14 @@ import wot.io
 
 
 def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_set=None,
-            permutations=None, method='mean_z_score', nbins=None, drop_frequency=None, drop_p_value_threshold=None,
-            gene_set_filter=None, progress=False, quantile_bins=False):
+            permutations=None, method=None, n_neighbors=None, drop_frequency=None,
+            drop_p_value_threshold=None, gene_set_filter=None, progress=False, neighbors_method=None):
+    if out is None:
+        out = ''
     use_dask = False
     ds = wot.io.read_dataset(matrix, use_dask=use_dask, chunks=(10000, None))
+    if progress:
+        print('Read ' + matrix)
     if cell_filter is not None:
         cell_filter = wot.io.read_gene_sets(cell_filter)
         cells_ids = cell_filter.row_meta.index.values[np.where(cell_filter.x[:, 0] > 0)[0]]
@@ -28,6 +32,8 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
         background_ds = wot.Dataset(ds.x[cell_filter], ds.row_meta.iloc[cell_filter], ds.col_meta)
 
     gs = wot.io.read_gene_sets(gene_sets, ds.col_meta.index.values)
+    if progress:
+        print('Read ' + gene_sets)
     if gs.x.shape[1] is 0:
         raise ValueError('No overlap of genes in gene sets and dataset')
     if gene_set_filter is not None:
@@ -46,9 +52,9 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
             print(gs.col_meta.index.values[j])
         result = wot.score_gene_sets(dataset_to_score=ds,
                                      gs=wot.Dataset(gs.x[:, [j]], gs.row_meta, gs.col_meta.iloc[[j]]),
-                                     permutations=permutations, method=method, nbins=nbins,
+                                     permutations=permutations, method=method, n_neighbors=n_neighbors,
                                      drop_frequency=drop_frequency, drop_p_value_threshold=drop_p_value_threshold,
-                                     progress=progress, quantile_bins=quantile_bins)
+                                     progress=progress, neighbors_method=neighbors_method)
         column_names = [str(gs.col_meta.index.values[j])]
         if permutations is not None and permutations > 0:
             column_names.append('p_value')
@@ -87,14 +93,15 @@ def main(argv):
     parser.add_argument('--nperm', help='Number of permutations', default=10000, type=int)
     parser.add_argument('--method', help='Method to compute gene set scores',
                         choices=['mean_z_score', 'mean', 'mean_rank'])
-    parser.add_argument('--nbins', help='Number of bins for sampling', default=25, type=int)
+    parser.add_argument('--n_neighbors', help='Number of neighbors for sampling', default=25, type=int)
+    parser.add_argument('--neighbors_method', help='Method to find nearest neighbors',
+                        choices=['mean', 'variance', 'mean_variance'], required=True)
     parser.add_argument('--drop_p_value_threshold',
                         help='Exclude cells from further permutations when the estimated lower bound of the nominal p-value is >= drop_p_value_threshold',
                         default=0.05, type=float)
     parser.add_argument('--drop_frequency',
                         help='Check the estimated lower bound of the nominal p-value every drop_frequency permutations',
                         default=1000, type=int)
-    parser.add_argument('--quantile_bins', action='store_true', help='Bin using quantiles')
     parser.add_argument('--progress', action='store_true', help='Print progress information')
 
     args = parser.parse_args(argv)
@@ -117,6 +124,6 @@ def main(argv):
         import sys
         gene_sets = os.path.join(os.path.dirname(sys.argv[0]), 'resources', 'growth_scores_gene_sets.gmx')
     compute(matrix=args.matrix, cell_filter=args.cell_filter, gene_sets=gene_sets, out=args.out,
-            format=args.format, permutations=args.nperm, method=args.method, nbins=args.nbins,
+            format=args.format, permutations=args.nperm, method=args.method, n_neighbors=args.n_neighbors,
             drop_frequency=args.drop_frequency, drop_p_value_threshold=args.drop_p_value_threshold,
-            gene_set_filter=args.gene_set_filter, progress=args.progress, quantile_bins=args.quantile_bins)
+            gene_set_filter=args.gene_set_filter, progress=args.progress, neighbors_method=args.neighbors_method)
