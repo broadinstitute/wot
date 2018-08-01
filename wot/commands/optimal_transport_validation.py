@@ -47,7 +47,7 @@ def compute_validation_summary(ot_model):
 
         for cv0, cv1 in product(p0.keys(), p1.keys()):
             tmap = ot_model.transport_map(t0, t1, covariate=(cv0, cv1))
-            interp_size = (len(p0) + len(p1)) // 2
+            interp_size = (len(p0[cv0]) + len(p1[cv1])) // 2
             i05 = wot.ot.interpolate_with_ot(p0[cv0].x, p1[cv1].x, tmap.x, interp_frac, interp_size)
             r05 = wot.ot.interpolate_randomly(p0[cv0].x, p1[cv1].x, interp_frac, interp_size)
 
