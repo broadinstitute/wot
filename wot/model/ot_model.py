@@ -61,6 +61,7 @@ class OTModel:
 
         if max_threads is None:
             wot.io.verbose("Argument max_threads not set. Using default")
+            # max_usable_cores = len(os.sched_getaffinity(0))
             self.max_threads = 1
         else:
             self.max_threads = max_threads
