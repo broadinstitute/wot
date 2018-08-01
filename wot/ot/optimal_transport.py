@@ -138,7 +138,6 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
     start_time = time.time()
     duality_time = 0
     epsilon_i = epsilon0 * scale_factor
-    duality_gap = np.inf
 
     for e in range(epsilon_scalings + 1):
         duality_gap = np.inf
