@@ -97,6 +97,7 @@ def main(argv):
     ot_model = wot.initialize_ot_model(args.matrix, args.cell_days,
             tmap_dir = tmap_dir,
             tmap_prefix = tmap_prefix,
+            fast = True,
             local_pca = args.local_pca,
             growth_iters = args.growth_iters,
             epsilon = args.epsilon,

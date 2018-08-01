@@ -53,19 +53,24 @@ class OTModel:
             covariate_data_frame = wot.io.read_covariate_data_frame(cov)
             self.matrix.row_meta = self.matrix.row_meta.join(covariate_data_frame)
 
+        if max_threads is None:
+            wot.io.verbose("Argument max_threads not set. Using default")
+            max_usable_cores = len(os.sched_getaffinity(0))
+            if kwargs.pop('fast', False):
+                wot.io.verbose("Fast mode. Using all but one cores")
+                self.max_threads = max_usable_cores - 1
+            else:
+                self.max_threads = 1
+        else:
+            self.max_threads = max_threads
+        wot.io.verbose("Using", self.max_threads, "thread(s) at most")
+
         self.ot_config = {}
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
         wot.model.purge_invalidated_caches(self)
         self.tmaps, self.cov_tmaps = wot.model.scan_transport_map_directory(self)
 
-        if max_threads is None:
-            wot.io.verbose("Argument max_threads not set. Using default")
-            # max_usable_cores = len(os.sched_getaffinity(0))
-            self.max_threads = 1
-        else:
-            self.max_threads = max_threads
-        wot.io.verbose("Using", self.max_threads, "thread(s) at most")
 
     def get_ot_config(self):
         """
