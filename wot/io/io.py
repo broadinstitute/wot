@@ -682,10 +682,10 @@ def write_dataset(ds, path, output_format='txt', txt_full=True):
                 f.write(str(ds.x.shape[0]) + '\t' + str(ds.x.shape[1]) + '\t' + str(len(ds.row_meta.columns)) +
                         '\t' + str(len(ds.col_meta.columns)) + '\n')
             f.write('id\t')
-            f.write('\t'.join(ds.row_meta.columns))
+            f.write('\t'.join(str(x) for x in ds.row_meta.columns))
             if len(ds.row_meta.columns) > 0:
                 f.write('\t')
-            f.write('\t'.join(ds.col_meta.index.values))
+            f.write('\t'.join(str(x) for x in ds.col_meta.index.values))
             f.write('\n')
             spacer = ''.join(np.full(len(ds.row_meta.columns), '\t', dtype=object))
             # column metadata fields + values
