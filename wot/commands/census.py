@@ -8,7 +8,19 @@ import pandas as pd
 import wot
 import wot.io
 
-def ancestor_census(ot_model, cset_matrix, *populations):
+def compute_ancestor_census(ot_model, cset_matrix, *populations):
+    """
+    Computes the census for the populations (for both ancestors and descendants).
+
+    Parameters
+    ----------
+    ot_model : wot.OTMolde
+        The OTModel used to find ancestors and descendants of the population
+    cset_matrix : wot.Dataset
+        The cell set matrix, cells as rows, cell sets as columns. 1s denote membership.
+    *populations : wot.Population
+        The target populations
+    """
     initial_populations = populations
     timepoints = []
     census = []
@@ -50,7 +62,7 @@ def main(argv):
     keys = [ keys[i] for i in range(len(keys)) if populations[i] is not None ]
     populations = [ p for p in populations if p is not None ]
 
-    timepoints, census = ancestor_census(ot_model, cell_sets_matrix, *populations)
+    timepoints, census = compute_ancestor_census(ot_model, cell_sets_matrix, *populations)
 
     row_meta = pd.DataFrame([], index=timepoints, columns=[])
     for i in range(len(census)):
