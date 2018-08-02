@@ -11,9 +11,9 @@ import scipy
 import wot.io
 import wot.ot
 
-def compute_trajectories(ot_model, *populations):
+def compute_trajectory_trends(ot_model, *populations):
     """
-    Computes the average and variance of each gene over time for the given populations
+    Computes the mean and variance of each gene over time for the given populations
 
     Parameters
     ----------
@@ -37,7 +37,7 @@ def compute_trajectories(ot_model, *populations):
 
     Examples
     --------
-    >>> timepoints, means, variances = compute_trajectories(ot_model, pop1, pop2, pop3)
+    >>> timepoints, means, variances = compute_trajectory_trends(ot_model, pop1, pop2, pop3)
     >>> means[i][j][k] # -> the mean value of the ancestors of population i at time j for gene k
     """
     timepoints = [wot.model.unique_timepoint(*populations)]
@@ -80,12 +80,12 @@ def main(argv):
     if len(populations) == 0:
         raise ValueError("No cells from the given cell sets are present at that time")
 
-    timepoints, trajectories, variances = compute_trajectories(ot_model, *populations)
+    timepoints, trends, variances = compute_trajectory_trends(ot_model, *populations)
 
     row_meta = pd.DataFrame([], index=timepoints, columns=[])
     col_meta = ot_model.matrix.col_meta.copy()
-    for i in range(len(trajectories)):
+    for i in range(len(trends)):
         cs_name = keys[i]
-        res = wot.Dataset(trajectories[i], row_meta, col_meta)
+        res = wot.Dataset(trends[i], row_meta, col_meta)
         # TODO: write the variances to a different file if a flag is passed
         wot.io.write_dataset(res, args.out + '_' + cs_name, output_format='txt', txt_full=False)
