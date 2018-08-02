@@ -147,6 +147,9 @@ class OTModel:
 
         m = self.max_threads
 
+        if not day_pairs:
+            return
+
         if m > 1 :
             procs = []
             for x in day_pairs:
