@@ -83,8 +83,10 @@ def primal(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
     J = len(q)
     F1 = lambda x, y : fdiv(lambda1, x, p, y)
     F2 = lambda x, y : fdiv(lambda2, x, q, y)
-    return F1(np.dot(R, dy), dx) + F2(np.dot(R.T, dx), dy) \
-            + (epsilon * np.sum(R * np.log(R) - R + K) + np.sum(R * C)) / (I * J)
+    with np.errstate(divide='ignore'):
+        return F1(np.dot(R, dy), dx) + F2(np.dot(R.T, dx), dy) \
+                + (epsilon * np.sum(R * np.nan_to_num(np.log(R)) - R + K)\
+                + np.sum(R * C)) / (I * J)
 
 def dual(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
     I = len(p)
