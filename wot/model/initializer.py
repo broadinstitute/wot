@@ -28,11 +28,11 @@ def initialize_ot_model(matrix, days, tmap_dir = '.', tmap_prefix = None, **kwar
 
     Example
     -------
-    # Basic initialization
-    initialize_ot_model('matrix.txt', 'days.txt')
+    >>> # Basic initialization
+    >>> initialize_ot_model('matrix.txt', 'days.txt')
 
-    # Tweaking unbalanced parameters
-    intialize_ot_model('matrix.txt', 'days.txt', lambda1=50, lambda2=80, epsilon=.01)
+    >>> # Tweaking unbalanced parameters
+    >>> initialize_ot_model('matrix.txt', 'days.txt', lambda1=50, lambda2=80, epsilon=.01)
     """
     ds = wot.io.read_dataset(matrix)
     wot.io.incorporate_days_information_in_dataset(ds, days)
