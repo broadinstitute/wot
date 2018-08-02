@@ -554,6 +554,8 @@ class OTModel:
             day = self.matrix.row_meta.loc[ids[0][0], 'day']
             if not all(self.matrix.row_meta.iloc[cell_inds]['day'] == day):
                 raise ValueError("All cells do not live in the same timepoint. Please choose one")
+        else:
+            day = float(at_time)
 
         day_query = self.matrix.row_meta['day'] == day
         all_inds = np.where(day_query)[0]
