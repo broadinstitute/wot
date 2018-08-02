@@ -465,6 +465,14 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
             print(basename_and_extension[0] + '.barcodes.txt not found')
             row_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
 
+        cell_count, gene_count = x.shape
+        if len(row_meta) != cell_count :
+            raise ValueError("Wrong number of cells : matrix has {} cells, barcodes file has {}"\
+                    .format(cell_count, len(row_meta)))
+        if len(col_meta) != gene_count :
+            raise ValueError("Wrong number of genes : matrix has {} genes, genes file has {}"\
+                    .format(gene_count, len(col_meta)))
+
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom' or ext == 'h5ad':
         f = h5py.File(path, 'r')
