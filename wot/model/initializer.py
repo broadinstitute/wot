@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import wot.io
+import wot
 import pandas as pd
 from .ot_model import *
 
@@ -38,6 +38,37 @@ def initialize_ot_model(matrix, days, tmap_dir = '.', tmap_prefix = None, **kwar
     wot.io.incorporate_days_information_in_dataset(ds, days)
     ot_model = OTModel(ds, tmap_dir, tmap_prefix, **kwargs)
     return ot_model
+
+def load_ot_model(matrix, days, tmaps):
+    """
+    Loads a previously generated OTModel, from the tmaps configuration
+
+    Parameters
+    ----------
+    matrix : str
+        Path to a gene expression matrix file.
+    days : str
+        Path to a days file for the matrix.
+    tmaps : str
+        Path to the transport maps cache
+
+    Returns
+    -------
+    ot_model : wot.OTModel
+        The OTModel, with the previously cached transport maps available
+    """
+    if not (len(tmaps) > 4 and tmaps[-4:] == ".yml"):
+        tmaps += ".yml"
+    if not os.path.isfile(tmaps):
+        raise ValueError("Configuration file not found : {}".format(tmaps))
+
+    with open(tmaps, 'r') as stream:
+        config = wot.model.parse_ot_configuration_from_stream(stream)
+
+    tmap_dir, tmap_prefix = os.path.split(tmaps[:-4])
+    return initialize_ot_model(matrix, days,
+            tmap_dir=tmap_dir, tmap_prefix=tmap_prefix,
+            **config)
 
 def parse_configuration(config):
     """

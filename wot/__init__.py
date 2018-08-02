@@ -3,6 +3,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 from .model import initialize_ot_model
+from .model import load_ot_model
 from .dataset import *
 from .dataset_util import *
 import wot.io
