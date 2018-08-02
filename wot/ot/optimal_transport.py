@@ -5,6 +5,7 @@ import numpy as np
 import ot as pot
 import scipy.stats
 import wot
+import sklearn.decomposition
 
 from wot.cython_speedup.ot import __cy__transport_stablev3
 
@@ -467,3 +468,33 @@ def glue_transport_maps(tmap_0, tmap_1):
     cait_index = tmap_1.row_meta.index.get_indexer_for(cells_at_intermediate_tpt)
     result_x = np.dot(tmap_0.x, tmap_1.x[cait_index,:])
     return wot.Dataset(result_x, tmap_0.row_meta.copy(), tmap_1.col_meta.copy())
+
+def get_pca(dim, *args):
+    """
+    Get a PCA projector for the arguments.
+
+    Parameters
+    ----------
+    dim : int
+        The number of components to use for PCA, i.e. number of dimensions of the resulting space.
+    *args : ndarray
+        The points to compute dimensionality reduction for. Can be several sets of points.
+
+    Returns
+    -------
+    pca : sklearn.decomposition.PCA
+        A PCA projector. Use `pca.transform(x)` to get the PCA-space projection of x.
+
+    Example
+    -------
+    >>> pca = get_pca(30, p0_x)
+    >>> pca.transform(p0_x)
+    >>> # -> project p0_x to PCA space
+    >>> pca = get_pca(30, p0_x, p1_x)
+    >>> p0, p05, p1 = [ pca.transform(x) for x in [p0_x, p05_x, p1_x] ]
+    >>> # -> project all three sets of points to PCA space computed from p0_x and p1_x
+    """
+    x = np.vstack(args)
+    x = x - x.mean(axis=0)
+    pca = sklearn.decomposition.PCA(n_components = dim)
+    return pca.fit(x)

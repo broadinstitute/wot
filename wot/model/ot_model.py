@@ -88,7 +88,8 @@ class OTModel:
                 'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
                 'epsilon0': 1, 'tau': 1e4,
                 'growth_iters': 3, 'batch_size': 50,
-                'tolerance': 1e-2, 'g': None
+                'tolerance': 1e-2, 'g': None,
+                'local_pca': 30,
                 }
         # TODO: parse cell growth rates files
         # TODO: support gene_filter and cell_filter
