@@ -9,15 +9,25 @@ import wot
 import wot.io
 
 def ancestor_census(ot_model, cset_matrix, *populations):
-    timepoints = [wot.model.unique_timepoint(*populations)]
+    initial_populations = populations
+    timepoints = []
     census = []
-    census.append(ot_model.population_census(cset_matrix, *populations))
+
+    def update(head, populations):
+        x = 0 if head else len(census)
+        timepoints.insert(x, wot.model.unique_timepoint(*populations))
+        census.insert(x, ot_model.population_census(cset_matrix, *populations))
+
+    update(True, populations)
     while ot_model.can_pull_back(*populations):
         populations = ot_model.pull_back(*populations)
-        timepoints.append(wot.model.unique_timepoint(*populations))
-        census.append(ot_model.population_census(cset_matrix, *populations))
-    census = np.asarray(census)[::-1,:,:]
-    return timepoints[::-1], [ census[:,i,:] for i in range(census.shape[1]) ]
+        update(True, populations)
+    populations = initial_populations
+    while ot_model.can_push_forward(*populations):
+        populations = ot_model.push_forward(*populations)
+        update(False, populations)
+    census = np.asarray(census)
+    return timepoints, [ census[:,i,:] for i in range(census.shape[1]) ]
 
 def main(argv):
     parser = argparse.ArgumentParser(

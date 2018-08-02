@@ -40,21 +40,29 @@ def compute_trajectory_trends(ot_model, *populations):
     >>> timepoints, means, variances = compute_trajectory_trends(ot_model, pop1, pop2, pop3)
     >>> means[i][j][k] # -> the mean value of the ancestors of population i at time j for gene k
     """
-    timepoints = [wot.model.unique_timepoint(*populations)]
+    initial_populations = populations
+    timepoints = []
     traj, variances = [], []
-    def update(*populations):
+    def update(head, populations):
+        x = 0 if head else len(traj)
         m, v = ot_model.population_mean_and_variance(*populations)
-        traj.append(m); variances.append(v)
+        timepoints.insert(x, wot.model.unique_timepoint(*populations))
+        traj.insert(x, m); variances.insert(x, v)
 
-    update(*populations)
+    update(True, populations)
     while ot_model.can_pull_back(*populations):
         populations = ot_model.pull_back(*populations)
-        timepoints.append(wot.model.unique_timepoint(*populations))
-        update(*populations)
+        update(True, populations)
+    populations = initial_populations
+    while ot_model.can_push_forward(*populations):
+        populations = ot_model.push_forward(*populations)
+        update(False, populations)
+
     def unpack(arr):
-        arr = [ arr[::-1,i,:] for i in range(arr.shape[1]) ]
+        arr = np.asarray(arr)
+        arr = [ arr[:,i,:] for i in range(arr.shape[1]) ]
         return arr if len(arr) > 1 else arr[0]
-    return timepoints[::-1], unpack(np.asarray(traj)), unpack(np.asarray(variances))
+    return timepoints, unpack(traj), unpack(variances)
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Generate mean expression profiles for '\
