@@ -155,10 +155,13 @@ def multivariate_normal_mixture(means, covs, p=None, size=1):
     if not size > 0:
         raise ValueError("size is not positive")
 
-    picks = np.random.choice(means.shape[0], p=p, size=size)
-    generate = lambda i : np.random.multivariate_normal(means[i], covs[i])
-    generator = np.vectorize(generate, signature='()->(n)')
-    result = generator(picks)
+    result = np.empty([size, means.shape[1]], dtype=np.float64)
+    picks = np.random.multinomial(size, p)
+    c = 0
+    for i in range(len(p)):
+        result[c:c+picks[i]] = \
+                np.random.multivariate_normal(means[i], covs[i], size=picks[i])
+        c += picks[i]
 
     if size == 1:
         return result.item()
