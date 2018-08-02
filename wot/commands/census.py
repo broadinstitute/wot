@@ -31,7 +31,7 @@ def main(argv):
 
     args = parser.parse_args(argv)
 
-    ot_model = wot.initialize_ot_model(args.matrix, args.cell_days, transport_maps_directory = args.tmap)
+    ot_model = wot.load_ot_model(args.matrix, args.cell_days, args.tmap)
     cell_sets = wot.io.read_cell_sets(args.cell_set)
     cell_sets_matrix = wot.io.read_gene_sets(args.cell_set)
     keys = list(cell_sets.keys())

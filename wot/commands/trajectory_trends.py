@@ -68,7 +68,7 @@ def main(argv):
 
     args = parser.parse_args(argv)
 
-    ot_model = wot.initialize_ot_model(args.matrix, args.cell_days, tmap_dir = args.tmap)
+    ot_model = wot.load_ot_model(args.matrix, args.cell_days, args.tmap)
     # TODO: refactor the following with census
     cell_sets = wot.io.read_cell_sets(args.cell_set)
     keys = list(cell_sets.keys())
