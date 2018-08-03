@@ -13,8 +13,7 @@ It thus relies on the computation of transport maps between consecutive timepoin
 These transport maps can be computed from the command line with :
 
 ```sh
-wot optimal_transport --matrix matrix.txt --cell_days days.txt \
- --out tmaps --local_pca -1
+wot optimal_transport --matrix matrix.txt --cell_days days.txt
 ```
 
 Several options are available for this command, to choose the Optimal Transport parameters
@@ -25,6 +24,7 @@ Here is another example, specifying the default values explicitely :
 
 ```sh
 wot optimal_transport --matrix matrix.txt --cell_days days.txt \
- --out tmaps --local_pca -1 --scaling_iter 3000 \
- --epsilon 0.05 --lambda1 1 --lambda2 50
+ --out tmaps --local_pca 30 --max_iter 1000000 \
+ --epsilon 0.05 --lambda1 1 --lambda2 50 \
+ --batch_size 50 --tolerance 0.01
 ```
