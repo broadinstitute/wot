@@ -41,7 +41,7 @@ class Dataset:
         self.col_meta = tmp
 
     def __len__(self):
-        return len(self.x)
+        return self.x.shape[0]
 
     def where(self, **kwargs):
         """

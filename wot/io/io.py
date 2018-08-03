@@ -805,6 +805,8 @@ def read_covariate_data_frame(path):
 
 def incorporate_days_information_in_dataset(dataset, path):
     days_data_frame = read_days_data_frame(path)
+    if len(days_data_frame) != len(dataset):
+        raise ValueError("Inconsistent shapes between dataset and cell days")
     dataset.row_meta = dataset.row_meta.join(days_data_frame)
 
 def read_day_pairs(day_pairs):
