@@ -77,21 +77,17 @@ def main(argv):
     args = parser.parse_args(argv)
 
     ot_model = wot.load_ot_model(args.matrix, args.cell_days, args.tmap)
-    # TODO: refactor the following with census
     cell_sets = wot.io.read_cell_sets(args.cell_set)
-    keys = list(cell_sets.keys())
-    populations = ot_model.population_from_ids(*[cell_sets[name] for name in keys], at_time=float(args.time))
-    # Get rid of empty populations : just ignore them
-    keys = [ keys[i] for i in range(len(keys)) if populations[i] is not None ]
-    populations = [ p for p in populations if p is not None ]
+    populations = ot_model.population_from_cell_sets(cell_sets, at_time=args.time)
 
     if len(populations) == 0:
         raise ValueError("No cells from the given cell sets are present at that time")
 
-    timepoints, trends, variances = compute_trajectory_trends(ot_model, *populations)
+    timepoints, trends, variances = compute_trajectory_trends(ot_model, *populations.values())
 
     row_meta = pd.DataFrame([], index=timepoints, columns=[])
     col_meta = ot_model.matrix.col_meta.copy()
+    keys = populations.keys()
     for i in range(len(trends)):
         cs_name = keys[i]
         res = wot.Dataset(trends[i], row_meta, col_meta)

@@ -54,16 +54,11 @@ def main(argv):
     args = parser.parse_args(argv)
 
     ot_model = wot.load_ot_model(args.matrix, args.cell_days, args.tmap)
-    # TODO: refactor the following with census
     cell_sets = wot.io.read_cell_sets(args.cell_set)
-    keys = list(cell_sets.keys())
-    populations = ot_model.population_from_ids(*[cell_sets[name] for name in keys], at_time=args.time)
-    # Get rid of empty populations : just ignore them
-    keys = [ keys[i] for i in range(len(keys)) if populations[i] is not None ]
-    populations = [ p for p in populations if p is not None ]
+    populations = ot_model.population_from_cell_sets(cell_sets, at_time=args.time)
 
-    trajectories = compute_trajectories(ot_model, *populations)
-    trajectories.to_csv(args.out, sep='\t', index_label='id', header=keys)
+    trajectories = compute_trajectories(ot_model, *populations.values())
+    trajectories.to_csv(args.out, sep='\t', index_label='id', header=populations.keys())
     exit(1)
 
 

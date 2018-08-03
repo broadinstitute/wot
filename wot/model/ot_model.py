@@ -575,6 +575,27 @@ class OTModel:
         else:
             return result
 
+    def population_from_cell_sets(self, cell_sets, at_time=None):
+        """
+        Similar to population_from_ids for cell sets
+
+        Parameters
+        ----------
+        cell_sets : dict of str: list of str
+            The dictionnary of ids
+        at_time : float, optional
+            The timepoint to consider
+
+        Returns
+        -------
+        populations : dict of str: wot.Population
+            The resulting populations
+        """
+        keys = list(cell_sets.keys())
+        populations = self.population_from_ids(*[cell_sets[name] for name in keys], at_time=at_time)
+        return { keys[i]: populations[i] for i in range(len(keys)) if populations[i] is not None }
+
+
     def cell_ids(self, population):
         day = population.time
         return list(self.matrix.row_meta.index[self.matrix.row_meta['day'] == day])
