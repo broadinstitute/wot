@@ -76,3 +76,14 @@ notebook. Just click the button below to download the whole archive.
 ```
 
 ![Ancestors plot](images/notebook_ancestors.png)
+
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="05_plotting_shared_ancestry.py">Download python code</a>
+## Shared ancestry ##
+---------------------
+
+```python
+{% include_relative notebook/05_plotting_shared_ancestry.py %}
+```
+
+![Shared ancestry plot](images/shared_ancestry.png)
