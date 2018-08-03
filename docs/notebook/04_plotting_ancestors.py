@@ -17,15 +17,15 @@ from matplotlib import pyplot
 ds = wot.io.read_dataset(matrix_file)
 
 ot_model = wot.initialize_ot_model(matrix_file, days_file,
-        scaling_iter=100, epsilon=.01, lambda1=50)
+        epsilon=.01, lambda1=10, lambda2=80, local_pca=0)
 ot_model.compute_all_transport_maps()
 
-transparent_col = lambda x : wot.graphics.hexstring_of_rgba((.08, .34, .59, x))
+transparent = lambda x : wot.graphics.hexstring_of_rgba((.08, .34, .59, x))
 def color_cells(population):
     p = population.p
     if not numpy.isclose(max(p), 0):
         p = p / max(p)
-    color = [ transparent_col(x) for x in p ]
+    color = [ transparent(x) for x in p ]
     wot.set_cell_metadata(ds, 'color', color,
             indices = ot_model.cell_ids(population))
 
