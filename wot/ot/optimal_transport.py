@@ -34,7 +34,7 @@ def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, 
                                   epsilon0=epsilon0)
     return Tmap
 
-def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau, epsilon0, growth_iters):
+def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau, epsilon0, growth_iters, max_iter):
     """
     Compute the optimal transport with stabilized numerics and duality gap guarantee.
 
@@ -50,6 +50,7 @@ def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, 
     tau : float
     epsilon0 : float
     growth_iters : int
+    max_iter : int
 
     Returns
     -------
@@ -58,7 +59,7 @@ def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, 
 
     Notes
     -----
-    It is guaranteed that the duality gap for the result is under the given threshold.
+    It is guaranteed that the duality gap for the result is under the given threshold, or that max_iter have been performed.
     """
     if batch_size <= 0:
         raise ValueError("Batch size must be positive")
@@ -66,7 +67,7 @@ def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, 
     row_sums = g
     for i in range(growth_iters):
         tmap = transport_stablev1(C, row_sums, lambda1, lambda2, epsilon,
-                batch_size, tolerance, tau, epsilon0)
+                batch_size, tolerance, tau, epsilon0, max_iter)
         row_sums = tmap.sum(axis=1) / tmap.shape[1]
     return tmap
 
@@ -96,7 +97,7 @@ def dual(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
             - epsilon * np.sum(R - K) / (I * J)
 # end @ Lénaïc Chizat
 
-def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau=10e100, epsilon0=1.):
+def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau=10e100, epsilon0=1., max_iter=1e7):
     """
     Compute the optimal transport with stabilized numerics, with the guarantee that the duality gap is at most `tolerance`
 
@@ -120,6 +121,8 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
         Threshold at which to perform numerical stabilization
     epsilon0 : float, optional
         Starting value for exponentially-decreasing epsilon
+    max_iter : int, optional
+        Maximum number of iterations. Print a warning and return if it is reached, even without convergence.
 
     Returns
     -------
@@ -140,6 +143,7 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
     start_time = time.time()
     duality_time = 0
     epsilon_i = epsilon0 * scale_factor
+    current_iter = 0
 
     for e in range(epsilon_scalings + 1):
         duality_gap = np.inf
@@ -154,6 +158,7 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
 
         while duality_gap > tolerance :
             for i in range(batch_size):
+                current_iter += 1
                 a = (p / (K.dot(np.multiply(b, dy)))) ** alpha1 * np.exp(-u / (lambda1 + epsilon_i))
                 b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
 
@@ -164,6 +169,10 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
                     v = v + epsilon_i * np.log(b)  # absorb
                     K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
                     a, b = np.ones(I), np.ones(J)
+
+                if current_iter >= max_iter:
+                    print("Warning : Reached max_iter with duality gap still above threshold. Returning")
+                    return (K.T * a).T * b
 
             duality_tmp_time = time.time()
             R = (K.T * a).T * b

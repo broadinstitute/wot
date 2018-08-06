@@ -38,7 +38,7 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--lambda2', type=float, default=50,
             help='Regularization parameter that controls the '
             'fidelity of the constraints on q')
-    parser.add_argument('--max_iter', type=int, default=3000,
+    parser.add_argument('--max_iter', type=int, default=1e7,
             help='Maximum number of scaling iterations. Abort if convergence was not reached')
     parser.add_argument('--batch_size', type=int, default=50,
             help='Number of scaling iterations to perform between duality gap check')
