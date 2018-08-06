@@ -36,7 +36,9 @@ def main(argv):
             max_threads = args.max_threads,
             epsilon0 = args.epsilon0,
             tau = args.tau,
-            day_pairs = args.config
+            day_pairs = args.config,
+            tolerance = args.tolerance,
+            batch_size = args.batch_size,
             )
 
     ot_model.compute_all_transport_maps(force = True)

@@ -107,7 +107,9 @@ def main(argv):
             epsilon0 = args.epsilon0,
             tau = args.tau,
             day_pairs = args.config,
-            covariate = args.covariate
+            covariate = args.covariate,
+            tolerance = args.tolerance,
+            batch_size = args.batch_size,
             )
     summary = compute_validation_summary(ot_model)
 
