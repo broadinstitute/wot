@@ -11,7 +11,7 @@ import os
 from itertools import product
 import time
 
-def compute_validation_summary(ot_model):
+def compute_validation_summary(ot_model, save_interpolated=False):
     """
     Compute the validation summary for the given OTModel
 
@@ -19,6 +19,8 @@ def compute_validation_summary(ot_model):
     ----------
     ot_model : wot.OTModel
         The OTModel to validate
+    save_interpolated : bool, optional, default: False
+        Wether to save or discard the interpolated and random point clouds
 
     Returns
     -------
@@ -51,6 +53,14 @@ def compute_validation_summary(ot_model):
             i05 = wot.ot.interpolate_with_ot(p0[cv0].x, p1[cv1].x, tmap.x, interp_frac, interp_size)
             r05 = wot.ot.interpolate_randomly(p0[cv0].x, p1[cv1].x, interp_frac, interp_size)
 
+            if save_interpolated:
+                prefix = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix)
+                prefix += '_{}_{}_cv{}_cv{}'.format(t0, t1, cv0, cv1)
+                wot.io.write_dataset(wot.dataset_from_x(i05),
+                        prefix + '_interp.txt', txt_full=False)
+                wot.io.write_dataset(wot.dataset_from_x(r05),
+                        prefix + '_random.txt', txt_full=False)
+
             for cv05 in p05.keys():
 
                 def update_summary(pop, t, name):
@@ -70,8 +80,8 @@ def compute_validation_summary(ot_model):
                 emd_time += update_summary(r05, t05, 'R_cv{}_cv{}'.format(cv0,cv1))
 
         total_time = time.time() - start_time
-        wot.io.verbose("Processed ({}, {}, {}) in {:.2f}s ({:.2f}% on EMD)"\
-                .format(t0, t05, t1, total_time, 100 * emd_time / total_time))
+        wot.io.verbose("Processed ({}, {}, {}) for {} covariate pairs, in {:.2f}s ({:.2f}% on EMD)"\
+                .format(t0, t05, t1, len(p0) * len(p1), total_time, 100 * emd_time / total_time))
 
     # Post-process summary to make it a pandas DataFrame with proper column names
     cols = ['interval_start', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1', 'distance']
@@ -82,6 +92,8 @@ def main(argv):
     wot.commands.add_model_arguments(parser)
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--covariate', help='Covariate values for each cell')
+    parser.add_argument('--save_interpolated', type=bool, default=False,
+            help='Save interpolated and random point clouds')
     parser.add_argument('--tmap', help='Transport maps prefix', default='val_tmaps')
     parser.add_argument('--out', help='Output file name', default='validation_summary.txt')
 
@@ -90,7 +102,6 @@ def main(argv):
     # TODO: add support for the following arguments :
     # '--resample_iter'
     # '--npair'
-    # '--save_interpolated'
 
     tmap_dir, tmap_prefix = os.path.split(args.tmap)
     ot_model = wot.initialize_ot_model(args.matrix, args.cell_days,
@@ -111,7 +122,7 @@ def main(argv):
             tolerance = args.tolerance,
             batch_size = args.batch_size,
             )
-    summary = compute_validation_summary(ot_model)
+    summary = compute_validation_summary(ot_model, save_interpolated=args.save_interpolated)
 
     summary.to_csv(args.out, sep = '\t', index=False)
     exit(1)
