@@ -2,6 +2,7 @@
 import numpy as np
 import ot as pot
 import sklearn.metrics
+import scipy.sparse
 
 
 def compute_growth_scores(proliferation, apoptosis, beta_max=1.7, beta_center=0.25, delta_max=1.7, delta_min=0.15,
@@ -159,6 +160,8 @@ def interpolate_with_ot(p0, p1, tmap, t_interpolate, size):
         An interpolated population of 'size' cells
     """
     t = t_interpolate
+    p0 = p0.toarray() if scipy.sparse.isspmatrix(p0) else p0
+    p1 = p1.toarray() if scipy.sparse.isspmatrix(p1) else p1
     p0 = np.asarray(p0, dtype=np.float64)
     p1 = np.asarray(p1, dtype=np.float64)
     tmap = np.asarray(tmap, dtype=np.float64)
@@ -196,6 +199,8 @@ def interpolate_randomly(p0, p1, t_interpolate, size):
         An interpolated population of 'size' cells
     """
     t = t_interpolate
+    p0 = p0.toarray() if scipy.sparse.isspmatrix(p0) else p0
+    p1 = p1.toarray() if scipy.sparse.isspmatrix(p1) else p1
     p0 = np.asarray(p0, dtype=np.float64)
     p1 = np.asarray(p1, dtype=np.float64)
     if p0.shape[1] != p1.shape[1]:
@@ -220,6 +225,8 @@ def earth_mover_distance(cloud1, cloud2):
     distance : float
         The distance between the two point clouds
     """
+    cloud1 = cloud1.toarray() if scipy.sparse.isspmatrix(cloud1) else cloud1
+    cloud2 = cloud2.toarray() if scipy.sparse.isspmatrix(cloud2) else cloud2
     p = np.ones(len(cloud1)) / len(cloud1)
     q = np.ones(len(cloud2)) / len(cloud2)
     pairwise_dist = sklearn.metrics.pairwise.pairwise_distances(

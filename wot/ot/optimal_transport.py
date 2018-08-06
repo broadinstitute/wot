@@ -4,6 +4,7 @@ import time
 import numpy as np
 import ot as pot
 import scipy.stats
+import scipy.sparse
 import wot
 import sklearn.decomposition
 
@@ -496,7 +497,26 @@ def get_pca(dim, *args):
     >>> p0, p05, p1 = [ pca.transform(x) for x in [p0_x, p05_x, p1_x] ]
     >>> # -> project all three sets of points to PCA space computed from p0_x and p1_x
     """
+    args = [a.toarray() if scipy.sparse.isspmatrix(a) else a for a in args]
     x = np.vstack(args)
     x = x - x.mean(axis=0)
     pca = sklearn.decomposition.PCA(n_components = dim)
     return pca.fit(x)
+
+def pca_transform(pca, arr):
+    """
+    Apply a PCA transformation to argument
+
+    Parameters
+    ----------
+    pca : sklearn.decomposition.PCA
+        A PCA projector. See wot.ot.get_pca
+    arr : numpy ndarray or scipy.sparse matrix
+        The array to project.
+
+    Returns
+    -------
+    result : ndarray
+    """
+    ndarr = arr.toarray() if scipy.sparse.isspmatrix(arr) else arr
+    return pca.transform(ndarr)
