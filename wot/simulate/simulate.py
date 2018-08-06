@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from wot.cython_speedup.simulate import __cy__multivariate_normal_evolving_mixture
 
 def interp(t, tp, fp, left=None, right=None, method='linear', smooth=0):
     """
@@ -167,79 +166,3 @@ def multivariate_normal_mixture(means, covs, p=None, size=1):
         return result.item()
     else:
         return result
-
-def multivariate_normal_evolving_mixture(means, covs, p=None, size=1):
-    """
-    Draw random samples from an evolving mixture of multivariate normal distributions
-
-    Parameters
-    ----------
-    means : (t, k, N) ndarray
-        Means of the k N-dimensional distributions
-    covs : (t, k, N, N) ndarray
-        Covariance matrices of the distributions.
-        Alternatively, a (t, k, N) ndarray may be passed to indicate diagonal covariance matrices.
-        A (t, k,) ndarray will be interpreted as multiples of the identity matrix
-    p : 1-D array_like or (t, k) ndarray, optional
-        The probability associated with each distribution. Defaults to uniform
-    size : 1-D array_like, optional
-        Number of samples to return per timepoint. Defaults to a single one if unspecified
-        Alternatively, an int will be interpreted as constant over time.
-
-    Returns
-    -------
-    x : (T * size, N) ndarray
-        The samples for each timepoint, all concatenated into one array.
-        Where T is either sum(size) or size * t if size was an int
-
-    Raises
-    ------
-    ValueError
-        If `means` does not have three dimensions
-        If `means`, `covs`, and `p` have incompatible sizes
-        If `size` is not positive
-
-    Note
-    ----
-    Does not check that the weights always sum to 1
-    """
-    means = np.asarray(means, dtype=np.float64)
-    if means.ndim != 3:
-        raise ValueError("means must have 3 dimensions: (t, k, N)")
-
-    t, k, n = means.shape
-    if isinstance(covs, (int, float)):
-        covs = [ covs ] * t
-    covs = np.asarray(covs, dtype=np.float64)
-    if covs.ndim == 1:
-        covs = np.ascontiguousarray([ [ c * np.identity(n) ] * k for c in covs ])
-    elif covs.ndim == 2:
-        covs = np.ascontiguousarray([ [ c * np.identity(n) for c in cov ] for cov in covs ])
-    elif covs.ndim == 3:
-        covs = np.ascontiguousarray([ [ np.diag(c) for c in cov ] for cov in covs])
-    else:
-        covs = np.ascontiguousarray(covs, dtype=np.float64)
-
-    if p is None:
-        p = np.ones(k) / k
-    p = np.asarray(p, dtype=np.float64)
-
-    if p.ndim < 2:
-        p = np.ascontiguousarray([ p ] * t, dtype=np.float64)
-    else:
-        p = np.ascontiguousarray(p, dtype=np.float64)
-
-    if isinstance(size, int):
-        size = [ size ] * t
-    size = np.ascontiguousarray(size, dtype=np.int64)
-
-    if means.shape[0] != covs.shape[0]:
-        raise ValueError("means and covs do not have the same timepoint count")
-    if means.shape[1] != covs.shape[1]:
-        raise ValueError("means and covs for a timepoint are not of the same length")
-    if means.shape[1] != p.shape[1]:
-        raise ValueError("means and p for a timepoint are not of the same length")
-    if not all(size > 0):
-        raise ValueError("size is not positive")
-
-    return __cy__multivariate_normal_evolving_mixture(means, covs, p, size)

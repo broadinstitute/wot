@@ -5,8 +5,6 @@
 
 import setuptools
 import numpy
-from setuptools.extension import Extension
-from Cython.Build import cythonize
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -28,15 +26,6 @@ setup_requirements = [
 test_requirements = [
     'unittest'
 ]
-
-extensions = [
-        Extension("wot.cython_speedup.simulate",
-            [ "cython_speedup/simulate.pyx" ],
-            include_dirs=[numpy.get_include()]),
-        Extension("wot.cython_speedup.ot",
-            [ "cython_speedup/ot.pyx" ],
-            include_dirs=[numpy.get_include()])
-        ]
 
 setuptools.setup(
     name='wot',
@@ -76,5 +65,4 @@ setuptools.setup(
             'wot=wot.__main__:main'
         ]
     },
-    ext_modules = cythonize(extensions)
 )
