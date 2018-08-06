@@ -71,11 +71,7 @@ class OTModel:
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
 
-        local_pca = self.get_ot_config()['local_pca']
-        if local_pca > self.matrix.x.shape[1]:
-            print("Warning : local_pca set to {}, above gene count of {}. Disabling PCA"\
-                    .format(local_pca, self.matrix.x.shape[1]))
-            self.ot_config['local_pca'] = 0
+        wot.model.check_model_consistency(self)
 
         wot.model.purge_invalidated_caches(self)
         self.tmaps, self.cov_tmaps = wot.model.scan_transport_map_directory(self)

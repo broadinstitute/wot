@@ -5,3 +5,4 @@ from .chaining import *
 from .ot_model import *
 from ._cache import *
 from .util import *
+from .checks import check_model_consistency
