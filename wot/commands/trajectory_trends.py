@@ -60,8 +60,10 @@ def compute_trajectory_trends(ot_model, *populations):
 
     def unpack(arr):
         arr = np.asarray(arr)
-        arr = [ arr[:,i,:] for i in range(arr.shape[1]) ]
-        return arr if len(arr) > 1 else arr[0]
+        if arr.ndim == 3:
+            # rearrange dimensions when more than one population is passed
+            arr = [ arr[:,i,:] for i in range(arr.shape[1]) ]
+        return np.asarray(arr) if len(arr) > 1 else arr[0]
     return timepoints, unpack(traj), unpack(variances)
 
 def main(argv):
