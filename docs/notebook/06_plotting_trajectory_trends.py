@@ -21,7 +21,7 @@ population = all_populations[target_cell_set]
 timepoints, trends, variances = \
         wot.commands.compute_trajectory_trends(ot_model, population)
 
-pyplot.figure(figsize=(10, 10))
+pyplot.figure(figsize=(5, 5))
 
 stds = numpy.sqrt(variances)
 genes = ot_model.matrix.col_meta.index
