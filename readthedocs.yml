@@ -1,0 +1,7 @@
+requirements_file: sdocs/requirements.txt
+
+python:
+  version: 3
+
+formats:
+  - none

@@ -107,3 +107,7 @@ docs/.jekyll-metadata
 
 # Tags for the package
 tags
+
+# Cython non-source files
+cython_speedup/*.c
+cython_speedup/*.html

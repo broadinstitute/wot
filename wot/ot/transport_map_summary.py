@@ -38,7 +38,7 @@ def transport_maps_by_time(cluster_transport_maps,
 
           Args:
               cluster_transport_maps (list): A list of cluster by
-              cluestr transport maps
+              cluster transport maps
               cluster_weights_by_time (list): A list of cluster weights by
               time. For
               example cluster_weights_by_time[1][3] gives the weight for the 2nd
@@ -169,7 +169,7 @@ def cluster_distance(transport_maps_1, transport_maps_2, grouped_by_cluster,
            transport_maps_1 (list): A list of transport maps.
            transport_maps_2 (list): A list of transport maps
            grouped_by_cluster (GroupBy): A GroupBy object
-              returned from pd.DataFrame.groupby(). The object maps
+             returned from pd.DataFrame.groupby(). The object maps
              cell ids to cluster ids .
            cluster_ids (list): A list of unique cluster ids
        Returns:

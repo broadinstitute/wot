@@ -3,7 +3,8 @@
 import math
 
 import numpy as np
-import pandas
+import pandas as pd
+import scipy.sparse
 import wot
 import scipy.sparse
 
@@ -49,7 +50,7 @@ def set_cell_metadata(dataset, name, data, indices=None):
     if indices is None:
         dataset.row_meta[name] = data
     else:
-        if isinstance(indices, set):
+        if isinstance(indices, set) or isinstance(indices[0], str):
             dataset.row_meta.loc[indices, name] = data
         else:
             dataset.row_meta.loc[dataset.row_meta.index[indices], name] = data
@@ -61,7 +62,7 @@ def merge_datasets(*args):
     row_columns = set(datasets[0].row_meta.columns)
     if not all([set(d.row_meta.columns) == row_columns for d in datasets]):
         raise ValueError("Unable to merge: incompatible metadata between datasets")
-    merged_row_meta = pandas.concat([d.row_meta for d in datasets], sort=True)
+    merged_row_meta = pd.concat([ d.row_meta for d in datasets ], sort=True)
     if merged_row_meta.index.duplicated().any():
         raise ValueError("Unable to merge: duplicate rows between datasets, cannot lose information")
     col_index = datasets[0].col_meta.index
@@ -72,7 +73,10 @@ def merge_datasets(*args):
 
 
 def dataset_from_x(x, rows=None, columns=None,
-                   row_prefix="cell_", column_prefix="gene_"):
+        row_prefix="cell_", column_prefix="gene_"):
+    x = np.asarray(x, dtype=np.float64)
+    if x.ndim == 1:
+        x = np.asarray([x]).T
     if rows is None:
         row_count_len = math.floor(math.log10(x.shape[0])) + 1
         rows = ["{}{:0{}}".format(row_prefix, i, row_count_len) for i in range(x.shape[0])]
@@ -80,6 +84,6 @@ def dataset_from_x(x, rows=None, columns=None,
         col_count_len = math.floor(math.log10(x.shape[1])) + 1
         columns = ["{}{:0{}}".format(column_prefix, i, col_count_len) for i in range(x.shape[1])]
     return wot.Dataset(x,
-                       pandas.DataFrame([], index=rows, columns=[]),
-                       pandas.DataFrame([], index=columns, columns=[])
-                       )
+            pd.DataFrame([], index=rows, columns=[]),
+            pd.DataFrame([], index=columns, columns=[])
+            )

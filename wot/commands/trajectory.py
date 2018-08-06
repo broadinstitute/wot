@@ -7,8 +7,62 @@ import numpy as np
 import pandas as pd
 import wot.io
 
+def compute_trajectories(ot_model, *populations):
+    """
+    Computes a detailled trajectory for each population
+
+    Parameters
+    ----------
+    ot_model : wot.OTModel
+        The OTModel used to find ancestors and descendants of the population
+    *populations : wot.Population
+        The target populations
+
+    Returns
+    -------
+    trajectories : pandas.DataFrame
+        Rows : all cells, Columns : populations index. At point (i, j) : the probability that cell i is an ancestor/descendant of population j
+    """
+    trajectories = []
+    initial_populations = populations
+
+    def update(head, populations):
+        x = 0 if head else len(trajectories)
+        trajectories.insert(x, np.array([pop.p for pop in populations]).T)
+
+    update(True, populations)
+    while ot_model.can_pull_back(*populations):
+        populations = ot_model.pull_back(*populations, as_list=True)
+        update(True, populations)
+    populations = initial_populations
+    while ot_model.can_push_forward(*populations):
+        populations = ot_model.push_forward(*populations, as_list=True)
+        update(False, populations)
+
+    return pd.DataFrame(np.concatenate(trajectories), index=ot_model.matrix.row_meta.index)
+
 
 def main(argv):
+    parser = argparse.ArgumentParser('Generate ancestors and descendants of cell sets at the given time')
+    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
+    parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
+    parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
+    parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True)
+    parser.add_argument('--time', help='Timepoint to consider', required=True)
+    parser.add_argument('--out', help='Output file name', default='wot_trajectory.txt')
+
+    args = parser.parse_args(argv)
+
+    ot_model = wot.load_ot_model(args.matrix, args.cell_days, args.tmap)
+    cell_sets = wot.io.read_cell_sets(args.cell_set)
+    populations = ot_model.population_from_cell_sets(cell_sets, at_time=args.time)
+
+    trajectories = compute_trajectories(ot_model, *populations.values())
+    trajectories.to_csv(args.out, sep='\t', index_label='id', header=populations.keys())
+    exit(1)
+
+
+    # Old version
     parser = argparse.ArgumentParser(
         description='Generate ancestors and descendants given a starting cell cet and transport maps')
     parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)

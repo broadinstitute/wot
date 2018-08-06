@@ -61,12 +61,23 @@ The package gets built to `dist/wot-VERSION.tar.gz`, for instance `dist/wot-0.1.
 > pip install --user cython --no-cache-dir
 > echo "$PATH" | grep -q "$HOME/.local/bin" || \
 >   echo -e "\n# Cython path\nPATH=\"\$PATH:\$HOME/.local/bin\"" \
->   >> ~/.bash_profile
+>   >> ~/.bash_profile && source ~/.bash_profile
 > ```
 >
 > *h5py*, *docutils*, and *msgpack-python* have to be installed separately and
 > before cython because of [a known issue](https://github.com/h5py/h5py/issues/535)
 > during the automatic installation through pip.
+
+> <button class="btn-info rounded border-0 px-3 py-1" disabled>Mac OSX users</button>
+>
+> If you are using a mac and get an error about *HDF5* when installing, run :
+> ```sh
+> conda install pytables
+> ```
+> And then re-run the block above.
+>
+> This is [another known issue](https://github.com/PyTables/PyTables/issues/385) when
+> installing *tables* on OSX when conda is also installed.
 
 Then install the built package from the *dist/* directory :
 

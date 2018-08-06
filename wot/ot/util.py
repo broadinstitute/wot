@@ -2,6 +2,7 @@
 import numpy as np
 import ot as pot
 import sklearn.metrics
+import scipy.sparse
 
 
 def compute_growth_scores(proliferation, apoptosis, beta_max=1.7, beta_center=0.25, delta_max=1.7, delta_min=0.15,
@@ -135,3 +136,99 @@ def split_in_two(n):
     indices_c[indices] = True
     indices_c = np.invert(indices_c)
     return indices, indices_c
+
+def interpolate_with_ot(p0, p1, tmap, t_interpolate, size):
+    """
+    Interpolate between p0 and p1 at fraction t_interpolate knowing a transport map from p0 to p1
+
+    Parameters
+    ----------
+    p0 : 2-D array
+        The genes of each cell in the source population
+    p1 : 2-D array
+        The genes of each cell in the destination population
+    tmap : 2-D array
+        A transport map from p0 to p1
+    t_interpolate : float
+        The fraction at which to interpolate
+    size : int
+        The number of cells in the interpolated population
+
+    Returns
+    -------
+    p05 : 2-D array
+        An interpolated population of 'size' cells
+    """
+    t = t_interpolate
+    p0 = p0.toarray() if scipy.sparse.isspmatrix(p0) else p0
+    p1 = p1.toarray() if scipy.sparse.isspmatrix(p1) else p1
+    p0 = np.asarray(p0, dtype=np.float64)
+    p1 = np.asarray(p1, dtype=np.float64)
+    tmap = np.asarray(tmap, dtype=np.float64)
+    if p0.shape[1] != p1.shape[1]:
+        raise ValueError("Unable to interpolate. Number of genes do not match")
+    if p0.shape[0] != tmap.shape[0] or p1.shape[0] != tmap.shape[1]:
+        raise ValueError("Unable to interpolate. Tmap size is {}, expected {}"
+                .format(tmap.shape, (len(p0), len(p1))))
+    I = len(p0); J = len(p1)
+    # Assume growth is exponential and retrieve growth rate at t_interpolate
+    p = tmap / np.power(tmap.sum(axis=0), 1. - t)
+    p = p.flatten(order='C')
+    p = p / p.sum()
+    choices = np.random.choice(I * J, p=p, size=size)
+    return np.asarray([p0[i//J] * (1 - t) + p1[i%J] * t for i in choices], dtype=np.float64)
+
+def interpolate_randomly(p0, p1, t_interpolate, size):
+    """
+    Interpolate between p0 and p1 at fraction t_interpolate
+
+    Parameters
+    ----------
+    p0 : 2-D array
+        The genes of each cell in the source population
+    p1 : 2-D array
+        The genes of each cell in the destination population
+    t_interpolate : float
+        The fraction at which to interpolate
+    size : int
+        The number of cells in the interpolated population
+
+    Returns
+    -------
+    p05 : 2-D array
+        An interpolated population of 'size' cells
+    """
+    t = t_interpolate
+    p0 = p0.toarray() if scipy.sparse.isspmatrix(p0) else p0
+    p1 = p1.toarray() if scipy.sparse.isspmatrix(p1) else p1
+    p0 = np.asarray(p0, dtype=np.float64)
+    p1 = np.asarray(p1, dtype=np.float64)
+    if p0.shape[1] != p1.shape[1]:
+        raise ValueError("Unable to interpolate. Number of genes do not match")
+    I = len(p0); J = len(p1)
+    choices = np.random.choice(I * J, size=size)
+    return np.asarray([p0[i//J] * (1 - t) + p1[i%J] * t for i in choices], dtype=np.float64)
+
+def earth_mover_distance(cloud1, cloud2):
+    """
+    Returns the earth mover's distance between two point clouds
+
+    Parameters
+    ----------
+    cloud1 : 2-D array
+        First point cloud
+    cloud2 : 2-D array
+        Second point cloud
+
+    Returns
+    -------
+    distance : float
+        The distance between the two point clouds
+    """
+    cloud1 = cloud1.toarray() if scipy.sparse.isspmatrix(cloud1) else cloud1
+    cloud2 = cloud2.toarray() if scipy.sparse.isspmatrix(cloud2) else cloud2
+    p = np.ones(len(cloud1)) / len(cloud1)
+    q = np.ones(len(cloud2)) / len(cloud2)
+    pairwise_dist = sklearn.metrics.pairwise.pairwise_distances(
+            cloud1, Y=cloud2, metric='sqeuclidean')
+    return np.sqrt(pot.emd2(p, q, pairwise_dist, numItermax=1e7))

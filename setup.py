@@ -4,14 +4,15 @@
 """The setup script."""
 
 import setuptools
+import numpy
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 requirements = [
-    'Cython', 'h5py', 'numpy', 'scipy',
-    'scikit-learn', 'pandas', 'pypandoc', 'pot', 'Flask',
-    'gunicorn', 'numexpr', 'simplejson', 'psutil', 'scanpy'
+    'Cython', 'h5py', 'numpy', 'scipy', 'scanpy',
+    'scikit-learn', 'pandas', 'pypandoc', 'Flask',
+    'gunicorn', 'numexpr', 'simplejson', 'psutil',
 ]
 
 extras_require = {
@@ -28,7 +29,7 @@ test_requirements = [
 
 setuptools.setup(
     name='wot',
-    version='0.1.5',
+    version='0.2.0',
     description="Optimal transport for time-course single cell data",
     author="WOT Team",
     author_email='wot@broadinstitute.org',
@@ -63,5 +64,5 @@ setuptools.setup(
         'console_scripts': [
             'wot=wot.__main__:main'
         ]
-    }
+    },
 )

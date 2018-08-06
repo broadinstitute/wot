@@ -261,6 +261,48 @@ class OptimalTransportHelper:
     def compute_cost_matrix(self, a, b):
         return OptimalTransportHelper.compute_default_cost_matrix(a, b, self.eigenvals)
 
+    @staticmethod
+    def compute_single_transport_map(ds, config):
+        """
+        Computes a single transport map
+
+        Parameters
+        ----------
+        ds : wot.Dataset
+            The gene expression matrix to consider.
+            It is assumed to have a valid day column for each cell.
+        config : dict
+            Configuration to use for all parameters for the couplings :
+            - t0, t1
+            - lambda1, lambda2, epsilon, g
+        """
+        t0 = config.pop('t0', None)
+        t1 = config.pop('t1', None)
+        if t0 is None or t1 is None:
+            raise ValueError("config must have both t0 and t1, indicating target timepoints")
+
+        covariate = config.pop('covariate', None)
+        if covariate is None:
+            p0 = ds.where(day=float(t0))
+            p1 = ds.where(day=float(t1))
+        else:
+            p0 = ds.where(day=float(t0), covariate=int(covariate[0]))
+            p1 = ds.where(day=float(t1), covariate=int(covariate[1]))
+        local_pca = config.pop('local_pca', None)
+        if local_pca is not None and local_pca > 0:
+            pca = wot.ot.get_pca(local_pca, p0.x, p1.x)
+            p0_x = wot.ot.pca_transform(pca, p0.x)
+            p1_x = wot.ot.pca_transform(pca, p1.x)
+        else:
+            p0_x = p0.x
+            p1_x = p1.x
+
+        C = OptimalTransportHelper.compute_default_cost_matrix(p0_x, p1_x)
+        config['g'] = config.get('g', None) or np.ones(C.shape[0])
+        tmap = wot.ot.transport_stablev1_learnGrowth(C, **config)
+        return wot.Dataset(tmap, p0.row_meta.copy(), p1.row_meta.copy())
+
+
     def compute_transport_maps(self, callback):
         day_pairs = self.day_pairs
         args = self.args

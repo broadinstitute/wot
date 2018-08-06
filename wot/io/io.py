@@ -10,6 +10,17 @@ import scipy.io
 import scipy.sparse
 import wot
 
+if os.getenv('wot_verbose', False) == False:
+    def verbose(*args):
+        pass
+else:
+    from datetime import datetime
+    pid = os.getpid()
+    uid = os.getuid()
+    def verbose(*args):
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
+                "{}-{}".format(pid, uid),
+                "V/wot:", *args, flush=True)
 
 def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
     """
@@ -29,22 +40,19 @@ def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
 
     Returns
     -------
-    cs_groups : dict of float: list of cell_set
+    cs_groups : dict of float: list of { 'set': set  of str, 'name': str }
         The different cell sets for each time point.
 
     Notes
     -----
-    The cell_set type is a dictionary with two keys: 'set' and 'name'
-    cell_set['set'] : set of str
-        The ids of the cells in that cell set.
-    cell_set['name'] : str
-        The name of that cell set, with the time appended to it.
-        For instance, 'cs1' at time 3 would have name 'cs1_3.0'
+    cell_set['name'] is a str, the name and time of that cell set.
+
+    For instance, 'cs1' at time 3 would have name 'cs1_3.0'
 
     Example
     -------
-    cs_groups[1.0] : [ { 'set': { 'cell_1', 'cell_2' },
-                         'name': 'cell_set_name_1.0' } ]
+    >>> cs_groups[1.0]
+    [ { 'set': { 'cell_1', 'cell_2' }, 'name': 'cell_set_name_1.0' } ]
     """
     group_to_cell_sets = {}
     if isinstance(cell_set_paths, str):
@@ -150,14 +158,8 @@ def read_transport_maps(input_dir, ids=None, time=None):
 
     Returns
     -------
-    transport_maps : list of tmap
-        The tmap type is a dictionnary with three keys : 'transport_map', 't1' and 't2'
-        tmap['t1'] : float
-            Start point for the transport map.
-        tmap['t2'] : float
-            End point for the trasnport map.
-        tmap['transport_map'] : wot.Dataset
-            Transport map between t1 and t2.
+    transport_maps : list of { 't1': float, 't2': float, 'transport_map': wot.Dataset }
+        The list of all transport maps
 
     Raises
     ------
@@ -169,10 +171,13 @@ def read_transport_maps(input_dir, ids=None, time=None):
     Notes
     -----
     Time points are determined by the filename.
-    Filenames must end in "_{t1}_{t2}.extension". Any transport map not following
-     this convention will be ignored. If any other dataset file is present in the
-     listed directories and uses this naming convention, it might be interpreted
-     as a transport maps, yielding unpredictable results.
+
+    Filenames must end in `_{t1}_{t2}.extension`.
+    Any transport map not following this convention will be ignored.
+    If any other dataset file is present in the listed directories and
+    uses this naming convention, it might be interpreted as a transport
+    map, yielding unpredictable results.
+
     All wot commands are guaranteed to enforce this naming convention.
     """
     transport_maps_inputs = []  # file, start, end
@@ -238,7 +243,7 @@ def read_gene_sets(path, feature_ids=None):
     elif ext == 'txt' or ext == 'grp':
         gs = read_grp(path, feature_ids)
     else:
-        raise ValueError('Unknown file format')
+        raise ValueError('Unknown file format "{}"'.format(ext))
     if set_names is not None:
         gs_filter = gs.col_meta.index.isin(set_names)
         gs = wot.Dataset(gs.x[:, gs_filter], gs.row_meta, gs.col_meta.iloc[gs_filter])
@@ -420,6 +425,13 @@ def write_gmt(gene_sets, f):
     for gset in gene_sets:
         f.write('{}\t{}\t{}\n'.format(gset, '-', '\t'.join(gene_sets[gset])))
 
+def read_cell_sets(path):
+    ds = read_gene_sets(path)
+    cell_sets = {}
+    for i in range(ds.x.shape[1]):
+        selected = np.where(ds.x[:,i] == 1)
+        cell_sets[ds.col_meta.index[i]] = list(ds.row_meta.index[selected])
+    return cell_sets
 
 def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_filter=None, col_filter=None,
                  force_sparse=False, backed=False):
@@ -456,6 +468,14 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
         if row_meta is None:
             print(basename_and_extension[0] + '.barcodes.txt not found')
             row_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
+
+        cell_count, gene_count = x.shape
+        if len(row_meta) != cell_count :
+            raise ValueError("Wrong number of cells : matrix has {} cells, barcodes file has {}"\
+                    .format(cell_count, len(row_meta)))
+        if len(col_meta) != gene_count :
+            raise ValueError("Wrong number of genes : matrix has {} genes, genes file has {}"\
+                    .format(gene_count, len(col_meta)))
 
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom' or ext == 'h5ad':
@@ -640,6 +660,7 @@ def check_file_extension(name, output_format):
 
 
 def get_filename_and_extension(name):
+    name = os.path.basename(name)
     dot_index = name.rfind('.')
     ext = ''
     basename = name
@@ -668,10 +689,10 @@ def write_dataset(ds, path, output_format='txt', txt_full=True):
                 f.write(str(ds.x.shape[0]) + '\t' + str(ds.x.shape[1]) + '\t' + str(len(ds.row_meta.columns)) +
                         '\t' + str(len(ds.col_meta.columns)) + '\n')
             f.write('id\t')
-            f.write('\t'.join(ds.row_meta.columns))
+            f.write('\t'.join(str(x) for x in ds.row_meta.columns))
             if len(ds.row_meta.columns) > 0:
                 f.write('\t')
-            f.write('\t'.join(ds.col_meta.index.values))
+            f.write('\t'.join(str(x) for x in ds.col_meta.index.values))
             f.write('\n')
             spacer = ''.join(np.full(len(ds.row_meta.columns), '\t', dtype=object))
             # column metadata fields + values
@@ -785,8 +806,21 @@ def read_days_data_frame(path):
     return pd.read_table(path, index_col='id',
                          engine='python', sep=None, dtype={'day': np.float64})
 
+def read_covariate_data_frame(path):
+    return pd.read_table(path, index_col='id',
+                         engine='python', sep=None, dtype={'covariate': int})
 
 def incorporate_days_information_in_dataset(dataset, path):
     days_data_frame = read_days_data_frame(path)
+    if len(days_data_frame) != len(dataset):
+        raise ValueError("Inconsistent shapes between dataset and cell days")
     dataset.row_meta = dataset.row_meta.join(days_data_frame)
-    return dataset
+
+def read_day_pairs(day_pairs):
+    if os.path.isfile(day_pairs):
+        target = day_pairs
+        args = { 'engine': 'python', 'sep': None }
+    else:
+        target = io.StringIO(day_pairs)
+        args = { 'sep': ',', 'lineterminator': ';' }
+    return pd.read_table(target, **args)
