@@ -44,6 +44,8 @@ def add_ot_parameters_arguments(parser):
             help='Number of scaling iterations to perform between duality gap check')
     parser.add_argument('--tolerance', type=int, default=1e-2,
             help='Maximal acceptable ratio between the duality gap and the primal objective value')
+    parser.add_argument('--max_threads', type=int, default=1,
+            help='Maximal number of threads to use when parallelizing tmap computation')
     parser.add_argument('--ncells', type=int,
             help='Number of cells to downsample from each timepoint')
     parser.add_argument('--ncounts', type=int,

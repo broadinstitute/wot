@@ -33,6 +33,7 @@ def main(argv):
             lambda1 = args.lambda1,
             lambda2 = args.lambda2,
             max_iter = args.max_iter,
+            max_threads = args.max_threads,
             epsilon0 = args.epsilon0,
             tau = args.tau,
             day_pairs = args.config

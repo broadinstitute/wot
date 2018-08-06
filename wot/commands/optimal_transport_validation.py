@@ -88,7 +88,6 @@ def main(argv):
     args = parser.parse_args(argv)
 
     # TODO: add support for the following arguments :
-    # '--t_interpolate'
     # '--resample_iter'
     # '--npair'
     # '--save_interpolated'
@@ -104,6 +103,7 @@ def main(argv):
             lambda1 = args.lambda1,
             lambda2 = args.lambda2,
             max_iter = args.max_iter,
+            max_threads = args.max_threads,
             epsilon0 = args.epsilon0,
             tau = args.tau,
             day_pairs = args.config,
