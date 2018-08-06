@@ -7,10 +7,10 @@ Subpackages
 .. toctree::
 
     wot.commands
-    wot.core
     wot.graphics
     wot.grn
     wot.io
+    wot.model
     wot.ot
     wot.simulate
 
@@ -29,6 +29,14 @@ wot.dataset\_util module
 ------------------------
 
 .. automodule:: wot.dataset_util
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+wot.gene\_set\_scores module
+----------------------------
+
+.. automodule:: wot.gene_set_scores
     :members:
     :undoc-members:
     :show-inheritance:
