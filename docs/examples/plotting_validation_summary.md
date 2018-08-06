@@ -7,7 +7,35 @@ location: Examples
 # Plotting a validation summary
 -------------------------------
 
-## Plotting from a DataFrame ##
+## Computing validation summary ##
+
+You can compute the validation summary for a set of constant parameters
+from the command line :
+
+```sh
+wot optimal_transport_validation --matrix matrix.txt --cell_days days.txt \
+ --covariate covariate.txt --out validation_summary.txt
+```
+
+This will create a file called 'validation_summary.txt', containing
+a tab-separated table with all the validation information.
+
+
+## Reading DataFrame from a file ##
+
+You can then create a `pandas.DataFrame` from the obtained validation summary file :
+
+```python
+import pandas
+
+path_to_file = 'validation_summary.txt'
+vs = pandas.read_table(path_to_file)
+
+# Call the function defined below to plot
+plot_validation_summary(vs, 'validation_summary.png')
+```
+
+## Plotting a DataFrame ##
 
 If you have the validation summary available as `pandas.DataFrame`,
 it is very easy to plot the mean and standard deviation of the distances
@@ -48,22 +76,11 @@ def plot_validation_summary(vs, filename):
     pyplot.savefig(filename)
 ```
 
-## Reading from a file ##
-
-You can create a `pandas.DataFrame` from your validation summary file just as easily :
-
-```python
-import pandas
-
-path_to_file = 'validation_summary.txt'
-vs = pandas.read_table(path_to_file)
-
-plot_validation_summary(vs, 'validation_summary.png')
-```
-
 ## Getting the DataFrame from the OTModel ##
 
-You could go even further by getting this validation summary directly from the OTModel.
+You can run the command-line tool to create a validation summary file, and then
+load it into a DataFrame to plot it, but you could also go even further by
+getting this validation summary directly from the OTModel.
 
 This could for instance be used to test several configurations, generating a validation
 plot for each of the configurations :
