@@ -1,7 +1,7 @@
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'
 days_file = 'days.txt'
-bg_color = "#80808080"
+bg_color = "#80808050"
 gene_x_plot = 0
 gene_y_plot = 1
 cell_set_1 = "Red blood cells"
@@ -24,7 +24,7 @@ populations = ot_model.population_from_cell_sets(cell_sets,
 traj = wot.commands.compute_trajectories(ot_model, *populations.values())
 traj.columns = populations.keys()
 ds = wot.io.read_dataset(matrix_file)
-wot.set_cell_metadata(ds, 'color', '#80808050')
+wot.set_cell_metadata(ds, 'color', bg_color)
 
 pyplot.figure(figsize=(5, 5))
 pyplot.axis('off')

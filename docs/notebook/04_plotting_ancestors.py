@@ -16,9 +16,7 @@ from matplotlib import pyplot
 
 ds = wot.io.read_dataset(matrix_file)
 
-ot_model = wot.initialize_ot_model(matrix_file, days_file,
-        epsilon=.01, lambda1=10, lambda2=80, local_pca=0)
-ot_model.compute_all_transport_maps()
+ot_model = wot.load_ot_model(matrix_file, days_file, 'tmaps')
 
 transparent = lambda x : wot.graphics.hexstring_of_rgba((.08, .34, .59, x))
 def color_cells(population):
