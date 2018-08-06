@@ -3,8 +3,6 @@ layout: documentation
 location: Documentation
 ---
 
-<b class="py-3 text-center" style="font-size: 150%; display: block">Command line interface documentation</b>
-
 Waddington Optimal Transport uses time-course data to infer how the
 probability distribution of cells in gene-expression space evolves
 over time, by using the mathematical approach of Optimal Transport (OT).
@@ -12,7 +10,7 @@ over time, by using the mathematical approach of Optimal Transport (OT).
 > <button class="btn-success rounded border-0 px-3 py-1" disabled>Interactive</button>
 >
 > Alternatively, **wot** features an interactive web interface to visualize
-> your data and perform all the tasks described below.
+> your data and perform many of the tasks described below.
 >
 > <div class="center-block text-center py-2">
 >   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
@@ -103,7 +101,7 @@ And then **wot** is installed and ready to use.
 ## Usage ##
 -----------
 
-**wot** is decomposed into several tools. Each tool can be used with the syntax `wot <tool>`.
+**wot** consists of several tools. Each tool can be used with the syntax `wot <tool>`.
 
 Help is available for each tool with `wot <tool> -h`. For instance:
 
@@ -131,12 +129,15 @@ a table containing the core options. Required options are in bold font.
 
 ```sh
 wot optimal_transport --matrix matrix.txt \
- --cell_days days.txt --out tmaps --local_pca -1
+ --cell_days days.txt --out tmaps
 ```
 
-This command will create a file `tmaps_{F}_{T}.loom` for each pair `{F}`, `{T}`
+This command will create a file `tmaps_{A}_{B}.loom` for each pair `{A}`, `{B}`
 in the day pairs file. These maps can then be translated to any format you find
 convenient with the [convert_matrix tool](#matrix_file).
+
+Additionally, a file `tmaps.yml` is generated, containing the configuration
+for the computed transport maps. You can later use this file with other commands.
 
 <table class="table table-hover" style="display: table">
   <thead class="thead-light">
@@ -155,47 +156,68 @@ convenient with the [convert_matrix tool](#matrix_file).
       <td>Timestamps for each cell. See <a href="#days_file">formats</a></td>
     </tr>
     <tr>
-      <td>--day_pairs</td>
-      <td>Target day pairs. See <a href="#day_pairs">formats</a></td>
+      <td>--epsilon</td>
+      <td>Regularization parameter that controls the entropy of the transport map<br/>default : 0.05</td>
     </tr>
     <tr>
-      <td>--scaling_iter</td>
-      <td>Number of iterations performed while scaling &epsilon;<br/>default : 3000</td>
+      <td>--lambda1</td>
+      <td>Regularization parameter that controls the fidelity of the constraint on p<br/>default : 1</td>
+    </tr>
+    <tr>
+      <td>--lambda2</td>
+      <td>Regularization parameter that controls the fidelity of the constraint on q<br/>default : 50</td>
+    </tr>
+    <tr>
+      <td>--batch_size</td>
+      <td>Number of iterations performed between two duality_gap checks<br/>default : 50</td>
+    </tr>
+    <tr>
+      <td>--tolerance</td>
+      <td>Threshold on the ratio between duality gap and primal objective<br/>default : 0.01</td>
     </tr>
     <tr>
       <td>--local_pca</td>
       <td>Number of dimensions to use when doing PCA<br/>default : 30</td>
     </tr>
+    <tr>
+      <td>--day_pairs</td>
+      <td>Configuration file for fine-graing control over OT parameters at each timepoint. See <a href="#day_pairs">formats</a></td>
+    </tr>
   </tbody>
 </table>
 
-##### Scaling iterations #####
+##### Convergence #####
 
-The convergence of the calculation of the transport maps can be
-accelerated by gradually increasing the entropy regularization
-parameter &epsilon;. Iteration count is thus split between those
-that use a scaled &epsilon; (scaling iterations) and those that
-use the final value of &epsilon; (extra iterations).
+The convergence of the calculation of the transport maps is checked
+through the use of the duality gap for the optimization problem.
+When this gap reaches 0, the transport map is guaranteed to be optimal.
+However, close-to-optimal transport maps are often acceptable and are
+a lot faster to compute. **wot** lets you choose the tolerance you
+want on the duality gap through the `--tolerance` parameter.
 
-By default, **wot** performs 3000 scaling iterations and 1000 extra iterations.
-While this is acceptable to ensure convergence in all cases when computing
-couplings, it does require a lot of computing power. You may want to perform
-fewer iterations to get an approximate result faster.
+Checking the duality gap is computationally expensive, that is why
+it is not done on every iteration, but rather after each batch of
+iterations. You can change the batch size with the `--batch-size`
+parameter. It is difficult to estimate the best batch size, as this
+depends heavily on the data being considered. Nonetheless, batch sizes
+too small (&lt; 10) or too big (&gt; 1000) are not recommended.
+
 
 ##### Local PCA #####
 
-Dimensionality reduction is used when computing distances between cells.
-The algorithm used for this purpose is Principal Component Analysis.
-While using more dimensions for this purpose will make it more precise,
-it will also slow the algorithm down. **wot** chooses by default
-to use 30 dimensions.
+The default transport cost uses Principal Component Analysis to reduce the
+dimension of the data before computing distances between cells.
+By default, **wot** uses 30 dimensions.
 
-Dimensionality reduction can be disabled with `--local_pca -1`
+Dimensionality reduction can be disabled with `--local_pca 0`
+
+If you specify more dimensions for the PCA than your dataset has genes,
+**wot** will skip PCA and print a warning.
 
 
 ### Trajectories ###
 
-Ancestors and descendants in **wot** are computed through the use of trajectories.
+Ancestors and descendants in **wot** are computed through the `trajectory` tool.
 
 You can select a **cell set** by specifying a [cell set file](#cellset_file).
 You can either manually edit this type of file, or generate it from a gene set file
@@ -203,7 +225,7 @@ using the [cells_by_gene_set](#cells_by_gene_set) tool.
 
 ```sh
 wot trajectory --tmap . --cell_days days.txt \
- --cell_set cell_sets.gmt --out traj --progress
+ --cell_set cell_sets.gmt --time 10 --out traj.txt
 ```
 
 <table class="table table-hover" style="display: table">
@@ -216,7 +238,11 @@ wot trajectory --tmap . --cell_days days.txt \
   <tbody>
     <tr>
       <td><b>--tmap</b></td>
-      <td>Directory containing the transport maps</td>
+      <td>Prefix of the transport maps configuration file</td>
+    </tr>
+    <tr>
+      <td><b>--matrix</b></td>
+      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
     </tr>
     <tr>
       <td><b>--cell_days</b></td>
@@ -227,16 +253,12 @@ wot trajectory --tmap . --cell_days days.txt \
       <td>Target cell set. See <a href="#cellset_file">formats</a></td>
     </tr>
     <tr>
-      <td>--day_pairs</td>
-      <td>Target day pairs. See <a href="#day_pairs">formats</a></td>
+      <td><b>--time</b></td>
+      <td>The target timepoint to consider if some cell sets span across multiple timepoints</td>
     </tr>
     <tr>
       <td>--out</td>
-      <td>Output filenames prefix</td>
-    </tr>
-    <tr>
-      <td>--progress</td>
-      <td>Display a progress bar while performing the calculation</td>
+      <td>Output filename<br/>default : wot_trajectory.txt</td>
     </tr>
   </tbody>
 </table>
@@ -244,16 +266,18 @@ wot trajectory --tmap . --cell_days days.txt \
 
 ### Ancestor census ###
 
-The census command lets you find out in which cell sets the ancestors
-of a given cell set were located.
+The ancestor census command computes the amount of mass of an
+ancestor distribution falls into each cell set.
+
 
 ```sh
-wot census --tmap . --cell_days days.txt \
- --cell_set cell_sets.gmt --matrix matrix.txt --progress
+wot census --tmap tmaps --cell_days days.txt \
+ --cell_set cell_sets.gmt --matrix matrix.txt \
+ --out census --time 10
 ```
 
-This would create several census files named `<prefix>_<cellset>_<timepoint>.txt`,
-for instance `census_tip1_100.0.txt`. See <a href="#census_file">formats</a>
+This would create several census files named `<prefix>_<cellset>.txt`,
+for instance `census_tip1.txt`. See <a href="#census_file">formats</a>
 for more information.
 
 <table class="table table-hover" style="display: table">
@@ -266,7 +290,11 @@ for more information.
   <tbody>
     <tr>
       <td><b>--tmap</b></td>
-      <td>Directory containing the transport maps</td>
+      <td>Prefix of the transport maps configuration file</td>
+    </tr>
+    <tr>
+      <td><b>--matrix</b></td>
+      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
     </tr>
     <tr>
       <td><b>--cell_days</b></td>
@@ -277,34 +305,115 @@ for more information.
       <td>Target cell sets. See <a href="#cellset_file">formats</a></td>
     </tr>
     <tr>
-      <td><b>--matrix</b></td>
-      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
+      <td><b>--time</b></td>
+      <td>The target timepoint to consider if some cell sets span across multiple timepoints</td>
     </tr>
     <tr>
       <td>--out</td>
       <td>Output filenames prefix.<br/>default : 'census'</td>
     </tr>
-    <tr>
-      <td>--progress</td>
-      <td>Display a progress bar while performing the calculation</td>
-    </tr>
   </tbody>
 </table>
-
-<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="{{site.baseurl}}/examples/ancestor_census">See example code</a>
-##### Plot for ancestor census #####
-
-![Ancestor census plot]({{site.baseurl}}/images/ancestor_census.png)
 
 
 ### Trajectory trends ###
 
-### Shared ancestry ###
+The trajectory trends command computes the mean and variance of each gene
+in the ancestor distribution of each cell set.
+
+You can select a **cell set** by specifying a [cell set file](#cellset_file).
+You can either manually edit this type of file, or generate it from a gene set file
+using the [cells_by_gene_set](#cells_by_gene_set) tool.
+
+```sh
+wot trajectory_trends --tmap tmaps --cell_days days.txt \
+ --cell_set cell_sets.gmt --matrix matrix.txt \
+ --out trends --time 10
+```
+
+<table class="table table-hover" style="display: table">
+  <thead class="thead-light">
+    <tr>
+      <th>Option</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>--tmap</b></td>
+      <td>Prefix of the transport maps configuration file</td>
+    </tr>
+    <tr>
+      <td><b>--matrix</b></td>
+      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
+    </tr>
+    <tr>
+      <td><b>--cell_days</b></td>
+      <td>Timestamps for each cell. See <a href="#days_file">formats</a></td>
+    </tr>
+    <tr>
+      <td><b>--cell_set</b></td>
+      <td>Target cell sets. See <a href="#cellset_file">formats</a></td>
+    </tr>
+    <tr>
+      <td><b>--time</b></td>
+      <td>The target timepoint to consider if some cell sets span across multiple timepoints</td>
+    </tr>
+    <tr>
+      <td>--out</td>
+      <td>Output filenames prefix.<br/>default : 'trends'</td>
+    </tr>
+  </tbody>
+</table>
+
 
 ### Local regulatory model via differential expression ###
 
-### Global regulatory model ###
+you can compare two ancestor distributions through local enrichment.
+
+The ancestor distributions can be two tips' or one tip's but at different time point. Now we have different ways to give the score that measures the difference between two distributions. Besides, the `matrix.txt` and `matrix1.txt`  should be the form of the result of trajectory trends.
+```sh
+wot optimal_local_enrichment --matrix1 matrix.txt \
+(--matrix2 matrix2.txt) --score t_test \
+--comparisons comapre.txt (--gsea C1)
+```
+
+When we run the cmd, we can get the file like `timepoint.rnk` or `timepoint1_timepoint2.rnk` including each gene's score.
+
+<table class="table table-hover" style="display: table">
+  <thead class="thead-light">
+    <tr>
+      <th>Option</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>--matrix1</b></td>
+      <td>A matrix with cells on rows and features, such as genes or pathways on columns See <a href="#matrix_file">formats</a></td>
+    </tr>
+    <tr>
+      <td><b>--score</b></td>
+      <td>Method to compute differential gene expression score. Choices are signal to noise, mean difference, t-test, and fold change.{s2n,mean_difference,fold_change,t_test}</td>
+    </tr>
+    <tr>
+      <td>--matrix2</td>
+      <td>A matrix with cells on rows and features, such as genes or pathways on columns See <a href="#matrix_file">formats</a></td>
+    </tr>
+    <tr>
+      <td>--gsea</td>
+      <td>Run <a href="http://software.broadinstitute.org/gsea/index.jsp">GSEA</a> on the specified MSigDB collections.<br/>
+          H (hallmark gene sets), C1 (positional gene sets), C2 (curated gene sets), C3 (motif gene sets),
+          C4 (computational gene sets), C5 (GO gene sets), C6 (oncogenic signatures), C7 (immunologic signatures)
+      </td>
+    </tr>
+    <tr>
+      <td>--comparisons</td>
+      <td>Comparisons to generate ranked lists for. By default, for one matrix signatures are created for all
+      consecutive timepoints. For two matrices for all matching timepoints.</td>
+    </tr>
+  </tbody>
+</table>
 
 
 ### Validation ###
@@ -317,23 +426,13 @@ optimal transport to see what distribution is expected at time 1 by this model.
 It is then easy to compare with the actual distributions at those time points,
 and thus check that the transport maps properly predict the cell's trajectory.
 
-In order to do that, you would want a [day pairs file](#day_pairs_file)
-containing the pair "0 2", tab-separated. You can then ask for interpolation
-at time fraction 0.5, which would result in time point 1 here.
-
 ```sh
 wot optimal_transport_validation --matrix matrix.txt \
- --cell_days days.txt --day_pairs day_pairs.txt \
- --out val_tmaps --t_interpolate .5 \
- --save_interpolated --local_pca -1 \
- --covariate covariate.txt --progress
+ --cell_days days.txt --covariate covariate.txt
 ```
 
-This would create two files : `val_tmaps_I_1.0.txt`
-and `val_tmaps_random_1.0.txt`.
-
-They contain the coordinates of respectively the *interpolated* and the
-*randomly generated* cells at that time point.
+This would create a validation summary, as a text file, containing
+all the information needed to evaluate the accuracy of the predictions.
 
 <table class="table table-hover" style="display: table">
   <thead class="thead-light">
@@ -352,20 +451,12 @@ They contain the coordinates of respectively the *interpolated* and the
       <td>Timestamps for each cell. See <a href="#days_file">formats</a></td>
     </tr>
     <tr>
-      <td><b>--t_interpolate</b></td>
-      <td>Interpolation fraction between two timepoints</td>
-    </tr>
-    <tr>
       <td>--covariate</td>
       <td>Covariate value for each cell. See format below</td>
     </tr>
     <tr>
-      <td>--save_interpolated</td>
-      <td>Save interpolated population and the summary<br/>By default : save summary, discard populations</td>
-    </tr>
-    <tr>
-      <td>--progress</td>
-      <td>Display a progress bar while performing the calculation</td>
+      <td>--out</td>
+      <td>The filename for the validation summary<br/>default : validation_summary.txt</td>
     </tr>
   </tbody>
 </table>
@@ -376,43 +467,49 @@ reproduced here for convenience.
 
 ##### Covariate #####
 
-To enhance the results obtained when performing validation with few timepoints,
-a covariate value may be assigned to each cell from each timepoint.
-
-The interpolation can then occur for each pair of batches, and the distance
-between the interpolated cells and the real population can be compared
-to the distance between real batches at the interpolated time point, to
-obtain more meaningful results.
+To measure the quality of interpolation, we compare the distance between
+batches of cells at the same time point.
 
 The covariate values may be specified in a tab-separated text file.
 It must have exactly two headers : "id" and "covariate".
 Each subsequent line must consist of a cell name, a tab, and a covariate value.
 
-> <button class="btn-warning rounded border-0 px-3 py-1" disabled>Warning</button>
->
-> While a higher number of batches will greatly enhance the quality of the
-> validation performed, the computation time required will increase as the
-> square of the number of batches per timepoint.
+##### Null hypothesises #####
+
+**wot** tests the results of the Optimal Transport predictions
+against three different null hypothesises.
+
+- **First point** :
+  The state of the population at time t0 is a good approximation for its
+  state between times t0 and t1.
+  This is equivalent to saying cells stay where they were at time t0,
+  and then instantly move to their next state exactly at time t1.
+- **Last point** :
+  The state of the population at time t1 is a good approximation for its
+  state between times t0 and t1.
+  This is equivalent to saying cells are in a given state at time t0, and
+  then instantly move to their next state, and stay there until time t1.
+- **Randomized interpolation** :
+  Linear interpolation between randomly-picked pairs of points from t0 and t1
+  is a good approximation for the state of the population between t0 and t1.
+
 
 #### Validation summary ####
 
-Additionally, a validation summary is generated, as a text file.
+The validation summary, generated as text file, is organized as follows :
 
 Each line contains information about the relation between two cell sets :
- - **interval_start** and **interval_end** indicate which day pair is being considered.
+ - **interval_start** and **interval_end** indicate which pair of timepoints is being considered.
  - **pair0** and **pair1** indicate which sets are being considered:
-   - **P0** is the population of the dataset at the first timepoint of the day pair
-   - **P0.5** is the population of the dataset at the interpolation timepoint
-   - **I0.5** is the interpolated population at that timepoint
-   - **R0.5** is the randomly generated population at that timepoint
-   - **P1** is the population of the dataset at the second timepoint of the day pair
+   - **P** is the real population at the intermediate timepoint
+   - **F** is the estimated population in *first point* hypothesis
+   - **L** is the estimated population in *last point* hypothesis
+   - **R** is the estimated population in *randomized interpolation* hypothesis
+   - **I** is the estimated population in *optimal transport* hypothesis
  - **distance** is the Wasserstein distance between the two sets considered
 
-<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="{{site.baseurl}}/examples/plotting_validation_summary">See example code</a>
-##### Plot validation summary #####
-
-![Validation summary plot]({{site.baseurl}}/images/validation_summary.png)
+**pair0** and **pair1** will have a suffix of the form **_cvX_cvY** or **_cvZ**
+when covariates are used, to indicate which batch they were extracted from.
 
 
 ### Force-directed Layout Embedding ###
@@ -532,18 +629,71 @@ Example:
 
 ### <a name="day_pairs_file">Day pairs file</a> ###
 
-The transitions to considered are specified in the *day\_pairs* file.
-This file must be a tab-separated plain text file, without any header.
+There are several options to specify Optimal Transport parameters in **wot**.
 
-It indicates which pairs of days should be considered when computing transport maps.
+The easiest is to just use constant parameters and specify them when
+computing transport maps with the `--epsilon` or `--lambda1` options.
+
+If you want more control over what parameters are used, you can use a
+detailed configuration file. There are two kinds of configuration files
+accepted by **wot**.
+
+#### Configuration per timepoint ####
+
+You can specify each parameter at each timepoint.
+When computing a transport map between two timepoints, the average
+of the two parameters for the considered timepoints will be taken into account.
+
+For instance, if you have prior knowledge of the amount of entropy
+at each timepoint, you could specify a different value of epsilon for each
+timepoint, and those would be used to compute more accurate transport maps.
+
+The configuration file is a tab-separated text file that starts with a header
+that must contain a column named `t`, for the timepoint, and then the name
+of any parameter you want to set. Any parameter not specified in this
+file can be specified constant with the command line options as previously.
 
 Example:
 
 <table class="table" style="display: table">
-<tr><td>0</td><td>2</td></tr>
-<tr><td>2</td><td>4</td></tr>
-<tr><td>4</td><td>6</td></tr>
+<tr><td>t</td><td>epsilon</td></tr>
+<tr><td>0</td><td>0.001</td></tr>
+<tr><td>1</td><td>0.002</td></tr>
+<tr><td>2</td><td>0.005</td></tr>
+<tr><td>3</td><td>0.008</td></tr>
+<tr><td>3.5</td><td>0.01</td></tr>
+<tr><td>4</td><td>0.005</td></tr>
+<tr><td>5</td><td>0.001</td></tr>
 </table>
+
+#### Configuration per pair of timepoints ####
+
+If you want to be even more explicit about what parameters to use for each
+transport map computation, you can specify parameters for pairs of timepoints.
+
+As previously, the configuration is specified in a tab-separated text file.
+Its header must have columns `t0` and `t1`, for source and destination timepoints.
+
+Bear in mind though, that any pair of timepoints not specified in this file
+will not be computable. That means you should at least put all pairs
+of consecutive timepoints if you want to be able to compute full trajectories.
+
+Example:
+
+<table class="table" style="display: table">
+<tr><td>t0</td><td>t1</td><td>lambda1</td></tr>
+<tr><td>0</td><td>1</td><td>50</td></tr>
+<tr><td>1</td><td>2</td><td>80</td></tr>
+<tr><td>2</td><td>4</td><td>30</td></tr>
+<tr><td>4</td><td>5</td><td>10</td></tr>
+</table>
+
+This can for instance be used if you want to skip a timepoint (note how
+timepoints 3 or 3.5 are not present here). If a timepoint is present in the
+dataset but not in this configuration file, it will be ignored.
+
+You can use as many parameter columns as you want, even none.
+All parameters not specified here can be specified as constant as previously.
 
 ### <a name="geneset_file">Gene sets</a> ###
 
@@ -631,33 +781,5 @@ Example:
 <tr><td>4.0</td><td>0.89</td><td>0.00</td><td>0.00</td></tr>
 <tr><td>5.0</td><td>0.99</td><td>0.00</td><td>0.00</td></tr>
 </table>
-
-
-## Sphinx-generated documentation ##
-------------------------------
-
-This document and the [examples]({{site.baseurl}}/examples) section should be more than enough to use **wot**.
-However, if you feel the need for a more in-depth documentation about each of the python
-functions in this package, it is available and can be generated from the sources of
-the package with the [Sphinx](http://www.sphinx-doc.org/en/master/) tool :
-
-```sh
-pip install --user sphinx sphinx_rtd_theme
-cd sdocs/
-sphinx-apidoc -o . ../wot/ -F
-make html
-```
-
-<br />
-
-> <button class="btn-info rounded border-0 px-3 py-1" disabled>Known issue</button>
->
-> If you have installed pygments system-wide, sphinx will not have permission
-> to access it. You will need to uninstall it as root and reinstall it after :
->
-> ```sh
-> sudo pip uninstall pygments
-> pip install --user pygments
-> ```
 
 [pip-install]: https://pip.pypa.io/en/stable/installing/

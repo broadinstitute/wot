@@ -1,33 +1,8 @@
----
-noheader: true
-layout: documentation
-location: Examples
----
-
-# Plotting cell sets
---------------------
-
-## Generating the cell sets ##
-
-If you don't already have a [cell sets file]({{ site.baseurl }}/cli_documentation#cellset_file),
-you may want to create one from a [gene sets file]({{ site.baseurl }}/cli_documentation#geneset_file).
-
-To do so, simply use the **cells_by_gene_set** wot tool :
-
-```sh
-wot cells_by_gene_set --matrix matrix.txt --gene_sets gene_sets.gmt \
- --out cell_sets.gmt --format gmt --quantile 0.99
-```
-
-## Coloring the cell sets ##
-
-The next step is to assign a color to each cell set. The following function may
-be used for that purpose :
-
-```python
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'
 days_file = 'days.txt'
+gene_sets_file = 'gene_sets.gmt'
+quantile_for_cell_sets = .88
 cell_sets_file = 'cell_sets.gmt'
 bg_color = "#80808020"
 cell_sets_to_color = [
@@ -48,7 +23,14 @@ from matplotlib import pyplot
 ds = wot.io.read_dataset(matrix_file)
 wot.io.incorporate_days_information_in_dataset(ds, days_file)
 
-cell_sets = wot.io.read_cell_sets(cell_sets_file)
+# Compute the cell sets for the given quantile
+
+gene_sets = wot.io.read_gene_sets(gene_sets_file, wot.cell_names(ds))
+cell_sets = wot.commands.get_cells_in_gene_sets(gene_sets, ds,
+        quantile=quantile_for_cell_sets)
+wot.io.write_gene_sets(cell_sets, cell_sets_file, "gmt")
+
+# Plot the cell sets
 
 wot.set_cell_metadata(ds, 'color', bg_color)
 
@@ -64,8 +46,3 @@ wot.graphics.legend_figure(pyplot, cell_sets_to_color)
 pyplot.autoscale(enable=True, tight=True)
 pyplot.tight_layout(pad=0)
 pyplot.savefig(destination_file)
-```
-
-## Result ##
-
-![cell sets plot]({{site.baseurl}}/images/notebook_cell_sets.png)

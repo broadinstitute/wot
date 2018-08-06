@@ -10,10 +10,12 @@ class TrajectoryTrends:
         if weights is not None:
             weights = weights / np.sum(weights)
         values = ds.x
-        values = values.toarray() if scipy.sparse.isspmatrix(values) else values
         if value_transform is not None:
             values = value_transform(values)
-        mean = np.average(values, weights=weights, axis=0)
+        if scipy.sparse.isspmatrix(values):
+            mean = values.T @ weights
+        else:
+            mean = np.average(values, weights=weights, axis=0)
         variance = np.average((values - mean) ** 2, weights=weights, axis=0)
         return {'mean': mean, 'variance': variance}
 

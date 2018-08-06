@@ -29,7 +29,7 @@ class Dataset:
         if type(row_meta) == pd.DataFrame and x.shape[0] != row_meta.shape[0]:
             raise Exception('Row dimensions do not match: ' + str(x.shape[0]) +
                             '!=' + str(row_meta.shape[0]))
-        if type(col_meta) == pd.DataFrame and x.shape[1] != col_meta.shape[0]:
+        if type(col_meta) == pd.DataFrame and len(x.shape) == 2 and x.shape[1] != col_meta.shape[0]:
             raise Exception(
                 'Column dimensions do not match: ' + str(x.shape[1]) +
                 '!=' + str(col_meta.shape[0]))
