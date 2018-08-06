@@ -32,11 +32,11 @@ def compute_trajectories(ot_model, *populations):
 
     update(True, populations)
     while ot_model.can_pull_back(*populations):
-        populations = ot_model.pull_back(*populations)
+        populations = ot_model.pull_back(*populations, as_list=True)
         update(True, populations)
     populations = initial_populations
     while ot_model.can_push_forward(*populations):
-        populations = ot_model.push_forward(*populations)
+        populations = ot_model.push_forward(*populations, as_list=True)
         update(False, populations)
 
     return pd.DataFrame(np.concatenate(trajectories), index=ot_model.matrix.row_meta.index)

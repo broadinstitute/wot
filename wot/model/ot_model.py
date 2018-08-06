@@ -290,7 +290,7 @@ class OTModel:
         """
         return self.timepoints.index(wot.model.unique_timepoint(*populations)) > 0
 
-    def push_forward(self, *populations, to_time = None, normalize=True):
+    def push_forward(self, *populations, to_time = None, normalize=True, as_list=False):
         """
         Pushes the population forward through the computed transport maps
 
@@ -302,6 +302,8 @@ class OTModel:
             Destination timepoint to push forward to.
         normalize : bool, optional, default: True
             Wether to normalize to a probability distribution or keep growth.
+        as_list : bool, optional, default: False
+            Wether to return a listof length 1 when a single element is passed, or a Population
 
         Returns
         -------
@@ -349,12 +351,12 @@ class OTModel:
             i += 1
 
         result = [ Population(self.timepoints[i], p[k,:]) for k in range(p.shape[0]) ]
-        if len(result) == 1:
+        if len(result) == 1 and not as_list:
             return result[0]
         else:
             return result
 
-    def pull_back(self, *populations, to_time = None, normalize=True):
+    def pull_back(self, *populations, to_time = None, normalize=True, as_list=False):
         """
         Pulls the population back through the computed transport maps
 
@@ -366,6 +368,8 @@ class OTModel:
             Destination timepoint to pull back to.
         normalize : bool, optional, default: True
             Wether to normalize to a probability distribution or keep growth.
+        as_list : bool, optional, default: False
+            Wether to return a listof length 1 when a single element is passed, or a Population
 
         Returns
         -------
@@ -413,12 +417,12 @@ class OTModel:
             i -= 1
 
         result = [ Population(self.timepoints[i], p[k,:]) for k in range(p.shape[0]) ]
-        if len(result) == 1:
+        if len(result) == 1 and not as_list:
             return result[0]
         else:
             return result
 
-    def ancestors(self, *populations, at_time=None):
+    def ancestors(self, *populations, at_time=None, as_list=False):
         """
         Computes the ancestors of a given population by pulling back through transport maps
 
@@ -429,6 +433,8 @@ class OTModel:
         at_time : int or float, optional
             Timepoint for which to compute the ancestors.
             If None, compute ancestors for the previous available time point.
+        as_list : bool, optional, default: False
+            Wether to return a listof length 1 when a single element is passed, or a Population
 
         Returns
         -------
@@ -458,9 +464,9 @@ class OTModel:
         If population.time is 7 and at_time is 5, the OTModel would pull back through two transport maps.
         This method is only and alias to OTModel.pull_back
         """
-        return self.pull_back(*populations, to_time = at_time)
+        return self.pull_back(*populations, to_time = at_time, as_list=as_list)
 
-    def descendants(self, *populations, at_time=None):
+    def descendants(self, *populations, at_time=None, as_list=False):
         """
         Computes the descendants of a given population by pushing forward through transport maps
 
@@ -471,6 +477,8 @@ class OTModel:
         at_time : int or float, optional
             Timepoint for which to compute the ancestors.
             If None, compute ancestors for the previous available time point.
+        as_list : bool, optional, default: False
+            Wether to return a listof length 1 when a single element is passed, or a Population
 
         Returns
         -------
@@ -500,7 +508,7 @@ class OTModel:
         If population.time is 5 and at_time is 7, the OTModel would push forward through two transport maps.
         This method is only and alias to OTModel.push_forward
         """
-        return self.push_forward(*populations, to_time = at_time)
+        return self.push_forward(*populations, to_time = at_time, as_list=as_list)
 
     def population_from_ids(self, *ids, at_time=None):
         """
