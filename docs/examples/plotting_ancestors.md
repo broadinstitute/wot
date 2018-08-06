@@ -1,3 +1,28 @@
+---
+noheader: true
+layout: documentation
+location: Examples
+---
+
+# Plotting ancestors
+--------------------
+
+
+## Generating the cell sets ##
+
+If you don't already have a [cell sets file]({{ site.baseurl }}/cli_documentation#cellset_file),
+you may want to create one from a [gene sets file]({{ site.baseurl }}/cli_documentation#geneset_file).
+
+To do so, simply use the **cells_by_gene_set** wot tool :
+
+```sh
+wot cells_by_gene_set --matrix matrix.txt --gene_sets gene_sets.gmt \
+ --out cell_sets.gmt --format gmt --quantile 0.99
+```
+
+## Computing and plotting ancestors ##
+
+```python
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'
 days_file = 'days.txt'
@@ -16,7 +41,9 @@ from matplotlib import pyplot
 
 ds = wot.io.read_dataset(matrix_file)
 
-ot_model = wot.load_ot_model(matrix_file, days_file, 'tmaps')
+ot_model = wot.initialize_ot_model(matrix_file, days_file,
+        epsilon=.01, lambda1=10, lambda2=80, local_pca=0)
+ot_model.compute_all_transport_maps()
 
 transparent = lambda x : wot.graphics.hexstring_of_rgba((.08, .34, .59, x))
 def color_cells(population):
@@ -50,3 +77,8 @@ wot.graphics.legend_figure(pyplot,
 pyplot.autoscale(enable=True, tight=True)
 pyplot.tight_layout(pad=0)
 pyplot.savefig(destination_file)
+```
+
+## Result ##
+
+![ancestors plot]({{site.baseurl}}/images/notebook_ancestors.png)

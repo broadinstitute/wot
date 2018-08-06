@@ -30,10 +30,10 @@ tips = [
         [ [ -.3, 0, 0, 0, 0, 0, 10 ], [ 0, 2.5, 0, 0, 0, 2, 3 ], [ -1, 5, 0, 0, 0, 4, 1 ], [-.5, 7.5, 0, 5, 0, 0, 0 ], [  -.5, 10, 0, 10, 0, 0, 0 ] ],
         [ [ -.3, 0, 0, 0, 0, 0, 10 ], [ 0, 2.5, 0, 0, 0, 2, 3 ], [ .3, 5, 0, 0, 5, 1, 1 ], [  1, 7.5, 0, 0, 9, 0, 0 ], [    2, 10, 0, 0, 10, 0, 0 ] ]
        ]
-times = [ [ i / (len(k) - 1) for i in range(len(k)) ] for k in tips ]
+times = [ numpy.linspace(0, 1, num=len(k)) for k in tips ]
 
 N = number_of_timepoints
-timepoints = [ i / ( N - 1) for i in range(N) ]
+timepoints = numpy.linspace(0, 1, num=N)
 
 means = numpy.array(
         [ wot.simulate.interp(timepoints, times[k], tips[k],
@@ -42,17 +42,14 @@ means = numpy.array(
 means = numpy.asarray([ means[:,t] for t in range(N) ])
 
 covs = [ .08, .1, .04, .04, .04, .03, .05 ]
-covs = [ [ c * (random() + .5) for c in covs ] for t in timepoints ]
+covs = [[ c * (random() + .5) for c in covs ]] * len(tips)
 
 sizes =  [ 5000 + randint(-100, 100) for _ in range(N) ]
-splits = [ 0 ]
-for i in range(N):
-    splits.append(sizes[i] + splits[-1])
 
-data = wot.simulate.multivariate_normal_evolving_mixture(
-        means, [ [ c ] * means.shape[1] for c in covs ], size=sizes)
+data = [ wot.simulate.multivariate_normal_mixture(means[i],
+    covs, size=sizes[i]) for i in range(N) ]
 data_to_dataset = lambda i : \
-        wot.dataset_from_x(data[splits[i]:splits[i+1],:],
+        wot.dataset_from_x(data[i],
                 row_prefix="cell_g{:02}_".format(i),
                 columns=gene_names)
 dataset_list = [ data_to_dataset(i) for i in range(N) ]
@@ -60,7 +57,7 @@ dataset_list = [ data_to_dataset(i) for i in range(N) ]
 
 for i in range(N):
     wot.set_cell_metadata(dataset_list[i], 'day', i)
-    covariates = randint(0, covariates_count - 1, size=splits[i+1] - splits[i])
+    covariates = randint(0, covariates_count, size=sizes[i])
     wot.set_cell_metadata(dataset_list[i], 'covariate', covariates)
 ds = wot.merge_datasets(*dataset_list)
 

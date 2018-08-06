@@ -1,149 +1,121 @@
-# WOT: Waddington-OT
+# WOT: Waddington-OT #
 
-Uses time-course data to infer how the probability distribution of cells in gene-expression space evolves over time,
-by using the mathematical approach of Optimal Transport (OT)
+Waddington-OT uses time-course data to infer how the probability distribution
+of cells in gene-expression space evolves over time, by using the mathematical
+approach of Optimal Transport (OT).
 
-* [Install](#install)
-* [Prepare Gene Expression Matrix](#prepare-expression-matrix)
-* [Optimal Transport](#optimal_transport)
-* [Visualization](#visualization)
-* [Optimal Transport Trajectory](#optimal_transport_trajectory)
-* [Optimal Transport Transition Table](#optimal_transport_transition_table)
-* [Optimal Transport Validation](#optimal_transport_validation)
-* [Gene Set Scores](#gene_set_score)
-* [File Formats](#file_formats)
+## Install ##
 
+Waddington-OT depends on [Python 3](https://www.python.org/downloads/).
 
+Several other python packages are required, but they can easily be installed through [pip][pip-install]
 
-## <a name="install"></a> Install
-Python 3 is required.
+### Dependencies ###
 
-Optionally install dependencies using conda:
-```
+You can install all dependencies for **wot** with [conda](https://conda.io/docs/) :
+```sh
 conda install cython h5py flask gunicorn numexpr numpy pandas scikit-learn scipy simplejson psutil
 conda install -c conda-forge pot
 ```
 
-Install WOT:
-
+Or with [pip][pip-install] :
+```sh
+pip install --user h5py docutils msgpack-python
+pip install --user cython
+pip install --user flask gunicorn numexpr numpy pandas scikit-learn scipy psutil pot
 ```
-pip install wot
+
+### Install the **wot** package ###
+
+```sh
+pip install --user wot
 ```
 
-## <a name="prepare-expression-matrix"></a> Prepare Expression Matrix
-Apply a pre-processing workflow to normalize and scale your data, and detect variable genes.
-Suggested tools include [Seurat](https://satijalab.org/seurat/) or [Scanpy](http://scanpy.readthedocs.io/en/latest/).
+## Usage ##
 
-    
-## WOT Tools
-WOT tools are run using the syntax *wot tool*. To see all tool options, type *wot tool -h* (e.g. wot optimal_transport -h)
+### Initializing an OT Model ###
 
+**wot** uses an OTModel as its user interface. This is meant to provide black-boxed
+functions to compute ancestors and descendants, while still using efficient caching
+of transport maps under the hood, as these take a long time to compute. It also
+allows **wot** to compute only the transport maps that are needed at any given time,
+speeding up short pull-backs where only a few of those transport maps are needed.
 
-## <a name="optimal_transport"></a> Optimal Transport
-*wot optimal_transport* calculates transport maps between consecutive time points and automatically learns cellular growth and death rates.
+You can initialize an OT Model in python with :
 
-Common Options (required in **bold**)
+```python
+ot_model = wot.initialize_ot_model('matrix.txt', 'days.txt')
+```
 
-Flag | Description
---- | --- |
-**matrix** | [Normalized gene expression matrix](#matrix).
-**cell_days** | [Assigns days to cells](#cell_days)
-gene_set_scores | Apoptosis and cell cycle scores used to compute growth rates. If not specified, a constant growth rate is used. The wot tool [gene_set_scores](#gene_set_scores) can be used to compute gene set scores.
-local_pca | Use principal component analysis to reduce the dimensionality of the expression matrix locally in the space of consecutive days. Thirty components are used by default.
-day_pairs | [Pairs of days to compute transport maps for](#day_pairs)
-gene_filter | File with one gene id per line to use for computing cost matrices (e.g. variable genes)
-out | Base name for output files 
+All Optimal Transport parameters can be customized when initializing the model.
+For instance, you could explicitely specify the defaults :
 
+```python
+ot_model = wot.initialize_ot_model('matrix.txt', 'days.txt', tmap_prefix='tmaps',
+    epsilon=.05, lambda1=10, lambda2=50, batch_size=50, tolerance=1e-2)
+```
 
-## <a name="validation">Optimal Transport Validation</a>
-*wot optimal_transport_validation* tests the performance of optimal transport by comparing interpolated distributions to held-out time points.
+This initialization steps store the configuration in a `tmaps.yml` file.
+The basename of this file can be customized with the `tmap_prefix` option used above.
 
-optimal_transport_validation has the same options as [optimal_transport](#optimal_transport) and
+Each `tmap_prefix` references a different OT Model. If you plan to use several
+models at the same time, you should a different prefix for each one of them.
 
-Flag | Description
---- | --- |
-**t_interpolate** | Interpolation fraction between two time points
-covariate | Two column file with headers "id" and "covariate" indicating cell ids and covariate value
+### Loading an OT Model ###
 
+Once the configuration file has been created, you can reload the previous
+OT Model in a different script from the YAML configuration file :
 
+```python
+ot_model = wot.load_ot_model('matrix.txt', 'days.txt', 'tmaps')
+```
 
-## <a name="visualization">Visualization</a>
-*wot force_layout* generates a force-directed layout using the ForceAtlas2 algorithm. The tool can optionally perform dimensionality reduction using diffusion component embedding of the dataset. 
-After you have generated the force layout coordinates, you can use *wot wot_server* to view trajectories and gene expression in the force layout.
+Note that it is not necessary to use the '.yml' suffix when loading an OT
+Model, the prefix is enough.
 
-**Trajectory Trends** plots the expression of a gene over time based on the transport maps
+All previously computed transport maps will be available, even across calls
+to the script.
 
-## <a name="optimal_transport_trajectory">Trajectory<a>
-*wot trajectory* generate ancestors and descendants given a starting cell cet and transport maps.
-Options
+### Changing parameters ###
 
-Flag | Description
---- | --- |
-**tmap** |Directory of transport maps as produced by [optimal_transport](#optimal_transport)
-**cell_set** | [Assigns cells to cell sets](#cell_sets) 
-**cell_days** | [Assigns days to cells](#cell_days)
- 
+If you want to change the OT parameters, you can simply re-initialize a model
+with the new parameters. **wot** will check for compatibility between the cached
+transport maps and the current configuration, and recompute the transport maps
+that do not match the current configuration, so you need not care about these issues.
 
+If you want to keep the previously computed transport maps, simply initialize
+a new model with a different prefix. Any model will only affect files that use
+its `tmap_prefix`, there is no interaction between models with different prefixes.
 
-## <a name="optimal_transport_transition_table">Transition Table</a>
-*wot transition_table* generate a transition table from one cell set to another cell set.
-Options
+### Using wot.commands ###
 
-Flag | Description
---- | --- |
-**tmap** |Directory of transport maps as produced by [optimal_transport](#optimal_transport)
-**cell_set** | [Assigns cells to cell sets](#cell_sets) 
-**cell_days** | [Assigns days to cells](#cell_days)
-**start_time** | The start time for the cell sets to compute the transitions to cell sets at end_time
-**end_time** | The end time. 
+All data-processing functions are located in the `wot.commands` subpackage.
+These include :
 
-    
-## <a name="gene_set_scores">Gene Set Scores</a>
-*wot gene_set_scores* computes gene set scores for each cell given a gene expression matrix and gene sets.
+- ancestor census
+- gene set scores
+- gene regulatory networks (grn)
+- local enrichment
+- optimal transport validation
+- trajectory
+- trajectory trends
+- convert matrix
+- force layout
+- wot server (interactive version of **wot**)
 
-Options
+All of these are documented on [wot's github pages website](http://broadinstitute.github.io/wot), with examples using simulated data to show how to use and plot the results of these commands.
 
-Flag | Description
---- | --- |
-**matrix** | Normalized gene expression matrix to compute gene set scores (e.g. apoptosis and cell cycle scores) for each cell.
+## Documentation ##
 
-## <a name="file_formats"></a> File Formats
+The full documentation for **wot** is available on Github Pages : <http://broadinstitute.github.io/wot>
 
-#### <a name="matrix">Gene Expression matrix</a> 
-Cells on rows and genes (features) on columns. Accepted formats are [Market Exchange Format (MEX)](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/matrices), [HDF5 Gene-Barcode Matrix](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices), [loom](http://linnarssonlab.org/loompy/format/index.html), [h5ad](http://scanpy.readthedocs.io/en/latest/), and text
-    
-Example Text File:
-    
-<table>
-<tr><td>id</td><td>gene_1</td><td>gene_2</td><td>gene_3</td></tr>
-<tr><td>cell_1</td><td>1.2</td><td>12.2</td><td>5.4</td></tr>
-<tr><td>cell_2</td><td>2.3</td><td>4.1</td><td>5.0</td></tr>
-</table>
-   
-       
+For more advanced usage, you may also browse the source code to read each
+function's documentation. Most of **wot**'s internal functions have docstrings
+with a description of their parameters, output and examples on how to use them.
 
-#### <a name="cell_days">Cell Days</a>
-Two column file with header "id" and "day".
+## Developer Notes ##
 
-Example:
+For more information about the internal functionning of **wot**, please refer
+to the [Developer Notes](developer_notes.md)
 
-<table>
-<tr><td>id</td><td>day</td></tr>
-<tr><td>cell_1</td><td>1</td></tr>
-<tr><td>cell_2</td><td>2.5</td></tr>
-</table>
-  
-#### <a name="day_pairs">Days Pairs</a> 
-Two column file without header with pairs of days to compute transport maps for.
-
-Example:
-
-<table>
-<tr><td>0</td><td>2</td></tr>
-<tr><td>2</td><td>4</td></tr>
-<tr><td>4</td><td>6</td></tr>
-</table>
-
-
-#### <a name="cell_sets">Cell Sets</a>
-Cell sets can be provided in [gmt](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29) or [gmx](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMX:_Gene_MatriX_file_format_.28.2A.gmx.29). 
+[pip-install]: https://pip.pypa.io/en/stable/installing/

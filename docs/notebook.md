@@ -65,6 +65,27 @@ notebook. Just click the button below to download the whole archive.
 
 ![Cell sets plots](images/notebook_cell_sets.png)
 
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="00_init_model.py">Download python code</a>
+## Initializing the OT Model ##
+-------------------------------
+
+> If you have downloaded our precomputed transport maps, you can skip this section.
+
+To compute ancestors and descendants, you will need an OT Model, storing all
+parameters for the transport maps. You can initialize it in python, for future use :
+
+```python
+{% include_relative notebook/00_init_model.py %}
+```
+
+You can then use `wot.load_ot_model` to reload this model, with the same parameters.
+
+If you want to change the parameters, simply rerun the above snippet with
+your prefered values. All subsequent scripts will use the new values.
+
+A configuration file called `tmaps.yml` will be created in your current
+working directory.
 
 <a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
  href="04_plotting_ancestors.py">Download python code</a>
@@ -76,3 +97,51 @@ notebook. Just click the button below to download the whole archive.
 ```
 
 ![Ancestors plot](images/notebook_ancestors.png)
+
+
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="05_plotting_shared_ancestry.py">Download python code</a>
+## Shared ancestry ##
+---------------------
+
+```python
+{% include_relative notebook/05_plotting_shared_ancestry.py %}
+```
+
+![Shared ancestry plot](images/shared_ancestry.png)
+
+
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="06_plotting_trajectory_trends.py">Download python code</a>
+## Trajectory trends ##
+---------------------
+
+```python
+{% include_relative notebook/06_plotting_trajectory_trends.py %}
+```
+
+![Trajectory trends plot](images/trajectory_trends.png)
+
+
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="07_plotting_ancestor_census.py">Download python code</a>
+## Ancestor census ##
+---------------------
+
+```python
+{% include_relative notebook/07_plotting_ancestor_census.py %}
+```
+
+![Ancestor census plot](images/ancestor_census.png)
+
+
+<a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
+ href="08_plotting_validation_summary.py">Download python code</a>
+## Validation summary ##
+---------------------
+
+```python
+{% include_relative notebook/08_plotting_validation_summary.py %}
+```
+
+![Validation summary plot](images/validation_summary.png)

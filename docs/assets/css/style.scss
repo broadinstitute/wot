@@ -11,7 +11,9 @@ nav[data-toggle='toc'] {
 
 nav[data-toggle="toc"] .nav-link.active,
 nav[data-toggle="toc"] .nav-link.active:focus,
-nav[data-toggle="toc"] .nav-link.active:hover {
+nav[data-toggle="toc"] .nav-link.active:hover,
+nav[data-toggle="toc"] .nav > li > a:hover,
+nav[data-toggle="toc"] .nav .nav > li > a:hover {
   color: #157878;
   border-color: #157878;
 }
