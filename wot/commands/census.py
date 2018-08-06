@@ -39,7 +39,10 @@ def compute_ancestor_census(ot_model, cset_matrix, *populations):
         populations = ot_model.push_forward(*populations, as_list=True)
         update(False, populations)
     census = np.asarray(census)
-    return timepoints, [ census[:,i,:] for i in range(census.shape[1]) ]
+    if census.ndim == 3:
+        # rearrange dimensions when more than one population is passed
+        census = np.asarray([census[:,i,:] for i in range(census.shape[1])])
+    return timepoints, census
 
 def main(argv):
     parser = argparse.ArgumentParser(
