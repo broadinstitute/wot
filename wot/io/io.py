@@ -808,7 +808,7 @@ def read_days_data_frame(path):
 
 def read_covariate_data_frame(path):
     return pd.read_table(path, index_col='id',
-                         engine='python', sep=None, dtype={'covariate': int})
+            engine='python', sep=None)
 
 def incorporate_days_information_in_dataset(dataset, path):
     days_data_frame = read_days_data_frame(path)

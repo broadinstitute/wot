@@ -53,6 +53,10 @@ class OTModel:
             covariate_data_frame = wot.io.read_covariate_data_frame(cov)
             self.matrix.row_meta = self.matrix.row_meta.join(covariate_data_frame)
 
+        g = kwargs.pop('cell_growth_rates', None)
+        if g is not None:
+            g_data_frame = wot.io.read_covariate_data_frame(g)
+            self.matrix.row_meta = self.matrix.row_meta.join(g_data_frame)
         if max_threads is None:
             wot.io.verbose("Argument max_threads not set. Using default")
             max_usable_cores = len(os.sched_getaffinity(0))
@@ -91,10 +95,9 @@ class OTModel:
                 'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
                 'epsilon0': 1, 'tau': 1e4,
                 'growth_iters': 3, 'batch_size': 50,
-                'tolerance': 1e-2, 'g': None,
                 'local_pca': 30, 'max_iter': 1e7,
+                'tolerance': 1e-2,
                 }
-        # TODO: parse cell growth rates files
         # TODO: support gene_filter and cell_filter
         # TODO: support ncells and ncounts
         config = self.ot_config

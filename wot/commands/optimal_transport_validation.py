@@ -122,6 +122,7 @@ def main(argv):
             covariate = args.covariate,
             tolerance = args.tolerance,
             batch_size = args.batch_size,
+            cell_growth_rates = args.cell_growth_rates,
             )
     summary = compute_validation_summary(ot_model, save_interpolated=args.save_interpolated)
 
