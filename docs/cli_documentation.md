@@ -331,6 +331,11 @@ wot trajectory_trends --tmap tmaps --cell_days days.txt \
  --out trends --time 10
 ```
 
+This will create a file `trends_<cell set name>.txt` with the mean expression
+profile among ancestors and `trends_<cell set name>.variance.txt` with the
+variance for each feature at each timepoint, for all cell sets in the file
+specified with `--cell_set`.
+
 <table class="table table-hover" style="display: table">
   <thead class="thead-light">
     <tr>
@@ -375,8 +380,9 @@ The input matrices must have timepoints on rows, and genes on columns. This is t
 by the [trajectory trends command](#trajectory-trends).
 
 ```sh
-wot local_enrichment --matrix1 matrix1.txt \
- --matrix2 matrix2.txt --score t_test
+wot local_enrichment --score t_test \
+ --matrix1 trends_set1.txt --variance1 trends_set1.variance.txt \
+ --matrix2 trends_set2.txt --variance2 trends_set2.variance.txt
 ```
 
 This will create files `<timepoint>.rnk` for each timepoint, containing each gene's score.
@@ -394,8 +400,16 @@ This will create files `<timepoint>.rnk` for each timepoint, containing each gen
       <td>A matrix with timepoints on rows and features, such as genes or pathways on columns See <a href="#matrix_file">formats</a></td>
     </tr>
     <tr>
+      <td><b>--variance1</b></td>
+      <td>A matrix with timepoints on rows and features on columns with the variance of each gene, associated with matrix1. See <a href="#matrix_file">formats</a></td>
+    </tr>
+    <tr>
       <td>--matrix2</td>
       <td>A matrix with timepoints on rows and features, such as genes or pathways on columns See <a href="#matrix_file">formats</a></td>
+    </tr>
+    <tr>
+      <td>--variance2</td>
+      <td>A matrix with timepoints on rows and features on columns with the variance of each gene, associated with matrix2. See <a href="#matrix_file">formats</a></td>
     </tr>
     <tr>
       <td><b>--score</b></td>

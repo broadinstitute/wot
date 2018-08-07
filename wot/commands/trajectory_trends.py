@@ -92,6 +92,10 @@ def main(argv):
     keys = populations.keys()
     for i in range(len(trends)):
         cs_name = keys[i]
-        res = wot.Dataset(trends[i], row_meta, col_meta)
-        # TODO: write the variances to a different file if a flag is passed
-        wot.io.write_dataset(res, args.out + '_' + cs_name, output_format='txt', txt_full=False)
+        trend = wot.Dataset(trends[i], row_meta, col_meta)
+        variance = wot.Dataset(variances[i], row_meta, col_meta)
+        basename = args.out + '_' + cs_name
+        wot.io.write_dataset(trend, basename + '.txt',
+                output_format='txt', txt_full=False)
+        wot.io.write_dataset(variance, basename + '.variance.txt',
+                output_format='txt', txt_full=False)

@@ -28,8 +28,10 @@ def get_scores(ds1, ds2, ds1_time_index, ds2_time_index, score_function):
 def main(argv):
     parser = argparse.ArgumentParser(
         description='Compute differentially expressed genes from output of trajectory_trends. Outputs a ranked list for each comparison.')
-    parser.add_argument('--matrix1', help=wot.commands.MATRIX_HELP, required=True)
-    parser.add_argument('--matrix2', help=wot.commands.MATRIX_HELP)
+    parser.add_argument('--matrix1', help='Gene expression matrix with timepoints on rows, features on columns', required=True)
+    parser.add_argument('--matrix2', help='Gene expression matrix with timepoints on rows, features on columns')
+    parser.add_argument('--variance1', help='Variance matrix with timepoints on rows, features on columns', required=True)
+    parser.add_argument('--variance2', help='Variance matrix with timepoints on rows, features on columns')
     parser.add_argument('--score',
                         help='Method to compute differential gene expression score. Choices are signal to noise, mean difference, t-test, and fold change',
                         choices=['s2n', 'mean_difference', 'fold_change', 't_test'])
@@ -42,17 +44,11 @@ def main(argv):
     args = parser.parse_args(argv)
     # dataset has time on rows, genes on columns
     ds1 = wot.io.read_dataset(args.matrix1)
-
-    # hack to add variance
-    f = h5py.File(args.matrix1, 'r')
-    ds1.variance = f['/layers/variance'][()]
-    f.close()
+    ds1.variance = wot.io.read_dataset(args.variance1).x
     ds2 = ds1
     if args.matrix2 is not None:
         ds2 = wot.io.read_dataset(args.matrix2)
-        f = h5py.File(args.matrix2, 'r')
-        ds2.variance = f['/layers/variance'][()]
-        f.close()
+        ds2.variance = wot.io.read_dataset(args.variance2).x
 
     #  TODO align with ds1
 
