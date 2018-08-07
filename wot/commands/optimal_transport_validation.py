@@ -47,7 +47,6 @@ def compute_validation_summary(ot_model, save_interpolated=False):
         p0, p05, p1 = p05, p1, ot_model.matrix.where(day=t1).split_by('covariate')
         interp_frac = (t05 - t0) / (t1 - t0)
 
-        wot.io.verbose("Computing Earth Mover's distance between all points clouds")
         for cv0, cv1 in product(p0.keys(), p1.keys()):
             tmap = ot_model.transport_map(t0, t1, covariate=(cv0, cv1))
             interp_size = (len(p0[cv0]) + len(p1[cv1])) // 2
