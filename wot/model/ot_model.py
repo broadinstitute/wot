@@ -57,7 +57,7 @@ class OTModel:
         if g is not None:
             g_data_frame = wot.io.read_covariate_data_frame(g)
             self.matrix.row_meta = self.matrix.row_meta.join(g_data_frame)
-        if max_threads is None:
+        if max_threads is None or max_threads == 0:
             wot.io.verbose("Argument max_threads not set. Using default")
             max_usable_cores = len(os.sched_getaffinity(0))
             if kwargs.pop('fast', False):
