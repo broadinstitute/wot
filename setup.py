@@ -13,6 +13,7 @@ requirements = [
     'Cython', 'h5py', 'numpy', 'scipy', 'scanpy',
     'scikit-learn', 'pandas', 'pypandoc', 'Flask',
     'gunicorn', 'numexpr', 'simplejson', 'psutil',
+    'pyyaml'
 ]
 
 extras_require = {
