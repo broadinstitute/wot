@@ -177,19 +177,23 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
                     print("Warning : Reached max_iter with duality gap still above threshold. Returning")
                     return (K.T * a).T * b
 
+            # The real dual variables. a and b are only the stabilized variables
+            _a = a * np.exp(u / epsilon_i)
+            _b = b * np.exp(v / epsilon_i)
+
             # Skip duality gap computation for the first epsilon scalings, use dual variables evolution instead
             if e == epsilon_scalings:
                 duality_tmp_time = time.time()
                 R = (K.T * a).T * b
-                pri = primal(C, _K, R, dx, dy, p, q, a * np.exp(u / epsilon_i), b * np.exp(v / epsilon_i), epsilon_i, lambda1, lambda2)
-                dua = dual(C, _K, R, dx, dy, p, q, a * np.exp(u / epsilon_i), b * np.exp(v / epsilon_i), epsilon_i, lambda1, lambda2)
+                pri = primal(C, _K, R, dx, dy, p, q, _a, _b, epsilon_i, lambda1, lambda2)
+                dua = dual(C, _K, R, dx, dy, p, q, _a, _b, epsilon_i, lambda1, lambda2)
                 duality_gap = (pri - dua) / abs(pri)
                 duality_time += time.time() - duality_tmp_time
                 # wot.io.verbose("Current (gap, primal, dual) : {:020.18f} {:020.18f} {:020.18f}".format(duality_gap, pri, dua))
             else:
                 duality_gap = max(
-                        np.linalg.norm(a - old_a) / (1 + np.linalg.norm(a)),
-                        np.linalg.norm(b - old_b) / (1 + np.linalg.norm(b)))
+                        np.linalg.norm(_a - old_a * np.exp(u/epsilon_i)) / (1 + np.linalg.norm(_a)),
+                        np.linalg.norm(_b - old_b * np.exp(v/epsilon_i)) / (1 + np.linalg.norm(_b)))
 
     total_time = time.time() - start_time
     wot.io.verbose("Computed tmap in {:.3f}s. Duality gap: {:.3E} ({:.2f}% of computing time)"\
