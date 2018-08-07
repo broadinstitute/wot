@@ -195,6 +195,8 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
                         np.linalg.norm(_a - old_a * np.exp(u/epsilon_i)) / (1 + np.linalg.norm(_a)),
                         np.linalg.norm(_b - old_b * np.exp(v/epsilon_i)) / (1 + np.linalg.norm(_b)))
 
+    if np.isnan(duality_gap):
+        raise RuntimeError("Overflow encountered in duality gap computation, please report this incident")
     total_time = time.time() - start_time
     wot.io.verbose("Computed tmap in {:.3f}s. Duality gap: {:.3E} ({:.2f}% of computing time)"\
             .format(total_time, duality_gap, 100 * duality_time / total_time))
