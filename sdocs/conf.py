@@ -6,6 +6,12 @@
 # full list see the documentation:
 # http://www.sphinx-doc.org/en/master/config
 
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.abspath('..'), 'wot'))
+
+
 # -- Project information -----------------------------------------------------
 
 project = 'wot'
