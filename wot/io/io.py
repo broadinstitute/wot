@@ -15,12 +15,16 @@ if os.getenv('wot_verbose', False) == False:
         pass
 else:
     from datetime import datetime
+
     pid = os.getpid()
     uid = os.getuid()
+
+
     def verbose(*args):
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
-                "{}-{}".format(pid, uid),
-                "V/wot:", *args, flush=True)
+              "{}-{}".format(pid, uid),
+              "V/wot:", *args, flush=True)
+
 
 def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
     """
@@ -425,13 +429,15 @@ def write_gmt(gene_sets, f):
     for gset in gene_sets:
         f.write('{}\t{}\t{}\n'.format(gset, '-', '\t'.join(gene_sets[gset])))
 
+
 def read_cell_sets(path):
     ds = read_gene_sets(path)
     cell_sets = {}
     for i in range(ds.x.shape[1]):
-        selected = np.where(ds.x[:,i] == 1)
+        selected = np.where(ds.x[:, i] == 1)
         cell_sets[ds.col_meta.index[i]] = list(ds.row_meta.index[selected])
     return cell_sets
+
 
 def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_filter=None, col_filter=None,
                  force_sparse=False, backed=False):
@@ -470,12 +476,12 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
             row_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
 
         cell_count, gene_count = x.shape
-        if len(row_meta) != cell_count :
-            raise ValueError("Wrong number of cells : matrix has {} cells, barcodes file has {}"\
-                    .format(cell_count, len(row_meta)))
-        if len(col_meta) != gene_count :
-            raise ValueError("Wrong number of genes : matrix has {} genes, genes file has {}"\
-                    .format(gene_count, len(col_meta)))
+        if len(row_meta) != cell_count:
+            raise ValueError("Wrong number of cells : matrix has {} cells, barcodes file has {}" \
+                             .format(cell_count, len(row_meta)))
+        if len(col_meta) != gene_count:
+            raise ValueError("Wrong number of genes : matrix has {} genes, genes file has {}" \
+                             .format(gene_count, len(col_meta)))
 
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom' or ext == 'h5ad':
@@ -679,7 +685,10 @@ def get_filename_and_extension(name):
 
 def write_dataset(ds, path, output_format='txt', txt_full=True):
     path = check_file_extension(path, output_format)
-    if output_format == 'txt' or output_format == 'txt.gz' or output_format == 'gct':
+    if output_format == 'txt' or output_format == 'gct' or output_format == 'csv':
+        sep = '\t'
+        if output_format is 'csv':
+            sep = ','
         if txt_full or output_format == 'gct':
             f = open(path, 'w')
             # write columns ids
@@ -688,34 +697,33 @@ def write_dataset(ds, path, output_format='txt', txt_full=True):
                 f.write('#1.3\n')
                 f.write(str(ds.x.shape[0]) + '\t' + str(ds.x.shape[1]) + '\t' + str(len(ds.row_meta.columns)) +
                         '\t' + str(len(ds.col_meta.columns)) + '\n')
-            f.write('id\t')
-            f.write('\t'.join(str(x) for x in ds.row_meta.columns))
+            f.write('id' + sep)
+            f.write(sep.join(str(x) for x in ds.row_meta.columns))
             if len(ds.row_meta.columns) > 0:
-                f.write('\t')
-            f.write('\t'.join(str(x) for x in ds.col_meta.index.values))
+                f.write(sep)
+            f.write(sep.join(str(x) for x in ds.col_meta.index.values))
             f.write('\n')
-            spacer = ''.join(np.full(len(ds.row_meta.columns), '\t', dtype=object))
+            spacer = ''.join(np.full(len(ds.row_meta.columns), sep, dtype=object))
             # column metadata fields + values
             for field in ds.col_meta.columns:
                 f.write(field)
                 f.write(spacer)
                 for val in ds.col_meta[field].values:
-                    f.write('\t')
+                    f.write(sep)
                     f.write(str(val))
 
                 f.write('\n')
             # TODO write as sparse array
             pd.DataFrame(index=ds.row_meta.index, data=np.hstack(
-                (ds.row_meta.values, ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x))).to_csv(f, sep='\t',
+                (ds.row_meta.values, ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x))).to_csv(f, sep=sep,
                                                                                                          header=False
                                                                                                          )
             f.close()
         else:
-
             pd.DataFrame(ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x, index=ds.row_meta.index,
                          columns=ds.col_meta.index).to_csv(path,
                                                            index_label='id',
-                                                           sep='\t',
+                                                           sep=sep,
                                                            doublequote=False,
                                                            compression='gzip' if output_format == 'txt.gz'
                                                            else None)
@@ -806,9 +814,11 @@ def read_days_data_frame(path):
     return pd.read_table(path, index_col='id',
                          engine='python', sep=None, dtype={'day': np.float64})
 
+
 def read_covariate_data_frame(path):
     return pd.read_table(path, index_col='id',
                          engine='python', sep=None, dtype={'covariate': int})
+
 
 def incorporate_days_information_in_dataset(dataset, path):
     days_data_frame = read_days_data_frame(path)
@@ -816,11 +826,12 @@ def incorporate_days_information_in_dataset(dataset, path):
         raise ValueError("Inconsistent shapes between dataset and cell days")
     dataset.row_meta = dataset.row_meta.join(days_data_frame)
 
+
 def read_day_pairs(day_pairs):
     if os.path.isfile(day_pairs):
         target = day_pairs
-        args = { 'engine': 'python', 'sep': None }
+        args = {'engine': 'python', 'sep': None}
     else:
         target = io.StringIO(day_pairs)
-        args = { 'sep': ',', 'lineterminator': ';' }
+        args = {'sep': ',', 'lineterminator': ';'}
     return pd.read_table(target, **args)
