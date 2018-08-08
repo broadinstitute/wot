@@ -35,6 +35,7 @@ def compute_validation_summary(ot_model, save_interpolated=False):
     ot_model.compute_all_transport_maps(force=False, with_covariates=True)
     # Now validate
     summary = []
+    local_pca = ot_model.get_ot_config()['local_pca']
 
     t05, t1 = times[:2]
     p05 = ot_model.matrix.where(day=t05).split_by('covariate')
@@ -50,8 +51,11 @@ def compute_validation_summary(ot_model, save_interpolated=False):
         for cv0, cv1 in product(p0.keys(), p1.keys()):
             tmap = ot_model.transport_map(t0, t1, covariate=(cv0, cv1))
             interp_size = (len(p0[cv0]) + len(p1[cv1])) // 2
-            i05 = wot.ot.interpolate_with_ot(p0[cv0].x, p1[cv1].x, tmap.x, interp_frac, interp_size)
-            r05 = wot.ot.interpolate_randomly(p0[cv0].x, p1[cv1].x, interp_frac, interp_size)
+            pca = wot.ot.get_pca(local_pca, p0[cv0].x, p1[cv1].x)
+            p0_x = wot.ot.pca_transform(pca, p0[cv0].x)
+            p1_x = wot.ot.pca_transform(pca, p1[cv1].x)
+            i05 = wot.ot.interpolate_with_ot(p0_x, p1_x, tmap.x, interp_frac, interp_size)
+            r05 = wot.ot.interpolate_randomly(p0_x, p1_x, interp_frac, interp_size)
 
             if save_interpolated:
                 prefix = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix)
@@ -62,19 +66,21 @@ def compute_validation_summary(ot_model, save_interpolated=False):
                         prefix + '_random.txt', txt_full=False)
 
             for cv05 in p05.keys():
+                p05_x = wot.ot.pca_transform(pca, p05[cv05].x)
 
                 def update_summary(pop, t, name):
                     name_05 = 'P_cv{}'.format(cv05)
                     emd_tmp = time.time()
-                    dist = wot.ot.earth_mover_distance(pop, p05[cv05].x)
+                    dist = wot.ot.earth_mover_distance(pop, p05_x)
                     summary.append([t0, t1, t, t05, cv0, cv1, name, name_05, dist])
                     return time.time() - emd_tmp
 
                 if cv0 == cv1:
-                    emd_time += update_summary(p0[cv0].x, t0, 'F_cv{}'.format(cv0))
-                    emd_time += update_summary(p1[cv1].x, t1, 'L_cv{}'.format(cv1))
+                    emd_time += update_summary(p0_x, t0, 'F_cv{}'.format(cv0))
+                    emd_time += update_summary(p1_x, t1, 'L_cv{}'.format(cv1))
                 if cv0 == cv1 and cv0 < cv05:
-                    emd_time += update_summary(p05[cv0].x, t05, 'P_cv{}'.format(cv0))
+                    p05_cv0_x = wot.ot.pca_transform(pca, p05[cv0].x)
+                    emd_time += update_summary(p05_cv0_x, t05, 'P_cv{}'.format(cv0))
 
                 emd_time += update_summary(i05, t05, 'I_cv{}_cv{}'.format(cv0,cv1))
                 emd_time += update_summary(r05, t05, 'R_cv{}_cv{}'.format(cv0,cv1))
