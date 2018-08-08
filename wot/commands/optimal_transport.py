@@ -39,6 +39,8 @@ def main(argv):
             tolerance = args.tolerance,
             batch_size = args.batch_size,
             cell_growth_rates = args.cell_growth_rates,
+            gene_filter = args.gene_filter,
+            cell_filter = args.cell_filter,
             )
 
     ot_model.compute_all_transport_maps(force = True)
