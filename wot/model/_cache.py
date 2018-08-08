@@ -226,7 +226,17 @@ def load_transport_map(ot_model, t1, t2):
         ot_model.compute_transport_map(t1, t2)
 
     path = ot_model.tmaps.get((t1, t2))
-    return wot.io.read_dataset(path)
+
+    try:
+        tmap = wot.io.read_dataset(path)
+    except:
+        wot.io.verbose("Warning : Error when reading tmap ({}, {}),"\
+                " file might have been corrupted. Recomputing".format(t1, t2))
+        ot_model.compute_transport_map(t1, t2)
+        path = ot_model.tmaps.get((t1, t2))
+        tmap = wot.io.read_dataset(path)
+
+    return tmap
 
 def load_covariate_restricted_transport_map(ot_model, t0, t1, covariate):
     """
@@ -253,4 +263,14 @@ def load_covariate_restricted_transport_map(ot_model, t0, t1, covariate):
         ot_model.compute_transport_map(t0, t1, covariate=(cv0, cv1))
 
     path = ot_model.cov_tmaps.get((t0, t1, cv0, cv1))
-    return wot.io.read_dataset(path)
+
+    try:
+        tmap = wot.io.read_dataset(path)
+    except:
+        wot.io.verbose("Warning : Error when reading tmap ({}, {}) cv ({}, {}),"\
+                " file might have been corrupted. Recomputing".format(t0, t1, cv0, cv1))
+        ot_model.compute_transport_map(t0, t1, covariate=(cv0, cv1))
+        path = ot_model.cov_tmaps.get((t0, t1, cv0, cv1))
+        tmap = wot.io.read_dataset(path)
+
+    return tmap
