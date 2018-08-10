@@ -26,9 +26,9 @@ notebook. Just click the button below to download the whole archive.
 
 <div class="center-block text-center py-2">
   <a class="nounderline btn-outline-secondary btn-lg border px-3 py-2 mx-3"
-     role="button" href="#">Download all data</a>
+     role="button" href="http://www.mediafire.com/file/01ahkjrsjjzt56l/all_simulated_data.zip">Download all data</a>
   <a class="nounderline btn-outline-secondary btn-lg border px-3 py-2 mx-3"
-     role="button" href="#">Download all scripts</a>
+     role="button" href="all_scripts.zip">Download all scripts</a>
 </div>
 
 <br />
