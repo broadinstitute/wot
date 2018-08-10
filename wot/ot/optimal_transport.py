@@ -129,6 +129,7 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
     transport_map : 2-D ndarray
         The entropy-regularized unbalanced transport map
     """
+    C = np.asarray(C, dtype=np.float64)
     epsilon_scalings = 5
     scale_factor = np.exp(- np.log(epsilon) / 10 )
 
