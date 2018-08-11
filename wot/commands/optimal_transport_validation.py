@@ -11,7 +11,7 @@ import os
 from itertools import product
 import time
 
-def compute_validation_summary(ot_model, save_interpolated=False):
+def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolated=False):
     """
     Compute the validation summary for the given OTModel
 
@@ -19,6 +19,8 @@ def compute_validation_summary(ot_model, save_interpolated=False):
     ----------
     ot_model : wot.OTModel
         The OTModel to validate
+    interp_pattern : (int, int), optional, default: (1,2)
+        The interpolation pattern : (x, y) will compute transport maps t[i] to t[i+y] and interpolate at t[i+x]
     save_interpolated : bool, optional, default: False
         Wether to save or discard the interpolated and random point clouds
 
@@ -27,31 +29,35 @@ def compute_validation_summary(ot_model, save_interpolated=False):
     validation_summary : pandas.DataFrame
         The validation summary
     """
+    i_mid, i_last = interp_pattern
     times = ot_model.timepoints
     # Skip a timepoint and validate using the skipped timepoint
-    ot_model.day_pairs = { (times[i], times[i+2]): {} for i in range(len(times) - 2) }
+    ot_model.day_pairs = { (times[i], times[i+i_last]): {} for i in range(len(times) - i_last) }
     if 'covariate' not in ot_model.matrix.row_meta.columns:
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
     ot_model.compute_all_transport_maps(force=False, with_covariates=True)
     # Now validate
     summary = []
+    local_pca = ot_model.get_ot_config()['local_pca']
 
-    t05, t1 = times[:2]
-    p05 = ot_model.matrix.where(day=t05).split_by('covariate')
-    p1  = ot_model.matrix.where(day=t1 ).split_by('covariate')
-    for t in times[2:]:
+    for t_cur in range(len(times) - i_last):
         start_time = time.time()
         emd_time = 0
 
-        t0, t05, t1 = t05, t1, t
-        p0, p05, p1 = p05, p1, ot_model.matrix.where(day=t1).split_by('covariate')
+        t0, t05, t1 = times[t_cur], times[t_cur + i_mid], times[t_cur + i_last]
+        p0  = ot_model.matrix.where(day=t0 ).split_by('covariate')
+        p05 = ot_model.matrix.where(day=t05).split_by('covariate')
+        p1  = ot_model.matrix.where(day=t1 ).split_by('covariate')
         interp_frac = (t05 - t0) / (t1 - t0)
 
         for cv0, cv1 in product(p0.keys(), p1.keys()):
             tmap = ot_model.transport_map(t0, t1, covariate=(cv0, cv1))
             interp_size = (len(p0[cv0]) + len(p1[cv1])) // 2
-            i05 = wot.ot.interpolate_with_ot(p0[cv0].x, p1[cv1].x, tmap.x, interp_frac, interp_size)
-            r05 = wot.ot.interpolate_randomly(p0[cv0].x, p1[cv1].x, interp_frac, interp_size)
+            pca = wot.ot.get_pca(local_pca, p0[cv0].x, p1[cv1].x)
+            p0_x = wot.ot.pca_transform(pca, p0[cv0].x)
+            p1_x = wot.ot.pca_transform(pca, p1[cv1].x)
+            i05 = wot.ot.interpolate_with_ot(p0_x, p1_x, tmap.x, interp_frac, interp_size)
+            r05 = wot.ot.interpolate_randomly(p0_x, p1_x, interp_frac, interp_size)
 
             if save_interpolated:
                 prefix = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix)
@@ -62,19 +68,21 @@ def compute_validation_summary(ot_model, save_interpolated=False):
                         prefix + '_random.txt', txt_full=False)
 
             for cv05 in p05.keys():
+                p05_x = wot.ot.pca_transform(pca, p05[cv05].x)
 
                 def update_summary(pop, t, name):
                     name_05 = 'P_cv{}'.format(cv05)
                     emd_tmp = time.time()
-                    dist = wot.ot.earth_mover_distance(pop, p05[cv05].x)
-                    summary.append([t0, t1, t, t05, cv0, cv1, name, name_05, dist])
+                    dist = wot.ot.earth_mover_distance(pop, p05_x)
+                    summary.append([t0, t05, t1, t, t05, cv0, cv1, name, name_05, dist])
                     return time.time() - emd_tmp
 
                 if cv0 == cv1:
-                    emd_time += update_summary(p0[cv0].x, t0, 'F_cv{}'.format(cv0))
-                    emd_time += update_summary(p1[cv1].x, t1, 'L_cv{}'.format(cv1))
+                    emd_time += update_summary(p0_x, t0, 'F_cv{}'.format(cv0))
+                    emd_time += update_summary(p1_x, t1, 'L_cv{}'.format(cv1))
                 if cv0 == cv1 and cv0 < cv05:
-                    emd_time += update_summary(p05[cv0].x, t05, 'P_cv{}'.format(cv0))
+                    p05_cv0_x = wot.ot.pca_transform(pca, p05[cv0].x)
+                    emd_time += update_summary(p05_cv0_x, t05, 'P_cv{}'.format(cv0))
 
                 emd_time += update_summary(i05, t05, 'I_cv{}_cv{}'.format(cv0,cv1))
                 emd_time += update_summary(r05, t05, 'R_cv{}_cv{}'.format(cv0,cv1))
@@ -84,7 +92,7 @@ def compute_validation_summary(ot_model, save_interpolated=False):
                 .format(t0, t05, t1, len(p0) * len(p1), total_time, 100 * emd_time / total_time))
 
     # Post-process summary to make it a pandas DataFrame with proper column names
-    cols = ['interval_start', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1', 'distance']
+    cols = ['interval_start', 'interval_mid', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1', 'distance']
     return pd.DataFrame(summary, columns = cols)
 
 def main(argv):
@@ -94,6 +102,8 @@ def main(argv):
     parser.add_argument('--covariate', help='Covariate values for each cell')
     parser.add_argument('--save_interpolated', type=bool, default=False,
             help='Save interpolated and random point clouds')
+    parser.add_argument('--interp_pattern', default='1,2',
+            help='The interpolation pattern. "x,y" will compute transport from time t[i] to t[i+y] and interpolate at t[i+x]')
     parser.add_argument('--tmap', help='Transport maps prefix', default='val_tmaps')
     parser.add_argument('--out', help='Output file name', default='validation_summary.txt')
 
@@ -121,8 +131,13 @@ def main(argv):
             covariate = args.covariate,
             tolerance = args.tolerance,
             batch_size = args.batch_size,
+            cell_growth_rates = args.cell_growth_rates,
+            gene_filter = args.gene_filter,
+            cell_filter = args.cell_filter,
             )
-    summary = compute_validation_summary(ot_model, save_interpolated=args.save_interpolated)
+    summary = compute_validation_summary(ot_model,
+            interp_pattern=(int(x) for x in args.interp_pattern.split(',')),
+            save_interpolated=args.save_interpolated)
 
     summary.to_csv(args.out, sep = '\t', index=False)
     exit(1)

@@ -53,7 +53,39 @@ class OTModel:
             covariate_data_frame = wot.io.read_covariate_data_frame(cov)
             self.matrix.row_meta = self.matrix.row_meta.join(covariate_data_frame)
 
-        if max_threads is None:
+        g = kwargs.pop('cell_growth_rates', None)
+        if g is not None:
+            g_data_frame = wot.io.read_covariate_data_frame(g)
+            self.matrix.row_meta = self.matrix.row_meta.join(g_data_frame)
+
+        cell_filter = kwargs.pop('cell_filter', None)
+        gene_filter = kwargs.pop('gene_filter', None)
+        if gene_filter is not None:
+            if os.path.isfile(gene_filter):
+                gene_ids = pd.read_table(gene_filter, index_col=0, header=None)\
+                        .index.values
+            else:
+                import re
+                expr = re.compile(gene_filter)
+                gene_ids = [e for e in self.matrix.col_meta.index.values if expr.match(e)]
+            col_indices = self.matrix.col_meta.index.isin(gene_ids)
+            self.matrix = wot.Dataset(self.matrix.x[:,col_indices],
+                    self.matrix.row_meta, self.matrix.col_meta[col_indices])
+            wot.io.verbose('Successfuly applied gene_filter: "{}"'.format(gene_filter))
+        if cell_filter is not None:
+            if os.path.isfile(cell_filter):
+                cell_ids = pd.read_table(cell_filter, index_col=0, header=None)\
+                        .index.values
+            else:
+                import re
+                expr = re.compile(cell_filter)
+                cell_ids = [e for e in self.matrix.row_meta.index.values if expr.match(e)]
+            row_indices = self.matrix.row_meta.index.isin(cell_ids)
+            self.matrix = wot.Dataset(self.matrix.x[row_indices,:],
+                    self.matrix.row_meta[row_indices], self.matrix.col_meta)
+            wot.io.verbose('Successfuly applied cell_filter: "{}"'.format(cell_filter))
+
+        if max_threads is None or max_threads == 0:
             wot.io.verbose("Argument max_threads not set. Using default")
             max_usable_cores = len(os.sched_getaffinity(0))
             if kwargs.pop('fast', False):
@@ -91,10 +123,9 @@ class OTModel:
                 'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
                 'epsilon0': 1, 'tau': 1e4,
                 'growth_iters': 3, 'batch_size': 50,
-                'tolerance': 1e-2, 'g': None,
-                'local_pca': 30,
+                'local_pca': 30, 'max_iter': 1e7,
+                'tolerance': 1e-2,
                 }
-        # TODO: parse cell growth rates files
         # TODO: support gene_filter and cell_filter
         # TODO: support ncells and ncounts
         config = self.ot_config

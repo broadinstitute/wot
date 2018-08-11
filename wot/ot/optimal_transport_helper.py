@@ -288,6 +288,10 @@ class OptimalTransportHelper:
         else:
             p0 = ds.where(day=float(t0), covariate=int(covariate[0]))
             p1 = ds.where(day=float(t1), covariate=int(covariate[1]))
+
+        if 'g' in p0.row_meta.columns:
+            config['g'] = np.asarray(p0.row_meta['cell_growth_rate'].values)
+
         local_pca = config.pop('local_pca', None)
         if local_pca is not None and local_pca > 0:
             pca = wot.ot.get_pca(local_pca, p0.x, p1.x)
