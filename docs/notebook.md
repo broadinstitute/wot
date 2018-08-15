@@ -26,20 +26,20 @@ notebook. Just click the button below to download the whole archive.
 
 <div class="center-block text-center py-2">
   <a class="nounderline btn-outline-secondary btn-lg border px-3 py-2 mx-3"
-     role="button" href="#">Download all data</a>
+     role="button" href="http://www.mediafire.com/file/01ahkjrsjjzt56l/all_simulated_data.zip">Download all data</a>
   <a class="nounderline btn-outline-secondary btn-lg border px-3 py-2 mx-3"
-     role="button" href="#">Download all scripts</a>
+     role="button" href="all_scripts.zip">Download all scripts</a>
 </div>
 
 <br />
 
 <a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="01_generating_data.py">Download python code</a>
+ href="00_generating_data.py">Download python code</a>
 ## Simulating data ##
 ---------------------
 
 ```python
-{% include_relative notebook/01_generating_data.py %}
+{% include_relative notebook/00_generating_data.py %}
 ```
 
 <a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
@@ -66,7 +66,7 @@ notebook. Just click the button below to download the whole archive.
 ![Cell sets plots](images/notebook_cell_sets.png)
 
 <a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="00_init_model.py">Download python code</a>
+ href="01_init_model.py">Download python code</a>
 ## Initializing the OT Model ##
 -------------------------------
 
@@ -76,7 +76,7 @@ To compute ancestors and descendants, you will need an OT Model, storing all
 parameters for the transport maps. You can initialize it in python, for future use :
 
 ```python
-{% include_relative notebook/00_init_model.py %}
+{% include_relative notebook/01_init_model.py %}
 ```
 
 You can then use `wot.load_ot_model` to reload this model, with the same parameters.

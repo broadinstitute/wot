@@ -121,7 +121,7 @@ a table containing the core options. Required options are in bold font.
 > this documentation. You can download it here and run the commands described
 > thereafter in the same directory.
 >
-> <div class="center-block text-center py-2"><a class="nounderline btn-outline-secondary btn-lg border px-4 py-2" role="button" href="#">Download .zip</a></div>
+> <div class="center-block text-center py-2"><a class="nounderline btn-outline-secondary btn-lg border px-4 py-2" role="button" href="http://www.mediafire.com/file/01ahkjrsjjzt56l/all_simulated_data.zip">Download .zip</a></div>
 
 
 
@@ -133,7 +133,7 @@ wot optimal_transport --matrix matrix.txt \
 ```
 
 This command will create a file `tmaps_{A}_{B}.loom` for each pair `{A}`, `{B}`
-in the day pairs file. These maps can then be translated to any format you find
+of consecutive timepoints. These maps can then be translated to any format you find
 convenient with the [convert_matrix tool](#matrix_file).
 
 Additionally, a file `tmaps.yml` is generated, containing the configuration
@@ -180,8 +180,8 @@ for the computed transport maps. You can later use this file with other commands
       <td>Number of dimensions to use when doing PCA<br/>default : 30</td>
     </tr>
     <tr>
-      <td>--day_pairs</td>
-      <td>Configuration file for fine-graing control over OT parameters at each timepoint. See <a href="#day_pairs">formats</a></td>
+      <td>--config</td>
+      <td>Configuration file for fine-graing control over OT parameters at each timepoint. See <a href="#ot-configuration-file">formats</a></td>
     </tr>
   </tbody>
 </table>
@@ -197,7 +197,7 @@ want on the duality gap through the `--tolerance` parameter.
 
 Checking the duality gap is computationally expensive, that is why
 it is not done on every iteration, but rather after each batch of
-iterations. You can change the batch size with the `--batch-size`
+iterations. You can change the batch size with the `--batch_size`
 parameter. It is difficult to estimate the best batch size, as this
 depends heavily on the data being considered. Nonetheless, batch sizes
 too small (&lt; 10) or too big (&gt; 1000) are not recommended.
@@ -224,7 +224,7 @@ You can either manually edit this type of file, or generate it from a gene set f
 using the [cells_by_gene_set](#cells_by_gene_set) tool.
 
 ```sh
-wot trajectory --tmap . --cell_days days.txt \
+wot trajectory --tmap tmaps --cell_days days.txt \
  --cell_set cell_sets.gmt --time 10 --out traj.txt
 ```
 
@@ -331,6 +331,11 @@ wot trajectory_trends --tmap tmaps --cell_days days.txt \
  --out trends --time 10
 ```
 
+This will create a file `trends_<cell set name>.txt` with the mean expression
+profile among ancestors and `trends_<cell set name>.variance.txt` with the
+variance for each feature at each timepoint, for all cell sets in the file
+specified with `--cell_set`.
+
 <table class="table table-hover" style="display: table">
   <thead class="thead-light">
     <tr>
@@ -369,16 +374,18 @@ wot trajectory_trends --tmap tmaps --cell_days days.txt \
 
 ### Local regulatory model via differential expression ###
 
-you can compare two ancestor distributions through local enrichment.
+The local enrichment command finds the genes that are differentially expressed between two sets of cells.
 
-The ancestor distributions can be two tips' or one tip's but at different time point. Now we have different ways to give the score that measures the difference between two distributions. Besides, the `matrix.txt` and `matrix1.txt`  should be the form of the result of trajectory trends.
+The input matrices must have timepoints on rows, and genes on columns. This is the format created
+by the [trajectory trends command](#trajectory-trends).
+
 ```sh
-wot optimal_local_enrichment --matrix1 matrix.txt \
-(--matrix2 matrix2.txt) --score t_test \
---comparisons comapre.txt (--gsea C1)
+wot local_enrichment --score t_test \
+ --matrix1 trends_set1.txt --variance1 trends_set1.variance.txt \
+ --matrix2 trends_set2.txt --variance2 trends_set2.variance.txt
 ```
 
-When we run the cmd, we can get the file like `timepoint.rnk` or `timepoint1_timepoint2.rnk` including each gene's score.
+This will create files `<timepoint>.rnk` for each timepoint, containing each gene's score.
 
 <table class="table table-hover" style="display: table">
   <thead class="thead-light">
@@ -390,31 +397,49 @@ When we run the cmd, we can get the file like `timepoint.rnk` or `timepoint1_tim
   <tbody>
     <tr>
       <td><b>--matrix1</b></td>
-      <td>A matrix with cells on rows and features, such as genes or pathways on columns See <a href="#matrix_file">formats</a></td>
+      <td>A matrix with timepoints on rows and features, such as genes or pathways on columns See <a href="#matrix_file">formats</a></td>
     </tr>
     <tr>
-      <td><b>--score</b></td>
-      <td>Method to compute differential gene expression score. Choices are signal to noise, mean difference, t-test, and fold change.{s2n,mean_difference,fold_change,t_test}</td>
+      <td><b>--variance1</b></td>
+      <td>A matrix with timepoints on rows and features on columns with the variance of each gene, associated with matrix1. See <a href="#matrix_file">formats</a></td>
     </tr>
     <tr>
       <td>--matrix2</td>
-      <td>A matrix with cells on rows and features, such as genes or pathways on columns See <a href="#matrix_file">formats</a></td>
+      <td>A matrix with timepoints on rows and features, such as genes or pathways on columns See <a href="#matrix_file">formats</a></td>
     </tr>
     <tr>
-      <td>--gsea</td>
-      <td>Run <a href="http://software.broadinstitute.org/gsea/index.jsp">GSEA</a> on the specified MSigDB collections.<br/>
-          H (hallmark gene sets), C1 (positional gene sets), C2 (curated gene sets), C3 (motif gene sets),
-          C4 (computational gene sets), C5 (GO gene sets), C6 (oncogenic signatures), C7 (immunologic signatures)
-      </td>
+      <td>--variance2</td>
+      <td>A matrix with timepoints on rows and features on columns with the variance of each gene, associated with matrix2. See <a href="#matrix_file">formats</a></td>
+    </tr>
+    <tr>
+      <td><b>--score</b></td>
+      <td>Method to compute differential expression score.<br/>
+      Available:
+      <ul>
+      <li>signal to noise (s2n)</li>
+      <li>mean difference (mean_difference)</li>
+      <li>t-test (t_test)</li>
+      <li>fold change (fold_change)</li>
+      </ul></td>
     </tr>
     <tr>
       <td>--comparisons</td>
-      <td>Comparisons to generate ranked lists for. By default, for one matrix signatures are created for all
-      consecutive timepoints. For two matrices for all matching timepoints.</td>
+      <td>The timepoints to compare. See detailled description below</td>
     </tr>
   </tbody>
 </table>
 
+This commands accepts two types of input configurations. The first one is as presented in the example with two matrices.
+It will compare the two matrices for all matching timepoints, and output a `<timepoint>.rnk` file for each of those.
+
+Alternatively, you can specify a single matrix, and the default behavior will be to compare entries of the matrix
+for all consecutives timepoints. This would create files names `<timepoint1>_<timepoint2>.rnk` instead.
+
+For more control over which comparisons are performed, you can specify a file with a tab-separated pair
+of timepoints on each line with the `--comparisons` parameter. The first of the two will refer to the
+timepoint of the selected entry in the first matrix, and the second to the timpepoints of the selected entry in the
+second matrix, which is identical to the first one if only one was specified. You will then get a file named
+`<timepoint1>_<timepoint2>.rnk` for each pair of timepoints in the comparisons file.
 
 ### Validation ###
 
@@ -458,12 +483,31 @@ all the information needed to evaluate the accuracy of the predictions.
       <td>--out</td>
       <td>The filename for the validation summary<br/>default : validation_summary.txt</td>
     </tr>
+    <tr>
+      <td>--interp_pattern</td>
+      <td>Two comma-separated values to specify the interpolation pattern<br />default : 1,2</td>
+    </tr>
   </tbody>
 </table>
 
 The validation tool also accepts all options of the
 [optimal_transport tool](#transport-maps). Mandatory options are
 reproduced here for convenience.
+
+##### Interpolation pattern #####
+
+Validation is done by transporting cells from time `t[i]` to `t[i+y]`,
+and then interpolating at a middle timepoint `t[i+x]` (assuming `t` is
+ordered and x < y).
+
+You can change these two values using the parameter `--interp_pattern x,y`.
+
+If you have timepoints 0, 1, 2, ... to 10, the default pattern is `1,2`,
+which means you would transport from 0 to 2 and interpolate at 1, and then
+transport from 1 to 3 and interpolate at 2, etc. Using pattern `2,4` would
+transport from 0 to 4 and interpolate at 2, then 1 to 5 and interpolate at 3, etc.
+But you might want to not interpolate in the middle, for instance with `1,4`, you
+would transport from 0 to 4 and interpolate at 1, etc.
 
 ##### Covariate #####
 
@@ -627,7 +671,7 @@ Example:
 <tr><td>cell_2</td><td>2.5</td></tr>
 </table>
 
-### <a name="day_pairs_file">Day pairs file</a> ###
+### OT Configuration file ###
 
 There are several options to specify Optimal Transport parameters in **wot**.
 
@@ -651,7 +695,8 @@ timepoint, and those would be used to compute more accurate transport maps.
 The configuration file is a tab-separated text file that starts with a header
 that must contain a column named `t`, for the timepoint, and then the name
 of any parameter you want to set. Any parameter not specified in this
-file can be specified constant with the command line options as previously.
+file can be specified as being constant as previously, with the command-line
+arguments `--epsilon`, `--lambda1`, `--tolerance`, etc. .
 
 Example:
 
@@ -693,7 +738,8 @@ timepoints 3 or 3.5 are not present here). If a timepoint is present in the
 dataset but not in this configuration file, it will be ignored.
 
 You can use as many parameter columns as you want, even none.
-All parameters not specified here can be specified as constant as previously.
+All parameters not specified here can be specified as being constant as previously,
+with the command-line arguments `--epsilon`, `--lambda1`, `--tolerance`, etc. .
 
 ### <a name="geneset_file">Gene sets</a> ###
 

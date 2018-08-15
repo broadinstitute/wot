@@ -12,14 +12,6 @@ wot.simulate.simulate module
     :undoc-members:
     :show-inheritance:
 
-wot.simulate.util module
-------------------------
-
-.. automodule:: wot.simulate.util
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

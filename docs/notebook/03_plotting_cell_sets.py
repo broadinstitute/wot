@@ -25,7 +25,7 @@ wot.io.incorporate_days_information_in_dataset(ds, days_file)
 
 # Compute the cell sets for the given quantile
 
-gene_sets = wot.io.read_gene_sets(gene_sets_file, wot.cell_names(ds))
+gene_sets = wot.io.read_gene_sets(gene_sets_file, ds.col_meta.index.values)
 cell_sets = wot.commands.get_cells_in_gene_sets(gene_sets, ds,
         quantile=quantile_for_cell_sets)
 wot.io.write_gene_sets(cell_sets, cell_sets_file, "gmt")

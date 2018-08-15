@@ -6,6 +6,7 @@ gene_sets_file = 'gene_sets.gmt'
 
 number_of_timepoints = 51
 covariates_count = 5
+average_cell_count_per_timepoint = 3000
 
 gene_sets = {
         'Stem cells': [ 'Stem_gene' ],
@@ -44,7 +45,7 @@ means = numpy.asarray([ means[:,t] for t in range(N) ])
 covs = [ .08, .1, .04, .04, .04, .03, .05 ]
 covs = [[ c * (random() + .5) for c in covs ]] * len(tips)
 
-sizes =  [ 5000 + randint(-100, 100) for _ in range(N) ]
+sizes =  [ average_cell_count_per_timepoint + randint(-100, 100) for _ in range(N) ]
 
 data = [ wot.simulate.multivariate_normal_mixture(means[i],
     covs, size=sizes[i]) for i in range(N) ]

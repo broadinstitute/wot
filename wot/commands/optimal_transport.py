@@ -17,7 +17,6 @@ def main(argv):
     args = parser.parse_args(argv)
 
     # TODO: add support for the following arguments :
-    # '--cell_growth_rates'
     # '--gene_filter'
     # '--cell_filter'
     # '--ncells'
@@ -39,6 +38,9 @@ def main(argv):
             day_pairs = args.config,
             tolerance = args.tolerance,
             batch_size = args.batch_size,
+            cell_growth_rates = args.cell_growth_rates,
+            gene_filter = args.gene_filter,
+            cell_filter = args.cell_filter,
             )
 
     ot_model.compute_all_transport_maps(force = True)
