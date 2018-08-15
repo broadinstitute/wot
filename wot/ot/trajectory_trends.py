@@ -14,9 +14,10 @@ class TrajectoryTrends:
             values = value_transform(values)
         if scipy.sparse.isspmatrix(values):
             mean = values.T @ weights
+            variance = np.average((values - mean).A1 ** 2, weights=weights, axis=0)
         else:
             mean = np.average(values, weights=weights, axis=0)
-        variance = np.average((values - mean) ** 2, weights=weights, axis=0)
+            variance = np.average((values - mean) ** 2, weights=weights, axis=0)
         return {'mean': mean, 'variance': variance}
 
     @staticmethod
