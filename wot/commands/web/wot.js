@@ -170,7 +170,8 @@ var createPlotAnimation = function (plotAnimatiobObject) {
         if ($playBtn.text() === 'Pause') {
             index++;
             showFrame();
-            setTimeout(nextTick, 500);
+            window.requestAnimationFrame(nextTick);
+            // setTimeout(nextTick, 500);
         }
     }
 
