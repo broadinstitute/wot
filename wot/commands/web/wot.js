@@ -70,7 +70,7 @@ var createPlotAnimation = function (plotAnimatiobObject) {
     var traces = plotAnimatiobObject.traces;
     var elem = plotAnimatiobObject.elem;
     var layout = plotAnimatiobObject.layout;
-    var $controls = $('<div style="display: inline;"><div data-name="create-cell-set-el"><button style="display: inline-block;width:auto;" class="btn btn-default btn-sm" name="create-cell-set" disabled>Create Cell Set</button> <span style="display: inline-block;" class="help-block" data-name="nselected"></span></div>' +
+    var $controls = $('<div style="display: inline;">' +
         '<div data-name="wot-anim"><button class="btn btn-default btn-sm" name="play">Play</button>  <select style="width:auto;" class="form-control input-sm" data-name="group"></select></div></div>');
     var index = 0;
     var groups = [];
@@ -80,22 +80,21 @@ var createPlotAnimation = function (plotAnimatiobObject) {
     }
 
     var $group = $controls.find('[data-name=group]');
-    var $createSelectedCellSet = $controls.find('[name=create-cell-set]');
-    var $nselected = $controls.find('[data-name=nselected]');
+
     var selectedIds = [];
-    $createSelectedCellSet.on('click', function (e) {
-        e.preventDefault();
-        var name;
-        if (index === 0) {
-            name = 'custom_set' + customSetCounter;
-        } else {
-            name = 'custom_set' + customSetCounter + '_' + traces[index - 1].name;
-        }
-        customSetCounter++;
-        customCellSetNameToIds[name] = selectedIds;
-        $(elem).find('.select-outline').remove();
-        updateCellSetsSelector();
-    });
+    // $createSelectedCellSet.on('click', function (e) {
+    //     e.preventDefault();
+    //     var name;
+    //     if (index === 0) {
+    //         name = 'custom_set' + customSetCounter;
+    //     } else {
+    //         name = 'custom_set' + customSetCounter + '_' + traces[index - 1].name;
+    //     }
+    //     customSetCounter++;
+    //     customCellSetNameToIds[name] = selectedIds;
+    //     $(elem).find('.select-outline').remove();
+    //     updateCellSetsSelector();
+    // });
     $group.html(groups.map(function (value, groupIndex) {
         return '<option value="' + groupIndex + '">' + value + '</option>';
     }).join(''));
@@ -155,15 +154,16 @@ var createPlotAnimation = function (plotAnimatiobObject) {
                         // curveNumber
                     });
                 }
-                $nselected.html(groupedThousands(selectedIds.length) + ' selected');
-                $createSelectedCellSet.prop('disabled', selectedIds.length === 0);
+                // $nselected.html(groupedThousands(selectedIds.length) + ' selected');
+                // $createSelectedCellSet.prop('disabled', selectedIds.length === 0);
+                plotAnimatiobObject.select(selectedIds);
             });
 
         }
         // reset on new frame
         selectedIds = [];
-        $nselected.html('0 selected');
-        $createSelectedCellSet.prop('disabled', true);
+        // $nselected.html('0 selected');
+        // $createSelectedCellSet.prop('disabled', true);
     }
 
     function nextTick() {
@@ -195,9 +195,6 @@ var createPlotAnimation = function (plotAnimatiobObject) {
     showFrame();
     if (traces.length === 0) {
         $controls.find('[data-name=wot-anim]').hide();
-    }
-    if (!plotAnimatiobObject.select) {
-        $controls.find('[data-name=create-cell-set-el]').hide();
     }
     return $controls;
 };
@@ -633,11 +630,12 @@ function updateCellSetsSelector() {
     $cellSet.selectpicker('render');
 }
 
-
+var brushedIds = {};
 var showFeature = function () {
     var traces = [];
 
     var filterValue = null;
+
     var f = function () {
         return true;
     };
@@ -683,8 +681,20 @@ var showFeature = function () {
             }
         }
     }
-    var nfields = groupBy.length;
-    var showlegend = nfields > 0 && isBackgroundTrace;
+    var isBrushed = false;
+    for (var key in brushedIds) {
+        isBrushed = true;
+        break;
+    }
+    if (isBrushed) {
+        var oldFilter = f;
+        f = function (value, id) {
+            return oldFilter(value) && brushedIds[id];
+        };
+    }
+    var isSelected = isBrushed || filterValue != null;
+    var ngroupByFields = groupBy.length;
+    var showlegend = ngroupByFields > 0 && isBackgroundTrace;
     var traceNameToTrace = {};
 
     var hidePoint = function (d) {
@@ -696,85 +706,86 @@ var showFeature = function () {
         };
     }
 
-    for (var i = 0, length = featureResult.ids.length; i < length; i++) {
-        var id = featureResult.ids[i];
-        var index = cellIdToIndex[id];
-        var keyArray = [];
-        for (var fieldIndex = 0; fieldIndex < nfields; fieldIndex++) {
-            var fieldName = groupBy[fieldIndex];
-            keyArray.push(cellInfo[fieldName][index]);
-        }
-        var key = keyArray.join('_');
-        var trace = traceNameToTrace[key];
-        if (trace == null) {
-            trace = {
-                x: [],
-                y: [],
-                ids: [],
-                nids: 0,
-                name: key,
-                keyArray: keyArray,
-                key: key,
-                mode: 'markers',
-                type: 'scattergl',
-                hoverinfo: 'text',
-                showlegend: showlegend
-            };
-            if (!isBackgroundTrace) {
-                if (featureResult.isNumeric) {
-                    if (zScore) {
-                        trace.marker = {
-                            cmin: -3,
-                            cmax: 3,
-                            color: [],
-                            opacity: [],
-                            showscale: true,
-                            colorscale: [[0, 'blue'], [0.25, 'rgb(217,217,217)'], [0.75, 'rgb(217,217,217)'], [1, 'red']],
-                            size: 2
-                        };
-
-                    } else {
-                        trace.marker = {
-                            cmin: valueTransform(featureResult.featureRange[0]),
-                            cmax: valueTransform(featureResult.featureRange[1]),
-                            color: [],
-                            opacity: [],
-                            showscale: true,
-                            colorscale: forceLayoutColorScale,
-                            size: 2
-                        };
-                    }
-                }
-
-            } else {
-                trace.marker = {
-                    size: 2,
-                    showscale: false,
-                    opacity: isBackgroundTrace ? backgroundOpacity : null,
-                    color: isBackgroundTrace ? 'rgb(217,217,217)' : null,
-                    cmin: null,
-                    cmax: null
+    if (isSelected || !isBackgroundTrace) {
+        for (var i = 0, length = featureResult.ids.length; i < length; i++) {
+            var id = featureResult.ids[i];
+            var index = cellIdToIndex[id];
+            var keyArray = [];
+            for (var fieldIndex = 0; fieldIndex < ngroupByFields; fieldIndex++) {
+                var fieldName = groupBy[fieldIndex];
+                keyArray.push(cellInfo[fieldName][index]);
+            }
+            var key = keyArray.join('_');
+            var trace = traceNameToTrace[key];
+            if (trace == null) {
+                trace = {
+                    x: [],
+                    y: [],
+                    ids: [],
+                    nids: 0,
+                    name: key,
+                    keyArray: keyArray,
+                    key: key,
+                    mode: 'markers',
+                    type: 'scattergl',
+                    hoverinfo: 'text',
+                    showlegend: showlegend
                 };
-            }
-            traceNameToTrace[key] = trace;
-        }
-        var accept = true;
-        if (!isBackgroundTrace) {
-            var value = valueTransform(values[i]);
-            accept = f(value);
-            if (accept) {
-                // skip background points
-                trace.marker.color.push(value);
-                trace.marker.opacity.push(hidePoint(value) ? 0 : 1);
-            }
-        }
-        trace.nids++;
-        if (accept) {
-            trace.x.push(cellInfo.x[index]);
-            trace.y.push(cellInfo.y[index]);
-            trace.ids.push(id);
-        }
+                if (!isBackgroundTrace) {
+                    if (featureResult.isNumeric) {
+                        if (zScore) {
+                            trace.marker = {
+                                cmin: -3,
+                                cmax: 3,
+                                color: [],
+                                opacity: [],
+                                showscale: true,
+                                colorscale: [[0, 'blue'], [0.25, 'rgb(217,217,217)'], [0.75, 'rgb(217,217,217)'], [1, 'red']],
+                                size: 2
+                            };
 
+                        } else {
+                            trace.marker = {
+                                cmin: valueTransform(featureResult.featureRange[0]),
+                                cmax: valueTransform(featureResult.featureRange[1]),
+                                color: [],
+                                opacity: [],
+                                showscale: true,
+                                colorscale: forceLayoutColorScale,
+                                size: 2
+                            };
+                        }
+                    }
+
+                } else {
+                    trace.marker = {
+                        size: 2,
+                        showscale: false,
+                        opacity: 1,
+                        color: 'black',
+                        cmin: null,
+                        cmax: null
+                    };
+                }
+                traceNameToTrace[key] = trace;
+            }
+            var value = isBackgroundTrace ? '' : valueTransform(values[i]);
+            var accept = f(value, id);
+            if (!isBackgroundTrace) {
+                if (accept) {
+                    trace.marker.opacity.push(hidePoint(value) ? 0 : 1);
+                    trace.marker.color.push(value);
+                }
+            }
+
+            trace.nids++;
+            if (accept) {
+                trace.x.push(cellInfo.x[index]);
+                trace.y.push(cellInfo.y[index]);
+                trace.ids.push(id);
+            }
+
+        }
     }
     for (var key in traceNameToTrace) {
         traces.push(traceNameToTrace[key]);
@@ -810,12 +821,21 @@ var showFeature = function () {
     featureForceLayoutInfo.layout.width = showlegend ? 1100 : 840; // leave room for legend
     featureForceLayoutInfo.layout.margin.r = showlegend ? 300 : 0;
 
+    var brush = function (selectedIds) {
+
+        brushedIds = {};
+        for (var i = 0; i < selectedIds.length; i++) {
+            brushedIds[selectedIds[i]] = true;
+        }
+        showFeature();
+    };
+
     $controls.html(createPlotAnimation({
-        backgroundTrace: isBackgroundTrace && nfields === 0 ? null : featureForceLayoutInfo.backgroundTrace,
+        backgroundTrace: featureForceLayoutInfo.backgroundTrace,
         traces: featurePlotTraces,
         elem: document.getElementById('force_layout_vis'),
         layout: featureForceLayoutInfo.layout,
-        select: true
+        select: brush
     }));
 
     var percentFormatter = d3.format('.1f');
