@@ -194,7 +194,10 @@ var createPlotAnimation = function (plotAnimatiobObject) {
     });
     showFrame();
     if (traces.length === 0) {
+        console.log('Only background trace');
         $controls.find('[data-name=wot-anim]').hide();
+    } else {
+        $controls.find('[data-name=wot-anim]').show();
     }
     return $controls;
 };
@@ -706,7 +709,7 @@ var showFeature = function () {
         };
     }
 
-    if (isSelected || !isBackgroundTrace) {
+    if (isSelected || !isBackgroundTrace || ngroupByFields > 0) {
         for (var i = 0, length = featureResult.ids.length; i < length; i++) {
             var id = featureResult.ids[i];
             var index = cellIdToIndex[id];
@@ -762,7 +765,7 @@ var showFeature = function () {
                         size: 2,
                         showscale: false,
                         opacity: 1,
-                        color: 'black',
+                        color: ngroupByFields === 0 ? 'black' : null,
                         cmin: null,
                         cmax: null
                     };
