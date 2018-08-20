@@ -1,0 +1,27 @@
+---
+layout: base
+---
+
+<div class="container">
+  <div class="row">
+
+    <!-- sidebar, which will move to the top on a small screen -->
+    <div class="col-sm-3">
+      <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
+    </div>
+
+    <div class="col-sm-9">
+      <main id="content" class="main-content" role="main">
+
+        {{ content }}
+
+        <footer class="site-footer">
+          {% if site.github.is_project_page %}
+          <span class="site-footer-owner"><a href="{{ site.github.repository_url }}">{{ site.github.repository_name }}</a> is maintained by <a href="{{ site.github.owner_url }}">{{ site.github.owner_name }}</a>.</span>
+          {% endif %}
+        </footer>
+
+      </main>
+    </div>
+  </div>
+</div>

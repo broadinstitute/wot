@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport"
+          content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+    <title>WOT</title>
+    <link rel="stylesheet" href="css/jquery-ui.min.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/bootstrap-select.min.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <script type="text/javascript" src="js/jquery-3.3.1.min.js"></script>
+    <script type="text/javascript" src="js/plotly-latest.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap-select.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="js/d3.v5.min.js"></script>
+    <script type="text/javascript" src="js/FileSaver.min.js"></script>
+
+</head>
+<body>
+<noscript>
+    <p>Please enable JavaScript</p>
+</noscript>
+<div class="container-fluid">
+
+    <ul class="nav nav-tabs" role="tablist">
+        <li class="active" role="presentation"><a href="#sets_el" aria-controls="sets_el" role="tab" data-toggle="tab">Cells</a>
+        </li>
+        <li id="trajectory_li" role="presentation"><a href="#trajectory_el" aria-controls="trajectory_el"
+                                                      role="tab"
+                                                      data-toggle="tab">Optimal Transport</a></li>
+
+    </ul>
+
+
+    <div class="tab-content">
+
+        <div role="tabpanel" class="tab-pane active" id="sets_el">
+            <div class="row">
+                <div class="col-xs-12 col-md-3 col-lg-2">
+                    <form id="set_form">
+                        <div class="form-group">
+                            <label for="set_features">Feature</label>
+                            <input placeholder="Enter a feature" class="form-control input-sm"
+                                   id="set_features" type="text">
+                        </div>
+                        <button id="set_submit" type="submit" class="btn btn-default btn-sm">Go</button>
+                        <hr/>
+                        <div class="form-group">
+                            <label style="display:block;" for="filter_quantile">Select Cells</label>
+                            <select id="filter_op" style="width:auto;display:inline-block;"
+                                    class="form-control input-sm">
+                                <option value="gt">></option>
+                                <option value="lt"><</option>
+                            </select>
+                            <input placeholder="Enter quantile" class="form-control input-sm" id="filter_quantile"
+                                   type="text" style="width:150px;display:inline-block;">
+                            <span class="help-block"><a style="display:none;" id="enter-quantile" href="#">Enter a quantile instead</a><a
+                                    id="enter-value" href="#">Enter a value instead</a></span>
+
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input id="log" type="checkbox"> Log
+                            </label>
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input id="z_score" type="checkbox"> Z-score
+                            </label>
+                        </div>
+                        <div class="form-group"><label for="force_layout_group_by">Group By</label>
+                            <select id="force_layout_group_by"
+                                    class="form-control input-sm selectpicker" multiple>
+                            </select>
+                        </div>
+
+                        <hr/>
+                        <button id="export_set" type="button" class="btn btn-default btn-sm">Export Custom Cell Sets
+                        </button>
+                        <span id="ncustom_sets" class="help-block"></span>
+                    </form>
+                </div>
+
+                <div class="col-xs-12 col-md-9 col-lg-10">
+                    <div id="set_loading" style="display:none;overflow:hidden;text-align:center;"><i
+                            class="fa fa-spinner fa-spin fa-3x"></i><span
+                            style="padding-left:4px;vertical-align:middle;font-weight:bold;">Loading...</span></div>
+                    <h2 id="set_title"></h2>
+                    <div style="display:inline-block;vertical-align:top;">
+                        <div id="force_layout_vis_controls"></div>
+                        <div id="force_layout_vis" style="display:inline-block;vertical-align:top;"></div>
+                    </div>
+                    <div id="table_vis" style="max-width:400px;display:inline-block;vertical-align:top;"></div>
+                </div>
+            </div>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="trajectory_el">
+            <div class="row">
+                <div class="col-xs-12 col-md-3 col-lg-2">
+                    <form id="trajectory_form">
+                        <div class="form-group">
+                            <label for="cell_sets">Cell Sets</label>
+                            <select data-actions-box="true"
+                                    data-selected-text-format="count"
+                                    data-live-search="true" class="form-control input-sm selectpicker"
+                                    id="cell_sets"
+                                    multiple></select>
+                        </div>
+                        <div id="transport_maps_group" style="display: none;" class="form-group">
+                            <label for="transport_maps">Transport Maps</label>
+                            <select class="form-control input-sm selectpicker" id="transport_maps" multiple></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="features">Features</label>
+                            <input class="form-control input-sm"
+                                   placeholder="Enter one or more features" id="features" type="text">
+                        </div>
+                        <button id="trajectory_submit" type="submit" class="btn btn-default btn-sm">Go</button>
+                    </form>
+                </div>
+                <div class="col-xs-12 col-md-9 col-lg-10">
+                    <div id="trajectory_loading" style="display:none;overflow:hidden;text-align:center;"><i
+                            class="fa fa-spinner fa-spin fa-3x"></i><span
+                            style="padding-left:4px;vertical-align:middle;font-weight:bold;">Loading...</span></div>
+                    <div id="trajectory_set_vis"></div>
+                    <div id="trajectory_vis"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<script type="text/javascript" src="wot.js"></script>
+</body>
+</html>
+

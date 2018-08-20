@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="{{ site.lang | default: "en-US" }}">
+  {% include head.html %}
+
+  <body data-spy="scroll" data-target="#toc">
+    {% include navbar.html %}
+
+    {% unless page.noheader %}
+      {% include header.html %}
+    {% endunless %}
+
+    {{ content }}
+
+    {% include analytics.html %}
+  </body>
+</html>

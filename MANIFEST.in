@@ -1,0 +1,10 @@
+include LICENSE
+include README.md
+
+include cython_speedup/*.pyx
+
+recursive-include wot *
+recursive-exclude tests *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+

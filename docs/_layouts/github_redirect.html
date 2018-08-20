@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    {% if site.github.is_project_page %}
+      <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+      <meta http-equiv="refresh" content="0;url={{ site.github.repository_url }}" />
+    {% else %}
+      <title>Github not found</title>
+    {% endif %}
+  </head>
+
+  <body>
+    {% if site.github.is_project_page %}
+      <p>You are being reirected to the github page of the project</p>
+    {% else %}
+      <p>This page should redirect you to the github page of the project, but it seems unexistent</p>
+    {% endif %}
+  </body>
+</html>
