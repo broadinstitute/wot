@@ -141,9 +141,9 @@ def main(argsv):
         result = {'v': []}
         for dataset_index in range(len(datasets)):
             ds = datasets[dataset_index]
-            column_indices = np.where(ds.col_meta.index.str.upper().isin(feature_ids))[0]
-            if len(column_indices) > 0:
-                for j in column_indices:
+            feature_indices = np.where(ds.col_meta.index.str.upper().isin(feature_ids))[0]
+            if len(feature_indices) > 0:
+                for j in feature_indices:
                     values = ds.x[:, j]
                     if scipy.sparse.isspmatrix(values):
                         values = values.toarray().flatten()

@@ -11,21 +11,22 @@ class Dataset:
            col_meta (pd.DataFrame) Column metadata
        """
 
-    def __init__(self, x, row_meta, col_meta):
+    def __init__(self, x, row_meta, col_meta, backed=False):
         self.x = x
         self.row_meta = row_meta
         self.col_meta = col_meta
         self.layers = {}
+        self.backed = backed
         row_duplicates = row_meta.index.duplicated()
         if any(row_duplicates):
             raise Exception('Duplicates in row indices : ',
-                    list(row_meta.index[row_duplicates])[:25],
-                    '(list may be truncated)')
+                            list(row_meta.index[row_duplicates])[:25],
+                            '(list may be truncated)')
         col_duplicates = col_meta.index.duplicated()
         if any(col_duplicates):
             raise Exception('Duplicates in column indices : ',
-                    list(col_meta.index[col_duplicates])[:25],
-                    '(list may be truncated)')
+                            list(col_meta.index[col_duplicates])[:25],
+                            '(list may be truncated)')
         if type(row_meta) == pd.DataFrame and x.shape[0] != row_meta.shape[0]:
             raise Exception('Row dimensions do not match: ' + str(x.shape[0]) +
                             '!=' + str(row_meta.shape[0]))
@@ -68,7 +69,7 @@ class Dataset:
         for key in kwargs:
             if key not in self.row_meta.columns:
                 raise ValueError("No such metadata in dataset : \"{}\"".format(key))
-        query = lambda s : all(s[k] == kwargs[k] for k in kwargs)
+        query = lambda s: all(s[k] == kwargs[k] for k in kwargs)
 
         all_ids = self.row_meta.index[self.row_meta.apply(query, axis=1)]
         all_indices = self.row_meta.index.get_indexer_for(all_ids)
@@ -100,4 +101,5 @@ class Dataset:
         def extract(group):
             indices = self.row_meta.index.get_indexer_for(group.index)
             return Dataset(self.x[indices], self.row_meta.iloc[indices].copy(), self.col_meta.copy())
-        return { name: extract(group) for name, group in self.row_meta.groupby(metadata) }
+
+        return {name: extract(group) for name, group in self.row_meta.groupby(metadata)}
