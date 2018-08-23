@@ -22,4 +22,4 @@ class Population:
         """
         Make the measure sum to 1, i.e. be a probability distribution over cells.
         """
-        self.p = p / np.sum(p)
+        self.p = self.p / np.sum(self.p)
