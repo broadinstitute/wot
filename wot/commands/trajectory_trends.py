@@ -96,6 +96,6 @@ def main(argv):
         variance = wot.Dataset(variances[i], row_meta, col_meta)
         basename = args.out + '_' + cs_name
         wot.io.write_dataset(trend, basename + '.txt',
-                output_format='txt', txt_full=False)
+                output_format='txt')
         wot.io.write_dataset(variance, basename + '.variance.txt',
-                output_format='txt', txt_full=False)
+                output_format='txt')

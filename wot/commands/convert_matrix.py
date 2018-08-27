@@ -15,4 +15,4 @@ def main(argv):
 
     for f in files:
         name = wot.io.get_filename_and_extension(f)[0]
-        wot.io.write_dataset(wot.io.read_dataset(f), name, output_format=args.format, txt_full=True)
+        wot.io.write_dataset(wot.io.read_dataset(f), name, output_format=args.format)

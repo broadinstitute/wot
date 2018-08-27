@@ -39,6 +39,17 @@ def compute_force_layout(ds, n_neighbors=100, n_comps=100, neighbors_diff=20, n_
         for i, j in zip(rows, cols):
             if i < j:
                 writer.write("{u} {v} {w:.6g}\n".format(u=i + 1, v=j + 1, w=W[i, j]))
+
+    run_gephi(input_graph_file, output_coord_file, n_steps)
+    # replace numbers with cids
+    df = pd.read_table(output_coord_file, header=0, index_col='id')
+    os.remove(output_coord_file)
+    os.remove(input_graph_file)
+    df.index = np.array(cids)[df.index.values - 1]
+    return df, adata
+
+
+def run_gephi(input_graph_file, output_coord_file, n_steps):
     layout = 'fa'
     import psutil
     memory = int(0.5 * psutil.virtual_memory()[0] * 1e-9)
@@ -48,21 +59,19 @@ def compute_force_layout(ds, n_neighbors=100, n_comps=100, neighbors_diff=20, n_
     subprocess.check_call(['java', '-Djava.awt.headless=true', '-Xmx{memory}g'.format(memory=memory), '-cp', classpath, \
                            'GraphLayout', input_graph_file, output_coord_file, layout, str(n_steps),
                            str(os.cpu_count())])
-    # replace numbers with cids
-    df = pd.read_table(output_coord_file, header=0, index_col='id')
-    os.remove(output_coord_file)
-    os.remove(input_graph_file)
-    df.index = np.array(cids)[df.index.values - 1]
-    return df, adata
 
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Force-directed layout embedding')
-    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
+    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP)
+    parser.add_argument('--n_comps', help='Number of diffusion components', type=int, default=20)
     parser.add_argument('--neighbors', help='Number of nearest neighbors', type=int, default=100)
     parser.add_argument('--neighbors_diff', help='Number of nearest neighbors to use in diffusion component space',
                         type=int, default=20)
-    parser.add_argument('--n_comps', help='Number of diffusion components', type=int, default=20)
+
+    parser.add_argument('--graph',
+                        help='Precomputed graph to use instead of matrix. See https://gephi.org/users/supported-graph-formats/')
+
     parser.add_argument('--n_steps', help='Number of force layout iterations', type=int, default=1000)
     parser.add_argument('--out', help='Output file name')
     args = parser.parse_args(argv)
@@ -78,13 +87,13 @@ def main(argv):
                 'https://github.com/gephi/gephi-toolkit/releases/download/v0.9.2/gephi-toolkit-0.9.2-all.jar') as response, open(
             jar_file, 'wb') as out_file:
             shutil.copyfileobj(response, out_file)
-    if not os.path.isfile(args.matrix):
-        print("Input matrix is not a file")
-        exit(1)
-    ds = wot.io.read_dataset(args.matrix)
-    df, adata = compute_force_layout(ds, n_neighbors=args.neighbors,
-                                     neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
-                                     n_steps=args.n_steps)
-    adata.write(args.out + '.h5ad')
-    csv_file = args.out if args.out.lower().endswith('.csv') else args.out + '.csv'
-    df.to_csv(csv_file, index_label='id')
+    if args.matrix is not None:
+        ds = wot.io.read_dataset(args.matrix)
+        df, adata = compute_force_layout(ds, n_neighbors=args.neighbors,
+                                         neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
+                                         n_steps=args.n_steps)
+        adata.write(args.out + '.h5ad')
+        csv_file = args.out if args.out.lower().endswith('.csv') else args.out + '.csv'
+        df.to_csv(csv_file, index_label='id')
+    elif args.graph is not None:
+        run_gephi(args.graph, args.out, args.n_steps)

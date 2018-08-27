@@ -63,9 +63,9 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
                 prefix = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix)
                 prefix += '_{}_{}_cv{}_cv{}'.format(t0, t1, cv0, cv1)
                 wot.io.write_dataset(wot.dataset_from_x(i05),
-                        prefix + '_interp.txt', txt_full=False)
+                        prefix + '_interp.txt')
                 wot.io.write_dataset(wot.dataset_from_x(r05),
-                        prefix + '_random.txt', txt_full=False)
+                        prefix + '_random.txt')
 
             for cv05 in p05.keys():
                 p05_x = wot.ot.pca_transform(pca, p05[cv05].x)

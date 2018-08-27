@@ -682,12 +682,13 @@ def get_filename_and_extension(name):
     return basename, ext
 
 
-def write_dataset(ds, path, output_format='txt', txt_full=True):
+def write_dataset(ds, path, output_format='txt'):
     path = check_file_extension(path, output_format)
     if output_format == 'txt' or output_format == 'gct' or output_format == 'csv':
         sep = '\t'
         if output_format is 'csv':
             sep = ','
+        txt_full = False
         if txt_full or output_format == 'gct':
             f = open(path, 'w')
             # write columns ids
@@ -723,9 +724,7 @@ def write_dataset(ds, path, output_format='txt', txt_full=True):
                          columns=ds.col_meta.index).to_csv(path,
                                                            index_label='id',
                                                            sep=sep,
-                                                           doublequote=False,
-                                                           compression='gzip' if output_format == 'txt.gz'
-                                                           else None)
+                                                           doublequote=False)
     elif output_format == 'loom':
         f = h5py.File(path, 'w')
         x = ds.x

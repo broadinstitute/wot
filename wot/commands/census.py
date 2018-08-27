@@ -68,4 +68,4 @@ def main(argv):
     for i in range(len(census)):
         cs_name = keys[i]
         res = wot.Dataset(census[i], row_meta, cell_sets_matrix.col_meta)
-        wot.io.write_dataset(res, args.out + '_' + cs_name, output_format='txt', txt_full=False)
+        wot.io.write_dataset(res, args.out + '_' + cs_name, output_format='txt')

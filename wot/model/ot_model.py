@@ -241,7 +241,7 @@ class OTModel:
             self.cov_tmaps[(t0, t1, *covariate)] = path
 
         wot.io.write_dataset(tmap, os.path.join(self.tmap_dir, path),
-                             output_format=self.output_file_format, txt_full=False)
+                             output_format=self.output_file_format)
         wot.io.verbose("Cached tmap ({}, {}) : {}".format(t0, t1, path))
 
     def transport_map(self, t0, t1, covariate=None):

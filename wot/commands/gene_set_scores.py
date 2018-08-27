@@ -75,7 +75,7 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
         else:
             x = result['score']
         wot.io.write_dataset(ds=wot.Dataset(x=x, row_meta=ds.row_meta, col_meta=pd.DataFrame(index=column_names)),
-                             path=out + '_' + column_names[0], output_format=format, txt_full=False)
+                             path=out + '_' + column_names[0], output_format=format)
     # import dask.array as da
     # da.to_npy_stack('/Users/jgould/git/wot/bin/data/', result.x, axis=0)
 
