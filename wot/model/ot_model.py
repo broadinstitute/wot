@@ -9,6 +9,7 @@ import itertools
 import numpy as np
 import pandas as pd
 
+
 class OTModel:
     """
     The OTModel takes care of computing and properly caching the transport maps
@@ -37,7 +38,7 @@ class OTModel:
 
     default_tmap_prefix = "tmaps"
 
-    def __init__(self, matrix, tmap_dir = None, tmap_prefix = None, max_threads = None, **kwargs):
+    def __init__(self, matrix, tmap_dir=None, tmap_prefix=None, max_threads=None, **kwargs):
         self.matrix = matrix
         self.timepoints = sorted(set(matrix.row_meta['day']))
         self.tmap_dir = tmap_dir or '.'
@@ -60,33 +61,34 @@ class OTModel:
 
         cell_filter = kwargs.pop('cell_filter', None)
         gene_filter = kwargs.pop('gene_filter', None)
+        self.output_file_format = kwargs.pop('output_file_format', 'loom')
         if gene_filter is not None:
             if os.path.isfile(gene_filter):
-                gene_ids = pd.read_table(gene_filter, index_col=0, header=None)\
-                        .index.values
+                gene_ids = pd.read_table(gene_filter, index_col=0, header=None) \
+                    .index.values
             else:
                 import re
                 expr = re.compile(gene_filter)
                 gene_ids = [e for e in self.matrix.col_meta.index.values if expr.match(e)]
             col_indices = self.matrix.col_meta.index.isin(gene_ids)
-            self.matrix = wot.Dataset(self.matrix.x[:,col_indices],
-                    self.matrix.row_meta, self.matrix.col_meta[col_indices])
+            self.matrix = wot.Dataset(self.matrix.x[:, col_indices],
+                                      self.matrix.row_meta, self.matrix.col_meta[col_indices])
             wot.io.verbose('Successfuly applied gene_filter: "{}"'.format(gene_filter))
         if cell_filter is not None:
             if os.path.isfile(cell_filter):
-                cell_ids = pd.read_table(cell_filter, index_col=0, header=None)\
-                        .index.values
+                cell_ids = pd.read_table(cell_filter, index_col=0, header=None) \
+                    .index.values
             else:
                 import re
                 expr = re.compile(cell_filter)
                 cell_ids = [e for e in self.matrix.row_meta.index.values if expr.match(e)]
             row_indices = self.matrix.row_meta.index.isin(cell_ids)
-            self.matrix = wot.Dataset(self.matrix.x[row_indices,:],
-                    self.matrix.row_meta[row_indices], self.matrix.col_meta)
+            self.matrix = wot.Dataset(self.matrix.x[row_indices, :],
+                                      self.matrix.row_meta[row_indices], self.matrix.col_meta)
             wot.io.verbose('Successfuly applied cell_filter: "{}"'.format(cell_filter))
 
         if max_threads is None or max_threads == 0:
-            wot.io.verbose("Argument max_threads not set. Using default")
+
             import multiprocessing
             max_usable_cores = multiprocessing.cpu_count()
             if kwargs.pop('fast', False):
@@ -94,6 +96,7 @@ class OTModel:
                 self.max_threads = max_usable_cores - 1
             else:
                 self.max_threads = 1
+            wot.io.verbose("Argument max_threads not set. Using " + str(self.max_threads))
         else:
             self.max_threads = max_threads
         wot.io.verbose("Using", self.max_threads, "thread(s) at most")
@@ -109,7 +112,6 @@ class OTModel:
         wot.model.purge_invalidated_caches(self)
         self.tmaps, self.cov_tmaps = wot.model.scan_transport_map_directory(self)
 
-
     def get_ot_config(self):
         """
         Get valid parameters for the Optimal Transport computation.
@@ -121,17 +123,17 @@ class OTModel:
         """
         # WARNING: Any value in ot_config that does not appear in the following dict will be ignored
         ot_defaults = {
-                'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
-                'epsilon0': 1, 'tau': 1e4,
-                'growth_iters': 3, 'batch_size': 50,
-                'local_pca': 30, 'max_iter': 1e7,
-                'tolerance': 1e-2,
-                }
+            'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
+            'epsilon0': 1, 'tau': 1e4,
+            'growth_iters': 3, 'batch_size': 50,
+            'local_pca': 30, 'max_iter': 1e7,
+            'tolerance': 1e-2,
+        }
         # TODO: support gene_filter and cell_filter
         # TODO: support ncells and ncounts
         config = self.ot_config
 
-        return { x: config[x] if x in config else ot_defaults[x] for x in ot_defaults }
+        return {x: config[x] if x in config else ot_defaults[x] for x in ot_defaults}
 
     def get_covariate_pairs(self):
         """Get all covariate pairs in the dataset"""
@@ -141,8 +143,7 @@ class OTModel:
         covariate = sorted(set(self.matrix.row_meta['covariate']))
         return product(covariate, covariate)
 
-
-    def compute_all_transport_maps(self, force = False, with_covariates=False):
+    def compute_all_transport_maps(self, force=False, with_covariates=False):
         """
         Computes all required transport maps and caches everything for future use.
 
@@ -161,7 +162,7 @@ class OTModel:
         t = self.timepoints
         day_pairs = self.day_pairs
         if day_pairs is None:
-            day_pairs = [(t[i], t[i+1]) for i in range(len(t) - 1)]
+            day_pairs = [(t[i], t[i + 1]) for i in range(len(t) - 1)]
 
         if with_covariates:
             day_pairs = [(*d, c) for d, c in itertools.product(day_pairs, self.get_covariate_pairs())]
@@ -169,7 +170,7 @@ class OTModel:
         if not force:
             if with_covariates:
                 day_pairs = [(t0, t1, cv) for t0, t1, cv in day_pairs
-                        if self.cov_tmaps.get((t0,t1,*cv), None) is None]
+                             if self.cov_tmaps.get((t0, t1, *cv), None) is None]
             else:
                 day_pairs = [x for x in day_pairs if self.tmaps.get(x, None) is None]
 
@@ -178,20 +179,20 @@ class OTModel:
         if not day_pairs:
             return
 
-        if m > 1 :
+        if m > 1:
             procs = []
             for x in day_pairs:
                 p = Process(target=self.compute_transport_map, args=(*x,))
                 procs.append(p)
 
             for i in range(len(procs) + m):
-                if i >= m :
+                if i >= m:
                     procs[i - m].join()
                 if i < len(procs):
                     procs[i].start()
             self.tmaps, self.cov_tmaps = wot.model.scan_transport_map_directory(self)
         else:
-            for x in day_pairs :
+            for x in day_pairs:
                 self.compute_transport_map(*x)
 
     def compute_transport_map(self, t0, t1, covariate=None):
@@ -230,17 +231,17 @@ class OTModel:
         else:
             local_config = {}
 
-        config = { **self.get_ot_config(), **local_config, 't0': t0, 't1': t1, 'covariate': covariate }
+        config = {**self.get_ot_config(), **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
         tmap = wot.ot.OptimalTransportHelper.compute_single_transport_map(self.matrix, config)
         if covariate is None:
-            path += "_{}_{}.loom".format(t0, t1)
+            path += "_{}_{}".format(t0, t1)
             self.tmaps[(t0, t1)] = path
         else:
-            path += "_{}_{}_cv{}_cv{}.loom".format(t0, t1, *covariate)
+            path += "_{}_{}_cv{}_cv{}".format(t0, t1, *covariate)
             self.cov_tmaps[(t0, t1, *covariate)] = path
 
         wot.io.write_dataset(tmap, os.path.join(self.tmap_dir, path),
-                output_format="loom", txt_full=False)
+                             output_format=self.output_file_format, txt_full=False)
         wot.io.verbose("Cached tmap ({}, {}) : {}".format(t0, t1, path))
 
     def transport_map(self, t0, t1, covariate=None):
@@ -264,8 +265,8 @@ class OTModel:
         if t0 not in self.timepoints or t1 not in self.timepoints:
             raise ValueError("Timepoints {}, {} not found".format(t0, t1))
 
-        atomic = (self.day_pairs is not None and (t0,t1) in self.day_pairs)\
-                or self.timepoints.index(t1) == self.timepoints.index(t0) + 1
+        atomic = (self.day_pairs is not None and (t0, t1) in self.day_pairs) \
+                 or self.timepoints.index(t1) == self.timepoints.index(t0) + 1
 
         if not atomic and covariate is not None:
             raise ValueError("Covariate-restricted transport maps can only be atomic")
@@ -299,7 +300,7 @@ class OTModel:
             If all populations are not in the same timepoint
         """
         return self.timepoints.index(wot.model.unique_timepoint(*populations)) \
-                < len(self.timepoints) - 1
+               < len(self.timepoints) - 1
 
     def can_pull_back(self, *populations):
         """
@@ -322,7 +323,7 @@ class OTModel:
         """
         return self.timepoints.index(wot.model.unique_timepoint(*populations)) > 0
 
-    def push_forward(self, *populations, to_time = None, normalize=True, as_list=False):
+    def push_forward(self, *populations, to_time=None, normalize=True, as_list=False):
         """
         Pushes the population forward through the computed transport maps
 
@@ -369,26 +370,26 @@ class OTModel:
             raise ValueError("Destination timepoint not found")
         if j >= len(self.timepoints):
             raise ValueError("No further timepoints. Unable to push forward")
-        if i > j :
+        if i > j:
             raise ValueError("Destination timepoint is before source. Unable to push forward")
 
-        p = np.vstack([ pop.p for pop in populations ])
+        p = np.vstack([pop.p for pop in populations])
         while i < j:
             t0 = self.timepoints[i]
-            t1 = self.timepoints[i+1]
+            t1 = self.timepoints[i + 1]
             tmap = self.transport_map(t0, t1)
             p = np.dot(p, tmap.x)
             if normalize:
                 p = (p.T / np.sum(p, axis=1)).T
             i += 1
 
-        result = [ Population(self.timepoints[i], p[k,:]) for k in range(p.shape[0]) ]
+        result = [Population(self.timepoints[i], p[k, :]) for k in range(p.shape[0])]
         if len(result) == 1 and not as_list:
             return result[0]
         else:
             return result
 
-    def pull_back(self, *populations, to_time = None, normalize=True, as_list=False):
+    def pull_back(self, *populations, to_time=None, normalize=True, as_list=False):
         """
         Pulls the population back through the computed transport maps
 
@@ -435,20 +436,20 @@ class OTModel:
             raise ValueError("No previous timepoints. Unable to pull back")
         if j == -1:
             raise ValueError("Destination timepoint not found")
-        if i < j :
+        if i < j:
             raise ValueError("Destination timepoint is after source. Unable to pull back")
 
-        p = np.vstack([ pop.p for pop in populations ])
+        p = np.vstack([pop.p for pop in populations])
         while i > j:
             t1 = self.timepoints[i]
-            t0 = self.timepoints[i-1]
+            t0 = self.timepoints[i - 1]
             tmap = self.transport_map(t0, t1)
             p = np.dot(tmap.x, p.T).T
             if normalize:
                 p = (p.T / np.sum(p, axis=1)).T
             i -= 1
 
-        result = [ Population(self.timepoints[i], p[k,:]) for k in range(p.shape[0]) ]
+        result = [Population(self.timepoints[i], p[k, :]) for k in range(p.shape[0])]
         if len(result) == 1 and not as_list:
             return result[0]
         else:
@@ -496,7 +497,7 @@ class OTModel:
         If population.time is 7 and at_time is 5, the OTModel would pull back through two transport maps.
         This method is only and alias to OTModel.pull_back
         """
-        return self.pull_back(*populations, to_time = at_time, as_list=as_list)
+        return self.pull_back(*populations, to_time=at_time, as_list=as_list)
 
     def descendants(self, *populations, at_time=None, as_list=False):
         """
@@ -540,7 +541,7 @@ class OTModel:
         If population.time is 5 and at_time is 7, the OTModel would push forward through two transport maps.
         This method is only and alias to OTModel.push_forward
         """
-        return self.push_forward(*populations, to_time = at_time, as_list=as_list)
+        return self.push_forward(*populations, to_time=at_time, as_list=as_list)
 
     def population_from_ids(self, *ids, at_time=None):
         """
@@ -583,7 +584,7 @@ class OTModel:
         It does not necessarily sum to 1. However, this method always returns a probability distribution over the cells of that time point.
         """
         day = at_time
-        all_ids = [ i for ids_el in ids for i in ids_el ]
+        all_ids = [i for ids_el in ids for i in ids_el]
         cell_inds = self.matrix.row_meta.index.get_indexer_for(all_ids)
 
         if at_time is None:
@@ -598,14 +599,14 @@ class OTModel:
 
         def get_population(ids_el):
             cell_inds = self.matrix.row_meta.index.get_indexer_for(ids_el)
-            p = [ 1 if id in cell_inds else 0 for id in all_inds ]
+            p = [1 if id in cell_inds else 0 for id in all_inds]
             p = np.asarray(p, dtype=np.float64)
             if np.isclose(np.sum(p), 0):
                 return None
             else:
                 return Population(day, p / np.sum(p))
 
-        result = [ get_population(ids_el) for ids_el in ids ]
+        result = [get_population(ids_el) for ids_el in ids]
         if len(result) == 1:
             return result[0]
         else:
@@ -629,8 +630,7 @@ class OTModel:
         """
         keys = list(cell_sets.keys())
         populations = self.population_from_ids(*[cell_sets[name] for name in keys], at_time=at_time)
-        return { keys[i]: populations[i] for i in range(len(keys)) if populations[i] is not None }
-
+        return {keys[i]: populations[i] for i in range(len(keys)) if populations[i] is not None}
 
     def cell_ids(self, population):
         day = population.time
@@ -663,15 +663,17 @@ class OTModel:
         all_ids_at_t = self.matrix.row_meta.index[self.matrix.row_meta['day'] == day]
         inter_ids = cell_set_matrix.row_meta.index.intersection(all_ids_at_t)
         if len(inter_ids) == 0:
-            census = [ [0] * cell_set_matrix.x.shape[1] ] * len(populations)
+            census = [[0] * cell_set_matrix.x.shape[1]] * len(populations)
         else:
             pop_indexer = all_ids_at_t.get_indexer_for(inter_ids)
             csm_indexer = cell_set_matrix.row_meta.index.get_indexer_for(inter_ids)
+
             def get_census(p):
-                return np.dot(p[pop_indexer], cell_set_matrix.x[csm_indexer,:])
-            norm = lambda p : p if np.isclose(np.sum(p), 0) else p / np.sum(p)
+                return np.dot(p[pop_indexer], cell_set_matrix.x[csm_indexer, :])
+
+            norm = lambda p: p if np.isclose(np.sum(p), 0) else p / np.sum(p)
             census = np.asarray([get_census(norm(pop.p)) for pop in populations],
-                    dtype=np.float64)
+                                dtype=np.float64)
 
         if len(census) == 1:
             return census[0]
@@ -703,14 +705,15 @@ class OTModel:
         day = wot.model.unique_timepoint(*populations)
         all_ids_at_t = self.matrix.row_meta.index[self.matrix.row_meta['day'] == day]
         all_indices_at_t = self.matrix.row_meta.index.get_indexer_for(all_ids_at_t)
-        values = self.matrix.x[all_indices_at_t,:]
+        values = self.matrix.x[all_indices_at_t, :]
         means, variances = [], []
         for pop in populations:
             mean = np.average(values, weights=pop.p, axis=0)
-            var  = np.average((values - mean) ** 2, weights=pop.p, axis=0)
-            means.append(mean); variances.append(var)
+            var = np.average((values - mean) ** 2, weights=pop.p, axis=0)
+            means.append(mean);
+            variances.append(var)
 
         if len(means) == 1:
-            return means[0],  variances[0]
+            return means[0], variances[0]
         else:
             return means, variances
