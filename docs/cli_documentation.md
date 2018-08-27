@@ -559,8 +559,8 @@ when covariates are used, to indicate which batch they were extracted from.
 ### Force-directed Layout Embedding ###
 
 In order to visualize data in two dimensions, **wot** uses
-[Force-directed Layout Embedding](https://en.wikipedia.org/wiki/Force-directed_graph_drawing).
-
+[Force-directed Layout Embedding (FLE)](https://en.wikipedia.org/wiki/Force-directed_graph_drawing). Intuitively, the FLE searches for a 2D layout of a nearest neighbor graph of the data. 
+We compute this nearest neighbor graph in diffusion component space.
 
 ```sh
 wot force_layout --matrix matrix.txt --out fdlayout
