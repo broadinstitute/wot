@@ -15,6 +15,7 @@ import wot.io
 def compute_force_layout(ds, n_neighbors=100, n_comps=100, neighbors_diff=20, n_steps=10000):
     import anndata
     import scanpy.api as sc
+
     if type(ds) == wot.Dataset:
         adata = anndata.AnnData(ds.x, ds.row_meta, ds.col_meta)
     else:
@@ -67,14 +68,23 @@ def main(argv):
     args = parser.parse_args(argv)
     if args.out is None:
         args.out = 'wot'
-
+    import os
+    jar_file = pkg_resources.resource_filename('wot', 'commands/resources/graph_layout/gephi-toolkit-0.9.2-all.jar')
+    if not os.path.isfile(jar_file):
+        import urllib.request
+        import shutil
+        print('Downloading gephi jar file')
+        with urllib.request.urlopen(
+                'https://github.com/gephi/gephi-toolkit/releases/download/v0.9.2/gephi-toolkit-0.9.2-all.jar') as response, open(
+            jar_file, 'wb') as out_file:
+            shutil.copyfileobj(response, out_file)
     if not os.path.isfile(args.matrix):
         print("Input matrix is not a file")
         exit(1)
     ds = wot.io.read_dataset(args.matrix)
     df, adata = compute_force_layout(ds, n_neighbors=args.neighbors,
-            neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
-            n_steps=args.n_steps)
+                                     neighbors_diff=args.neighbors_diff, n_comps=args.n_comps,
+                                     n_steps=args.n_steps)
     adata.write(args.out + '.h5ad')
     csv_file = args.out if args.out.lower().endswith('.csv') else args.out + '.csv'
     df.to_csv(csv_file, index_label='id')
