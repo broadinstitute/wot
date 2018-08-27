@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg', warn=False)
 
 from .model import initialize_ot_model
 from .model import load_ot_model
