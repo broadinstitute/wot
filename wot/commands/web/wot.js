@@ -7,7 +7,7 @@ var $cellSet = $('#cell_sets');
 var $features = $('#features');
 var groupedThousands = d3.format(',');
 var logTransform = false;
-var backgroundOpacity = 0.4;
+var backgroundOpacity = 1;
 var plotConfig = {
     showLink: false,
     displaylogo: false,
