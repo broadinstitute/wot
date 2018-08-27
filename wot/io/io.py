@@ -447,11 +447,10 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
 
     if ext == 'mtx':
         # look for .barcodes.txt and .genes.txt
+        import itertools
         sp = os.path.split(path)
         row_meta = None
-        import itertools
-        sep_exts = itertools.product(['.', '_', '-'], ['tsv', 'txt'])
-        for sep_ext in sep_exts:
+        for sep_ext in itertools.product(['.', '_', '-'], ['tsv', 'txt']):
             f = os.path.join(sp[0],
                              basename_and_extension[0] + sep_ext[0] + 'barcodes.' + sep_ext[1])
             if os.path.isfile(f) or os.path.isfile(f + '.gz'):
@@ -459,22 +458,22 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
                                          header=None)
                 break
         col_meta = None
-        for sep_ext in sep_exts:
-            f = os.path.join(sp[0], basename_and_extension[0] + sep_ext[0] + 'genes.' + sep_ext[1])
+        for sep_ext in itertools.product(['.', '_', '-'], ['tsv', 'txt']):
+            f = os.path.join(sp[0],
+                             basename_and_extension[0] + sep_ext[0] + 'genes.' + sep_ext[1])
             if os.path.isfile(f) or os.path.isfile(f + '.gz'):
                 col_meta = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
                                          header=None)
                 break
 
-        x = scipy.io.mmread(path)
-        x = scipy.sparse.csr_matrix(x.T)
         if col_meta is None:
             print(basename_and_extension[0] + '.genes.txt not found')
             col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1))
         if row_meta is None:
             print(basename_and_extension[0] + '.barcodes.txt not found')
             row_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
-
+        x = scipy.io.mmread(path)
+        x = scipy.sparse.csr_matrix(x.T)
         cell_count, gene_count = x.shape
         if len(row_meta) != cell_count:
             raise ValueError("Wrong number of cells : matrix has {} cells, barcodes file has {}" \
