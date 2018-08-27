@@ -87,7 +87,8 @@ class OTModel:
 
         if max_threads is None or max_threads == 0:
             wot.io.verbose("Argument max_threads not set. Using default")
-            max_usable_cores = len(os.sched_getaffinity(0))
+            import multiprocessing
+            max_usable_cores = multiprocessing.cpu_count()
             if kwargs.pop('fast', False):
                 wot.io.verbose("Fast mode. Using all but one cores")
                 self.max_threads = max_usable_cores - 1
