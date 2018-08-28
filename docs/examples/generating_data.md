@@ -82,7 +82,7 @@ for i in range(N):
 ds = wot.merge_datasets(*dataset_list)
 
 wot.io.write_gene_sets(gene_sets, gene_sets_file, "gmt")
-wot.io.write_dataset(ds, matrix_file, txt_full = False)
+wot.io.write_dataset(ds, matrix_file)
 wot.io.write_dataset_metadata(ds, days_file, 'day')
 wot.io.write_dataset_metadata(ds, covariate_file, 'covariate')
 ```
@@ -90,8 +90,8 @@ wot.io.write_dataset_metadata(ds, covariate_file, 'covariate')
 
 ## Plotting two features ##
 
-The best way to visualize you data is using the Force-directed Layout Embedding
-to project it into 2 dimensions.
+One of the best ways to visualize your dataset is to use Force-directed Layout Embedding
+to project your data into 2 dimensions.
 
 However, you might also want to just plot 2 specific features of you dataset.
 The following snippet does that :
