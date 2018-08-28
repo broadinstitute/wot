@@ -70,7 +70,7 @@ by the visualization tool.
 ##### Interactive web server #####
 
 ```sh
-wot wot_server --matrix matrix.txt --tmaps . \
+wot wot_server --matrix matrix.txt --tmap . \
  --cell_meta fdlayout.csv --cell_meta days.txt
 ```
 
