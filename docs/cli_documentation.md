@@ -743,7 +743,7 @@ with the command-line arguments `--epsilon`, `--lambda1`, `--tolerance`, etc. .
 
 ### <a name="geneset_file">Gene sets</a> ###
 
-Gene sets can be in **gmx** (Gene MatriX), or **gmt** (Gene Matrix Transposed) format.
+Gene sets can be in **gmx** (Gene MatriX), **gmt** (Gene Matrix Transposed), or **grp** format.
 
 The **gmt** format is convenient to store large databases of gene sets.
 However, for a handful of sets, the **gmx** format might offer better
@@ -783,6 +783,18 @@ Example:
 <tr><td>gene_1</td><td></td><td>gene_1</td></tr>
 </table>
 
+
+##### GRP #####
+
+The **grp** format contains a single gene set in a simple newline-delimited text format. 
+
+Example:
+
+<table class="table" style="display: table">
+<tr><td>gene_1</td></tr>
+<tr><td>gene_2</td></tr>
+<tr><td>gene_3</td></tr>
+</table>
 
 ### <a name="cellset_file">Cell sets</a> ###
 
