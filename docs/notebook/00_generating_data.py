@@ -63,6 +63,6 @@ for i in range(N):
 ds = wot.merge_datasets(*dataset_list)
 
 wot.io.write_gene_sets(gene_sets, gene_sets_file, "gmt")
-wot.io.write_dataset(ds, matrix_file, txt_full = False)
+wot.io.write_dataset(ds, matrix_file)
 wot.io.write_dataset_metadata(ds, days_file, 'day')
 wot.io.write_dataset_metadata(ds, covariate_file, 'covariate')
