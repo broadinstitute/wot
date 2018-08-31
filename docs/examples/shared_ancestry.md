@@ -16,7 +16,7 @@ wot trajectory --matrix matrix.txt --cell_days days.txt \
  --cell_set cell_sets.gmt --tmap tmaps --time 50
 ```
 
-Note : You need to have a transport map configuration called `tmaps.yml` for this to work. Please refer to the [CLI documentation]({{site.baseurl}}/cli_documentation#transport-maps) for instructions on how to compute transport maps.
+Note : You need to have a transport maps computed for this to work. Please refer to the [CLI documentation]({{site.baseurl}}/cli_documentation#transport-maps) for instructions on how to compute transport maps.
 
 ## Compute shared ancestry ##
 

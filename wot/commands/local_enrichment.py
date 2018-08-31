@@ -28,9 +28,11 @@ def get_scores(ds1, ds2, ds1_time_index, ds2_time_index, score_function):
 def main(argv):
     parser = argparse.ArgumentParser(
         description='Compute differentially expressed genes from output of trajectory_trends. Outputs a ranked list for each comparison.')
-    parser.add_argument('--matrix1', help='Gene expression matrix with timepoints on rows, features on columns', required=True)
+    parser.add_argument('--matrix1', help='Gene expression matrix with timepoints on rows, features on columns',
+                        required=True)
     parser.add_argument('--matrix2', help='Gene expression matrix with timepoints on rows, features on columns')
-    parser.add_argument('--variance1', help='Variance matrix with timepoints on rows, features on columns', required=True)
+    parser.add_argument('--variance1', help='Variance matrix with timepoints on rows, features on columns',
+                        required=True)
     parser.add_argument('--variance2', help='Variance matrix with timepoints on rows, features on columns')
     parser.add_argument('--score',
                         help='Method to compute differential gene expression score. Choices are signal to noise, mean difference, t-test, and fold change',
@@ -49,8 +51,12 @@ def main(argv):
     if args.matrix2 is not None:
         ds2 = wot.io.read_dataset(args.matrix2)
         ds2.variance = wot.io.read_dataset(args.variance2).x
+        ds_indices = ds1.col_meta.index.get_indexer_for(ds2.col_meta.index)
 
-    #  TODO align with ds1
+        if (ds_indices[ds_indices == -1]).sum() > 0:
+            raise ValueError('Unable to align datasets')
+        ds2 = wot.Dataset(ds2.x[:, ds_indices], row_meta=ds2.row_meta, col_meta=ds2.col_meta.iloc[ds_indices])
+        ds2.variance = ds2.variance[:, ds_indices]
 
     def s2n(m1, m2, v1, v2, *varargs):
         denom = (np.sqrt(v1) + np.sqrt(v2))
@@ -64,7 +70,7 @@ def main(argv):
         return m1 - m2
 
     def t_test(m1, m2, v1, v2, n1, n2):
-        return (m1 - m2) / np.sqrt((v1 / n1) + (v2 / n2));
+        return (m1 - m2) / np.sqrt((v1 / n1) + (v2 / n2))
 
     score_function = locals()[args.score]
     names = []

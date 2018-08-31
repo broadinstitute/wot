@@ -1,3 +1,7 @@
+import wot
+import numpy
+from matplotlib import pyplot
+
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'
 days_file = 'days.txt'
@@ -8,31 +12,30 @@ skip_first_n_genes = 2
 destination_file = "trajectory_trends.png"
 # --------------------------------------
 
-import wot
-import numpy
-from matplotlib import pyplot
-
-ot_model = wot.load_ot_model(matrix_file, days_file, 'tmaps')
-cell_sets = wot.io.read_cell_sets(cell_sets_file)
-all_populations = ot_model.population_from_cell_sets(cell_sets,
-        at_time=target_timepoint)
+ds = wot.io.read_dataset(matrix_file)
+tmap_model = wot.model.TransportMapModel.from_directory('tmaps')
+cell_sets = wot.io.read_sets(cell_sets_file, as_dict=True)
+all_populations = tmap_model.population_from_cell_sets(cell_sets,
+                                                       at_time=target_timepoint)
 population = all_populations[target_cell_set]
 
-timepoints, trends, variances = \
-        wot.commands.compute_trajectory_trends(ot_model, population)
-
+# timepoints, means, variances = tmap_model.compute_trajectory_trends(ds, population)
+trajectory_ds = wot.ot.compute_trajectories(tmap_model, {target_cell_set: all_populations[target_cell_set]})
+results = wot.ot.compute_trajectory_trends_from_trajectory(trajectory_ds, ds)
+means, variances = results[0]
+timepoints = means.row_meta.index.values
 pyplot.figure(figsize=(5, 5))
-
-stds = numpy.sqrt(variances)
-genes = ot_model.matrix.col_meta.index
-for i in range(skip_first_n_genes, trends.shape[1]):
-    pyplot.plot(timepoints, trends[:,i], label=genes[i])
-    pyplot.fill_between(timepoints, trends[:,i] - stds[:,i],
-            trends[:,i] + stds[:,i], alpha=.5)
+means = means.x
+stds = numpy.sqrt(variances.x)
+genes = ds.col_meta.index
+for i in range(skip_first_n_genes, means.shape[1]):
+    pyplot.plot(timepoints, means[:, i], label=genes[i])
+    pyplot.fill_between(timepoints, means[:, i] - stds[:, i],
+                        means[:, i] + stds[:, i], alpha=.5)
 
 pyplot.xlabel("Time")
 pyplot.ylabel("Gene expression")
-pyplot.title("Trajectory trend of {} from time {}"\
-        .format(target_cell_set, target_timepoint))
+pyplot.title("Trajectory trend of {} from time {}" \
+             .format(target_cell_set, target_timepoint))
 pyplot.legend()
 pyplot.savefig(destination_file)

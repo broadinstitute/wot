@@ -19,19 +19,19 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
     if progress:
         print('Read ' + matrix)
     if cell_filter is not None:
-        cell_filter = wot.io.read_gene_sets(cell_filter)
+        cell_filter = wot.io.read_sets(cell_filter)
         cells_ids = cell_filter.row_meta.index.values[np.where(cell_filter.x[:, 0] > 0)[0]]
         cell_filter = ds.row_meta.index.isin(cells_ids)
         ds = wot.Dataset(ds.x[cell_filter], ds.row_meta.iloc[cell_filter], ds.col_meta)
 
     background_ds = None
     if background_cell_set is not None:
-        background_cells_ds = wot.io.read_gene_sets(background_cell_set)
+        background_cells_ds = wot.io.read_sets(background_cell_set)
         background_cells_ids = background_cells_ds.row_meta.index.values[np.where(background_cells_ds.x[:, 0] > 0)[0]]
         cell_filter = ds.row_meta.index.isin(background_cells_ids)
         background_ds = wot.Dataset(ds.x[cell_filter], ds.row_meta.iloc[cell_filter], ds.col_meta)
 
-    gs = wot.io.read_gene_sets(gene_sets, ds.col_meta.index.values)
+    gs = wot.io.read_sets(gene_sets, ds.col_meta.index.values)
     if progress:
         print('Read ' + gene_sets)
     if gs.x.shape[1] is 0:

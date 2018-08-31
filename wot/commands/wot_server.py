@@ -41,8 +41,10 @@ def main(argsv):
                         help='File with one cell id per line to include or or a python regular expression of cell ids to include')
     parser.add_argument('--cell_meta',
                         help='Every file needs to have the header "id". One file should have "x" and "y", the x and y cell coordinates',
-                        action='append', required=True)
-    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, action='append')
+                        action='append')
+    parser.add_argument('--matrix',
+                        help=wot.commands.MATRIX_HELP + '. The 1st matrix needs to be the one used to compute transport maps',
+                        required=True, action='append')
     parser.add_argument('--workers', help='Number of worker processes', type=int, default=2)
     parser.add_argument('--port', help='Web server port', type=int, default=8080)
     parser.add_argument('--host', help='Web server host', default='127.0.0.1')
@@ -53,8 +55,18 @@ def main(argsv):
     cell_metadata = None
     datasets = []
     dataset_names = []
+    if args.cell_meta is not None:
+        for f in args.cell_meta:
+            df = pd.read_table(f, engine='python', sep=None, index_col='id')
+            if cell_metadata is None:
+                cell_metadata = df
+            else:
+                cell_metadata = cell_metadata.join(df, how='outer')
+    else:
+        cell_metadata = pd.DataFrame()
 
     if args.matrix is not None:
+
         for path in args.matrix:
             name_and_ext = wot.io.get_filename_and_extension(os.path.basename(path))
             dataset_names.append(name_and_ext[0])
@@ -73,8 +85,9 @@ def main(argsv):
                 row_indices = ds.row_meta.index.isin(cell_ids)
 
                 ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
+            ds.row_meta = ds.row_meta.join(cell_metadata)
             datasets.append(ds)
-        # align datasets
+        # FIXME align datasets with first dataset
         # ref_dataset = datasets[0]
         # for i in range(1, len(datasets)):
         #     ds = datasets[i]
@@ -82,15 +95,6 @@ def main(argsv):
         #     ds_order = ds_order[ds_order != -1]
         #     ds = wot.Dataset(ds.x[ds_order], ds.row_meta.iloc[ds_order], ds.col_meta)
         #     datasets[i] = ds
-    if args.cell_meta is not None:
-        for f in args.cell_meta:
-            df = pd.read_table(f, engine='python', sep=None, index_col='id')
-            if cell_metadata is None:
-                cell_metadata = df
-            else:
-                cell_metadata = cell_metadata.join(df, how='outer')
-    else:
-        cell_metadata = pd.DataFrame()
 
     if args.cell_set is not None:
         time_to_cell_sets = wot.io.group_cell_sets(args.cell_set, cell_metadata)
@@ -99,30 +103,32 @@ def main(argsv):
     name_to_transport_maps = {}
     if args.tmap is not None:
         for d in args.tmap:
-            tmaps = wot.io.list_transport_maps(d)
-            if len(tmaps) == 0:
-                raise ValueError('No transport maps found in ' + d)
-            name_to_transport_maps[os.path.basename(os.path.abspath(d))] = tmaps
+            name_to_transport_maps[os.path.basename(os.path.abspath(d))] = d
 
-    nx = 800
-    ny = 800
-    cell_metadata = cell_metadata[~np.isnan(cell_metadata['x'].values)]
-    xmin = np.min(cell_metadata['x'])
-    xmax = np.max(cell_metadata['x'])
-    ymin = np.min(cell_metadata['y'])
-    ymax = np.max(cell_metadata['y'])
-
-    cell_metadata['x'] = np.floor(np.interp(cell_metadata['x'].values, [xmin, xmax], [0, nx])).astype(int)
-    cell_metadata['y'] = np.floor(np.interp(cell_metadata['y'].values, [ymin, ymax], [0, ny])).astype(int)
     static_folder = os.path.join(os.path.dirname(sys.argv[0]), 'web')
     app = flask.Flask(__name__, static_folder=static_folder)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
+    # @app.route("/coords/", methods=['GET'])
+    # def coords():
+    #     nx = flask.request.args.get('nx', 800, type=int)
+    #     ny = flask.request.args.get('ny', 800, type=int)
+    #
+    #     xmin = np.min(cell_metadata['x'])
+    #     xmax = np.max(cell_metadata['x'])
+    #     ymin = np.min(cell_metadata['y'])
+    #     ymax = np.max(cell_metadata['y'])
+    #
+    #     x = np.floor(np.interp(cell_metadata['x'].values, [xmin, xmax], [0, nx])).astype(int)
+    #     y = np.floor(np.interp(cell_metadata['y'].values, [ymin, ymax], [0, ny])).astype(int)
+    #     return flask.Response(json.dumps(info_json, ignore_nan=True), mimetype='application/json')
+
     @app.route("/info/", methods=['GET'])
     def info():
-        cell_json = {'id': cell_metadata.index.values.tolist()}
-        for column_name in cell_metadata:
-            cell_json[column_name] = cell_metadata[column_name].values.tolist()
+
+        cell_json = {'id': datasets[0].row_meta.index.values.tolist()}
+        for column_name in datasets[0].row_meta:
+            cell_json[column_name] = datasets[0].row_meta[column_name].values.tolist()
 
         features = set()
         for dataset_index in range(len(datasets)):
@@ -177,15 +183,15 @@ def main(argsv):
         return flask.jsonify(filtered_cell_sets)
 
     @app.route("/trajectory/", methods=['POST'])
-    def trajectory():
+    def compute_trajectory():
         feature_ids = flask.request.form.getlist('feature[]')  # list of ids
         cell_set_ids = set(flask.request.form.getlist('cell_set[]'))  # list of ids
         ncustom_cell_sets = int(flask.request.form.get('ncustom_cell_sets', '0'))
         transport_map_name = flask.request.form.get('transport_map', '')
         if transport_map_name is '' and len(name_to_transport_maps) == 1:
             transport_map_name = list(name_to_transport_maps.keys())[0]
-        transport_maps = name_to_transport_maps[transport_map_name]
-        filtered_time_to_cell_sets = {}
+
+        filtered_time_to_cell_sets = {}  # maps to to dict of sets where key is set name and values are list of set ids
         if ncustom_cell_sets > 0:
             for cell_set_idx in range(ncustom_cell_sets):
                 cell_set_name = flask.request.form.get('cell_set_name' + str(cell_set_idx))
@@ -194,12 +200,12 @@ def main(argsv):
                 group_by_day = subset.groupby('day')
 
                 for group_name, group in group_by_day:
-                    cell_sets = filtered_time_to_cell_sets.get(group_name)
-                    if cell_sets is None:
-                        cell_sets = []
-                        filtered_time_to_cell_sets[group_name] = cell_sets
+                    cell_sets_dict = filtered_time_to_cell_sets.get(group_name)
+                    if cell_sets_dict is None:
+                        cell_sets_dict = {}
+                        filtered_time_to_cell_sets[group_name] = cell_sets_dict
                     full_name = cell_set_name + '_' + str(group_name)
-                    cell_sets.append({'set': set(group.index.values), 'name': full_name})
+                    cell_sets_dict[full_name] = list(group.index.values)
 
         # filter predefined sets
         for t in time_to_cell_sets:
@@ -209,10 +215,12 @@ def main(argsv):
                 if cell_set['name'] in cell_set_ids:
                     filtered_cell_sets.append(cell_set)
             if len(filtered_cell_sets) > 0:
-                custom_sets = filtered_time_to_cell_sets.get(t)
-                if custom_sets is not None:
-                    filtered_cell_sets = custom_sets + filtered_cell_sets
-                filtered_time_to_cell_sets[t] = filtered_cell_sets
+                cell_sets_dict = filtered_time_to_cell_sets.get(t)
+                if cell_sets_dict is None:
+                    cell_sets_dict = {}
+                    filtered_time_to_cell_sets[t] = cell_sets_dict = cell_sets_dict
+                for s in filtered_cell_sets:
+                    cell_sets_dict[s['name']] = list(s['set'])
 
         if len(filtered_time_to_cell_sets) == 0:
             raise ValueError('No cell sets specified')
@@ -228,32 +236,52 @@ def main(argsv):
                         wot.Dataset(ds.x[:, column_indices], ds.row_meta, ds.col_meta.iloc[column_indices]))
                     filtered_dataset_names.append(dataset_names[i])
 
-        trajectories = wot.ot.Trajectory.trajectory_for_cell_sets(transport_maps=transport_maps,
-                                                                  time_to_cell_sets=filtered_time_to_cell_sets,
-                                                                  cache_transport_maps=True)
+        tmap_model = wot.model.TransportMapModel.from_directory(name_to_transport_maps[transport_map_name])
+        trajectory_ds = None
+        for t in filtered_time_to_cell_sets:  # compute trajectories for all unique starting times
+            populations = tmap_model.population_from_cell_sets(filtered_time_to_cell_sets[t], at_time=t)
+            trajectory_ds_t = wot.ot.compute_trajectories(tmap_model, populations)
+            if trajectory_ds is None:
+                trajectory_ds = trajectory_ds_t
+            else:
+                # concatentate columns on trajectory datasets
+                trajectory_ds.x = np.concatenate((trajectory_ds.x, trajectory_ds_t.x), axis=1)
+                trajectory_ds.col_meta = pd.concat((trajectory_ds.col_meta, trajectory_ds_t.col_meta), axis=1,
+                                                   sort=False)
 
-        cell_set_to_trajectory_embedding = wot.ot.Trajectory.trajectory_embedding(trajectories,
-                                                                                  cell_metadata[['x', 'y']])
-        ancestry_similarity_traces = wot.ot.Trajectory.ancestry_similarity(trajectories)
-        dataset_name_to_trends = wot.ot.TrajectoryTrends.compute_dataset_name_to_trends(trajectories, filtered_datasets,
-                                                                                        filtered_dataset_names)
-        trajectory_trends = {}
-        for dataset_name in dataset_name_to_trends:
-            trends = dataset_name_to_trends[dataset_name]
-            # mean, variance, times, ncells, cell_set, and features
-            # create a trace for each feature/cell set
+        trajectory_similarities = wot.ot.trajectory_similarities(trajectory_ds) if trajectory_ds.x.shape[
+                                                                                       1] > 1 else None
+        trajectory_trends_json = {}
+        for i in range(len(filtered_datasets)):
+            trends = wot.ot.compute_trajectory_trends_from_trajectory(trajectory_ds, filtered_datasets[i])
             traces = []
-            trajectory_trends[dataset_name] = traces
-            for trend in trends:
-                features = trend['features']
-                for j in range(len(features)):
-                    trace = {'x': trend['times'], 'y': trend['mean'][:, j].tolist(),
-                             'name': trend['cell_set'] + ' ' + features[j]}
+            trajectory_trends_json[filtered_dataset_names[i]] = traces
+            for j in range(len(trends)):
+                mean, variance = trends[j]
+                for k in range(mean.shape[1]):
+                    trace = {'x': mean.row_meta.index.values.tolist(), 'y': mean.x[:, k].tolist(),
+                             'name': str(mean.col_meta.index.values[k]) + '_' + str(
+                                 trajectory_ds.col_meta.index.values[k]), 'mode': 'lines+markers'}
                     traces.append(trace)
-        data = {'cell_set_to_trajectory_embedding': cell_set_to_trajectory_embedding,
-                'ancestry_similarity': ancestry_similarity_traces,
-                'trajectory_trends': trajectory_trends}
-        return flask.jsonify(data)
+
+        trajectory_similarities_json = []
+        if trajectory_similarities is not None:
+            for key in trajectory_similarities:
+                t = trajectory_similarities[key]
+                trajectory_similarities_json.append(
+                    {'name': str(key), 'x': t['time'].tolist(), 'y': t['similarity'].tolist(), 'mode': 'lines+markers'})
+
+        trajectory_json = []
+        for j in range(trajectory_ds.x.shape[1]):
+            name = str(trajectory_ds.col_meta.index.values[j])
+            x = trajectory_ds.x[:, j].tolist()
+            trajectory_json.append({'name': name, 'p': x})
+        data = {
+            'trajectory_similarities': trajectory_similarities_json,
+            'trajectory_trends': trajectory_trends_json,
+            'trajectory': {'id': trajectory_ds.row_meta.index.values.tolist(), 'data': trajectory_json}
+        }
+        return flask.Response(json.dumps(data, ignore_nan=True), mimetype='application/json')
 
     options = {
         'bind': '%s:%s' % (args.host, args.port),

@@ -12,13 +12,16 @@ location: Examples
 You can compute an ancestor census for your cell sets with:
 
 ```sh
-wot census --tmap tmaps --cell_days days.txt \
- --cell_set cell_sets.gmt --matrix matrix.txt \
- --out census --time 10
+wot census --tmap tmaps \
+ --cell_set cell_sets.gmt \
+ --out census --time 15
 ```
 
 See the [CLI documentation]({{site.baseurl}}/cli_documentation#ancestor-census)
 for more information about this command.
+
+Note : You need to have a transport maps computed for this to work. Please refer to the [CLI documentation]({{site.baseurl}}/cli_documentation#transport-maps) for instructions on how to compute transport maps.
+
 
 ### Plotting ###
 

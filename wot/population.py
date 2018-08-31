@@ -2,6 +2,7 @@
 
 import numpy as np
 
+
 class Population:
     """
     A Population is a measure over the the cells at given timepoint.

@@ -10,7 +10,7 @@ import wot.io
 def get_cells_in_gene_sets(gene_sets, dataset, quantile=.99):
     cell_sets = {}
     for gene_set_index in range(gene_sets.x.shape[1]):
-        gene_indices = list(np.where(gene_sets.x[:,gene_set_index] == 1)[0])
+        gene_indices = list(np.where(gene_sets.x[:, gene_set_index] == 1)[0])
         extracted = dataset.x[:, gene_indices]
         thresholds = np.percentile(extracted, axis=0, q=quantile * 100)
         selected = []
@@ -18,21 +18,22 @@ def get_cells_in_gene_sets(gene_sets, dataset, quantile=.99):
             if all(extracted[i] > thresholds):
                 selected.append(i)
         cell_sets[gene_sets.col_meta.index[gene_set_index]] = \
-                dataset.row_meta.index[selected]
+            dataset.row_meta.index[selected]
     return cell_sets
 
+
 def main(argv):
-    parser = argparse.ArgumentParser(description=\
-            'Compute the list of cells in each gene set')
+    parser = argparse.ArgumentParser(description= \
+                                         'Compute the list of cells in each gene set')
     parser.add_argument('--matrix',
-            help=wot.commands.MATRIX_HELP, required=True)
+                        help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--gene_sets',
-            help='Gene sets in gmx of gmt format', required=True)
+                        help='Gene sets in gmx of gmt format', required=True)
     parser.add_argument('--out', help='Output file name prefix')
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP,
-            default='gmt', choices=['gmt', 'gmx', 'txt'])
+                        default='gmt', choices=['gmt', 'gmx', 'txt'])
     parser.add_argument('--quantile', default=.99,
-            help='Proportion of cells considered to have high expression')
+                        help='Proportion of cells considered to have high expression')
 
     args = parser.parse_args(argv)
 
@@ -40,7 +41,7 @@ def main(argv):
         args.out = 'stdout'
 
     dataset = wot.io.read_dataset(args.matrix)
-    gene_sets = wot.io.read_gene_sets(args.gene_sets, dataset.col_meta.index.values)
+    gene_sets = wot.io.read_sets(args.gene_sets, dataset.col_meta.index.values)
 
     result = get_cells_in_gene_sets(gene_sets, dataset, quantile=float(args.quantile))
     wot.io.write_gene_sets(result, args.out, args.format)

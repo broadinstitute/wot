@@ -62,7 +62,7 @@ def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
     if isinstance(cell_set_paths, str):
         cell_set_paths = [cell_set_paths]
     for path in cell_set_paths:
-        cell_set_ds = wot.io.read_gene_sets(path)
+        cell_set_ds = wot.io.read_sets(path)
         for i in range(cell_set_ds.x.shape[1]):
             cell_set_name = cell_set_ds.col_meta.index.values[i]
             cell_ids_in_set = cell_set_ds.row_meta.index.values[cell_set_ds.x[:, i] > 0]
@@ -232,7 +232,7 @@ def read_transport_maps(input_dir, ids=None, time=None):
     return transport_maps_inputs
 
 
-def read_gene_sets(path, feature_ids=None):
+def read_sets(path, feature_ids=None, as_dict=False):
     path = str(path)
     hash_index = path.rfind('#')
     set_names = None
@@ -251,6 +251,8 @@ def read_gene_sets(path, feature_ids=None):
     if set_names is not None:
         gs_filter = gs.col_meta.index.isin(set_names)
         gs = wot.Dataset(gs.x[:, gs_filter], gs.row_meta, gs.col_meta.iloc[gs_filter])
+    if as_dict:
+        return wot.io.convert_binary_dataset_to_dict(gs)
     return gs
 
 
@@ -430,8 +432,7 @@ def write_gmt(gene_sets, f):
         f.write('{}\t{}\t{}\n'.format(gset, '-', '\t'.join(gene_sets[gset])))
 
 
-def read_cell_sets(path):
-    ds = read_gene_sets(path)
+def convert_binary_dataset_to_dict(ds):
     cell_sets = {}
     for i in range(ds.x.shape[1]):
         selected = np.where(ds.x[:, i] == 1)
@@ -444,7 +445,6 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
     path = str(path)
     basename_and_extension = get_filename_and_extension(path)
     ext = basename_and_extension[1]
-
     if ext == 'mtx':
         # look for .barcodes.txt and .genes.txt
         import itertools
@@ -483,6 +483,10 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
                              .format(gene_count, len(col_meta)))
 
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
+    elif ext == 'npy' or ext == 'npz':
+        x = np.load(path, mmap_mode='r')
+        return wot.Dataset(x=x, row_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1)),
+                           col_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1)))
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom' or ext == 'h5ad':
         f = h5py.File(path, 'r')
         if ext == 'h5ad':
@@ -725,6 +729,8 @@ def write_dataset(ds, path, output_format='txt'):
                                                            index_label='id',
                                                            sep=sep,
                                                            doublequote=False)
+    elif output_format == 'npy':
+        np.save(path, ds.x)
     elif output_format == 'loom':
         f = h5py.File(path, 'w')
         x = ds.x
@@ -820,8 +826,6 @@ def read_covariate_data_frame(path):
 
 def incorporate_days_information_in_dataset(dataset, path):
     days_data_frame = read_days_data_frame(path)
-    if len(days_data_frame) != len(dataset):
-        raise ValueError("Inconsistent shapes between dataset and cell days")
     dataset.row_meta = dataset.row_meta.join(days_data_frame)
 
 
@@ -830,6 +834,7 @@ def read_day_pairs(day_pairs):
         target = day_pairs
         args = {'engine': 'python', 'sep': None}
     else:
+        import io
         target = io.StringIO(day_pairs)
         args = {'sep': ',', 'lineterminator': ';'}
     return pd.read_table(target, **args)

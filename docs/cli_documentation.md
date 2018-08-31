@@ -136,8 +136,6 @@ This command will create a file `tmaps_{A}_{B}.loom` for each pair `{A}`, `{B}`
 of consecutive timepoints. These maps can then be translated to any format you find
 convenient with the [convert_matrix tool](#matrix_file).
 
-Additionally, a file `tmaps.yml` is generated, containing the configuration
-for the computed transport maps. You can later use this file with other commands.
 
 <table class="table table-hover" style="display: table">
   <thead class="thead-light">

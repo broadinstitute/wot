@@ -59,7 +59,7 @@ plt.xlabel("Time point",fontsize=10)
 plt.ylabel("Gene expression",fontsize=10)
 plt.title(" Trajectory trends from cells of tip1 at day 100",fontsize=10)
 plt.legend(loc='best',edgecolor='black',fontsize=10)
-plt.savefig("Trjectory_trends_Tip1_100.png")
+plt.savefig("Trajectory_trends_Tip1_100.png")
 plt.show()
 plt.close()
 ```

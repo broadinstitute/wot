@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import wot
-import pandas as pd
+
 from .ot_model import *
 
-def initialize_ot_model(matrix, days, tmap_dir = '.', tmap_prefix = None, **kwargs):
+
+def initialize_ot_model(matrix, days, tmap_out=None, **kwargs):
     """
     Initializes an OTModel from a list of files.
 
@@ -36,39 +37,9 @@ def initialize_ot_model(matrix, days, tmap_dir = '.', tmap_prefix = None, **kwar
     """
     ds = wot.io.read_dataset(matrix)
     wot.io.incorporate_days_information_in_dataset(ds, days)
-    ot_model = OTModel(ds, tmap_dir, tmap_prefix, **kwargs)
+    ot_model = OTModel(ds, tmap_out, **kwargs)
     return ot_model
 
-def load_ot_model(matrix, days, tmaps):
-    """
-    Loads a previously generated OTModel, from the tmaps configuration
-
-    Parameters
-    ----------
-    matrix : str
-        Path to a gene expression matrix file.
-    days : str
-        Path to a days file for the matrix.
-    tmaps : str
-        Path to the transport maps cache
-
-    Returns
-    -------
-    ot_model : wot.OTModel
-        The OTModel, with the previously cached transport maps available
-    """
-    if not (len(tmaps) > 4 and tmaps[-4:] == ".yml"):
-        tmaps += ".yml"
-    if not os.path.isfile(tmaps):
-        raise ValueError("Configuration file not found : {}".format(tmaps))
-
-    with open(tmaps, 'r') as stream:
-        config = wot.model.parse_ot_configuration_from_stream(stream)
-
-    tmap_dir, tmap_prefix = os.path.split(tmaps[:-4])
-    return initialize_ot_model(matrix, days,
-            tmap_dir=tmap_dir, tmap_prefix=tmap_prefix,
-            **config)
 
 def parse_configuration(config):
     """
@@ -139,13 +110,13 @@ def parse_per_timepoint_configuration(config):
     if isinstance(config, pd.DataFrame):
         if 't' not in config.columns:
             raise ValueError("Invalid per-timepoint configuration : must have column t")
-        types = { 't': float, 'epsilon': float, 'lambda1': float, 'lambda2': float }
+        types = {'t': float, 'epsilon': float, 'lambda1': float, 'lambda2': float}
         config = config.sort_values(by='t').astype({x: types[x] for x in types if x in config.columns})
-        fields = [ x for x in config.columns if x != 't' and x in types ]
+        fields = [x for x in config.columns if x != 't' and x in types]
         day_pairs = {}
         for i in range(len(config) - 1):
             t0c = config.iloc[i]
-            t1c = config.iloc[i+1]
+            t1c = config.iloc[i + 1]
             day_pairs[(t0c['t'], t1c['t'])] = {x: (t0c[x] + t1c[x]) / 2 for x in fields}
         return day_pairs
     elif isinstance(config, dict):
@@ -189,19 +160,19 @@ def parse_per_timepair_configuration(config):
         return parse_per_timepair_configuration(result)
     elif isinstance(config, dict):
         try:
-            if not all(isinstance(z, (int, float)) for x,y in config for z in [x,y]):
+            if not all(isinstance(z, (int, float)) for x, y in config for z in [x, y]):
                 raise ValueError("Dictionnary keys for config must be pairs of floats")
         except:
             # `x, y in config` failed, so a key is not a pair (wrong unpack count)
             raise ValueError("Dictionnary keys for config must be pairs")
         # At this point, we know all keys are pairs of float-castable scalars
-        valid_fields = [ 'epsilon', 'lambda1', 'lambda2' ]
+        valid_fields = ['epsilon', 'lambda1', 'lambda2']
         for key in config:
             if not isinstance(config[key], dict):
                 raise ValueError("Dictionnary values for config must be dictionnaries")
             selected = config[key]
             # Drop all keys that are not valid configuration options for day pairs
-            config[key] = { x: selected[x] for x in valid_fields if x in selected }
+            config[key] = {x: selected[x] for x in valid_fields if x in selected}
         return config
     else:
         raise ValueError("Unrecognized argument type for config. Use DataFrame or dict")

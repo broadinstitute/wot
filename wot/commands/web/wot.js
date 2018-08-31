@@ -332,7 +332,6 @@ $.ajax('/info/').done(function (json) {
     if (transportMapNames.length === 0) {
         $('#trajectory_li').hide();
     } else {
-
         $transportMaps.html(transportMapNames.map(function (name) {
             return '<option value="' + name + '">' + name + '</option>'
         }));
@@ -469,14 +468,14 @@ $features
 });
 
 var showTrajectoryPlots = function (result, $el) {
-    var ancestrySimilarityTraces = result.ancestry_similarity;
-    var cellSetToTrajectoryEmbedding = result.cell_set_to_trajectory_embedding;
+    var trajectorySimilarityTraces = result.trajectory_similarities;
+    var trajectory = result.trajectory;
     var trajectoryTrends = result.trajectory_trends;
-    if (ancestrySimilarityTraces.length > 0) {
+    if (trajectorySimilarityTraces.length > 0) {
         var $div = $('<li style="list-style: none;"><h4>Trajectory Similarity</h4><div class="plot"></div></li>');
         $div.appendTo($el);
 
-        Plotly.newPlot($div.find('.plot')[0], ancestrySimilarityTraces, {
+        Plotly.newPlot($div.find('.plot')[0], trajectorySimilarityTraces, {
                 title: '',
                 showlegend: true,
                 autosize: true,
@@ -515,12 +514,35 @@ var showTrajectoryPlots = function (result, $el) {
 
     }
     if (cellInfo != null) {
-        for (var cellSet in cellSetToTrajectoryEmbedding) {
-            createForceLayoutTrajectory(cellSetToTrajectoryEmbedding[cellSet], cellSet, $el);
+        var cellIds = trajectory.id;
+        for (var i = 0; i < trajectory.data.length; i++) { // create separate plot for each trajectory
+            var name = trajectory.data[i].name;
+            var p = trajectory.data[i].p;
+            var timeToTrace = {};
+            if (p.length !== cellInfo.id.length) {
+                throw new Error();
+            }
+            for (var i = 0, length = cellInfo.id.length; i < length; i++) {
+                var t = cellInfo.day[i];
+                var trace = timeToTrace[t];
+                if (trace === undefined) {
+                    trace = {t: t, x: [], y: [], marker: {color: []}};
+                    timeToTrace[t] = trace;
+                }
+                trace.x.push(cellInfo.x[i]);
+                trace.y.push(cellInfo.y[i]);
+                trace.marker.color.push(p[i]);
+            }
+            var traces = [];
+            for (var t in timeToTrace) {
+                traces.push(timeToTrace[t]);
+            }
+            createForceLayoutTrajectory(traces, name, $el);
         }
     }
 
 };
+
 
 var fetchTrajectoryData = function () {
 
@@ -536,12 +558,12 @@ var fetchTrajectoryData = function () {
     var transportMaps = $transportMaps.val();
     if (selectedCellSets.length > 0 && transportMaps.length > 0) {
         $trajectoryEl.empty();
-        transportMaps.forEach(function (transportMap) {
+        transportMaps.forEach(function (transportMapName) {
             var $el = $('<div>Loading...</div>');
             $el.appendTo($trajectoryEl);
             var predefinedCellSets = [];
             var ncustom_cell_sets = 0;
-            var data = {feature: _selectedFeatures, transport_map: transportMap};
+            var data = {feature: _selectedFeatures, transport_map: transportMapName};
             selectedCellSets.forEach(function (name) {
                 var ids = customCellSetNameToIds[name];
                 if (ids != null) {
@@ -556,12 +578,12 @@ var fetchTrajectoryData = function () {
             data.cell_set = selectedCellSets;
 
             $.ajax({url: '/trajectory/', data: data, method: 'POST'}).done(function (results) {
-                $el.html('<h2>' + transportMap + '</h2>');
+                $el.html('<h2>' + transportMapName + '</h2>');
                 showTrajectoryPlots(results, $el);
                 $el.sortable({handle: 'h4'});
             }).fail(function (err) {
                 console.log(err);
-                $el.html('An unexpected error occurred while loading ' + transportMap + '. Please try again.');
+                $el.html('An unexpected error occurred while loading ' + transportMapName + '. Please try again.');
             });
         });
 

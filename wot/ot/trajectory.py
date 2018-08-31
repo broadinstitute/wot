@@ -111,7 +111,8 @@ class Trajectory:
         return trajectory_results
 
     @staticmethod
-    def __trajectory_for_cell_sets_at_time_t(cell_sets, transport_maps, time, cache_transport_maps=True, print_progress=(False, 0, 0)):
+    def __trajectory_for_cell_sets_at_time_t(cell_sets, transport_maps, time, cache_transport_maps=True,
+                                             print_progress=(False, 0, 0)):
         """
 
         Args:
@@ -164,7 +165,7 @@ class Trajectory:
             trajectory_ranges.append({'is_back': False, 'range': range(transport_map_t1_index, len(transport_maps))})
 
         progress_count = 0
-        total_progress_count = sum([ len(t['range']) for t in trajectory_ranges])
+        total_progress_count = sum([len(t['range']) for t in trajectory_ranges])
 
         for trajectory_range in trajectory_ranges:
             is_back = trajectory_range['is_back']
@@ -172,7 +173,7 @@ class Trajectory:
             for transport_index in trajectory_range['range']:
                 if print_progress[0]:
                     p = print_progress[1] + print_progress[2] * \
-                            progress_count / total_progress_count
+                        progress_count / total_progress_count
                     wot.io.output_progress(p)
                     progress_count += 1
                 tmap_dict = transport_maps[transport_index]

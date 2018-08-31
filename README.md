@@ -8,7 +8,6 @@ approach of Optimal Transport (OT).
 
 Waddington-OT depends on [Python 3](https://www.python.org/downloads/).
 
-Several other python packages are required, but they can easily be installed through [pip][pip-install]
 
 ### Dependencies ###
 
@@ -35,11 +34,7 @@ pip install --user wot
 
 ### Initializing an OT Model ###
 
-**wot** uses an OTModel as its user interface. This is meant to provide black-boxed
-functions to compute ancestors and descendants, while still using efficient caching
-of transport maps under the hood, as these take a long time to compute. It also
-allows **wot** to compute only the transport maps that are needed at any given time,
-speeding up short pull-backs where only a few of those transport maps are needed.
+**wot** uses an OTModel as its interface for computing transport maps. 
 
 You can initialize an OT Model in python with :
 
@@ -55,33 +50,25 @@ ot_model = wot.initialize_ot_model('matrix.txt', 'days.txt', tmap_prefix='tmaps'
     epsilon=.05, lambda1=10, lambda2=50, batch_size=50, tolerance=1e-2)
 ```
 
-This initialization steps store the configuration in a `tmaps.yml` file.
-The basename of this file can be customized with the `tmap_prefix` option used above.
-
-Each `tmap_prefix` references a different OT Model. If you plan to use several
-models at the same time, you should a different prefix for each one of them.
-
-### Loading an OT Model ###
-
-Once the configuration file has been created, you can reload the previous
-OT Model in a different script from the YAML configuration file :
+You can compute all transport maps with :
 
 ```python
-ot_model = wot.load_ot_model('matrix.txt', 'days.txt', 'tmaps')
+ot_model.compute_all_transport_maps()
 ```
 
-Note that it is not necessary to use the '.yml' suffix when loading an OT
-Model, the prefix is enough.
+### Loading Transport Maps ###
 
-All previously computed transport maps will be available, even across calls
-to the script.
+Once the transport maps have been created, you can operate on the transport maps using the TransportMapModel interface :
+
+```python
+tmap_model = wot.model.TransportMapModel.from_directory('.')
+```
+
+
+All previously computed transport maps will be available.
 
 ### Changing parameters ###
 
-If you want to change the OT parameters, you can simply re-initialize a model
-with the new parameters. **wot** will check for compatibility between the cached
-transport maps and the current configuration, and recompute the transport maps
-that do not match the current configuration, so you need not care about these issues.
 
 If you want to keep the previously computed transport maps, simply initialize
 a new model with a different prefix. Any model will only affect files that use

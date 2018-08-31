@@ -9,15 +9,15 @@ import wot.io
 class TestIO(unittest.TestCase):
 
     def test_read_grp(self):
-        gs = wot.io.read_gene_sets(os.path.abspath('inputs/io/test.grp'))
+        gs = wot.io.read_sets(os.path.abspath('inputs/io/test.grp'))
         self.assertTrue(np.sum(gs.x) == 4)
 
     def test_read_grp_subset(self):
-        gs = wot.io.read_gene_sets(os.path.abspath('inputs/io/test.grp'), ['a', 'e', 'c', 'f'])
+        gs = wot.io.read_sets(os.path.abspath('inputs/io/test.grp'), ['a', 'e', 'c', 'f'])
         self.assertTrue(gs.x[0, 0] == 1 and gs.x[2, 0] == 1)
 
     def test_read_gmx(self):
-        gs = wot.io.read_gene_sets(os.path.abspath(
+        gs = wot.io.read_sets(os.path.abspath(
             'inputs/io/test_gene_sets.gmx'))
         np.testing.assert_array_equal(gs.x,
                                       np.array([[1, 0], [0, 1], [1, 0], [0,
@@ -25,7 +25,7 @@ class TestIO(unittest.TestCase):
                                                 [1, 0]]))
 
     def test_read_gmt(self):
-        gs = wot.io.read_gene_sets(
+        gs = wot.io.read_sets(
             os.path.abspath('inputs/io/msigdb.v6.1.symbols.gmt'))
 
         set_id_filter = gs.col_meta.index.values == \
@@ -43,7 +43,7 @@ class TestIO(unittest.TestCase):
             self.assertTrue(index[0] >= 0)
 
     def test_read_gmt_write_gmx(self):
-        gs = wot.io.read_gene_sets(
+        gs = wot.io.read_sets(
             os.path.abspath('inputs/io/msigdb.v6.1.symbols.gmt'))
 
         set_id_filter = gs.col_meta.index.values == \
@@ -66,7 +66,7 @@ class TestIO(unittest.TestCase):
         for input in inputs:
 
             for j in range(len(expected_ids_array)):
-                gs = wot.io.read_gene_sets(
+                gs = wot.io.read_sets(
                     os.path.abspath(input), feature_ids=expected_ids_array[j])
                 gs_ids = gs.row_meta.index.values
                 expected_ids = expected_ids_array[j]

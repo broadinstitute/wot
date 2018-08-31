@@ -13,21 +13,17 @@ def main(argv):
     wot.commands.add_model_arguments(parser)
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--out', default='./tmaps',
-                        help='Prefix for ouput file names')
+                        help='Prefix for output file names')
     parser.add_argument('--format', default='loom', help='Transport map file format.',
                         choices=wot.commands.FORMAT_CHOICES)
     args = parser.parse_args(argv)
 
     # TODO: add support for the following arguments :
-    # '--gene_filter'
-    # '--cell_filter'
     # '--ncells'
     # '--ncounts'
 
-    tmap_dir, tmap_prefix = os.path.split(args.out)
     ot_model = wot.initialize_ot_model(args.matrix, args.cell_days,
-                                       tmap_dir=tmap_dir,
-                                       tmap_prefix=tmap_prefix,
+                                       tmap_out=args.out,
                                        local_pca=args.local_pca,
                                        growth_iters=args.growth_iters,
                                        epsilon=args.epsilon,
@@ -46,4 +42,4 @@ def main(argv):
                                        output_file_format=args.format
                                        )
 
-    ot_model.compute_all_transport_maps(force=True)
+    ot_model.compute_all_transport_maps()

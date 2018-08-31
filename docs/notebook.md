@@ -66,26 +66,21 @@ notebook. Just click the button below to download the whole archive.
 ![Cell sets plots](images/notebook_cell_sets.png)
 
 <a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
- href="01_init_model.py">Download python code</a>
-## Initializing the OT Model ##
+ href="01_create_tmaps.py">Download python code</a>
+## Create Transport Maps ##
 -------------------------------
 
 > If you have downloaded our precomputed transport maps, you can skip this section.
 
-To compute ancestors and descendants, you will need an OT Model, storing all
+To compute ancestors and descendants, you will need to compute transport maps using an OT Model, storing all
 parameters for the transport maps. You can initialize it in python, for future use :
 
 ```python
-{% include_relative notebook/01_init_model.py %}
+{% include_relative notebook/01_create_tmaps.py %}
 ```
 
-You can then use `wot.load_ot_model` to reload this model, with the same parameters.
+You can then use `wot.load_ot_model` to load this model, with the same parameters.
 
-If you want to change the parameters, simply rerun the above snippet with
-your prefered values. All subsequent scripts will use the new values.
-
-A configuration file called `tmaps.yml` will be created in your current
-working directory.
 
 <a class="btn-info rounded border-0 px-3 py-1 btn-example nounderline"
  href="04_plotting_ancestors.py">Download python code</a>
