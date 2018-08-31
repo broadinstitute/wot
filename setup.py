@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 
 requirements = [
     'Cython', 'h5py', 'numpy', 'scipy', 'scanpy',
-    'scikit-learn', 'pandas>=0.21', 'pypandoc', 'Flask',
+    'scikit-learn', 'pandas>=0.21', 'Flask',
     'gunicorn', 'numexpr', 'simplejson', 'psutil',
     'pyyaml'
 ]
