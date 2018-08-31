@@ -28,7 +28,7 @@ over time, by using the mathematical approach of Optimal Transport (OT).
 
 This packages depends on [Python 3](https://www.python.org/downloads/).
 
-Several other python packages are required, but they can easily be installed through [pip][pip-install]
+Several other python packages are required, but they can easily be installed through [pip][pip-install] or [conda](https://www.anaconda.com/download/)
 
 ### Install from pip ###
 
@@ -40,62 +40,6 @@ pip install --user wot
 
 **wot** is then installed and ready to use.
 
-
-### Install from source ###
-
-Alternatively, you can install **wot** from source, and eventually modify it :
-
-```sh
-git clone https://github.com/broadinstitute/wot
-cd wot && python setup.py sdist
-```
-
-The package gets built to `dist/wot-VERSION.tar.gz`, for instance `dist/wot-0.1.2.tar.gz`.
-
-> <button class="btn-info rounded border-0 px-3 py-1" disabled>Dependencies</button>
->
-> Once built, if you don't already satisfy all dependecies, you must install required packages :
->
-> ```sh
-> pip install --user h5py docutils msgpack-python --no-cache-dir
-> pip install --user cython --no-cache-dir
-> echo "$PATH" | grep -q "$HOME/.local/bin" || \
->   echo -e "\n# Cython path\nPATH=\"\$PATH:\$HOME/.local/bin\"" \
->   >> ~/.bash_profile && source ~/.bash_profile
-> ```
->
-> *h5py*, *docutils*, and *msgpack-python* have to be installed separately and
-> before cython because of [a known issue](https://github.com/h5py/h5py/issues/535)
-> during the automatic installation through pip.
-
-> <button class="btn-info rounded border-0 px-3 py-1" disabled>Mac OSX users</button>
->
-> If you are using a mac and get an error about *HDF5* when installing, run :
-> ```sh
-> conda install pytables
-> ```
-> And then re-run the block above.
->
-> This is [another known issue](https://github.com/PyTables/PyTables/issues/385) when
-> installing *tables* on OSX when conda is also installed.
-
-Then install the built package from the *dist/* directory :
-
-```sh
-pip install --user dist/wot-*.tar.gz
-```
-
-And then **wot** is installed and ready to use.
-
-<hr />
-
-> <button class="btn-info rounded border-0 px-3 py-1" disabled>Note</button>
->
-> To improve random numbers generation performance, you might want to install [gslrandom](https://github.com/slinderman/gslrandom).
->
-> ```sh
-> pip install --user gslrandom
-> ```
 
 
 ## Usage ##
@@ -239,14 +183,6 @@ wot trajectory --tmap tmaps --cell_days days.txt \
       <td>Prefix of the transport maps configuration file</td>
     </tr>
     <tr>
-      <td><b>--matrix</b></td>
-      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
-    </tr>
-    <tr>
-      <td><b>--cell_days</b></td>
-      <td>Timestamps for each cell. See <a href="#days_file">formats</a></td>
-    </tr>
-    <tr>
       <td><b>--cell_set</b></td>
       <td>Target cell set. See <a href="#cellset_file">formats</a></td>
     </tr>
@@ -269,12 +205,12 @@ ancestor distribution falls into each cell set.
 
 
 ```sh
-wot census --tmap tmaps --cell_days days.txt \
- --cell_set cell_sets.gmt --matrix matrix.txt \
+wot census --tmap tmaps  \
+ --cell_set cell_sets.gmt \
  --out census --time 10
 ```
 
-This would create several census files named `<prefix>_<cellset>.txt`,
+This command creates several census files named `<prefix>_<cellset>.txt`,
 for instance `census_tip1.txt`. See <a href="#census_file">formats</a>
 for more information.
 
@@ -289,14 +225,6 @@ for more information.
     <tr>
       <td><b>--tmap</b></td>
       <td>Prefix of the transport maps configuration file</td>
-    </tr>
-    <tr>
-      <td><b>--matrix</b></td>
-      <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
-    </tr>
-    <tr>
-      <td><b>--cell_days</b></td>
-      <td>Timestamps for each cell. See <a href="#days_file">formats</a></td>
     </tr>
     <tr>
       <td><b>--cell_set</b></td>
@@ -351,10 +279,6 @@ specified with `--cell_set`.
       <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
     </tr>
     <tr>
-      <td><b>--cell_days</b></td>
-      <td>Timestamps for each cell. See <a href="#days_file">formats</a></td>
-    </tr>
-    <tr>
       <td><b>--cell_set</b></td>
       <td>Target cell sets. See <a href="#cellset_file">formats</a></td>
     </tr>
@@ -379,8 +303,8 @@ by the [trajectory trends command](#trajectory-trends).
 
 ```sh
 wot local_enrichment --score t_test \
- --matrix1 trends_set1.txt --variance1 trends_set1.variance.txt \
- --matrix2 trends_set2.txt --variance2 trends_set2.variance.txt
+ --matrix1 trends_set1.mean.txt --variance1 trends_set1.variance.txt \
+ --matrix2 trends_set2.mean.txt --variance2 trends_set2.variance.txt
 ```
 
 This will create files `<timepoint>.rnk` for each timepoint, containing each gene's score.
@@ -616,18 +540,19 @@ and can be given directly to the *wot_server* interactive tool.
 
 The *matrix* file specifies the gene expression matrix to use.
 
-The following formats are accepted by all tools: *mtx*, *hdf5*, *h5*, *h5ad*, *loom*, and *gct*.
+The following formats are accepted by all tools: *mtx*, *txt*, *h5ad*, *loom*, and *gct*. Please note that *wot* expects 
+cells on the rows and genes on the columns, except for the *mtx* format.
 
-##### Plain text gene expression matrix #####
+##### Text #####
 
-Additionally, a plain text format is accepted. It must consist of tab-separated columns.
+The text format consists of tab or comma separated columns with genes on the columns and cells on the rows.
 
 The first row, the header, must consist of an "id" field, and then the list of genes to be considered.
 
 Each subsequent row will give the expression level of each gene for a given cell.
 
-The first field must be a unique identifier for the cell, and then the tab-separated list
-of expression level for each gene/feature.
+The first field must be a unique identifier for the cell, and then the tab or comma separated list
+of expression levels for each gene/feature.
 
 Example:
 
@@ -636,6 +561,23 @@ Example:
 <tr><td>cell_1</td><td>1.2</td><td>12.2</td><td>5.4</td></tr>
 <tr><td>cell_2</td><td>2.3</td><td>4.1</td><td>5.0</td></tr>
 </table>
+
+##### MTX #####
+
+The MTX format is a sparse matrix format with genes on the rows and cells on the columns as output by [Cell Ranger](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/matrices). 
+You should also have TSV files with genes and barcode sequences corresponding to row and column indices, respectively. 
+These files must be located in the same folder as the MTX file with the same base file name. For example if the MTX file is my_data.mtx, you should
+also have a my_data.genes.txt file and a my_data.barcodes.txt file.
+
+
+##### GCT #####
+
+A GCT file is a tab-delimited text file. Please see description [here](http://software.broadinstitute.org/cancer/software/genepattern/file-formats-guide#GCT)
+
+
+##### Loom #####
+
+A HDF5 file for efficient storage and access of large datases. Please see description at [http://loompy.org/](http://loompy.org/)
 
 ---
 
@@ -839,3 +781,4 @@ Example:
 </table>
 
 [pip-install]: https://pip.pypa.io/en/stable/installing/
+
