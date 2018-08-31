@@ -586,19 +586,18 @@ A HDF5 file for efficient storage and access of large datases. Please see descri
 > You can convert input matrices from one format to another :
 >
 > ```sh
-> wot convert_matrix file.mtx --format loom
+> wot convert_matrix --format txt *.loom
 > ```
 >
-> This command would create a file named *file.loom* containing the same
-> matrix as *file.mtx*, in the same directory.
+> This command converts all loom files in the current directory to text.
 >
 > Supported input formats are *mtx*, *hdf5*, *h5*, *h5ad*, *loom*, and *gct*.
 >
-> Supported output formats are *txt*, *txt.gz*, *loom*, and *gct*. (default: *loom*)
+> Supported output formats are *txt*, *loom*, and *gct*. (default: *loom*)
 
 
 
-### <a name="days_file">Cell timestamps (day file)</a> ###
+### <a name="days_file">Cell timestamps (cell day file)</a> ###
 
 The timestamp associated with each cell of the matrix file is specified in the *days* file.
 This file must be a tab-separated plain text file, with two header fields: "id" and "day".
