@@ -11,47 +11,37 @@ import h5py
 
 
 class TransportMapModel:
-    def __init__(self, tmaps):
-        self.day_pairs = set()
-        unique_timepoints = set()
-        self.timepoint_to_ids = {}
-        for key in tmaps:
-            t0 = key[0]
-            t1 = key[1]
-            self.day_pairs.add((t0, t1))
-            unique_timepoints.add(t0)
-            unique_timepoints.add(t1)
-            load_t0 = self.timepoint_to_ids.get(t0) is None
-            load_t1 = self.timepoint_to_ids.get(t1) is None
-            if load_t0 or load_t1:
-                path = tmaps[key]
-                f = h5py.File(path, 'r')
-                if load_t0:
-                    ids = f['/row_attrs/id'][()].astype(str)
-                    df = pd.DataFrame(index=ids, data={'day': t0})
-                    self.timepoint_to_ids[t0] = df
-                if load_t1:
-                    ids = f['/col_attrs/id'][()].astype(str)
-                    df = pd.DataFrame(index=ids, data={'day': t1})
-                    self.timepoint_to_ids[t1] = df
-                f.close()
-        self.meta = None
-        self.timepoints = sorted(unique_timepoints)
-        for t in self.timepoints:
-            df = self.timepoint_to_ids[t]
-            if self.meta is None:
-                self.meta = df
-            else:
-                self.meta = pd.concat((self.meta, df), copy=False)
+    """
+       Creates a transport map model for operating on pre-computed transport maps
+
+       Parameters
+       ----------
+       tmaps : dict
+           Maps day pairs to transport map path.
+       meta : pandas.DataFrame
+           Cell metadata with index cell ids and 'day'. Must match the order in the transport maps.
+       timepoints : list
+           Sorted list of cell timepoints
+        day_pairs : list
+            List of (t1,t2)
+       """
+
+    def __init__(self, tmaps, meta, timepoints, day_pairs):
         self.tmaps = tmaps
+        self.meta = meta
+        self.timepoints = timepoints
+        self.day_pairs = day_pairs
 
     @staticmethod
     def from_directory(tmap_out, with_covariates=False):
         """
-        Creates a wot.TransportMapModel from an output directory
+        Creates a wot.TransportMapModel from an output directory.
+
+        Parameters
+        ----------
         :param tmap_out:
         :param with_covariates:
-        :return:
+        :return: TransportMapModel instance
         """
         tmap_dir, tmap_prefix = os.path.split(tmap_out)
         tmap_dir = tmap_dir or '.'
@@ -85,7 +75,39 @@ class TransportMapModel:
                 continue
         if len(tmaps) is 0:
             raise ValueError('No transport maps found')
-        return TransportMapModel(tmaps=tmaps)
+        day_pairs = set()
+        unique_timepoints = set()
+        timepoint_to_ids = {}
+        for key in tmaps:
+            t0 = key[0]
+            t1 = key[1]
+            day_pairs.add((t0, t1))
+            unique_timepoints.add(t0)
+            unique_timepoints.add(t1)
+            load_t0 = timepoint_to_ids.get(t0) is None
+            load_t1 = timepoint_to_ids.get(t1) is None
+            if load_t0 or load_t1:
+                path = tmaps[key]
+                f = h5py.File(path, 'r')
+                if load_t0:
+                    ids = f['/row_attrs/id'][()].astype(str)
+                    df = pd.DataFrame(index=ids, data={'day': t0})
+                    timepoint_to_ids[t0] = df
+                if load_t1:
+                    ids = f['/col_attrs/id'][()].astype(str)
+                    df = pd.DataFrame(index=ids, data={'day': t1})
+                    timepoint_to_ids[t1] = df
+                f.close()
+        meta = None
+        timepoints = sorted(unique_timepoints)
+        for t in timepoints:
+            df = timepoint_to_ids[t]
+            if meta is None:
+                meta = df
+            else:
+                meta = pd.concat((meta, df), copy=False)
+
+        return TransportMapModel(tmaps=tmaps, meta=meta, timepoints=timepoints, day_pairs=day_pairs)
 
     def get_transport_map(self, t0, t1, covariate=None):
         """
@@ -425,7 +447,7 @@ class TransportMapModel:
         """
 
         day = float(at_time)
-        df = self.timepoint_to_ids[day]
+        df = self.meta[self.meta['day'] == day]
 
         def get_population(ids_el):
             cell_inds = df.index.get_indexer_for(ids_el)
@@ -461,7 +483,8 @@ class TransportMapModel:
 
     def cell_ids(self, population):
         day = population.time
-        return self.timepoint_to_ids[day].index.values
+        df = self.meta[self.meta['day'] == day]
+        return df.index.values
 
     def compute_ancestor_census(self, cset_matrix, *populations):
         """
@@ -523,7 +546,7 @@ class TransportMapModel:
         If several populations are given, they must all live in the same timepoint.
         """
         day = wot.model.unique_timepoint(*populations)
-        df = self.timepoint_to_ids[day]
+        df = self.meta[self.meta['day'] == day]
         inter_ids = cell_set_matrix.row_meta.index.intersection(df.index)
         if len(inter_ids) == 0:
             census = [[0] * cell_set_matrix.x.shape[1]] * len(populations)
@@ -539,5 +562,3 @@ class TransportMapModel:
                                 dtype=np.float64)
 
         return census
-
-
