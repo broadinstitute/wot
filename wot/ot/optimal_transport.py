@@ -34,7 +34,9 @@ def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, 
                                   epsilon0=epsilon0)
     return Tmap
 
-def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau, epsilon0, growth_iters, max_iter):
+
+def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau, epsilon0,
+                                   growth_iters, max_iter, pp=None, qq=None):
     """
     Compute the optimal transport with stabilized numerics and duality gap guarantee.
 
@@ -42,6 +44,8 @@ def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, 
     ----------
     C : 2D array
     g : 1D array
+    pp : 1D array
+    qq : 1D array
     lambda1 : float
     lambda2 : float
     epsilon : float
@@ -66,38 +70,45 @@ def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, 
 
     row_sums = g
     for i in range(growth_iters):
-        tmap = transport_stablev1(C, row_sums, lambda1, lambda2, epsilon,
-                batch_size, tolerance, tau, epsilon0, max_iter)
+        tmap = transport_stablev1(C, row_sums, pp, qq, lambda1, lambda2, epsilon,
+                                  batch_size, tolerance, tau, epsilon0, max_iter)
         row_sums = tmap.sum(axis=1) / tmap.shape[1]
     return tmap
 
+
 # @ Lénaïc Chizat 2015 - optimal transport
 def fdiv(l, x, p, dx):
-    return l * np.sum( dx * (x * (np.log(x / p)) - x + p))
+    return l * np.sum(dx * (x * (np.log(x / p)) - x + p))
+
 
 def fdivstar(l, u, p, dx):
     return l * np.sum((p * dx) * (np.exp(u / l) - 1))
 
+
 def primal(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
     I = len(p)
     J = len(q)
-    F1 = lambda x, y : fdiv(lambda1, x, p, y)
-    F2 = lambda x, y : fdiv(lambda2, x, q, y)
+    F1 = lambda x, y: fdiv(lambda1, x, p, y)
+    F2 = lambda x, y: fdiv(lambda2, x, q, y)
     with np.errstate(divide='ignore'):
         return F1(np.dot(R, dy), dx) + F2(np.dot(R.T, dx), dy) \
-                + (epsilon * np.sum(R * np.nan_to_num(np.log(R)) - R + K)\
-                + np.sum(R * C)) / (I * J)
+               + (epsilon * np.sum(R * np.nan_to_num(np.log(R)) - R + K) \
+                  + np.sum(R * C)) / (I * J)
+
 
 def dual(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
     I = len(p)
     J = len(q)
-    F1c = lambda u, v : fdivstar(lambda1, u, p, v)
-    F2c = lambda u, v : fdivstar(lambda2, u, q, v)
-    return - F1c(- epsilon * np.log(a), dx) - F2c( - epsilon * np.log(b), dy) \
-            - epsilon * np.sum(R - K) / (I * J)
+    F1c = lambda u, v: fdivstar(lambda1, u, p, v)
+    F2c = lambda u, v: fdivstar(lambda2, u, q, v)
+    return - F1c(- epsilon * np.log(a), dx) - F2c(- epsilon * np.log(b), dy) \
+           - epsilon * np.sum(R - K) / (I * J)
+
+
 # end @ Lénaïc Chizat
 
-def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau=10e100, epsilon0=1., max_iter=1e7):
+def transport_stablev1(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tolerance, tau=10e100, epsilon0=1.,
+                       max_iter=1e7):
     """
     Compute the optimal transport with stabilized numerics, with the guarantee that the duality gap is at most `tolerance`
 
@@ -131,12 +142,16 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
     """
     C = np.asarray(C, dtype=np.float64)
     epsilon_scalings = 5
-    scale_factor = np.exp(- np.log(epsilon) / 10 )
+    scale_factor = np.exp(- np.log(epsilon) / 10)
 
     I, J = C.shape
     dx, dy = np.ones(I) / I, np.ones(J) / J
     p = g
+    if pp is not None:
+        p *= pp
     q = np.ones(J) * np.average(g)
+    if qq is not None:
+        q *= qq
 
     u, v = np.zeros(I), np.zeros(J)
     a, b = np.ones(I), np.ones(J)
@@ -159,7 +174,7 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
         old_a, old_b = a, b
         threshold = tolerance if e == epsilon_scalings else 1e-6
 
-        while duality_gap > threshold :
+        while duality_gap > threshold:
             for i in range(batch_size if e == epsilon_scalings else 5):
                 current_iter += 1
                 old_a, old_b = a, b
@@ -193,15 +208,16 @@ def transport_stablev1(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, t
                 # wot.io.verbose("Current (gap, primal, dual) : {:020.18f} {:020.18f} {:020.18f}".format(duality_gap, pri, dua))
             else:
                 duality_gap = max(
-                        np.linalg.norm(_a - old_a * np.exp(u/epsilon_i)) / (1 + np.linalg.norm(_a)),
-                        np.linalg.norm(_b - old_b * np.exp(v/epsilon_i)) / (1 + np.linalg.norm(_b)))
+                    np.linalg.norm(_a - old_a * np.exp(u / epsilon_i)) / (1 + np.linalg.norm(_a)),
+                    np.linalg.norm(_b - old_b * np.exp(v / epsilon_i)) / (1 + np.linalg.norm(_b)))
 
     if np.isnan(duality_gap):
         raise RuntimeError("Overflow encountered in duality gap computation, please report this incident")
     total_time = time.time() - start_time
-    wot.io.verbose("Computed tmap in {:.3f}s. Duality gap: {:.3E} ({:.2f}% of computing time)"\
-            .format(total_time, duality_gap, 100 * duality_time / total_time))
+    wot.io.verbose("Computed tmap in {:.3f}s. Duality gap: {:.3E} ({:.2f}% of computing time)" \
+                   .format(total_time, duality_gap, 100 * duality_time / total_time))
     return R
+
 
 def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
                        epsilon0=None, extra_iter=1000):
@@ -308,7 +324,7 @@ def transport_stable(p, q, C, lambda1, lambda2, epsilon, scaling_iter, g):
     return (K.T * a).T * b
 
 
-def optimal_transport(cost_matrix, g=None, p=None, q=None, solver=None,
+def optimal_transport(cost_matrix, g=None, pp=None, qq=None, p=None, q=None, solver=None,
                       delta_days=1, epsilon=0.1, lambda1=1.,
                       lambda2=1., min_transport_fraction=0.05,
                       max_transport_fraction=0.4, min_growth_fit=0.9,
@@ -463,6 +479,7 @@ def optimal_transport_with_entropy(cost_matrix, growth_rate, p=None, q=None,
     return {'transport': transport, 'lambda1': lambda1 * l0,
             'lambda2': lambda2 * l0, 'epsilon': epsilon * e0}
 
+
 def glue_transport_maps(tmap_0, tmap_1):
     """
     Glue two transport maps together
@@ -482,8 +499,9 @@ def glue_transport_maps(tmap_0, tmap_1):
     # FIXME: Column sum normalization is needed before gluing. Can be skipped only if lambda2 is high enough
     cells_at_intermediate_tpt = tmap_0.col_meta.index
     cait_index = tmap_1.row_meta.index.get_indexer_for(cells_at_intermediate_tpt)
-    result_x = np.dot(tmap_0.x, tmap_1.x[cait_index,:])
+    result_x = np.dot(tmap_0.x, tmap_1.x[cait_index, :])
     return wot.Dataset(result_x, tmap_0.row_meta.copy(), tmap_1.col_meta.copy())
+
 
 def get_pca(dim, *args):
     """
@@ -513,8 +531,9 @@ def get_pca(dim, *args):
     args = [a.toarray() if scipy.sparse.isspmatrix(a) else a for a in args]
     x = np.vstack(args)
     x = x - x.mean(axis=0)
-    pca = sklearn.decomposition.PCA(n_components = dim)
+    pca = sklearn.decomposition.PCA(n_components=dim)
     return pca.fit(x)
+
 
 def pca_transform(pca, arr):
     """

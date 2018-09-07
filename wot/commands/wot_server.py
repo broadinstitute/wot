@@ -85,9 +85,9 @@ def main(argsv):
                 row_indices = ds.row_meta.index.isin(cell_ids)
 
                 ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
-            ds.row_meta = ds.row_meta.join(cell_metadata)
+
             datasets.append(ds)
-        # FIXME align datasets with first dataset
+        # align datasets with transport map
         # ref_dataset = datasets[0]
         # for i in range(1, len(datasets)):
         #     ds = datasets[i]
@@ -240,7 +240,7 @@ def main(argsv):
         trajectory_ds = None
         for t in filtered_time_to_cell_sets:  # compute trajectories for all unique starting times
             populations = tmap_model.population_from_cell_sets(filtered_time_to_cell_sets[t], at_time=t)
-            trajectory_ds_t = wot.ot.compute_trajectories(tmap_model, populations)
+            trajectory_ds_t = tmap_model.compute_trajectories(populations)
             if trajectory_ds is None:
                 trajectory_ds = trajectory_ds_t
             else:

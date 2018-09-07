@@ -5,13 +5,17 @@ import os
 from multiprocessing import Process
 
 import pandas as pd
+import numpy as np
+import sklearn
+import scipy
+
 import wot.io
 import wot.model
 
 
 class OTModel:
     """
-    The OTModel takes care of computing transport maps.
+    The OTModel computes transport maps.
 
     Parameters
     ----------
@@ -134,7 +138,6 @@ class OTModel:
             'local_pca': 30, 'max_iter': 1e7,
             'tolerance': 1e-2,
         }
-        # TODO: support gene_filter and cell_filter
         # TODO: support ncells and ncounts
         config = self.ot_config
 
@@ -234,7 +237,7 @@ class OTModel:
             local_config = {}
 
         config = {**self.get_ot_config(), **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
-        tmap = wot.ot.OptimalTransportHelper.compute_single_transport_map(self.matrix, config)
+        tmap = OTModel.compute_single_transport_map(self.matrix, config)
         if covariate is None:
             path += "_{}_{}".format(t0, t1)
 
@@ -244,3 +247,64 @@ class OTModel:
         wot.io.write_dataset(tmap, os.path.join(self.tmap_dir, path),
                              output_format=self.output_file_format)
         wot.io.verbose("Created tmap ({}, {}) : {}".format(t0, t1, path))
+
+    @staticmethod
+    def compute_default_cost_matrix(a, b, eigenvals=None):
+        if eigenvals is not None:
+            a = a.dot(eigenvals)
+            b = b.dot(eigenvals)
+
+        cost_matrix = sklearn.metrics.pairwise.pairwise_distances(a.toarray() if scipy.sparse.isspmatrix(a) else a,
+                                                                  b.toarray() if scipy.sparse.isspmatrix(b) else b,
+                                                                  metric='sqeuclidean')
+        cost_matrix = cost_matrix / np.median(cost_matrix)
+        return cost_matrix
+
+    @staticmethod
+    def compute_single_transport_map(ds, config):
+        """
+        Computes a single transport map
+
+        Parameters
+        ----------
+        ds : wot.Dataset
+            The gene expression matrix to consider.
+            It is assumed to have a valid day column for each cell.
+        config : dict
+            Configuration to use for all parameters for the couplings :
+            - t0, t1
+            - lambda1, lambda2, epsilon, g
+        """
+        t0 = config.pop('t0', None)
+        t1 = config.pop('t1', None)
+        if t0 is None or t1 is None:
+            raise ValueError("config must have both t0 and t1, indicating target timepoints")
+
+        covariate = config.pop('covariate', None)
+        if covariate is None:
+            p0 = ds.where(day=float(t0))
+            p1 = ds.where(day=float(t1))
+        else:
+            p0 = ds.where(day=float(t0), covariate=int(covariate[0]))
+            p1 = ds.where(day=float(t1), covariate=int(covariate[1]))
+
+        if 'cell_growth_rate' in p0.row_meta.columns:
+            config['g'] = np.asarray(p0.row_meta['cell_growth_rate'].values)
+        if 'pp' in p0.row_meta.columns:
+            config['pp'] = np.asarray(p0.row_meta['pp'].values)
+        if 'qq' in p1.row_meta.columns:
+            config['qq'] = np.asarray(p1.row_meta['qq'].values)
+
+        local_pca = config.pop('local_pca', None)
+        if local_pca is not None and local_pca > 0:
+            pca = wot.ot.get_pca(local_pca, p0.x, p1.x)
+            p0_x = wot.ot.pca_transform(pca, p0.x)
+            p1_x = wot.ot.pca_transform(pca, p1.x)
+        else:
+            p0_x = p0.x
+            p1_x = p1.x
+
+        C = OTModel.compute_default_cost_matrix(p0_x, p1_x)
+        config['g'] = config.get('g', None) or np.ones(C.shape[0])
+        tmap = wot.ot.transport_stablev1_learnGrowth(C, **config)
+        return wot.Dataset(tmap, p0.row_meta.copy(), p1.row_meta.copy())

@@ -18,7 +18,7 @@ def trajectory_similarities(trajectory_ds):
     Parameters
     ----------
     trajectory_ds : wot.Dataset
-       Dataset returned by wot.ot.compute_trajectories
+       Dataset returned by wot.model.TransportModel.compute_trajectories
 
     Returns
     -------
@@ -53,7 +53,7 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
     Parameters
     ----------
     trajectory_ds : wot.Dataset
-       Dataset returned by wot.ot.compute_trajectories
+       Dataset returned by wot.model.TransportModel.compute_trajectories
     ds : wot.Dataset
         Dataset used to compute mean and variance
 
@@ -157,60 +157,4 @@ def compute_trajectory_trends(tmap_model, *populations):
     return timepoints, unpack(traj), unpack(variances)
 
 
-def compute_trajectories(tmap_model, population_dict):
-    """
-    Computes a trajectory for each population
 
-    Parameters
-    ----------
-    tmap_model : wot.TransportMapModel
-        The TransportMapModel used to find ancestors and descendants of the population
-    *population_dict : dict of str: wot.Population
-        The target populations such as ones from tmap_model.population_from_cell_sets
-
-    Returns
-    -------
-    trajectories : wot.Dataset
-        Rows : all cells, Columns : populations index. At point (i, j) : the probability that cell i is an
-        ancestor/descendant of population j
-    """
-    trajectories = []
-    populations = population_dict.values()
-    population_names = list(population_dict.keys())
-    initial_populations = populations
-
-    # timepoints = []
-
-    def update(head, populations):
-        idx = 0 if head else len(trajectories)
-        # timepoints.insert(idx, wot.model.unique_timepoint(*populations))
-        trajectories.insert(idx, np.array([pop.p for pop in populations]).T)
-
-    update(True, populations)
-    while tmap_model.can_pull_back(*populations):
-        populations = tmap_model.pull_back(*populations, as_list=True)
-        update(True, populations)
-    populations = initial_populations
-    while tmap_model.can_push_forward(*populations):
-        populations = tmap_model.push_forward(*populations, as_list=True)
-        update(False, populations)
-
-    # # list of trajectories. Each trajectory is a list of wot.Datasets split by time
-    # name_to_list = {}
-    # start = 0
-    # for j in range(len(population_names)):
-    #     name_to_list[population_names[j]] = []
-    # for i in range(len(timepoints)):
-    #     t = timepoints[i]
-    #     probs = trajectories[i]
-    #     ncells = probs.shape[0]
-    #     row_meta = tmap_model.matrix.row_meta.iloc[np.arange(start, start + ncells)].copy()
-    #     row_meta['day'] = t
-    #
-    #     for j in range(probs.shape[1]):
-    #         name_to_list[population_names[j]].append(
-    #             wot.Dataset(x=probs[:, j], row_meta=row_meta, col_meta=pd.DataFrame(index=[population_names[j]])))
-    #     start += ncells
-    # return list(name_to_list.values())
-    return wot.Dataset(x=np.concatenate(trajectories), row_meta=tmap_model.meta,
-                       col_meta=pd.DataFrame(index=population_names))

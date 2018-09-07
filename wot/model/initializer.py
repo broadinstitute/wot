@@ -36,7 +36,9 @@ def initialize_ot_model(matrix, days, tmap_out=None, **kwargs):
     >>> initialize_ot_model('matrix.txt', 'days.txt', lambda1=50, lambda2=80, epsilon=.01)
     """
     ds = wot.io.read_dataset(matrix)
-    wot.io.incorporate_days_information_in_dataset(ds, days)
+    cell_growth_rates = kwargs.pop('cell_growth_rates', None)
+
+    wot.io.add_row_metadata_to_dataset(ds, days, cell_growth_rates)
     ot_model = OTModel(ds, tmap_out, **kwargs)
     return ot_model
 
@@ -161,7 +163,7 @@ def parse_per_timepair_configuration(config):
     elif isinstance(config, dict):
         try:
             if not all(isinstance(z, (int, float)) for x, y in config for z in [x, y]):
-                raise ValueError("Dictionnary keys for config must be pairs of floats")
+                raise ValueError("Dictionary keys for config must be pairs of floats")
         except:
             # `x, y in config` failed, so a key is not a pair (wrong unpack count)
             raise ValueError("Dictionnary keys for config must be pairs")

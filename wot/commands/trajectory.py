@@ -16,5 +16,5 @@ def main(argv):
     tmap_model = wot.model.TransportMapModel.from_directory(args.tmap)
     cell_sets = wot.io.read_sets(args.cell_set, as_dict=True)
     populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.time)
-    trajectories = wot.ot.compute_trajectories(tmap_model, populations)
+    trajectories = tmap_model.compute_trajectories(populations)
     wot.io.write_dataset(trajectories, args.out)

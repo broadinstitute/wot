@@ -24,7 +24,7 @@ def main(argv):
     if len(populations) == 0:
         raise ValueError("No cells from the given cell sets are present at that time")
 
-    trajectory_ds = wot.ot.compute_trajectories(tmap_model, populations)
+    trajectory_ds = tmap_model.compute_trajectories(populations)
     matrix = wot.io.read_dataset(args.matrix)
     results = wot.ot.compute_trajectory_trends_from_trajectory(trajectory_ds, matrix)
     # output genes on columns, time on rows, one file per trajectory

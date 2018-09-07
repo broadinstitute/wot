@@ -440,12 +440,27 @@ def convert_binary_dataset_to_dict(ds):
     return cell_sets
 
 
-def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_filter=None, col_filter=None,
-                 force_sparse=False, backed=False):
+def read_dataset(path, **kwargs):
+    chunks = kwargs.pop('chunks', (500, 500))
+    use_dask = kwargs.pop('use_dask', False)
+    genome10x = kwargs.pop('genome10x', None)
+    row_filter = kwargs.pop('row_filter', None)
+    col_filter = kwargs.pop('col_filter', None)
+    force_sparse = kwargs.pop('force_sparse', False)
+    backed = kwargs.pop('backed', False)
+
     path = str(path)
+    tmp_path = None
+    if path.startswith('gs://'):
+        import subprocess
+        subprocess.check_call(['gsutil', '-q', '-m', 'cp', path, '/tmp/'])
+        path = '/tmp/' + os.path.split(path)[1]
+        tmp_path = path
     basename_and_extension = get_filename_and_extension(path)
     ext = basename_and_extension[1]
     if ext == 'mtx':
+        x = scipy.io.mmread(path)
+        x = scipy.sparse.csr_matrix(x.T)
         # look for .barcodes.txt and .genes.txt
         import itertools
         sp = os.path.split(path)
@@ -472,8 +487,7 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
         if row_meta is None:
             print(basename_and_extension[0] + '.barcodes.txt not found')
             row_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
-        x = scipy.io.mmread(path)
-        x = scipy.sparse.csr_matrix(x.T)
+
         cell_count, gene_count = x.shape
         if len(row_meta) != cell_count:
             raise ValueError("Wrong number of cells : matrix has {} cells, barcodes file has {}" \
@@ -483,8 +497,15 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
                              .format(gene_count, len(col_meta)))
 
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
-    elif ext == 'npy' or ext == 'npz':
-        x = np.load(path, mmap_mode='r')
+    elif ext == 'npz':
+        obj = np.load(path)
+        if tmp_path is not None:
+            os.remove(tmp_path)
+        return wot.Dataset(x=obj['x'], row_meta=pd.DataFrame(index=obj['rid']), col_meta=pd.DataFrame(index=obj['cid']))
+    elif ext == 'npy':
+        x = np.load(path)
+        if tmp_path is not None:
+            os.remove(tmp_path)
         return wot.Dataset(x=x, row_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1)),
                            col_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1)))
     elif ext == 'hdf5' or ext == 'h5' or ext == 'loom' or ext == 'h5ad':
@@ -534,7 +555,6 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
 
         if not use_dask:
             x = f[h5_x]
-            is_x_sparse = False
             if type(x) == h5py.Group:
                 data = x['data'][()]
                 x = scipy.sparse.csr_matrix((data, x['indices'][()], x['indptr'][()]),
@@ -573,6 +593,8 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
 
             if not backed:
                 f.close()
+                if tmp_path is not None:
+                    os.remove(tmp_path)
             return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta, backed=backed)
         else:
 
@@ -583,7 +605,10 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
             # col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
         return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta, backed=backed)
     elif ext == 'gct':
-        return wot.io.read_gct(path)
+        ds = wot.io.read_gct(path)
+        if tmp_path is not None:
+            os.remove(tmp_path)
+        return ds
     else:
         with open(path) as fp:
             row_ids = []
@@ -609,7 +634,8 @@ def read_dataset(path, chunks=(500, 500), use_dask=False, genome10x=None, row_fi
                     row_ids.append(tokens[0])
                     np_arrays.append(np.array(tokens[1:], dtype=np.float64))
                     i += 1
-
+            if tmp_path is not None:
+                os.remove(tmp_path)
             return wot.Dataset(x=np.array(np_arrays),
                                row_meta=pd.DataFrame(index=row_ids),
                                col_meta=pd.DataFrame(index=column_ids))
@@ -824,9 +850,11 @@ def read_covariate_data_frame(path):
                          engine='python', sep=None)
 
 
-def incorporate_days_information_in_dataset(dataset, path):
-    days_data_frame = read_days_data_frame(path)
-    dataset.row_meta = dataset.row_meta.join(days_data_frame)
+def add_row_metadata_to_dataset(dataset, days_path, growth_rates_path=None):
+    dataset.row_meta = dataset.row_meta.join(read_days_data_frame(days_path))
+    if growth_rates_path is not None:
+        dataset.row_meta = dataset.row_meta.join(
+            pd.read_table(growth_rates_path, index_col='id', engine='python', sep=None))
 
 
 def read_day_pairs(day_pairs):

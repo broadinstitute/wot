@@ -20,8 +20,8 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--growth_iters', type=int, default=3,
                         help='Number of growth iterations for learning the growth rate.')
     parser.add_argument('--cell_growth_rates',
-                        help='Two column file with "id" and "cell_growth_rate"'
-                             'headers corresponding to cell id and growth rate per day.')
+                        help='File with "id" and "cell_growth_rate"'
+                             'headers corresponding to cell id and growth rate per day. May also contain "pp" and "qq"')
     parser.add_argument('--gene_filter',
                         help='File with one gene id per line to use for computing'
                              'cost matrices (e.g. variable genes)')
@@ -51,7 +51,7 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--epsilon0', type=float, default=1,
                         help='Warm starting value for epsilon')
     parser.add_argument('--tau', type=float, default=10000)
-    parser.add_argument('--ncells', type=int,
-                        help='Number of cells to downsample from each timepoint')
-    parser.add_argument('--ncounts', type=int,
-                        help='Number of counts to downsample from each cell')
+    # parser.add_argument('--ncells', type=int,
+    #                     help='Number of cells to downsample from each timepoint')
+    # parser.add_argument('--ncounts', type=int,
+    #                     help='Number of counts to downsample from each cell')

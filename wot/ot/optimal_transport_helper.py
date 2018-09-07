@@ -13,92 +13,6 @@ import wot.ot
 
 class OptimalTransportHelper:
 
-    @staticmethod
-    def create_base_parser(description):
-        parser = argparse.ArgumentParser(
-            description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-        parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
-        parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
-        parser.add_argument('--day_pairs',
-                            help='Two column file without header with '
-                                 'pairs of days to compute transport maps for')
-        parser.add_argument('--local_pca', help='Convert day pairs matrix to PCA coordinates. Set to 0 to disable',
-                            type=int, default=30)
-        parser.add_argument('--growth_iters', type=int, default=3,
-                            help='Number of growth iterations for learning the growth rate.')
-        parser.add_argument('--cell_growth_rates',
-                            help='Two column file with "id" and "cell_growth_rate" headers corresponding to cell id and growth rate per day.')
-        parser.add_argument('--gene_filter',
-                            help='File with one gene id per line to use for computing cost matrices (e.g. variable genes)')
-        parser.add_argument('--cell_filter',
-                            help='File with one cell id per line to include or or a python regular expression of cell ids to include')
-        parser.add_argument('--epsilon', type=float, default=0.05,
-                            help='Controls the entropy of the transport map. An '
-                                 'extremely large entropy parameter will give a '
-                                 'maximally entropic transport map, and an '
-                                 'extremely '
-                                 'small entropy parameter will give a nearly '
-                                 'deterministic transport map (but could also '
-                                 'lead to '
-                                 'numerical instability in the algorithm')
-
-        parser.add_argument('--lambda1',
-                            help='Regularization parameter that controls the '
-                                 'fidelity of the constraints on p', type=float, default=1)
-        parser.add_argument('--lambda2', default=50,
-                            help='Regularization parameter that controls the '
-                                 'fidelity of the constraints on q', type=float)
-        parser.add_argument('--scaling_iter', default=3000,
-                            help='Number of scaling iterations', type=int)
-        parser.add_argument('--out', help='Prefix for ouput file names')
-        parser.add_argument('--ncells', help='Number of cells to downsample from each timepoint', type=int)
-        parser.add_argument('--ncounts', help='Number of counts to downsample from each cell', type=int)
-
-        # parser.add_argument('--max_transport_fraction',
-        #                     default=0.4,
-        #                     help='The maximum fraction of cells at time t that are '
-        #                          'transported to time t + 1 for floating_epsilon solver',
-        #                     type=float)
-        # parser.add_argument('--min_transport_fraction',
-        #                     default=0.05,
-        #                     help='The minimum fraction of cells at time t that are '
-        #                          'transported to time t + 1 for floating_epsilon solver',
-        #                     type=float)
-
-        # parser.add_argument('--min_growth_fit', type=float, default=0.9)
-        # parser.add_argument('--l0_max', type=float, default=100)
-
-        # parser.add_argument('--epsilon_adjust', help='Scaling factor to adjust epsilon for floating_epsilon solver',
-        #                     type=float, default=1.1)
-        # parser.add_argument('--lambda_adjust', help='Scaling factor to adjust lambda for floating_epsilon solver',
-        #                     type=float, default=1.5)
-
-        parser.add_argument('--numItermax', type=int, default=100)
-        parser.add_argument('--epsilon0', type=float, default=1, help='Warm starting value for epsilon')
-        parser.add_argument('--numInnerItermax', type=int, default=50)
-        parser.add_argument('--tau', type=float, default=10000)
-        # parser.add_argument('--stopThr', type=float, default=1e-10, help='For sinkhorn_epsilon solver')
-
-        # parser.add_argument('--beta_min', type=float, default=0.3, help='Growth function parameter')
-        # parser.add_argument('--delta_min', type=float, default=0.3, help='Growth function parameter')
-        # parser.add_argument('--beta_max', type=float, default=1.7, help='Growth function parameter')
-        # parser.add_argument('--delta_max', type=float, default=1.7, help='Growth function parameter')
-        # parser.add_argument('--beta_center', type=float, default=0.25, help='Growth function parameter')
-
-        # parser.add_argument('--diagonal', help='Diagonal scaling matrix')
-        # parser.add_argument('--power', help='Diagonal scaling power', type=float)
-
-        # parser.add_argument('--solver',
-        #                     help='Solver to use when computing transport maps. One of unbalanced, floating_epsilon, '
-        #                          'sinkhorn_epsilon, unregularized',
-        #                     choices=['epsilon', 'sinkhorn_epsilon', 'unbalanced', 'unregularized'],
-        #                     default='unbalanced')
-
-        parser.add_argument('--verbose', action='store_true',
-                            help='Print progress information')
-        return parser
-
     def __init__(self, args, covariate_df=None, covariate_pairs=None):
 
         eigenvals = None
@@ -246,66 +160,8 @@ class OptimalTransportHelper:
                                                                                day_pairs.shape[0] > 1 else ''))
         self.day_to_indices = day_to_indices
 
-    @staticmethod
-    def compute_default_cost_matrix(a, b, eigenvals=None):
-        if eigenvals is not None:
-            a = a.dot(eigenvals)
-            b = b.dot(eigenvals)
-
-        cost_matrix = sklearn.metrics.pairwise.pairwise_distances(a.toarray() if scipy.sparse.isspmatrix(a) else a,
-                                                                  b.toarray() if scipy.sparse.isspmatrix(b) else b,
-                                                                  metric='sqeuclidean')
-        cost_matrix = cost_matrix / np.median(cost_matrix)
-        return cost_matrix
-
     def compute_cost_matrix(self, a, b):
         return OptimalTransportHelper.compute_default_cost_matrix(a, b, self.eigenvals)
-
-    @staticmethod
-    def compute_single_transport_map(ds, config):
-        """
-        Computes a single transport map
-
-        Parameters
-        ----------
-        ds : wot.Dataset
-            The gene expression matrix to consider.
-            It is assumed to have a valid day column for each cell.
-        config : dict
-            Configuration to use for all parameters for the couplings :
-            - t0, t1
-            - lambda1, lambda2, epsilon, g
-        """
-        t0 = config.pop('t0', None)
-        t1 = config.pop('t1', None)
-        if t0 is None or t1 is None:
-            raise ValueError("config must have both t0 and t1, indicating target timepoints")
-
-        covariate = config.pop('covariate', None)
-        if covariate is None:
-            p0 = ds.where(day=float(t0))
-            p1 = ds.where(day=float(t1))
-        else:
-            p0 = ds.where(day=float(t0), covariate=int(covariate[0]))
-            p1 = ds.where(day=float(t1), covariate=int(covariate[1]))
-
-        if 'g' in p0.row_meta.columns:
-            config['g'] = np.asarray(p0.row_meta['cell_growth_rate'].values)
-
-        local_pca = config.pop('local_pca', None)
-        if local_pca is not None and local_pca > 0:
-            pca = wot.ot.get_pca(local_pca, p0.x, p1.x)
-            p0_x = wot.ot.pca_transform(pca, p0.x)
-            p1_x = wot.ot.pca_transform(pca, p1.x)
-        else:
-            p0_x = p0.x
-            p1_x = p1.x
-
-        C = OptimalTransportHelper.compute_default_cost_matrix(p0_x, p1_x)
-        config['g'] = config.get('g', None) or np.ones(C.shape[0])
-        tmap = wot.ot.transport_stablev1_learnGrowth(C, **config)
-        return wot.Dataset(tmap, p0.row_meta.copy(), p1.row_meta.copy())
-
 
     def compute_transport_maps(self, callback):
         day_pairs = self.day_pairs
@@ -423,5 +279,5 @@ class OptimalTransportHelper:
                           'P1_suffix': '_cv-' + str(cv1) if cv1 is not None else '',
                           'cv0': cv0, 'cv1': cv1,
                           'call_count': callback_call_count,
-                          'total_call_count': len(day_pairs) * len(covariate_pairs) })
+                          'total_call_count': len(day_pairs) * len(covariate_pairs)})
                 callback_call_count += 1
