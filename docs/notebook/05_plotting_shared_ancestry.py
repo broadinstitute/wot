@@ -20,7 +20,7 @@ cell_sets = wot.io.read_sets(cell_sets_file, as_dict=True)
 populations = tmap_model.population_from_cell_sets(cell_sets,
                                                    at_time=target_timepoint)
 
-trajectories = wot.ot.compute_trajectories(tmap_model, populations)
+trajectories = tmap_model.compute_trajectories(populations)
 ds = wot.io.read_dataset(matrix_file)
 wot.set_cell_metadata(ds, 'color', bg_color)
 

@@ -149,10 +149,11 @@ def transport_stablev1(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tole
     p = g
     if pp is not None:
         p *= pp
-    q = np.ones(J) * np.average(g)
-    if qq is not None:
-        q *= qq
 
+    if qq is not None:
+        q = qq * np.average(g, weights=pp)
+    else:
+        q = np.ones(J) * np.average(g)
     u, v = np.zeros(I), np.zeros(J)
     a, b = np.ones(I), np.ones(J)
 

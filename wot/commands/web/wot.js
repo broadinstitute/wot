@@ -518,19 +518,19 @@ var showTrajectoryPlots = function (result, $el) {
         for (var i = 0; i < trajectory.data.length; i++) { // create separate plot for each trajectory
             var name = trajectory.data[i].name;
             var p = trajectory.data[i].p;
+
             var timeToTrace = {};
-            if (p.length !== cellInfo.id.length) {
-                throw new Error();
-            }
-            for (var i = 0, length = cellInfo.id.length; i < length; i++) {
-                var t = cellInfo.day[i];
+
+            for (var i = 0, length = cellIds; i < length; i++) {
+                var index = cellIdToIndex[cellIds[i]];
+                var t = cellInfo.day[index];
                 var trace = timeToTrace[t];
                 if (trace === undefined) {
                     trace = {t: t, x: [], y: [], marker: {color: []}};
                     timeToTrace[t] = trace;
                 }
-                trace.x.push(cellInfo.x[i]);
-                trace.y.push(cellInfo.y[i]);
+                trace.x.push(cellInfo.x[index]);
+                trace.y.push(cellInfo.y[index]);
                 trace.marker.color.push(p[i]);
             }
             var traces = [];

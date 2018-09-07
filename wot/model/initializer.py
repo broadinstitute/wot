@@ -37,8 +37,8 @@ def initialize_ot_model(matrix, days, tmap_out=None, **kwargs):
     """
     ds = wot.io.read_dataset(matrix)
     cell_growth_rates = kwargs.pop('cell_growth_rates', None)
-
-    wot.io.add_row_metadata_to_dataset(ds, days, cell_growth_rates)
+    sampling_bias = kwargs.pop('sampling_bias', None)
+    wot.io.add_row_metadata_to_dataset(ds, days, cell_growth_rates, sampling_bias)
     ot_model = OTModel(ds, tmap_out, **kwargs)
     return ot_model
 

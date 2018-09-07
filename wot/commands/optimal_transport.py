@@ -39,7 +39,8 @@ def main(argv):
                                        cell_growth_rates=args.cell_growth_rates,
                                        gene_filter=args.gene_filter,
                                        cell_filter=args.cell_filter,
-                                       output_file_format=args.format
+                                       output_file_format=args.format,
+                                       sampling_bias=args.sampling_bias
                                        )
 
     ot_model.compute_all_transport_maps()

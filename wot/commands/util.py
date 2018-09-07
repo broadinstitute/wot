@@ -21,7 +21,8 @@ def add_ot_parameters_arguments(parser):
                         help='Number of growth iterations for learning the growth rate.')
     parser.add_argument('--cell_growth_rates',
                         help='File with "id" and "cell_growth_rate"'
-                             'headers corresponding to cell id and growth rate per day. May also contain "pp" and "qq"')
+                             'headers corresponding to cell id and growth rate per day.')
+    parser.add_argument('--sampling_bias', help='File with "id", "pp", and "qq" to correct sampling bias.')
     parser.add_argument('--gene_filter',
                         help='File with one gene id per line to use for computing'
                              'cost matrices (e.g. variable genes)')
