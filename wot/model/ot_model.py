@@ -71,7 +71,7 @@ class OTModel:
                 gene_ids = [e for e in self.matrix.col_meta.index.values if expr.match(e)]
             col_indices = self.matrix.col_meta.index.isin(gene_ids)
             self.matrix = wot.Dataset(self.matrix.x[:, col_indices],
-                                      self.matrix.row_meta, self.matrix.col_meta[col_indices])
+                                      self.matrix.row_meta, self.matrix.col_meta[col_indices].copy(False))
             wot.io.verbose('Successfuly applied gene_filter: "{}"'.format(gene_filter))
         if cell_filter is not None:
             if os.path.isfile(cell_filter):
@@ -83,7 +83,7 @@ class OTModel:
                 cell_ids = [e for e in self.matrix.row_meta.index.values if expr.match(e)]
             row_indices = self.matrix.row_meta.index.isin(cell_ids)
             self.matrix = wot.Dataset(self.matrix.x[row_indices, :],
-                                      self.matrix.row_meta[row_indices], self.matrix.col_meta)
+                                      self.matrix.row_meta[row_indices].copy(False), self.matrix.col_meta)
             wot.io.verbose('Successfuly applied cell_filter: "{}"'.format(cell_filter))
         self.timepoints = sorted(set(self.matrix.row_meta['day']))
         wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
@@ -105,6 +105,11 @@ class OTModel:
         wot.io.verbose("Using", self.max_threads, "thread(s) at most")
         if self.max_threads > 1:
             wot.io.verbose("Warning : Multiple threads are being used. Time estimates will be inaccurate")
+
+        if 'pp' in self.matrix.row_meta:
+            self.matrix.row_meta['pp'] = self.matrix.row_meta['pp'] / self.matrix.row_meta['pp'].sum()
+        if 'qq' in self.matrix.row_meta:
+            self.matrix.row_meta['qq'] = self.matrix.row_meta['qq'] / self.matrix.row_meta['qq'].sum()
 
         self.ot_config = {}
         for k in kwargs.keys():
@@ -305,6 +310,7 @@ class OTModel:
             p1_x = p1.x
 
         C = OTModel.compute_default_cost_matrix(p0_x, p1_x)
-        config['g'] = config.get('g', None) or np.ones(C.shape[0])
+        if config.get('g') is None:
+            config['g'] = np.ones(C.shape[0])
         tmap = wot.ot.transport_stablev1_learnGrowth(C, **config)
         return wot.Dataset(tmap, p0.row_meta.copy(), p1.row_meta.copy())
