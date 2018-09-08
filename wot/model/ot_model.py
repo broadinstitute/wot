@@ -106,11 +106,6 @@ class OTModel:
         if self.max_threads > 1:
             wot.io.verbose("Warning : Multiple threads are being used. Time estimates will be inaccurate")
 
-        if 'pp' in self.matrix.row_meta:
-            self.matrix.row_meta['pp'] = self.matrix.row_meta['pp'] / self.matrix.row_meta['pp'].sum()
-        if 'qq' in self.matrix.row_meta:
-            self.matrix.row_meta['qq'] = self.matrix.row_meta['qq'] / self.matrix.row_meta['qq'].sum()
-
         self.ot_config = {}
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
@@ -297,8 +292,10 @@ class OTModel:
             config['g'] = np.asarray(p0.row_meta['cell_growth_rate'].values)
         if 'pp' in p0.row_meta.columns:
             config['pp'] = np.asarray(p0.row_meta['pp'].values)
+            config['pp'] = config['pp'] / config['pp'].sum()
         if 'qq' in p1.row_meta.columns:
             config['qq'] = np.asarray(p1.row_meta['qq'].values)
+            config['qq'] = config['qq'] / config['qq'].sum()
 
         local_pca = config.pop('local_pca', None)
         if local_pca is not None and local_pca > 0:
