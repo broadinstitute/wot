@@ -76,12 +76,26 @@ def score_gene_sets(dataset_to_score, gs, method='mean', permutations=None, n_ne
 
     """
 
+    if permutations is None:
+        permutations = 0
     x = dataset_to_score.x
+    if gs.x.shape[1] > 1:
+        raise ValueError('Only one gene set allowed as input')
+    gs_1_0 = gs.x
+
+    if not scipy.sparse.issparse(gs_1_0):
+        gs_1_0 = scipy.sparse.csr_matrix(gs_1_0)
+
     # preprocess the dataset
     if method == 'mean_z_score':
-        # gs_x = gs_x[gene_indices]
-        # background_x = background_x[:, gene_indices]
-        # dataset_to_score.x = dataset_to_score.x[:, gene_indices]
+        if permutations <= 0:  # no need to z-score entire dataset
+            gs_indices = (gs_1_0 > 0)
+            if hasattr(gs_indices, 'toarray'):
+                gs_indices = gs_indices.toarray()
+            gs_indices = gs_indices.flatten()
+            gs_1_0 = gs_1_0[gs_indices]
+            x = x[:, gs_indices]
+
         if scipy.sparse.issparse(x):
             x = x.toarray()
         mean = x.mean(axis=0)
@@ -100,13 +114,6 @@ def score_gene_sets(dataset_to_score, gs, method='mean', permutations=None, n_ne
                 row = row.toarray()
             ranks[i] = scipy.stats.rankdata(row, method='min')
         x = ranks
-
-    if gs.x.shape[1] > 1:
-        raise ValueError('Only one gene set allowed as input')
-    gs_1_0 = gs.x
-
-    if not scipy.sparse.issparse(gs_1_0):
-        gs_1_0 = scipy.sparse.csr_matrix(gs_1_0)
 
     observed_scores = x @ gs_1_0
     if hasattr(observed_scores, 'toarray'):
