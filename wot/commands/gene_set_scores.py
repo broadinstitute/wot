@@ -84,7 +84,7 @@ def main(argv):
     parser = argparse.ArgumentParser(description='Compute cell gene set scores')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--gene_sets',
-                        help='Gene sets in gmx or gmt format. If not specified gene sets for apoptosis and cell cycle are used')
+                        help='Gene sets in gmx, gmt, or grp format', required=True)
     parser.add_argument('--cell_filter', help='Cells to include')
     parser.add_argument('--gene_set_filter', help='Gene sets to include')
     parser.add_argument('--out', help='Output file name prefix')
@@ -120,9 +120,6 @@ def main(argv):
     #     client = Client(args.dask)
 
     gene_sets = args.gene_sets
-    if gene_sets is None:
-        import sys
-        gene_sets = os.path.join(os.path.dirname(sys.argv[0]), 'resources', 'growth_scores_gene_sets.gmx')
     compute(matrix=args.matrix, cell_filter=args.cell_filter, gene_sets=gene_sets, out=args.out,
             format=args.format, permutations=args.nperm, method=args.method, n_neighbors=args.n_neighbors,
             drop_frequency=args.drop_frequency, drop_p_value_threshold=args.drop_p_value_threshold,
