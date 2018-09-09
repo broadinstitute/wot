@@ -148,9 +148,11 @@ def transport_stablev1(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tole
     dx, dy = np.ones(I) / I, np.ones(J) / J
     p = g
     if pp is not None:
+        pp = pp / pp.sum()
         p *= pp
 
     if qq is not None:
+        qq = qq / qq.sum()
         q = qq * np.average(g, weights=pp)
     else:
         q = np.ones(J) * np.average(g)

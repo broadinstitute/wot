@@ -292,10 +292,8 @@ class OTModel:
             config['g'] = np.asarray(p0.row_meta['cell_growth_rate'].values)
         if 'pp' in p0.row_meta.columns:
             config['pp'] = np.asarray(p0.row_meta['pp'].values)
-            config['pp'] = config['pp'] / config['pp'].sum()
         if 'qq' in p1.row_meta.columns:
             config['qq'] = np.asarray(p1.row_meta['qq'].values)
-            config['qq'] = config['qq'] / config['qq'].sum()
 
         local_pca = config.pop('local_pca', None)
         if local_pca is not None and local_pca > 0:
