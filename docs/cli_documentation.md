@@ -399,7 +399,7 @@ all the information needed to evaluate the accuracy of the predictions.
     </tr>
     <tr>
       <td>--covariate</td>
-      <td>Covariate value for each cell. See format below</td>
+      <td>Covariate value for each cell. See <a href="#covariate_file">formats</a></td>
     </tr>
     <tr>
       <td>--out</td>
@@ -777,6 +777,20 @@ Example:
 <tr><td>3.0</td><td>0.72</td><td>0.02</td><td>0.01</td></tr>
 <tr><td>4.0</td><td>0.89</td><td>0.00</td><td>0.00</td></tr>
 <tr><td>5.0</td><td>0.99</td><td>0.00</td><td>0.00</td></tr>
+</table>
+
+
+### <a name="covariate_file">Covariate file</a> ###
+
+The batch associated with each cell of the matrix file is specified in the *covariate* file.
+This file must be a tab-separated plain text file, with two header fields: "id" and "covariate".
+
+Example:
+
+<table class="table" style="display: table">
+<tr><td>id</td><td>covariate</td></tr>
+<tr><td>cell_1</td><td>0</td></tr>
+<tr><td>cell_2</td><td>1</td></tr>
 </table>
 
 [pip-install]: https://pip.pypa.io/en/stable/installing/
