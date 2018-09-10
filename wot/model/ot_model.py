@@ -37,8 +37,6 @@ class OTModel:
     """
 
     def __init__(self, matrix, tmap_out, max_threads=None, **kwargs):
-        self.tmap_out = tmap_out
-
         tmap_dir, tmap_prefix = os.path.split(tmap_out) if tmap_out is not None else (None, None)
         self.matrix = matrix
         self.tmap_dir = tmap_dir or '.'

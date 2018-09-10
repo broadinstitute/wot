@@ -40,7 +40,7 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
     # Now validate
     summary = []
     local_pca = ot_model.get_ot_config()['local_pca']
-    tmap_model = wot.model.TransportMapModel.from_directory(ot_model.tmap_out, True)
+    tmap_model = wot.model.TransportMapModel.from_directory(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix), True)
 
     for t_cur in range(len(times) - i_last):
         start_time = time.time()
@@ -143,5 +143,3 @@ def main(argv):
                                          save_interpolated=args.save_interpolated)
 
     summary.to_csv(args.out, sep='\t', index=False)
-
-
