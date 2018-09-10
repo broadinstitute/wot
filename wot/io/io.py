@@ -845,12 +845,8 @@ def read_days_data_frame(path):
                          engine='python', sep=None, dtype={'day': np.float64})
 
 
-def read_covariate_data_frame(path):
-    return pd.read_table(path, index_col='id',
-                         engine='python', sep=None)
-
-
-def add_row_metadata_to_dataset(dataset, days_path, growth_rates_path=None, sampling_bias_path=None):
+def add_row_metadata_to_dataset(dataset, days_path, growth_rates_path=None, sampling_bias_path=None,
+                                covariate_path=None):
     dataset.row_meta = dataset.row_meta.join(read_days_data_frame(days_path))
     if growth_rates_path is not None:
         dataset.row_meta = dataset.row_meta.join(
@@ -858,6 +854,9 @@ def add_row_metadata_to_dataset(dataset, days_path, growth_rates_path=None, samp
     if sampling_bias_path is not None:
         dataset.row_meta = dataset.row_meta.join(
             pd.read_table(sampling_bias_path, index_col='id', engine='python', sep=None))
+    if covariate_path is not None:
+        dataset.row_meta = dataset.row_meta.join(
+            pd.read_table(covariate_path, index_col='id', engine='python', sep=None))
 
 
 def read_day_pairs(day_pairs):

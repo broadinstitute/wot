@@ -41,21 +41,7 @@ class OTModel:
         self.matrix = matrix
         self.tmap_dir = tmap_dir or '.'
         self.tmap_prefix = tmap_prefix or "tmaps"
-
-        wot.io.verbose("Initializing OTModel ({},{})".format(tmap_dir, tmap_prefix))
-        wot.io.verbose("Additional arguments :", kwargs)
-
         self.day_pairs = wot.model.parse_configuration(kwargs.pop('day_pairs', None))
-        cov = kwargs.pop('covariate', None)
-        if cov is not None:
-            covariate_data_frame = wot.io.read_covariate_data_frame(cov)
-            self.matrix.row_meta = self.matrix.row_meta.join(covariate_data_frame)
-
-        g = kwargs.pop('cell_growth_rates', None)
-        if g is not None:
-            g_data_frame = wot.io.read_covariate_data_frame(g)
-            self.matrix.row_meta = self.matrix.row_meta.join(g_data_frame)
-
         cell_filter = kwargs.pop('cell_filter', None)
         gene_filter = kwargs.pop('gene_filter', None)
         self.output_file_format = kwargs.pop('output_file_format', 'loom')
@@ -93,7 +79,7 @@ class OTModel:
                 import multiprocessing
                 max_usable_cores = multiprocessing.cpu_count()
             if kwargs.pop('fast', False):
-                wot.io.verbose("Fast mode. Using all but one cores")
+                wot.io.verbose("Fast mode. Using all but one core")
                 self.max_threads = max_usable_cores - 1
             else:
                 self.max_threads = 1

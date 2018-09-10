@@ -35,6 +35,7 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
     # Skip a timepoint and validate using the skipped timepoint
     ot_model.day_pairs = {(times[i], times[i + i_last]): {} for i in range(len(times) - i_last)}
     if 'covariate' not in ot_model.matrix.row_meta.columns:
+        print('Warning-no covariate specified.')
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
     ot_model.compute_all_transport_maps(with_covariates=True)
     # Now validate
@@ -143,5 +144,4 @@ def main(argv):
                                          save_interpolated=args.save_interpolated)
 
     summary.to_csv(args.out, sep='\t', index=False)
-    vs = pd.read_table(args.out)
-    wot.ot.plot_ot_validation_summary(vs, args.out + '.png')
+    wot.ot.plot_ot_validation_summary(summary, wot.io.get_filename_and_extension(args.out)[0] + '.png')

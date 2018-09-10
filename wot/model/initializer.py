@@ -36,9 +36,10 @@ def initialize_ot_model(matrix, days, tmap_out=None, **kwargs):
     >>> initialize_ot_model('matrix.txt', 'days.txt', lambda1=50, lambda2=80, epsilon=.01)
     """
     ds = wot.io.read_dataset(matrix)
-    cell_growth_rates = kwargs.pop('cell_growth_rates', None)
-    sampling_bias = kwargs.pop('sampling_bias', None)
-    wot.io.add_row_metadata_to_dataset(ds, days, cell_growth_rates, sampling_bias)
+    wot.io.add_row_metadata_to_dataset(dataset=ds, days_path=days,
+                                       growth_rates_path=kwargs.pop('cell_growth_rates', None),
+                                       sampling_bias_path=kwargs.pop('sampling_bias', None),
+                                       covariate_path=kwargs.pop('covariate', None))
     ot_model = OTModel(ds, tmap_out, **kwargs)
     return ot_model
 
