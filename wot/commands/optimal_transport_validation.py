@@ -99,7 +99,7 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(description='Compute a validation summary for the configuration')
+    parser = argparse.ArgumentParser(description='Compute a validation summary')
     wot.commands.add_model_arguments(parser)
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--covariate', help='Covariate values for each cell')
