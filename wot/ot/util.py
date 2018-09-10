@@ -137,6 +137,7 @@ def split_in_two(n):
     indices_c = np.invert(indices_c)
     return indices, indices_c
 
+
 def interpolate_with_ot(p0, p1, tmap, t_interpolate, size):
     """
     Interpolate between p0 and p1 at fraction t_interpolate knowing a transport map from p0 to p1
@@ -169,14 +170,16 @@ def interpolate_with_ot(p0, p1, tmap, t_interpolate, size):
         raise ValueError("Unable to interpolate. Number of genes do not match")
     if p0.shape[0] != tmap.shape[0] or p1.shape[0] != tmap.shape[1]:
         raise ValueError("Unable to interpolate. Tmap size is {}, expected {}"
-                .format(tmap.shape, (len(p0), len(p1))))
-    I = len(p0); J = len(p1)
+                         .format(tmap.shape, (len(p0), len(p1))))
+    I = len(p0);
+    J = len(p1)
     # Assume growth is exponential and retrieve growth rate at t_interpolate
     p = tmap / np.power(tmap.sum(axis=0), 1. - t)
     p = p.flatten(order='C')
     p = p / p.sum()
     choices = np.random.choice(I * J, p=p, size=size)
-    return np.asarray([p0[i//J] * (1 - t) + p1[i%J] * t for i in choices], dtype=np.float64)
+    return np.asarray([p0[i // J] * (1 - t) + p1[i % J] * t for i in choices], dtype=np.float64)
+
 
 def interpolate_randomly(p0, p1, t_interpolate, size):
     """
@@ -205,9 +208,11 @@ def interpolate_randomly(p0, p1, t_interpolate, size):
     p1 = np.asarray(p1, dtype=np.float64)
     if p0.shape[1] != p1.shape[1]:
         raise ValueError("Unable to interpolate. Number of genes do not match")
-    I = len(p0); J = len(p1)
+    I = len(p0);
+    J = len(p1)
     choices = np.random.choice(I * J, size=size)
-    return np.asarray([p0[i//J] * (1 - t) + p1[i%J] * t for i in choices], dtype=np.float64)
+    return np.asarray([p0[i // J] * (1 - t) + p1[i % J] * t for i in choices], dtype=np.float64)
+
 
 def earth_mover_distance(cloud1, cloud2):
     """
@@ -230,5 +235,37 @@ def earth_mover_distance(cloud1, cloud2):
     p = np.ones(len(cloud1)) / len(cloud1)
     q = np.ones(len(cloud2)) / len(cloud2)
     pairwise_dist = sklearn.metrics.pairwise.pairwise_distances(
-            cloud1, Y=cloud2, metric='sqeuclidean')
+        cloud1, Y=cloud2, metric='sqeuclidean')
     return np.sqrt(pot.emd2(p, q, pairwise_dist, numItermax=1e7))
+
+
+def plot_ot_validation_summary(vs, filename):
+    from matplotlib import pyplot
+    import wot.graphics
+    vs['time'] = (vs['interval_start'] + vs['interval_end']) / 2
+    vs['type'] = vs['pair0'].astype(str).str[0]
+    res = vs.groupby(['time', 'type'])['distance'] \
+        .agg([np.mean, np.std])
+
+    legend = {
+        'P': ["#f000f0", "between real batches"],
+        'R': ["#00f000", "between random and real"],
+        'I': ["#f00000", "between interpolated and real"],
+        'F': ["#00f0f0", "between first and real"],
+        'L': ["#f0f000", "between last and real"],
+    }
+
+    pyplot.figure(figsize=(10, 10))
+    pyplot.title("OT Validation")
+    pyplot.xlabel("time")
+    pyplot.ylabel("distance")
+    wot.graphics.legend_figure(pyplot, legend.values())
+    for p, d in res.groupby('type'):
+        if p not in legend.keys():
+            continue
+        t = np.asarray(d.index.get_level_values('time'))
+        m = np.asarray(d['mean'])
+        s = np.asarray(d['std'])
+        pyplot.plot(t, m, '-o', color=legend[p][0])
+        pyplot.fill_between(t, m - s, m + s, color=legend[p][0] + "50")
+    pyplot.savefig(filename)

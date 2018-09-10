@@ -143,3 +143,5 @@ def main(argv):
                                          save_interpolated=args.save_interpolated)
 
     summary.to_csv(args.out, sep='\t', index=False)
+    vs = pd.read_table(args.out)
+    wot.ot.plot_ot_validation_summary(vs, args.out + '.png')
