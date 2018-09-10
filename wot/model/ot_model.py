@@ -269,8 +269,8 @@ class OTModel:
             p0 = ds.where(day=float(t0))
             p1 = ds.where(day=float(t1))
         else:
-            p0 = ds.where(day=float(t0), covariate=int(covariate[0]))
-            p1 = ds.where(day=float(t1), covariate=int(covariate[1]))
+            p0 = ds.where(day=float(t0), covariate=covariate[0])
+            p1 = ds.where(day=float(t1), covariate=covariate[1])
 
         if 'cell_growth_rate' in p0.row_meta.columns:
             config['g'] = np.asarray(p0.row_meta['cell_growth_rate'].values)
