@@ -144,4 +144,6 @@ def main(argv):
                                          save_interpolated=args.save_interpolated)
 
     summary.to_csv(args.out, sep='\t', index=False)
-    wot.ot.plot_ot_validation_summary(summary, wot.io.get_filename_and_extension(args.out)[0] + '.png')
+    res = wot.graphics.group_ot_validation_summary(summary,
+                                                   wot.io.get_filename_and_extension(args.out)[0] + '.summary.txt')
+    wot.graphics.plot_ot_validation_summary(res, wot.io.get_filename_and_extension(args.out)[0] + '.png')

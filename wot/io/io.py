@@ -814,10 +814,13 @@ def write_dataset(ds, path, output_format='txt'):
         raise Exception('Unknown file output_format')
 
 
-def write_dataset_metadata(ds, path, metadata_name):
-    if metadata_name not in ds.row_meta.columns:
-        raise ValueError("Metadata not present in dataset: \"{}\"".format(metadata_name))
-    ds.row_meta[[metadata_name]].to_csv(path, index_label='id', sep='\t', doublequote=False)
+def write_dataset_metadata(meta_data, path, metadata_name=None):
+    if metadata_name is not None and metadata_name not in meta_data:
+        raise ValueError("Metadata not present: \"{}\"".format(metadata_name))
+    if metadata_name is not None:
+        meta_data[[metadata_name]].to_csv(path, index_label='id', sep='\t', doublequote=False)
+    else:
+        meta_data.to_csv(path, index_label='id', sep='\t', doublequote=False)
 
 
 def save_loom_attrs(f, is_columns, metadata, length):
