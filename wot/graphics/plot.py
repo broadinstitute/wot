@@ -68,6 +68,7 @@ def group_ot_validation_summary(df, filename):
             pd.DataFrame(data={"time": t, "mean": m, "std": s, "type": legend[p][1]}).to_csv(f, sep="\t",
                                                                                              header=is_first,
                                                                                              index=False)
+            is_first = False
     return res
 
 
