@@ -203,7 +203,7 @@ var createPlotAnimation = function (plotAnimatiobObject) {
 };
 
 
-var createForceLayoutPlotObject = function (showLegend) {
+var createForceLayoutPlotObject = function (showLegend, isRoundedPix) {
     var layout =
         {
             xaxis: {
@@ -246,13 +246,13 @@ var createForceLayoutPlotObject = function (showLegend) {
         type: 'scattergl',
         name: 'All',
         ids: cellInfo.id,
-        x: cellInfo.x,
-        y: cellInfo.y
+        x: isRoundedPix ? cellInfo.xround : cellInfo.x,
+        y: isRoundedPix ? cellInfo.yround : cellInfo.y
     };
     return {layout: layout, backgroundTrace: backgroundTrace}
 
 };
-var createForceLayoutTrajectory = function (traces, key, $el) {
+var createForceLayoutTrajectory = function (traces, key, $el, bin) {
     var $div = $('<li style="list-style: none;"><h4>' + key + ' Trajectory</h4><div data-name="controls"></div><div class="plot"></div></li>');
     $div.appendTo($el);
     traces.forEach(function (trace) {
@@ -262,8 +262,6 @@ var createForceLayoutTrajectory = function (traces, key, $el) {
         trace.showlegend = false;
         trace.key = trace.t;
         trace.marker = {
-            cmax: trace.marker.cmax,
-            cmin: trace.marker.cmin,
             showscale: true,
             colorscale: forceLayoutColorScale,
             size: 2,
@@ -272,7 +270,7 @@ var createForceLayoutTrajectory = function (traces, key, $el) {
     });
 
     var elem = $div.find('.plot')[0];
-    var forceLayoutInfo = createForceLayoutPlotObject(false);
+    var forceLayoutInfo = createForceLayoutPlotObject(false, bin);
     var backgroundTrace = forceLayoutInfo.backgroundTrace;
 
     var $controls = createPlotAnimation({
@@ -307,6 +305,21 @@ $.ajax('/info/').done(function (json) {
             cellInfoHeaderNames.push(key);
         }
     }
+    var xmin = d3.min(cellInfo.x);
+    var xmax = d3.max(cellInfo.x);
+    var ymin = d3.min(cellInfo.y);
+    var ymax = d3.max(cellInfo.y);
+    var xroundScale = d3.scaleLinear().domain([xmin, xmax]).range([0, 800]);
+    var yroundScale = d3.scaleLinear().domain([ymin, ymax]).range([0, 800]);
+    var xround = new Uint32Array(cellInfo.x.length);
+    var yround = new Uint32Array(cellInfo.x.length);
+    for (var i = 0, length = xround.length; i < length; i++) {
+        xround[i] = xroundScale(cellInfo.x[i]);
+        yround[i] = yroundScale(cellInfo.y[i]);
+    }
+    cellInfo.xround = xround;
+    cellInfo.yround = yround;
+
     $groupBy.html(cellInfoHeaderNames.map(function (value) {
         return '<option value="' + value + '">' + value + '</option>'
     }).join(''));
@@ -512,34 +525,52 @@ var showTrajectoryPlots = function (result, $el) {
         }
 
     }
-    if (cellInfo != null) {
-        var trajectoryIds = trajectory.id;
-        for (var trajectorIdx = 0; trajectorIdx < trajectory.data.length; trajectorIdx++) { // create separate plot for each trajectory
-            var name = trajectory.data[trajectorIdx].name;
-            var p = trajectory.data[trajectorIdx].p;
-            var timeToTrace = {};
-            for (var cellIdx = 0; cellIdx < p.length; cellIdx++) {
-                var index = cellIdToIndex[trajectoryIds[cellIdx]];
-                var t = cellInfo.day[index];
-                var trace = timeToTrace[t];
-                if (trace === undefined) {
-                    trace = {t: t, x: [], y: [], marker: {color: []}};
-                    timeToTrace[t] = trace;
+
+    var trajectoryIds = trajectory.id;
+    var bin = false;
+    for (var trajectorIdx = 0; trajectorIdx < trajectory.data.length; trajectorIdx++) { // create separate plot for each trajectory
+        var name = trajectory.data[trajectorIdx].name;
+        var p = trajectory.data[trajectorIdx].p;
+        var timeToTrace = {};
+
+        for (var cellIdx = 0; cellIdx < p.length; cellIdx++) {
+            var index = cellIdToIndex[trajectoryIds[cellIdx]];
+            var t = cellInfo.day[index];
+            var trace = timeToTrace[t];
+            if (trace === undefined) {
+                trace = {t: t, x: [], y: [], keyToIndex: {}, marker: {color: []}};
+                timeToTrace[t] = trace;
+            }
+            if (bin) {
+                var xpix = cellInfo.xround[index];
+                var ypix = cellInfo.yround[index];
+                var key = xpix + ',' + ypix;
+                var existingIndex = trace.keyToIndex[key];
+                if (existingIndex !== undefined) {
+                    trace.marker.color[existingIndex] += p[cellIdx];
+                } else {
+                    trace.x.push(xpix);
+                    trace.y.push(ypix);
+                    trace.marker.color.push(p[cellIdx]);
+                    trace.keyToIndex[key] = trace.x.length - 1;
                 }
+            } else {
                 trace.x.push(cellInfo.x[index]);
                 trace.y.push(cellInfo.y[index]);
                 trace.marker.color.push(p[cellIdx]);
             }
-            var traces = [];
-            for (var t in timeToTrace) {
-                traces.push(timeToTrace[t]);
-            }
-            createForceLayoutTrajectory(traces, name, $el);
-        }
 
-    } else {
-        console.log('Unable to view trajectories');
+
+        }
+        var traces = [];
+        for (var t in timeToTrace) {
+            var trace = timeToTrace[t];
+            delete trace.keyToIndex;
+            traces.push(trace);
+        }
+        createForceLayoutTrajectory(traces, name, $el, bin);
     }
+
 
 };
 
