@@ -195,7 +195,6 @@ var createPlotAnimation = function (plotAnimatiobObject) {
     });
     showFrame();
     if (traces.length === 0) {
-        console.log('Only background trace');
         $controls.find('[data-name=wot-anim]').hide();
     } else {
         $controls.find('[data-name=wot-anim]').show();
@@ -514,15 +513,13 @@ var showTrajectoryPlots = function (result, $el) {
 
     }
     if (cellInfo != null) {
-        var cellIds = trajectory.id;
-        for (var i = 0; i < trajectory.data.length; i++) { // create separate plot for each trajectory
-            var name = trajectory.data[i].name;
-            var p = trajectory.data[i].p;
-
+        var trajectoryIds = trajectory.id;
+        for (var trajectorIdx = 0; trajectorIdx < trajectory.data.length; trajectorIdx++) { // create separate plot for each trajectory
+            var name = trajectory.data[trajectorIdx].name;
+            var p = trajectory.data[trajectorIdx].p;
             var timeToTrace = {};
-
-            for (var i = 0, length = cellIds; i < length; i++) {
-                var index = cellIdToIndex[cellIds[i]];
+            for (var cellIdx = 0; cellIdx < p.length; cellIdx++) {
+                var index = cellIdToIndex[trajectoryIds[cellIdx]];
                 var t = cellInfo.day[index];
                 var trace = timeToTrace[t];
                 if (trace === undefined) {
@@ -531,7 +528,7 @@ var showTrajectoryPlots = function (result, $el) {
                 }
                 trace.x.push(cellInfo.x[index]);
                 trace.y.push(cellInfo.y[index]);
-                trace.marker.color.push(p[i]);
+                trace.marker.color.push(p[cellIdx]);
             }
             var traces = [];
             for (var t in timeToTrace) {
@@ -539,6 +536,9 @@ var showTrajectoryPlots = function (result, $el) {
             }
             createForceLayoutTrajectory(traces, name, $el);
         }
+
+    } else {
+        console.log('Unable to view trajectories');
     }
 
 };

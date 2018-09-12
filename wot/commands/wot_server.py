@@ -64,13 +64,13 @@ def main(argsv):
                 cell_metadata = cell_metadata.join(df, how='outer')
     else:
         cell_metadata = pd.DataFrame()
-
+    cached_tmap_models = {}
     if args.matrix is not None:
 
         for path in args.matrix:
             name_and_ext = wot.io.get_filename_and_extension(os.path.basename(path))
             dataset_names.append(name_and_ext[0])
-            ds = wot.io.read_dataset(path, backed=True)
+            ds = wot.io.read_dataset(path, backed=False)
 
             if args.cell_filter is not None:
                 if not os.path.isfile(args.cell_filter):
@@ -83,9 +83,8 @@ def main(argsv):
 
                 # row_indices = np.isin(ds.row_meta.index.values, cell_ids, assume_unique=True)
                 row_indices = ds.row_meta.index.isin(cell_ids)
-
                 ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
-
+            ds.row_meta = ds.row_meta.join(cell_metadata)
             datasets.append(ds)
         # align datasets with transport map
         # ref_dataset = datasets[0]
@@ -125,11 +124,9 @@ def main(argsv):
 
     @app.route("/info/", methods=['GET'])
     def info():
-
         cell_json = {'id': datasets[0].row_meta.index.values.tolist()}
         for column_name in datasets[0].row_meta:
             cell_json[column_name] = datasets[0].row_meta[column_name].values.tolist()
-
         features = set()
         for dataset_index in range(len(datasets)):
             ds = datasets[dataset_index]
@@ -236,7 +233,11 @@ def main(argsv):
                         wot.Dataset(ds.x[:, column_indices], ds.row_meta, ds.col_meta.iloc[column_indices]))
                     filtered_dataset_names.append(dataset_names[i])
 
-        tmap_model = wot.model.TransportMapModel.from_directory(name_to_transport_maps[transport_map_name])
+        tmap_model = cached_tmap_models.get(transport_map_name)
+        if tmap_model is None:
+            tmap_model = wot.model.TransportMapModel.from_directory(name_to_transport_maps[transport_map_name],
+                                                                    cache=True)
+            cached_tmap_models[transport_map_name] = tmap_model
         trajectory_ds = None
         for t in filtered_time_to_cell_sets:  # compute trajectories for all unique starting times
             populations = tmap_model.population_from_cell_sets(filtered_time_to_cell_sets[t], at_time=t)
@@ -258,7 +259,7 @@ def main(argsv):
             trajectory_trends_json[filtered_dataset_names[i]] = traces
             for j in range(len(trends)):
                 mean, variance = trends[j]
-                for k in range(mean.shape[1]):
+                for k in range(mean.x.shape[1]):
                     trace = {'x': mean.row_meta.index.values.tolist(), 'y': mean.x[:, k].tolist(),
                              'name': str(mean.col_meta.index.values[k]) + '_' + str(
                                  trajectory_ds.col_meta.index.values[k]), 'mode': 'lines+markers'}

@@ -65,9 +65,9 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
     """
 
     ds_indices = trajectory_ds.row_meta.index.get_indexer_for(ds.row_meta.index)
-
-    if (ds_indices[ds_indices == -1]).sum() > 0:
-        raise ValueError('Cell ids not found')
+    ds_indices = ds_indices[ds_indices != -1]
+    if len(ds_indices) != trajectory_ds.x.shape[0]:
+        raise ValueError('Dataset does not match transport map')
     ds = wot.Dataset(ds.x[ds_indices], ds.row_meta.iloc[ds_indices], ds.col_meta)
     timepoints = []
     mean_list = []
@@ -155,6 +155,3 @@ def compute_trajectory_trends(tmap_model, *populations):
         return np.asarray(arr) if len(arr) > 1 else arr[0]
 
     return timepoints, unpack(traj), unpack(variances)
-
-
-

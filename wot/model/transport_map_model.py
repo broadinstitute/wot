@@ -25,9 +25,10 @@ class TransportMapModel:
             List of (t1,t2)
        """
 
-    def __init__(self, tmaps, meta, timepoints=None, day_pairs=None):
+    def __init__(self, tmaps, meta, timepoints=None, day_pairs=None, cache=False):
         self.tmaps = tmaps
         self.meta = meta
+        self.cache = cache
         if timepoints is None:
             timepoints = sorted(meta['day'].unique())
         self.timepoints = timepoints
@@ -56,14 +57,14 @@ class TransportMapModel:
         populations = population_dict.values()
         population_names = list(population_dict.keys())
         initial_populations = populations
-    
+
         # timepoints = []
-    
+
         def update(head, populations):
             idx = 0 if head else len(trajectories)
             # timepoints.insert(idx, wot.model.unique_timepoint(*populations))
             trajectories.insert(idx, np.array([pop.p for pop in populations]).T)
-    
+
         update(True, populations)
         while self.can_pull_back(*populations):
             populations = self.pull_back(*populations, as_list=True)
@@ -72,7 +73,7 @@ class TransportMapModel:
         while self.can_push_forward(*populations):
             populations = self.push_forward(*populations, as_list=True)
             update(False, populations)
-    
+
         # # list of trajectories. Each trajectory is a list of wot.Datasets split by time
         # name_to_list = {}
         # start = 0
@@ -122,10 +123,18 @@ class TransportMapModel:
 
         if atomic:
             if covariate is None:
-                return wot.io.read_dataset(self.tmaps.get((t0, t1)))
+                key = (t0, t1)
             else:
                 cv0, cv1 = covariate
-                return wot.io.read_dataset(self.tmaps.get((t0, t1, cv0, cv1)))
+                key = (t0, t1, cv0, cv1)
+            ds_or_path = self.tmaps.get(key)
+            if type(ds_or_path) is wot.Dataset:
+                return ds_or_path
+            ds = wot.io.read_dataset(ds_or_path)
+            if self.cache:
+                self.tmaps[key] = ds
+            return ds
+
         else:
             path = wot.model.find_path(t0, t1, self.day_pairs, self.timepoints)
             return wot.model.chain_transport_maps(self, path)
@@ -574,7 +583,7 @@ class TransportMapModel:
         return TransportMapModel(tmaps=tmaps, meta=meta, timepoints=timepoints, day_pairs=day_pairs)
 
     @staticmethod
-    def from_directory(tmap_out, with_covariates=False):
+    def from_directory(tmap_out, with_covariates=False, cache=False):
         """
         Creates a wot.TransportMapModel from an output directory.
 
@@ -648,4 +657,4 @@ class TransportMapModel:
             else:
                 meta = pd.concat((meta, df), copy=False)
 
-        return TransportMapModel(tmaps=tmaps, meta=meta, timepoints=timepoints, day_pairs=day_pairs)
+        return TransportMapModel(tmaps=tmaps, meta=meta, timepoints=timepoints, day_pairs=day_pairs, cache=cache)
