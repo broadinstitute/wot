@@ -69,16 +69,10 @@ class Trajectory:
                 cell_ids = trajectory['cell_ids']
                 joined = coords.join(pd.DataFrame(index=cell_ids, data={'p': p}), how='right')
                 df_sum = joined.groupby(['x', 'y']).sum()
-                p = np.percentile(df_sum['p'].values, 95)
-                highs.append(p)
                 traces.append({'p': p, 't': t, 'x': df_sum.index.get_level_values(0).tolist(),
                                'y': df_sum.index.get_level_values(1).tolist(),
                                'marker': {'color': df_sum['p'].values.tolist()}})
-            cmax = np.percentile(highs, 50)
-            cmin = 0
-            for trace in traces:
-                trace['marker']['cmin'] = cmin
-                trace['marker']['cmax'] = cmax
+
             cell_set_name_to_traces[cell_set] = traces
         return cell_set_name_to_traces
 
