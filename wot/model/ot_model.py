@@ -90,10 +90,15 @@ class OTModel:
         if self.max_threads > 1:
             wot.io.verbose("Warning : Multiple threads are being used. Time estimates will be inaccurate")
 
-        self.ot_config = {}
+        self.ot_config = {
+            'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
+            'epsilon0': 1, 'tau': 1e4,
+            'growth_iters': 3,
+            'local_pca': 30
+        }
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
-        local_pca = self.get_ot_config()['local_pca']
+        local_pca = self.ot_config['local_pca']
         if local_pca > self.matrix.x.shape[1]:
             print("Warning : local_pca set to {}, above gene count of {}. Disabling PCA" \
                   .format(local_pca, self.matrix.x.shape[1]))
@@ -104,28 +109,6 @@ class OTModel:
             query = self.matrix.row_meta['day'].isnull()
             faulty = list(self.matrix.row_meta.index[query])
             raise ValueError("Days information missing for cells : {}".format(faulty))
-
-    def get_ot_config(self):
-        """
-        Get valid parameters for the Optimal Transport computation.
-
-        Returns
-        -------
-        ot_config : dict
-            Dictionnary of valid parameters, or defaults if unspecified.
-        """
-        # WARNING: Any value in ot_config that does not appear in the following dict will be ignored
-        ot_defaults = {
-            'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
-            'epsilon0': 1, 'tau': 1e4,
-            'growth_iters': 3, 'batch_size': 50,
-            'local_pca': 30, 'max_iter': 1e7,
-            'tolerance': 1e-2,
-        }
-        # TODO: support ncells and ncounts
-        config = self.ot_config
-
-        return {x: config[x] if x in config else ot_defaults[x] for x in ot_defaults}
 
     def get_covariate_pairs(self):
         """Get all covariate pairs in the dataset"""
@@ -220,7 +203,7 @@ class OTModel:
         else:
             local_config = {}
 
-        config = {**self.get_ot_config(), **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
+        config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
         tmap = OTModel.compute_single_transport_map(self.matrix, config)
         if covariate is None:
             path += "_{}_{}".format(t0, t1)
@@ -291,5 +274,7 @@ class OTModel:
         C = OTModel.compute_default_cost_matrix(p0_x, p1_x)
         if config.get('g') is None:
             config['g'] = np.ones(C.shape[0])
-        tmap = wot.ot.transport_stablev1_learnGrowth(C, **config)
+        delta_days = t1 - t0
+        config['g'] = config['g'] ** delta_days
+        tmap = wot.ot.transport_stable_learn_growth(C, **config)
         return wot.Dataset(tmap, p0.row_meta.copy(), p1.row_meta.copy())

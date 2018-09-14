@@ -29,18 +29,16 @@ def main(argv):
                                        epsilon=args.epsilon,
                                        lambda1=args.lambda1,
                                        lambda2=args.lambda2,
-                                       max_iter=args.max_iter,
                                        max_threads=args.max_threads,
                                        epsilon0=args.epsilon0,
                                        tau=args.tau,
                                        day_pairs=args.config,
-                                       tolerance=args.tolerance,
-                                       batch_size=args.batch_size,
                                        cell_growth_rates=args.cell_growth_rates,
                                        gene_filter=args.gene_filter,
                                        cell_filter=args.cell_filter,
                                        output_file_format=args.format,
-                                       sampling_bias=args.sampling_bias
+                                       sampling_bias=args.sampling_bias,
+                                       scaling_iter=args.scaling_iter
                                        )
 
     ot_model.compute_all_transport_maps()

@@ -40,7 +40,7 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
     ot_model.compute_all_transport_maps(with_covariates=True)
     # Now validate
     summary = []
-    local_pca = ot_model.get_ot_config()['local_pca']
+    local_pca = ot_model.ot_config['local_pca']
     tmap_model = wot.model.TransportMapModel.from_directory(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix), True)
 
     for t_cur in range(len(times) - i_last):

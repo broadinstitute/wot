@@ -9,8 +9,9 @@ import wot
 import sklearn.decomposition
 
 
-def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
-                                 epsilon0=None, extra_iter=1000, growth_iters=3):
+def transport_stable_learn_growth(C, lambda1, lambda2, epsilon, scaling_iter, g, pp=None, qq=None, tau=None,
+                                  epsilon0=None,
+                                  growth_iters=3):
     """
     Compute the optimal transport with stabilized numerics.
     Args:
@@ -22,7 +23,6 @@ def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, 
         scaling_iter: number of scaling iterations
         g: growth value for input cells
     """
-
     for i in range(growth_iters):
         if i == 0:
             rowSums = g
@@ -31,12 +31,12 @@ def transport_stable_learnGrowth(C, lambda1, lambda2, epsilon, scaling_iter, g, 
 
         Tmap = transport_stablev2(C, lambda1, lambda2, epsilon,
                                   scaling_iter, rowSums, numInnerItermax=20, tau=tau,
-                                  epsilon0=epsilon0)
+                                  epsilon0=epsilon0, pp=pp, qq=qq)
     return Tmap
 
 
-def transport_stablev1_learnGrowth(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau, epsilon0,
-                                   growth_iters, max_iter, pp=None, qq=None):
+def transport_stablev_learn_growth_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau, epsilon0,
+                                               growth_iters, max_iter, pp=None, qq=None):
     """
     Compute the optimal transport with stabilized numerics and duality gap guarantee.
 
@@ -148,12 +148,12 @@ def transport_stablev1(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tole
     dx, dy = np.ones(I) / I, np.ones(J) / J
     p = g
     if pp is not None:
-        pp = pp / pp.sum()
+        pp = pp / np.average(pp)
         p *= pp
 
     if qq is not None:
-        qq = qq / qq.sum()
-        q = qq * np.average(g, weights=pp)
+        qq = qq / np.average(qq)
+        q = qq * np.sum(g * pp) / I
     else:
         q = np.ones(J) * np.average(g)
     u, v = np.zeros(I), np.zeros(J)
@@ -222,7 +222,7 @@ def transport_stablev1(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tole
     return R
 
 
-def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerItermax=None, tau=None,
+def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, pp, qq, numInnerItermax=None, tau=None,
                        epsilon0=None, extra_iter=1000):
     """
     Compute the optimal transport with stabilized numerics.
@@ -246,7 +246,16 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, numInnerIt
     dx = np.ones(C.shape[0]) / C.shape[0]
     dy = np.ones(C.shape[1]) / C.shape[1]
     p = g
-    q = np.ones(C.shape[1]) * np.average(g)
+
+    if pp is not None:
+        pp = pp / np.average(pp)
+        p *= pp
+
+    if qq is not None:
+        qq = qq / np.average(qq)
+        q = qq * np.sum(g * pp) / C.shape[0]
+    else:
+        q = np.ones(C.shape[1]) * np.average(g)
 
     u = np.zeros(len(p))
     v = np.zeros(len(q))
