@@ -108,43 +108,35 @@ def main(argv):
                         help='Save interpolated and random point clouds')
     parser.add_argument('--interp_pattern', default='1,2',
                         help='The interpolation pattern. "x,y" will compute transport from time t[i] to t[i+y] and interpolate at t[i+x]')
-    parser.add_argument('--tmap', help='Transport maps prefix', default='val_tmaps')
-    parser.add_argument('--out', help='Output file name', default='validation_summary.txt')
-
+    parser.add_argument('--out', default='./tmaps_val',
+                        help='Prefix for output file names')
     args = parser.parse_args(argv)
-
-    # TODO: add support for the following arguments :
-    # '--resample_iter'
-    # '--npair'
-
-    tmap_dir, tmap_prefix = os.path.split(args.tmap)
     ot_model = wot.initialize_ot_model(args.matrix, args.cell_days,
-                                       tmap_dir=tmap_dir,
-                                       tmap_prefix=tmap_prefix,
-                                       fast=True,
+                                       tmap_out=args.out,
                                        local_pca=args.local_pca,
                                        growth_iters=args.growth_iters,
                                        epsilon=args.epsilon,
                                        lambda1=args.lambda1,
                                        lambda2=args.lambda2,
-                                       max_iter=args.max_iter,
                                        max_threads=args.max_threads,
                                        epsilon0=args.epsilon0,
                                        tau=args.tau,
                                        day_pairs=args.config,
-                                       covariate=args.covariate,
-                                       tolerance=args.tolerance,
-                                       batch_size=args.batch_size,
                                        cell_growth_rates=args.cell_growth_rates,
                                        gene_filter=args.gene_filter,
                                        cell_filter=args.cell_filter,
+                                       output_file_format=args.format,
+                                       sampling_bias=args.sampling_bias,
+                                       scaling_iter=args.scaling_iter
                                        )
     summary = compute_validation_summary(ot_model,
                                          interp_pattern=(int(x) for x in args.interp_pattern.split(',')),
                                          save_interpolated=args.save_interpolated)
 
-    summary.to_csv(args.out, sep='\t', index=False)
+    summary.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary.txt'), sep='\t',
+                   index=False)
     res = wot.graphics.group_ot_validation_summary(summary,
-                                                   wot.io.get_filename_and_extension(args.out)[
-                                                       0] + '.stats.txt')
-    wot.graphics.plot_ot_validation_summary(res, wot.io.get_filename_and_extension(args.out)[0] + '.png')
+                                                   os.path.join(ot_model.tmap_dir,
+                                                                ot_model.tmap_prefix + '_validation_summary_stats.txt'))
+    wot.graphics.plot_ot_validation_summary(res, os.path.join(ot_model.tmap_dir,
+                                                              ot_model.tmap_prefix + '_validation_summary.png'))

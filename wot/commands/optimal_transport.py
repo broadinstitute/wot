@@ -17,11 +17,6 @@ def main(argv):
     parser.add_argument('--format', default='loom', help='Transport map file format.',
                         choices=wot.commands.FORMAT_CHOICES)
     args = parser.parse_args(argv)
-
-    # TODO: add support for the following arguments :
-    # '--ncells'
-    # '--ncounts'
-
     ot_model = wot.initialize_ot_model(args.matrix, args.cell_days,
                                        tmap_out=args.out,
                                        local_pca=args.local_pca,
@@ -40,5 +35,4 @@ def main(argv):
                                        sampling_bias=args.sampling_bias,
                                        scaling_iter=args.scaling_iter
                                        )
-
     ot_model.compute_all_transport_maps()
