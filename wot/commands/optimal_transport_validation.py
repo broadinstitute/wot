@@ -125,9 +125,9 @@ def main(argv):
                                        cell_growth_rates=args.cell_growth_rates,
                                        gene_filter=args.gene_filter,
                                        cell_filter=args.cell_filter,
-                                       output_file_format=args.format,
                                        sampling_bias=args.sampling_bias,
-                                       scaling_iter=args.scaling_iter
+                                       scaling_iter=args.scaling_iter,
+                                       covariate=args.covariate
                                        )
     summary = compute_validation_summary(ot_model,
                                          interp_pattern=(int(x) for x in args.interp_pattern.split(',')),
