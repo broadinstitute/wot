@@ -245,17 +245,17 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, pp, qq, nu
     epsilon_i = epsilon0 if warm_start else epsilon
     dx = np.ones(C.shape[0]) / C.shape[0]
     dy = np.ones(C.shape[1]) / C.shape[1]
-    p = g
 
     if pp is not None:
         pp = pp / np.average(pp)
-        p *= pp
+        dx = dx * pp
 
     if qq is not None:
         qq = qq / np.average(qq)
-        q = qq * np.sum(g * pp) / C.shape[0]
-    else:
-        q = np.ones(C.shape[1]) * np.average(g)
+        dy = dy * qq
+
+    p = g / np.average(g, weights=dx)
+    q = np.ones(C.shape[1])
 
     u = np.zeros(len(p))
     v = np.zeros(len(q))
