@@ -132,7 +132,7 @@ def main(argv):
                                        )
     summary = compute_validation_summary(ot_model,
                                          interp_pattern=(int(x) for x in args.interp_pattern.split(',')),
-                                         save_interpolated=args.save_interpolated, interp_size=interp_size)
+                                         save_interpolated=args.save_interpolated, interp_size=args.interp_size)
 
     summary.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary.txt'), sep='\t',
                    index=False)
