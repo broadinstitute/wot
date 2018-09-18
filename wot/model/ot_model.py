@@ -264,9 +264,9 @@ class OTModel:
 
         local_pca = config.pop('local_pca', None)
         if local_pca is not None and local_pca > 0:
-            pca = wot.ot.get_pca(local_pca, p0.x, p1.x)
-            p0_x = wot.ot.pca_transform(pca, p0.x)
-            p1_x = wot.ot.pca_transform(pca, p1.x)
+            pca, mean = wot.ot.get_pca(local_pca, p0.x, p1.x)
+            p0_x = wot.ot.pca_transform(pca, mean, p0.x)
+            p1_x = wot.ot.pca_transform(pca, mean, p1.x)
         else:
             p0_x = p0.x
             p1_x = p1.x

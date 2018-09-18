@@ -12,7 +12,7 @@ from itertools import product
 import time
 
 
-def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolated=False):
+def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolated=False, interp_size=10000):
     """
     Compute the validation summary for the given OTModel
 
@@ -55,8 +55,8 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
 
         for cv0, cv1 in product(p0.keys(), p1.keys()):
             tmap = tmap_model.get_transport_map(t0, t1, covariate=(cv0, cv1))
-            interp_size = (len(p0[cv0]) + len(p1[cv1])) // 2
-            pca = wot.ot.get_pca(local_pca, p0[cv0].x, p1[cv1].x)
+            # interp_size = (len(p0[cv0]) + len(p1[cv1])) / 2
+            pca, mean = wot.ot.get_pca(local_pca, p0[cv0].x, p1[cv1].x)
             p0_x = wot.ot.pca_transform(pca, p0[cv0].x)
             p1_x = wot.ot.pca_transform(pca, p1[cv1].x)
             i05 = wot.ot.interpolate_with_ot(p0_x, p1_x, tmap.x, interp_frac, interp_size)
@@ -71,7 +71,7 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
                                      prefix + '_random.txt')
 
             for cv05 in p05.keys():
-                p05_x = wot.ot.pca_transform(pca, p05[cv05].x)
+                p05_x = wot.ot.pca_transform(pca, mean, p05[cv05].x)
 
                 def update_summary(pop, t, name):
                     name_05 = 'P_cv{}'.format(cv05)
@@ -84,7 +84,7 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
                     emd_time += update_summary(p0_x, t0, 'F_cv{}'.format(cv0))
                     emd_time += update_summary(p1_x, t1, 'L_cv{}'.format(cv1))
                 if cv0 == cv1 and cv0 < cv05:
-                    p05_cv0_x = wot.ot.pca_transform(pca, p05[cv0].x)
+                    p05_cv0_x = wot.ot.pca_transform(pca, mean, p05[cv0].x)
                     emd_time += update_summary(p05_cv0_x, t05, 'P_cv{}'.format(cv0))
 
                 emd_time += update_summary(i05, t05, 'I_cv{}_cv{}'.format(cv0, cv1))
@@ -94,9 +94,9 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
         wot.io.verbose("Processed ({}, {}, {}) for {} covariate pairs, in {:.2f}s ({:.2f}% on EMD)" \
                        .format(t0, t05, t1, len(p0) * len(p1), total_time, 100 * emd_time / total_time))
 
-    # Post-process summary to make it a pandas DataFrame with proper column names
-    cols = ['interval_start', 'interval_mid', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1', 'distance']
-    return pd.DataFrame(summary, columns=cols)
+    return pd.DataFrame(summary,
+                        columns=['interval_start', 'interval_mid', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0',
+                                 'pair1', 'distance'])
 
 
 def main(argv):
@@ -110,6 +110,7 @@ def main(argv):
                         help='The interpolation pattern. "x,y" will compute transport from time t[i] to t[i+y] and interpolate at t[i+x]')
     parser.add_argument('--out', default='./tmaps_val',
                         help='Prefix for output file names')
+    parser.add_argument('--interp_size', default=10000, type=int)
     args = parser.parse_args(argv)
     ot_model = wot.initialize_ot_model(args.matrix, args.cell_days,
                                        tmap_out=args.out,
@@ -131,7 +132,7 @@ def main(argv):
                                        )
     summary = compute_validation_summary(ot_model,
                                          interp_pattern=(int(x) for x in args.interp_pattern.split(',')),
-                                         save_interpolated=args.save_interpolated)
+                                         save_interpolated=args.save_interpolated, interp_size=interp_size)
 
     summary.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary.txt'), sep='\t',
                    index=False)

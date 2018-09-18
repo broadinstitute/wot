@@ -542,12 +542,13 @@ def get_pca(dim, *args):
     """
     args = [a.toarray() if scipy.sparse.isspmatrix(a) else a for a in args]
     x = np.vstack(args)
-    x = x - x.mean(axis=0)
+    mean = x.mean(axis=0)
+    x = x - mean
     pca = sklearn.decomposition.PCA(n_components=dim)
-    return pca.fit(x)
+    return pca.fit(x), mean
 
 
-def pca_transform(pca, arr):
+def pca_transform(pca, mean, arr):
     """
     Apply a PCA transformation to argument
 
@@ -563,4 +564,5 @@ def pca_transform(pca, arr):
     result : ndarray
     """
     ndarr = arr.toarray() if scipy.sparse.isspmatrix(arr) else arr
+    ndarr = ndarr - mean
     return pca.transform(ndarr)
