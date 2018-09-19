@@ -57,8 +57,8 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
             tmap = tmap_model.get_transport_map(t0, t1, covariate=(cv0, cv1))
             # interp_size = (len(p0[cv0]) + len(p1[cv1])) / 2
             pca, mean = wot.ot.get_pca(local_pca, p0[cv0].x, p1[cv1].x)
-            p0_x = wot.ot.pca_transform(pca, p0[cv0].x)
-            p1_x = wot.ot.pca_transform(pca, p1[cv1].x)
+            p0_x = wot.ot.pca_transform(pca, mean, p0[cv0].x)
+            p1_x = wot.ot.pca_transform(pca, mean, p1[cv1].x)
             i05 = wot.ot.interpolate_with_ot(p0_x, p1_x, tmap.x, interp_frac, interp_size)
             r05 = wot.ot.interpolate_randomly(p0_x, p1_x, interp_frac, interp_size)
 
