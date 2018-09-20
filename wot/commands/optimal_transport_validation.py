@@ -40,7 +40,7 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
         print('Warning-no covariate specified.')
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
 
-    # ot_model.compute_all_transport_maps(with_covariates=True)
+    ot_model.compute_all_transport_maps(with_covariates=True)
     # Now validate
     summary = []
     local_pca = ot_model.ot_config['local_pca']
