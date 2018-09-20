@@ -42,6 +42,7 @@ class OTModel:
         self.tmap_dir = tmap_dir or '.'
         self.tmap_prefix = tmap_prefix or "tmaps"
         self.day_pairs = wot.model.parse_configuration(kwargs.pop('day_pairs', None))
+
         cell_filter = kwargs.pop('cell_filter', None)
         gene_filter = kwargs.pop('gene_filter', None)
         self.output_file_format = kwargs.pop('output_file_format', 'loom')
@@ -68,8 +69,12 @@ class OTModel:
             row_indices = self.matrix.row_meta.index.isin(cell_ids)
             self.matrix = wot.Dataset(self.matrix.x[row_indices, :],
                                       self.matrix.row_meta[row_indices].copy(False), self.matrix.col_meta)
+
             wot.io.verbose('Successfuly applied cell_filter: "{}"'.format(cell_filter))
         self.timepoints = sorted(set(self.matrix.row_meta['day']))
+        if self.matrix.x.shape[0] is 0:
+            print('No cells in matrix')
+            exit(1)
         wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
 
         if max_threads is None or max_threads == 0:
@@ -90,12 +95,7 @@ class OTModel:
         if self.max_threads > 1:
             wot.io.verbose("Warning : Multiple threads are being used. Time estimates will be inaccurate")
 
-        self.ot_config = {
-            'epsilon': .05, 'lambda1': 1, 'lambda2': 50,
-            'epsilon0': 1, 'tau': 1e4,
-            'growth_iters': 3,
-            'local_pca': 30
-        }
+        self.ot_config = {}
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
         local_pca = self.ot_config['local_pca']
@@ -136,11 +136,15 @@ class OTModel:
         """
         t = self.timepoints
         day_pairs = self.day_pairs
-        if day_pairs is None:
+
+        if day_pairs is None or len(day_pairs) == 0:
             day_pairs = [(t[i], t[i + 1]) for i in range(len(t) - 1)]
 
         if with_covariates:
-            day_pairs = [(*d, c) for d, c in itertools.product(day_pairs, self.get_covariate_pairs())]
+            covariate_day_pairs = [(*d, c) for d, c in itertools.product(day_pairs, self.get_covariate_pairs())]
+            if type(day_pairs) is dict:
+                day_pairs = list(day_pairs.keys())
+            day_pairs = day_pairs + covariate_day_pairs
 
         # if not force:
         #     if with_covariates:
@@ -217,6 +221,7 @@ class OTModel:
 
     @staticmethod
     def compute_default_cost_matrix(a, b, eigenvals=None):
+
         if eigenvals is not None:
             a = a.dot(eigenvals)
             b = b.dot(eigenvals)
@@ -263,15 +268,18 @@ class OTModel:
             config['qq'] = np.asarray(p1.row_meta['pp'].values)
 
         local_pca = config.pop('local_pca', None)
+        eigenvals = None
         if local_pca is not None and local_pca > 0:
-            pca, mean = wot.ot.get_pca(local_pca, p0.x, p1.x)
-            p0_x = wot.ot.pca_transform(pca, mean, p0.x)
-            p1_x = wot.ot.pca_transform(pca, mean, p1.x)
+            # pca, mean = wot.ot.get_pca(local_pca, p0.x, p1.x)
+            # p0_x = wot.ot.pca_transform(pca, mean, p0.x)
+            # p1_x = wot.ot.pca_transform(pca, mean, p1.x)
+            p0_x, p1_x, pca, mean = wot.ot.compute_pca(p0.x, p1.x, local_pca)
+            eigenvals = np.diag(pca.singular_values_)
         else:
             p0_x = p0.x
             p1_x = p1.x
 
-        C = OTModel.compute_default_cost_matrix(p0_x, p1_x)
+        C = OTModel.compute_default_cost_matrix(p0_x, p1_x, eigenvals)
         if config.get('g') is None:
             config['g'] = np.ones(C.shape[0])
         delta_days = t1 - t0

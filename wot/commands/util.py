@@ -30,6 +30,8 @@ def add_ot_parameters_arguments(parser):
                         help='File with one cell id per line to include or or a '
                              'python regular expression of cell ids to include')
     parser.add_argument('--scaling_iter', default=3000, help='Number of scaling iterations', type=int)
+    parser.add_argument('--inner_iter_max', type=int, default=50,
+                        help='For OT solver')
     parser.add_argument('--epsilon', type=float, default=0.05,
                         help='Controls the entropy of the transport map. An extremely '
                              'large entropy parameter will give a maximally entropic '
@@ -48,7 +50,7 @@ def add_ot_parameters_arguments(parser):
     #                     help='Number of scaling iterations to perform between duality gap check')
     # parser.add_argument('--tolerance', type=int, default=1e-2,
     #                     help='Maximal acceptable ratio between the duality gap and the primal objective value')
-    parser.add_argument('--max_threads', type=int, default=0,
+    parser.add_argument('--max_threads', type=int, default=1,
                         help='Maximal number of threads to use when parallelizing tmap computation')
     parser.add_argument('--epsilon0', type=float, default=1,
                         help='Warm starting value for epsilon')

@@ -33,6 +33,7 @@ def main(argv):
                                        cell_filter=args.cell_filter,
                                        output_file_format=args.format,
                                        sampling_bias=args.sampling_bias,
-                                       scaling_iter=args.scaling_iter
+                                       scaling_iter=args.scaling_iter,
+                                       inner_iter_max=args.inner_iter_max
                                        )
     ot_model.compute_all_transport_maps()

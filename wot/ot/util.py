@@ -5,8 +5,8 @@ import sklearn.metrics
 import scipy.sparse
 
 
-def compute_growth_scores(proliferation, apoptosis, beta_max=1.7, beta_center=0.25, delta_max=1.7, delta_min=0.15,
-                          beta_min=0):
+def compute_growth_scores(proliferation, apoptosis, beta_max=1.7, beta_center=0.25, delta_max=1.7, delta_min=0.3,
+                          beta_min=0.3):
     birth = __beta(proliferation, beta_max=beta_max, center=beta_center, beta_min=beta_min)
     death = __delta(apoptosis, delta_max=delta_max, delta_min=delta_min)
     return np.exp(birth - death)
@@ -22,7 +22,7 @@ def __beta(p, beta_max=1.7, beta_min=0, pmax=1.0, pmin=-0.5, center=0.25):
     return __gen_logistic(p, beta_max, beta_min, pmax, pmin, center, width=0.5)
 
 
-def __delta(a, delta_max=1.7, delta_min=0.15, amax=0.5, amin=-0.4, center=0.1):
+def __delta(a, delta_max=1.7, delta_min=0.3, amax=0.5, amin=-0.4, center=0.1):
     return __gen_logistic(a, delta_max, delta_min, amax, amin, center,
                           width=0.2)
 
@@ -181,7 +181,7 @@ def interpolate_with_ot(p0, p1, tmap, t_interpolate, size):
     return np.asarray([p0[i // J] * (1 - t) + p1[i % J] * t for i in choices], dtype=np.float64)
 
 
-def interpolate_randomly(p0, p1, t_interpolate, size):
+def interpolate_randomly_old(p0, p1, t_interpolate, size):
     """
     Interpolate between p0 and p1 at fraction t_interpolate
 
@@ -208,9 +208,25 @@ def interpolate_randomly(p0, p1, t_interpolate, size):
     p1 = np.asarray(p1, dtype=np.float64)
     if p0.shape[1] != p1.shape[1]:
         raise ValueError("Unable to interpolate. Number of genes do not match")
-    I = len(p0);
+    I = len(p0)
     J = len(p1)
     choices = np.random.choice(I * J, size=size)
+    return np.asarray([p0[i // J] * (1 - t) + p1[i % J] * t for i in choices], dtype=np.float64)
+
+
+def interpolate_randomly(p0, p1, t, size, g):
+    p0 = p0.toarray() if scipy.sparse.isspmatrix(p0) else p0
+    p1 = p1.toarray() if scipy.sparse.isspmatrix(p1) else p1
+    p0 = np.asarray(p0, dtype=np.float64)
+    p1 = np.asarray(p1, dtype=np.float64)
+    p = g
+    q = np.ones(p1.shape[0]) * np.average(g)
+    p = np.outer(p, q)
+    p = p.flatten(order='C')
+    p = p / p.sum()
+    I = len(p0)
+    J = len(p1)
+    choices = np.random.choice(I * J, p=p, size=size)
     return np.asarray([p0[i // J] * (1 - t) + p1[i % J] * t for i in choices], dtype=np.float64)
 
 
@@ -237,6 +253,3 @@ def earth_mover_distance(cloud1, cloud2):
     pairwise_dist = sklearn.metrics.pairwise.pairwise_distances(
         cloud1, Y=cloud2, metric='sqeuclidean')
     return np.sqrt(pot.emd2(p, q, pairwise_dist, numItermax=1e7))
-
-
-

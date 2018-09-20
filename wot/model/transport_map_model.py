@@ -597,38 +597,48 @@ class TransportMapModel:
         tmap_dir = tmap_dir or '.'
         tmap_prefix = tmap_prefix or "tmaps"
         tmaps = {}
-        pattern = tmap_prefix
+
+        covariate_pattern = None
         if with_covariates:
-            pattern += '_[0-9]*.[0-9]*_[0-9]*.[0-9]*_cv[0-9]*_cv[0-9]*.*loom'
-        else:
-            pattern += '_[0-9]*.[0-9]*_[0-9]*.[0-9]*.*loom'
+            covariate_pattern = tmap_prefix + '_[0-9]*.[0-9]*_[0-9]*.[0-9]*_cv[0-9]*_cv[0-9]*.*loom'
 
-        files = glob.glob(os.path.join(tmap_dir, pattern))
+        pattern = tmap_prefix + '_[0-9]*.[0-9]*_[0-9]*.[0-9]*.*loom'
 
-        for path in files:
+        for path in glob.glob(os.path.join(tmap_dir, pattern)):
             if not os.path.isfile(path):
                 continue
             basename, ext = wot.io.get_filename_and_extension(path)
             tokens = basename.split('_')
             try:
-                if with_covariates:
+                t1 = float(tokens[-2])
+                t2 = float(tokens[-1])
+                tmaps[(t1, t2)] = path
+            except ValueError:
+                pass
+
+        if covariate_pattern is not None:
+            for path in glob.glob(os.path.join(tmap_dir, covariate_pattern)):
+                if not os.path.isfile(path):
+                    continue
+                basename, ext = wot.io.get_filename_and_extension(path)
+                tokens = basename.split('_')
+                try:
                     t1 = float(tokens[-4])
                     t2 = float(tokens[-3])
                     cv1 = int(tokens[-2][2:])
                     cv2 = int(tokens[-1][2:])
                     tmaps[(t1, t2, cv1, cv2)] = path
-                else:
-                    t1 = float(tokens[-2])
-                    t2 = float(tokens[-1])
-                    tmaps[(t1, t2)] = path
-            except ValueError:
-                continue
+                except ValueError:
+                    pass
+
         if len(tmaps) is 0:
             raise ValueError('No transport maps found')
         day_pairs = set()
         unique_timepoints = set()
         timepoint_to_ids = {}
         for key in tmaps:
+            if len(key) != 2:
+                continue
             t0 = key[0]
             t1 = key[1]
             day_pairs.add((t0, t1))

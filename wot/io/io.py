@@ -854,6 +854,8 @@ def add_row_metadata_to_dataset(dataset, days_path, growth_rates_path=None, samp
     if growth_rates_path is not None:
         dataset.row_meta = dataset.row_meta.join(
             pd.read_table(growth_rates_path, index_col='id', engine='python', sep=None))
+    else:
+        dataset.row_meta['cell_growth_rate'] = 1.0
     if sampling_bias_path is not None:
         dataset.row_meta = dataset.row_meta.join(
             pd.read_table(sampling_bias_path, index_col='id', engine='python', sep=None))

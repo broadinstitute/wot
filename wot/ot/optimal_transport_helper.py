@@ -171,6 +171,7 @@ class OptimalTransportHelper:
         day_to_indices = self.day_to_indices
         callback_call_count = 0
         ds = self.ds
+        print(args)
         for day_index in range(day_pairs.shape[0]):
             t0 = day_pairs.iloc[day_index, 0]
             t1 = day_pairs.iloc[day_index, 1]
@@ -220,6 +221,7 @@ class OptimalTransportHelper:
                     p0_5_full = wot.Dataset(np.diag(1 / pca.singular_values_).dot(U.T.dot(y.T)).T, p0_5_full.row_meta,
                                             pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 self.eigenvals = np.diag(pca.singular_values_)
+                print(self.eigenvals)
 
             delta_t = t1 - t0
             for covariate_pair in covariate_pairs:

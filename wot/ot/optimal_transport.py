@@ -10,8 +10,7 @@ import sklearn.decomposition
 
 
 def transport_stable_learn_growth(C, lambda1, lambda2, epsilon, scaling_iter, g, pp=None, qq=None, tau=None,
-                                  epsilon0=None,
-                                  growth_iters=3):
+                                  epsilon0=None, growth_iters=3, inner_iter_max=None):
     """
     Compute the optimal transport with stabilized numerics.
     Args:
@@ -29,9 +28,10 @@ def transport_stable_learn_growth(C, lambda1, lambda2, epsilon, scaling_iter, g,
         else:
             rowSums = Tmap.sum(axis=1) / Tmap.shape[1]
 
-        Tmap = transport_stablev2(C, lambda1, lambda2, epsilon,
-                                  scaling_iter, rowSums, numInnerItermax=20, tau=tau,
-                                  epsilon0=epsilon0, pp=pp, qq=qq)
+        Tmap = transport_stablev2(C=C, lambda1=lambda1, lambda2=lambda2, epsilon=epsilon,
+                                  scaling_iter=scaling_iter, g=rowSums, tau=tau,
+                                  epsilon0=epsilon0, pp=pp, qq=qq, numInnerItermax=inner_iter_max,
+                                  extra_iter=1000)
     return Tmap
 
 
@@ -222,8 +222,8 @@ def transport_stablev1(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tole
     return R
 
 
-def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, pp, qq, numInnerItermax=None, tau=None,
-                       epsilon0=None, extra_iter=1000):
+def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, pp, qq, numInnerItermax, tau,
+                       epsilon0, extra_iter):
     """
     Compute the optimal transport with stabilized numerics.
     Args:
@@ -235,7 +235,7 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, pp, qq, nu
         scaling_iter: number of scaling iterations
         g: growth value for input cells
     """
-    extra_iter = min(extra_iter, scaling_iter)
+
     warm_start = tau is not None
     epsilon_final = epsilon
 
@@ -246,16 +246,18 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, pp, qq, nu
     dx = np.ones(C.shape[0]) / C.shape[0]
     dy = np.ones(C.shape[1]) / C.shape[1]
 
-    if pp is not None:
-        pp = pp / np.average(pp)
-        dx = dx * pp
+    # if pp is not None:
+    #     pp = pp / np.average(pp)
+    #     dx = dx * pp
+    #
+    # if qq is not None:
+    #     qq = qq / np.average(qq)
+    #     dy = dy * qq
 
-    if qq is not None:
-        qq = qq / np.average(qq)
-        dy = dy * qq
-
-    p = g / np.average(g, weights=dx)
-    q = np.ones(C.shape[1])
+    # p = g / np.average(g, weights=dx)
+    # q = np.ones(C.shape[1])
+    p = g
+    q = np.ones(C.shape[1]) * np.average(g)
 
     u = np.zeros(len(p))
     v = np.zeros(len(q))
@@ -515,6 +517,23 @@ def glue_transport_maps(tmap_0, tmap_1):
     return wot.Dataset(result_x, tmap_0.row_meta.copy(), tmap_1.col_meta.copy())
 
 
+def compute_pca(m1, m2, n_components):
+    matrices = list()
+    matrices.append(m1 if not scipy.sparse.isspmatrix(m1) else m1.toarray())
+    matrices.append(m2 if not scipy.sparse.isspmatrix(m2) else m2.toarray())
+    x = np.vstack(matrices)
+    mean_shift = x.mean(axis=0)
+    x = x - mean_shift
+    pca = sklearn.decomposition.PCA(n_components=n_components, random_state=58951)
+    pca.fit(x.T)
+    comp = pca.components_.T
+    m1_len = m1.shape[0]
+    m2_len = m2.shape[0]
+    pca_1 = comp[0:m1_len]
+    pca_2 = comp[m1_len:(m1_len + m2_len)]
+    return pca_1, pca_2, pca, mean_shift
+
+
 def get_pca(dim, *args):
     """
     Get a PCA projector for the arguments.
@@ -546,6 +565,22 @@ def get_pca(dim, *args):
     x = x - mean
     pca = sklearn.decomposition.PCA(n_components=dim)
     return pca.fit(x), mean
+
+
+# def get_pca_old(dim,*args):
+#     args = [a.toarray() if scipy.sparse.isspmatrix(a) else a for a in args]
+#     x = np.vstack(args)
+#     mean_shift = x.mean(axis=0)
+#     x = x - mean_shift
+#     pca = sklearn.decomposition.PCA(n_components=args.local_pca)
+#     pca.fit(x.T)
+#     x = pca.components_.T
+#     return pca, mean
+
+
+# def pca_transform_old(components,mean,arr):
+#     ndarr = arr.toarray() if scipy.sparse.isspmatrix(arr) else arr
+#     ndarr = ndarr - mean
 
 
 def pca_transform(pca, mean, arr):
