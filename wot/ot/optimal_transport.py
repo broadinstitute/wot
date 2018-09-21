@@ -142,7 +142,7 @@ def transport_stablev1(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tole
     """
     C = np.asarray(C, dtype=np.float64)
     epsilon_scalings = 5
-    scale_factor = np.exp(- np.log(epsilon) / 10)
+    scale_factor = np.exp(- np.log(epsilon) / epsilon_scalings)
 
     I, J = C.shape
     dx, dy = np.ones(I) / I, np.ones(J) / J
