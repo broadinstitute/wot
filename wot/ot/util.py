@@ -138,7 +138,7 @@ def split_in_two(n):
     return indices, indices_c
 
 
-def interpolate_with_ot(p0, p1, tmap, t_interpolate, size):
+def interpolate_with_ot(p0, p1, tmap, interp_frac, size):
     """
     Interpolate between p0 and p1 at fraction t_interpolate knowing a transport map from p0 to p1
 
@@ -160,7 +160,6 @@ def interpolate_with_ot(p0, p1, tmap, t_interpolate, size):
     p05 : 2-D array
         An interpolated population of 'size' cells
     """
-    t = t_interpolate
     p0 = p0.toarray() if scipy.sparse.isspmatrix(p0) else p0
     p1 = p1.toarray() if scipy.sparse.isspmatrix(p1) else p1
     p0 = np.asarray(p0, dtype=np.float64)
@@ -174,14 +173,14 @@ def interpolate_with_ot(p0, p1, tmap, t_interpolate, size):
     I = len(p0);
     J = len(p1)
     # Assume growth is exponential and retrieve growth rate at t_interpolate
-    p = tmap / np.power(tmap.sum(axis=0), 1. - t)
+    p = tmap / np.power(tmap.sum(axis=0), 1. - interp_frac)
     p = p.flatten(order='C')
     p = p / p.sum()
     choices = np.random.choice(I * J, p=p, size=size)
-    return np.asarray([p0[i // J] * (1 - t) + p1[i % J] * t for i in choices], dtype=np.float64)
+    return np.asarray([p0[i // J] * (1 - interp_frac) + p1[i % J] * interp_frac for i in choices], dtype=np.float64)
 
 
-def interpolate_randomly_old(p0, p1, t_interpolate, size):
+def interpolate_randomly(p0, p1, t_interpolate, size):
     """
     Interpolate between p0 and p1 at fraction t_interpolate
 
@@ -214,13 +213,15 @@ def interpolate_randomly_old(p0, p1, t_interpolate, size):
     return np.asarray([p0[i // J] * (1 - t) + p1[i % J] * t for i in choices], dtype=np.float64)
 
 
-def interpolate_randomly(p0, p1, t, size, g):
+def interpolate_randomly_with_growth(p0, p1, t, size, g):
     p0 = p0.toarray() if scipy.sparse.isspmatrix(p0) else p0
     p1 = p1.toarray() if scipy.sparse.isspmatrix(p1) else p1
     p0 = np.asarray(p0, dtype=np.float64)
     p1 = np.asarray(p1, dtype=np.float64)
+
     p = g
     q = np.ones(p1.shape[0]) * np.average(g)
+
     p = np.outer(p, q)
     p = p.flatten(order='C')
     p = p / p.sum()

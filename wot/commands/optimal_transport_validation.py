@@ -44,6 +44,8 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
     ot_model.compute_all_transport_maps(with_covariates=True)
     # Now validate
     summary = []
+    summary_columns = ['interval_start', 'interval_mid', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1',
+                       'distance']
     local_pca = ot_model.ot_config['local_pca']
     tmap_model = wot.model.TransportMapModel.from_directory(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix), True)
 
@@ -67,6 +69,23 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
             p1_ds.col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1))
             p05_ds.col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1))
 
+        tmap = tmap_model.get_transport_map(t0, t1)
+        i05 = wot.ot.interpolate_with_ot(p0_ds.x, p1_ds.x, tmap.x, interp_frac, interp_size)
+        r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_ds.x, p1_ds.x, interp_frac, interp_size,
+                                                                  p0_ds.row_meta['cell_growth_rate'].values ** (
+                                                                      interp_frac))
+        r05_no_growth = wot.ot.interpolate_randomly(p0_ds.x, p1_ds.x, interp_frac, interp_size)
+
+        def update_full_summary(pop, t, name):
+            dist = wot.ot.earth_mover_distance(pop, p05_ds.x, eigenvals if local_pca > 0 else None)
+            summary.append([t0, t05, t1, t, t05, 'full', 'full', name, 'P', dist])
+
+        update_full_summary(i05, t05, 'I')
+        update_full_summary(r05_with_growth, t05, 'Rg')
+        update_full_summary(r05_no_growth, t05, 'R')
+        update_full_summary(p0_ds.x, t0, 'F')
+        update_full_summary(p1_ds.x, t1, 'L')
+
         p0 = p0_ds.split_by('covariate')
         p05 = p05_ds.split_by('covariate')
         p1 = p1_ds.split_by('covariate')
@@ -79,16 +98,18 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
             p0_x = p0[cv0].x
             p1_x = p1[cv1].x
             i05 = wot.ot.interpolate_with_ot(p0_x, p1_x, tmap.x, interp_frac, interp_size)
-            r05 = wot.ot.interpolate_randomly(p0_x, p1_x, interp_frac, interp_size,
-                                              p0[cv0].row_meta['cell_growth_rate'].values ** (t05 - t0))
+            r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_x, p1_x, interp_frac, interp_size,
+                                                                      p0[cv0].row_meta['cell_growth_rate'].values ** (
+                                                                          interp_frac))
+            r05_no_growth = wot.ot.interpolate_randomly(p0_x, p1_x, interp_frac, interp_size)
 
             if save_interpolated:
                 prefix = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix)
                 prefix += '_{}_{}_cv{}_cv{}'.format(t0, t1, cv0, cv1)
                 wot.io.write_dataset(wot.dataset_from_x(i05),
                                      prefix + '_interp.txt')
-                wot.io.write_dataset(wot.dataset_from_x(r05),
-                                     prefix + '_random.txt')
+                # wot.io.write_dataset(wot.dataset_from_x(r05),
+                #                      prefix + '_random.txt')
 
             for cv05 in p05.keys():
                 # p05_x = wot.ot.pca_transform(pca, mean, p05[cv05].x)
@@ -107,11 +128,10 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
                     update_summary(p05[cv0].x, t05, 'P_cv{}'.format(cv0))
 
                 update_summary(i05, t05, 'I_cv{}_cv{}'.format(cv0, cv1))
-                update_summary(r05, t05, 'R_cv{}_cv{}'.format(cv0, cv1))
+                update_summary(r05_with_growth, t05, 'Rg_cv{}_cv{}'.format(cv0, cv1))
+                update_summary(r05_no_growth, t05, 'R_cv{}_cv{}'.format(cv0, cv1))
 
-    return pd.DataFrame(summary,
-                        columns=['interval_start', 'interval_mid', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0',
-                                 'pair1', 'distance'])
+    return pd.DataFrame(summary, columns=summary_columns)
 
 
 def main(argv):
@@ -152,8 +172,8 @@ def main(argv):
 
     summary.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary.txt'), sep='\t',
                    index=False)
-    res = wot.graphics.group_ot_validation_summary(summary,
-                                                   os.path.join(ot_model.tmap_dir,
-                                                                ot_model.tmap_prefix + '_validation_summary_stats.txt'))
+    res = wot.graphics.group_ot_validation_summary(summary)
+    res.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary_stats.txt'), sep="\t",
+               header=False, index=False)
     wot.graphics.plot_ot_validation_summary(res, os.path.join(ot_model.tmap_dir,
                                                               ot_model.tmap_prefix + '_validation_summary.png'))

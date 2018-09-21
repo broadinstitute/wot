@@ -46,57 +46,53 @@ def kernel_smooth(xi, yi, start, stop, steps, sigma):
     return xlist, fhat
 
 
-def group_ot_validation_summary(df, filename):
+ot_validation_legend = {
+    'P': ["#a6cee3", "between real batches"],
+    'I': ["#1f78b4", "between interpolated and real"],
+    'F': ["#b2df8a", "between first and real"],
+    'L': ["#33a02c", "between last and real"],
+    'R': ["#fb9a99", "between random (no growth) and real"],
+    'Rg': ["#e31a1c", "between random (with growth) and real"]
+}
+
+
+def group_ot_validation_summary(df):
     df['time'] = (df['interval_start'] + df['interval_end']) / 2
-    df['type'] = df['pair0'].astype(str).str[0]
-    res = df.groupby(['time', 'type'])['distance'].agg([np.mean, np.std])
-    is_first = True
-    legend = {
-        'P': ["#984ea3", "between real batches"],
-        'R': ["#4daf4a", "between random and real"],
-        'I': ["#e41a1c", "between interpolated and real"],
-        'F': ["#377eb8", "between first and real"],
-        'L': ["#ff7f00", "between last and real"],
-    }
-    with open(filename, 'w') as f:
-        for p, d in res.groupby('type'):
-            if p not in legend.keys():
-                continue
-            t = np.asarray(d.index.get_level_values('time'))
-            m = np.asarray(d['mean'])
-            s = np.asarray(d['std'])
-            pd.DataFrame(data={"time": t, "mean": m, "std": s, "type": legend[p][1]}).to_csv(f, sep="\t",
-                                                                                             header=is_first,
-                                                                                             index=False)
-            is_first = False
-    return res
+    full_df = df[df['cv0'] == 'full']
+    cv_df = df[df['cv0'] != 'full']
+    cv_df = cv_df.copy()
+    cv_df['type'] = cv_df['pair0'].astype(str).str.split('_').str.get(0)
+    cv_agg = cv_df.groupby(['time', 'type'])['distance'].agg([np.mean, np.std])
+    result = []
+    result_columns = ['time', 'mean', 'std', 'type']
+    # value from full batches, std from mean, except for P vs P
+    for type, d in cv_agg.groupby('type'):
+        t = np.asarray(d.index.get_level_values('time'))
+        mean = d['mean'] if type is 'P' else full_df[full_df['pair0'] == type]['distance']
+        std = d['std']
+        result.append([t[0], np.asarray(mean)[0], np.asarray(std)[0], type])
+    grouped_df = pd.DataFrame(result, columns=result_columns)
+    return grouped_df
 
 
-def plot_ot_validation_summary(res, filename, bandwidth=None):
-    legend = {
-        'P': ["#984ea3", "between real batches"],
-        'R': ["#4daf4a", "between random and real"],
-        'I': ["#e41a1c", "between interpolated and real"],
-        'F': ["#377eb8", "between first and real"],
-        'L': ["#ff7f00", "between last and real"],
-    }
-
+def plot_ot_validation_summary(grouped_df, filename, bandwidth=None):
     pyplot.figure(figsize=(10, 10))
     pyplot.title("OT Validation")
     pyplot.xlabel("time")
     pyplot.ylabel("distance")
-    wot.graphics.legend_figure(pyplot, legend.values())
+    wot.graphics.legend_figure(pyplot, ot_validation_legend.values())
 
-    for p, d in res.groupby('type'):
-        if p not in legend.keys():
+    for p, d in grouped_df.groupby('type'):
+        if p not in ot_validation_legend.keys():
+            print('skipping ' + str(p))
             continue
-        t = np.asarray(d.index.get_level_values('time'))
+        t = np.asarray(d['time'])
         m = np.asarray(d['mean'])
         s = np.asarray(d['std'])
         if bandwidth is not None:
             x, m = kernel_smooth(t, m, 0, t[len(t) - 1], 1000, bandwidth)
             x, s = kernel_smooth(t, s, 0, t[len(t) - 1], 1000, bandwidth)
             t = x
-        pyplot.plot(t, m, '-o', color=legend[p][0])
-        pyplot.fill_between(t, m - s, m + s, color=legend[p][0] + "50")
+        pyplot.plot(t, m, '-o', color=ot_validation_legend[p][0])
+        pyplot.fill_between(t, m - s, m + s, color=ot_validation_legend[p][0] + "50")
     pyplot.savefig(filename)
