@@ -35,14 +35,13 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
     i_mid, i_last = interp_pattern
     times = ot_model.timepoints
     times = np.array(times)
-    times = times[times >= 17]  # FIXME
     # Skip a timepoint and validate using the skipped timepoint
     ot_model.day_pairs = {(times[i], times[i + i_last]): {} for i in range(len(times) - i_last)}
     if 'covariate' not in ot_model.matrix.row_meta.columns:
         print('Warning-no covariate specified.')
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
 
-    # ot_model.compute_all_transport_maps(with_covariates=True)
+    ot_model.compute_all_transport_maps(with_covariates=True)
     # Now validate
     summary = []
     local_pca = ot_model.ot_config['local_pca']
