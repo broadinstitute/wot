@@ -230,7 +230,7 @@ def interpolate_randomly(p0, p1, t, size, g):
     return np.asarray([p0[i // J] * (1 - t) + p1[i % J] * t for i in choices], dtype=np.float64)
 
 
-def earth_mover_distance(cloud1, cloud2):
+def earth_mover_distance(cloud1, cloud2, eigenvals):
     """
     Returns the earth mover's distance between two point clouds
 
@@ -248,6 +248,9 @@ def earth_mover_distance(cloud1, cloud2):
     """
     cloud1 = cloud1.toarray() if scipy.sparse.isspmatrix(cloud1) else cloud1
     cloud2 = cloud2.toarray() if scipy.sparse.isspmatrix(cloud2) else cloud2
+    if eigenvals is not None:
+        cloud1 = cloud1.dot(eigenvals)
+        cloud2 = cloud2.dot(eigenvals)
     p = np.ones(len(cloud1)) / len(cloud1)
     q = np.ones(len(cloud2)) / len(cloud2)
     pairwise_dist = sklearn.metrics.pairwise.pairwise_distances(

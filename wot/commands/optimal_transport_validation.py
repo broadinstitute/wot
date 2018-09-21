@@ -34,13 +34,15 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
     """
     i_mid, i_last = interp_pattern
     times = ot_model.timepoints
+    times = np.array(times)
+    times = times[times >= 17]  # FIXME
     # Skip a timepoint and validate using the skipped timepoint
     ot_model.day_pairs = {(times[i], times[i + i_last]): {} for i in range(len(times) - i_last)}
     if 'covariate' not in ot_model.matrix.row_meta.columns:
         print('Warning-no covariate specified.')
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
 
-    ot_model.compute_all_transport_maps(with_covariates=True)
+    # ot_model.compute_all_transport_maps(with_covariates=True)
     # Now validate
     summary = []
     local_pca = ot_model.ot_config['local_pca']
@@ -58,6 +60,7 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
             matrices.append(p0_ds.x if not scipy.sparse.isspmatrix(p0_ds.x) else p0_ds.x.toarray())
             matrices.append(p1_ds.x if not scipy.sparse.isspmatrix(p1_ds.x) else p1_ds.x.toarray())
             p0_ds.x, p1_ds.x, pca, mean_shift = wot.ot.compute_pca(p0_ds.x, p1_ds.x, local_pca)
+            eigenvals = np.diag(pca.singular_values_)
             U = np.vstack(matrices).T.dot(pca.components_.T).dot(np.diag(1 / pca.singular_values_))
             y = p05_ds.x - mean_shift
             p05_ds.x = np.diag(1 / pca.singular_values_).dot(U.T.dot(y.T)).T
@@ -94,7 +97,7 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
 
                 def update_summary(pop, t, name):
                     name_05 = 'P_cv{}'.format(cv05)
-                    dist = wot.ot.earth_mover_distance(pop, p05_x)
+                    dist = wot.ot.earth_mover_distance(pop, p05_x, eigenvals if local_pca > 0 else None)
                     summary.append([t0, t05, t1, t, t05, cv0, cv1, name, name_05, dist])
 
                 if cv0 == cv1:
