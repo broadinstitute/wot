@@ -57,22 +57,18 @@ ot_validation_legend = {
 
 
 def group_ot_validation_summary(df):
+    df = df.copy()
     df['time'] = (df['interval_start'] + df['interval_end']) / 2
+    df['type'] = df['pair0'].astype(str).str.split('_').str.get(0)
     full_df = df[df['cv0'] == 'full']
+    full_df.set_index(['time', 'type'], inplace=True)
+    full_df = full_df.rename(columns={'distance': 'mean'})['mean']
     cv_df = df[df['cv0'] != 'full']
-    cv_df = cv_df.copy()
-    cv_df['type'] = cv_df['pair0'].astype(str).str.split('_').str.get(0)
+
     cv_agg = cv_df.groupby(['time', 'type'])['distance'].agg([np.mean, np.std])
-    result = []
-    result_columns = ['time', 'mean', 'std', 'type']
-    # value from full batches, std from mean, except for P vs P
-    for type, d in cv_agg.groupby('type'):
-        t = np.asarray(d.index.get_level_values('time'))
-        mean = d['mean'] if type is 'P' else full_df[full_df['pair0'] == type]['distance']
-        std = d['std']
-        result.append([t[0], np.asarray(mean)[0], np.asarray(std)[0], type])
-    grouped_df = pd.DataFrame(result, columns=result_columns)
-    return grouped_df
+    cv_agg.update(full_df)
+    # mean from full batches, std from batches, except for P vs P, where mean is from CVs
+    return cv_agg
 
 
 def plot_ot_validation_summary(grouped_df, filename, bandwidth=None):
@@ -82,10 +78,11 @@ def plot_ot_validation_summary(grouped_df, filename, bandwidth=None):
     pyplot.ylabel("distance")
     wot.graphics.legend_figure(pyplot, ot_validation_legend.values())
 
-    for p, d in grouped_df.groupby('type'):
-        if p not in ot_validation_legend.keys():
-            print('skipping ' + str(p))
+    for idx in grouped_df.index.get_level_values('type'):
+        if type not in ot_validation_legend.keys():
+            print('skipping ' + str(type))
             continue
+        d = grouped_df[idx]
         t = np.asarray(d['time'])
         m = np.asarray(d['mean'])
         s = np.asarray(d['std'])
@@ -93,6 +90,6 @@ def plot_ot_validation_summary(grouped_df, filename, bandwidth=None):
             x, m = kernel_smooth(t, m, 0, t[len(t) - 1], 1000, bandwidth)
             x, s = kernel_smooth(t, s, 0, t[len(t) - 1], 1000, bandwidth)
             t = x
-        pyplot.plot(t, m, '-o', color=ot_validation_legend[p][0])
+        pyplot.plot(t, m, '-o', color=ot_validation_legend[type][0])
         pyplot.fill_between(t, m - s, m + s, color=ot_validation_legend[p][0] + "50")
     pyplot.savefig(filename)
