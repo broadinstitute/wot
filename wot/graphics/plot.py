@@ -71,25 +71,24 @@ def group_ot_validation_summary(df):
     return cv_agg
 
 
-def plot_ot_validation_summary(grouped_df, filename, bandwidth=None):
+def plot_ot_validation_summary(df, filename, bandwidth=None):
+    df = df.reset_index()
     pyplot.figure(figsize=(10, 10))
     pyplot.title("OT Validation")
     pyplot.xlabel("time")
     pyplot.ylabel("distance")
     wot.graphics.legend_figure(pyplot, ot_validation_legend.values())
 
-    for idx in grouped_df.index.get_level_values('type'):
-        if type not in ot_validation_legend.keys():
-            print('skipping ' + str(type))
+    for p, d in df.groupby('type'):
+        if p not in ot_validation_legend.keys():
             continue
-        d = grouped_df[idx]
-        t = np.asarray(d['time'])
+        t = np.asarray(d('time'))
         m = np.asarray(d['mean'])
         s = np.asarray(d['std'])
         if bandwidth is not None:
             x, m = kernel_smooth(t, m, 0, t[len(t) - 1], 1000, bandwidth)
             x, s = kernel_smooth(t, s, 0, t[len(t) - 1], 1000, bandwidth)
             t = x
-        pyplot.plot(t, m, '-o', color=ot_validation_legend[type][0])
+        pyplot.plot(t, m, '-o', color=ot_validation_legend[p][0])
         pyplot.fill_between(t, m - s, m + s, color=ot_validation_legend[p][0] + "50")
     pyplot.savefig(filename)
