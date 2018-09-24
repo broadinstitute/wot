@@ -92,7 +92,7 @@ def main(argv):
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='txt', choices=wot.commands.FORMAT_CHOICES)
     parser.add_argument('--nperm', help='Number of permutations', default=10000, type=int)
     parser.add_argument('--method', help='Method to compute gene set scores',
-                        choices=['mean_z_score', 'mean', 'mean_rank'])
+                        choices=['mean_z_score', 'mean', 'mean_rank'], required=True)
     parser.add_argument('--n_neighbors', help='Number of neighbors for sampling', default=20, type=int)
     parser.add_argument('--neighbors_method', help='Method to find nearest neighbors',
                         choices=['mean', 'variance', 'mean_variance'], default='mean')
