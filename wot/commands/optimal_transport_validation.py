@@ -57,7 +57,7 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
                        'distance']
     local_pca = ot_model.ot_config['local_pca']
     tmap_model = wot.model.TransportMapModel.from_directory(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix), True)
-    print(day_pairs_triplets)
+
     for triplet in day_pairs_triplets:
         t0, t05, t1 = triplet
         interp_frac = (t05 - t0) / (t1 - t0)
