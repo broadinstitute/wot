@@ -14,7 +14,7 @@ import wot.io
 import wot.ot
 
 
-def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolated=False, interp_size=10000):
+def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpolated=False, interp_size=10000):
     """
     Compute the validation summary for the given OTModel
 
@@ -22,8 +22,8 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
     ----------
     ot_model : wot.OTModel
         The OTModel to validate
-    interp_pattern : (int, int), optional, default: (1,2)
-        The interpolation pattern : (x, y) will compute transport maps t[i] to t[i+y] and interpolate at t[i+x]
+    interp_pattern : (float, float), optional, default: (0.5,1)
+        The interpolation pattern : (x, y) will compute transport maps from t to t+y and interpolate at t+x
     save_interpolated : bool, optional, default: False
         Wether to save or discard the interpolated and random point clouds
 
@@ -32,11 +32,20 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
     validation_summary : pandas.DataFrame
         The validation summary
     """
-    i_mid, i_last = interp_pattern
-    times = ot_model.timepoints
-    times = np.array(times)
-    # Skip a timepoint and validate using the skipped timepoint
-    ot_model.day_pairs = {(times[i], times[i + i_last]): {} for i in range(len(times) - i_last)}
+
+    times = np.array(ot_model.timepoints)
+    day_pairs = {}
+    day_pairs_triplets = []
+
+    for i in range(len(times)):
+        t0 = times[i]
+        t1 = t0 + interp_pattern[1]
+        t05 = t0 + interp_pattern[0]
+        if t1 in ot_model.timepoints and t05 in ot_model.timepoints:
+            day_pairs[(t0, t1)] = {}
+            day_pairs_triplets.append((t0, t05, t1))
+
+    ot_model.day_pairs = day_pairs
     if 'covariate' not in ot_model.matrix.row_meta.columns:
         print('Warning-no covariate specified.')
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
@@ -48,9 +57,9 @@ def compute_validation_summary(ot_model, interp_pattern=(1, 2), save_interpolate
                        'distance']
     local_pca = ot_model.ot_config['local_pca']
     tmap_model = wot.model.TransportMapModel.from_directory(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix), True)
-
-    for t_cur in range(len(times) - i_last):
-        t0, t05, t1 = times[t_cur], times[t_cur + i_mid], times[t_cur + i_last]
+    print(day_pairs_triplets)
+    for triplet in day_pairs_triplets:
+        t0, t05, t1 = triplet
         interp_frac = (t05 - t0) / (t1 - t0)
         p0_ds = ot_model.matrix.where(day=t0)
         p05_ds = ot_model.matrix.where(day=t05)
@@ -141,8 +150,8 @@ def main(argv):
     parser.add_argument('--covariate', help='Covariate values for each cell')
     parser.add_argument('--save_interpolated', type=bool, default=False,
                         help='Save interpolated and random point clouds')
-    parser.add_argument('--interp_pattern', default='1,2',
-                        help='The interpolation pattern. "x,y" will compute transport from time t[i] to t[i+y] and interpolate at t[i+x]')
+    parser.add_argument('--interp_pattern', default='0.5,1',
+                        help='The interpolation pattern "x,y" will compute transport maps from time t to t+y and interpolate at t+x')
     parser.add_argument('--out', default='./tmaps_val',
                         help='Prefix for output file names')
     parser.add_argument('--interp_size', default=10000, type=int)
@@ -167,7 +176,7 @@ def main(argv):
                                        covariate=args.covariate
                                        )
     summary = compute_validation_summary(ot_model,
-                                         interp_pattern=(int(x) for x in args.interp_pattern.split(',')),
+                                         interp_pattern=[float(x) for x in args.interp_pattern.split(',')],
                                          save_interpolated=args.save_interpolated, interp_size=args.interp_size)
 
     summary.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary.txt'), sep='\t',

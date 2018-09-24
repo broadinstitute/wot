@@ -567,22 +567,6 @@ def get_pca(dim, *args):
     return pca.fit(x), mean
 
 
-# def get_pca_old(dim,*args):
-#     args = [a.toarray() if scipy.sparse.isspmatrix(a) else a for a in args]
-#     x = np.vstack(args)
-#     mean_shift = x.mean(axis=0)
-#     x = x - mean_shift
-#     pca = sklearn.decomposition.PCA(n_components=args.local_pca)
-#     pca.fit(x.T)
-#     x = pca.components_.T
-#     return pca, mean
-
-
-# def pca_transform_old(components,mean,arr):
-#     ndarr = arr.toarray() if scipy.sparse.isspmatrix(arr) else arr
-#     ndarr = ndarr - mean
-
-
 def pca_transform(pca, mean, arr):
     """
     Apply a PCA transformation to argument

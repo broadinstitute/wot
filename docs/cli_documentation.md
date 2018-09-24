@@ -418,13 +418,11 @@ reproduced here for convenience.
 
 ##### Interpolation pattern #####
 
-Validation is done by transporting cells from time `t[i]` to `t[i+y]`,
-and then interpolating at a middle timepoint `t[i+x]` (assuming `t` is
-ordered and x < y).
+Validation is done by transporting cells from time t to t+y and interpolating at t+x.
 
 You can change these two values using the parameter `--interp_pattern x,y`.
 
-If you have timepoints 0, 1, 2, ... to 10, the default pattern is `1,2`,
+If you have timepoints 0, 1, 2, ... to 10, the pattern is `1,2`,
 which means you would transport from 0 to 2 and interpolate at 1, and then
 transport from 1 to 3 and interpolate at 2, etc. Using pattern `2,4` would
 transport from 0 to 4 and interpolate at 2, then 1 to 5 and interpolate at 3, etc.
