@@ -45,6 +45,7 @@ class OTModel:
 
         cell_filter = kwargs.pop('cell_filter', None)
         gene_filter = kwargs.pop('gene_filter', None)
+        day_filter = kwargs.pop('cell_day_filter', None)
         self.output_file_format = kwargs.pop('output_file_format', 'loom')
         if gene_filter is not None:
             if os.path.isfile(gene_filter):
@@ -71,6 +72,13 @@ class OTModel:
                                       self.matrix.row_meta[row_indices].copy(False), self.matrix.col_meta)
 
             wot.io.verbose('Successfuly applied cell_filter: "{}"'.format(cell_filter))
+        if day_filter is not None:
+            days = day_filter.split(',')
+            row_indices = self.matrix.row_meta['day'].isin(days)
+            self.matrix = wot.Dataset(self.matrix.x[row_indices, :],
+                                      self.matrix.row_meta[row_indices].copy(False), self.matrix.col_meta)
+
+            wot.io.verbose('Successfuly applied day_filter: "{}"'.format(day_filter))
         self.timepoints = sorted(set(self.matrix.row_meta['day']))
         if self.matrix.x.shape[0] is 0:
             print('No cells in matrix')

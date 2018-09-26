@@ -182,6 +182,7 @@ def main(argv):
                                        epsilon0=args.epsilon0,
                                        tau=args.tau,
                                        day_pairs=args.config,
+                                       cell_day_filter=args.cell_day_filter,
                                        cell_growth_rates=args.cell_growth_rates,
                                        gene_filter=args.gene_filter,
                                        cell_filter=args.cell_filter,
