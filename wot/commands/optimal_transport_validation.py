@@ -143,6 +143,21 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
     return pd.DataFrame(summary, columns=summary_columns)
 
 
+def group_ot_validation_summary(df):
+    df = df.copy()
+    df['time'] = (df['interval_start'] + df['interval_end']) / 2
+    df['type'] = df['pair0'].astype(str).str.split('_').str.get(0)
+    full_df = df[df['cv0'] == 'full']
+    full_df.set_index(['time', 'type'], inplace=True)
+    full_df = full_df.rename(columns={'distance': 'mean'})['mean']
+    cv_df = df[df['cv0'] != 'full']
+
+    cv_agg = cv_df.groupby(['time', 'type'])['distance'].agg([np.mean, np.std])
+    cv_agg.update(full_df)
+    # mean from full batches, std from batches, except for P vs P, where mean is from CVs
+    return cv_agg
+
+
 def main(argv):
     parser = argparse.ArgumentParser(description='Compute a validation summary')
     wot.commands.add_model_arguments(parser)
@@ -181,8 +196,8 @@ def main(argv):
 
     summary.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary.txt'), sep='\t',
                    index=False)
-    res = wot.graphics.group_ot_validation_summary(summary)
-    res.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary_stats.txt'), sep="\t",
-               header=False, index=False)
-    wot.graphics.plot_ot_validation_summary(res, os.path.join(ot_model.tmap_dir,
-                                                              ot_model.tmap_prefix + '_validation_summary.png'))
+    summary_stats = group_ot_validation_summary(summary)
+    summary_stats.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary_stats.txt'),
+                         sep="\t", )
+    wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(ot_model.tmap_dir,
+                                                                        ot_model.tmap_prefix + '_validation_summary.png'))
