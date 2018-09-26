@@ -12,8 +12,7 @@ with open("README.md", "r") as fh:
 requirements = [
     'Cython', 'h5py', 'numpy', 'scipy', 'scanpy',
     'scikit-learn', 'pandas>=0.21', 'Flask',
-    'gunicorn', 'numexpr', 'simplejson', 'psutil',
-    'pyyaml'
+    'gunicorn', 'numexpr', 'simplejson', 'psutil'
 ]
 
 extras_require = {
@@ -30,7 +29,7 @@ test_requirements = [
 
 setuptools.setup(
     name='wot',
-    version='0.2.1',
+    version='0.2.2',
     description="Optimal transport for time-course single cell data",
     author="WOT Team",
     author_email='wot@broadinstitute.org',
