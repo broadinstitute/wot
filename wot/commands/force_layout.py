@@ -57,8 +57,8 @@ def run_gephi(input_graph_file, output_coord_file, n_steps):
         pkg_resources.resource_filename('wot', 'commands/resources/graph_layout/GraphLayout.class')) + ':' + \
                 pkg_resources.resource_filename('wot', 'commands/resources/graph_layout/gephi-toolkit-0.9.2-all.jar')
     subprocess.check_call(['java', '-Djava.awt.headless=true', '-Xmx{memory}g'.format(memory=memory), '-cp', classpath, \
-                           'GraphLayout', input_graph_file, output_coord_file, layout, str(n_steps),
-                           str(os.cpu_count())])
+                           'GraphLayout', '--input', input_graph_file, '--output', output_coord_file, '--layout',
+                           layout, '--nsteps', str(n_steps)])
 
 
 def main(argv):
