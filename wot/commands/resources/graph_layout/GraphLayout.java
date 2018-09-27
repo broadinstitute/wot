@@ -16,6 +16,8 @@ import org.gephi.layout.plugin.forceAtlas2.ForceAtlas2;
 import org.gephi.layout.plugin.openord.OpenOrdLayout;
 import org.gephi.layout.spi.Layout;
 
+import java.util.Set;
+import java.util.HashSet;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -38,9 +40,15 @@ public class GraphLayout {
         Boolean strongGravityMode = null;
         Double gravity = null;
         Boolean outboundAttractionDistribution = null;
+        Set<String> formats = new HashSet<>();
+        // gexf
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("--input")) {
                 file = new File(args[++i]);
+                if (!file.exists()) {
+                    System.err.println(file + " not found.");
+                    System.exit(1);
+                }
             } else if (args[i].equals("--output")) {
                 output = args[++i];
             } else if (args[i].equals("--layout")) {
@@ -65,9 +73,14 @@ public class GraphLayout {
                 strongGravityMode = args[++i].equalsIgnoreCase("true");
             } else if (args[i].equals("--outboundAttractionDistribution")) {
                 outboundAttractionDistribution = args[++i].equalsIgnoreCase("true");
+            } else if (args[i].equals("--format")) {
+                formats.add(args[++i]);
             } else {
                 System.err.println("Unknown argument " + args[i]);
             }
+        }
+        if (formats.size() == 0) {
+            formats.add("csv");
         }
 
         ProjectController pc = Lookup.getDefault().lookup(ProjectController.class);
@@ -122,17 +135,25 @@ public class GraphLayout {
             layout.goAlgo();
         }
         layout.endAlgo();
+        // ExporterCSV, ExporterDL, ExporterGDF, ExporterGEXF, ExporterGML, ExporterGraphML, ExporterPajek, ExporterVNA, PDFExporter, PNGExporter, SVGExporter
         ExportController ec = Lookup.getDefault().lookup(ExportController.class);
-        PrintWriter pw = new PrintWriter(new FileWriter(output));
-        pw.print("id\tx\ty\n");
-        for (Node n : g.getNodes()) {
-            pw.print(n.getId());
-            pw.print("\t");
-            pw.print(n.x());
-            pw.print("\t");
-            pw.print(n.y());
-            pw.print("\n");
+        for (String format : formats) {
+            if (format.equals("txt")) {
+                PrintWriter pw = new PrintWriter(new FileWriter(output + (output.endsWith("." + format) ? "" : "." + format)));
+                pw.print("id\tx\ty\n");
+                for (Node n : g.getNodes()) {
+                    pw.print(n.getId());
+                    pw.print("\t");
+                    pw.print(n.x());
+                    pw.print("\t");
+                    pw.print(n.y());
+                    pw.print("\n");
+                }
+                pw.close();
+            } else {
+                ec.exportFile(new File(output + (output.endsWith("." + format) ? "" : "." + format)), ec.getExporter(format));
+            }
         }
-        pw.close();
+
     }
 }
