@@ -36,12 +36,18 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
     times = np.array(ot_model.timepoints)
     day_pairs = {}
     day_pairs_triplets = []
+    tol = 0.01
 
     for i in range(len(times)):
         t0 = times[i]
-        t1 = t0 + interp_pattern[1]
-        t05 = t0 + interp_pattern[0]
-        if t1 in ot_model.timepoints and t05 in ot_model.timepoints:
+        t05_value = t0 + interp_pattern[0]
+        t1_value = t0 + interp_pattern[1]
+        t1_indices = np.where(np.isclose(times, t1_value, tol))[0]
+        t05_indices = np.where(np.isclose(times, t05_value, tol))[0]
+
+        if len(t1_indices) is 1 and len(t05_indices) is 1:
+            t1 = times[t1_indices[0]]
+            t05 = times[t05_indices[0]]
             day_pairs[(t0, t1)] = {}
             day_pairs_triplets.append((t0, t05, t1))
 
