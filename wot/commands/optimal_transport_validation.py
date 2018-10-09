@@ -57,7 +57,7 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
         print('Warning-no covariate specified.')
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
 
-    ot_model.compute_all_transport_maps(with_covariates=True)
+    ot_model.compute_all_transport_maps(with_covariates=True, full_pairs=compute_full_distances)
     # Now validate
     summary = []
     summary_columns = ['interval_start', 'interval_mid', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1',
@@ -158,8 +158,7 @@ def group_ot_validation_summary(df):
     # full_df = df[df['cv0'] == 'full']
     # full_df.set_index(['time', 'type'], inplace=True)
     # full_df = full_df.rename(columns={'distance': 'mean'})['mean']
-    cv_df = df[df['cv0'] != 'full']
-
+    cv_df = df[df['cv0'].astype(str) != 'full']
     cv_agg = cv_df.groupby(['time', 'type'])['distance'].agg([np.mean, np.std])
     # cv_agg.update(full_df)
     # mean and std from covariates only CVs
