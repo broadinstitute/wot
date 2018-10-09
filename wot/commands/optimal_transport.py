@@ -14,8 +14,8 @@ def main(argv):
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--out', default='./tmaps',
                         help='Prefix for output file names')
-    parser.add_argument('--format', default='loom', help='Transport map file format.',
-                        choices=wot.commands.FORMAT_CHOICES)
+    # parser.add_argument('--format', default='loom', help='Transport map file format.',
+    #                     choices=wot.commands.FORMAT_CHOICES)
     args = parser.parse_args(argv)
     ot_model = wot.initialize_ot_model(args.matrix, args.cell_days,
                                        tmap_out=args.out,
@@ -32,9 +32,11 @@ def main(argv):
                                        cell_growth_rates=args.cell_growth_rates,
                                        gene_filter=args.gene_filter,
                                        cell_filter=args.cell_filter,
-                                       output_file_format=args.format,
+                                       # output_file_format=args.format,
                                        sampling_bias=args.sampling_bias,
                                        scaling_iter=args.scaling_iter,
-                                       inner_iter_max=args.inner_iter_max
+                                       inner_iter_max=args.inner_iter_max,
+                                       ncells=args.ncells,
+                                       ncounts=args.ncounts
                                        )
     ot_model.compute_all_transport_maps()

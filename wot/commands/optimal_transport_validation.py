@@ -14,7 +14,8 @@ import wot.io
 import wot.ot
 
 
-def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpolated=False, interp_size=10000):
+def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpolated=False, compute_full_distances=False,
+                               interp_size=10000):
     """
     Compute the validation summary for the given OTModel
 
@@ -84,22 +85,23 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
             p1_ds.col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1))
             p05_ds.col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1))
 
-        tmap = tmap_model.get_transport_map(t0, t1)
-        i05 = wot.ot.interpolate_with_ot(p0_ds.x, p1_ds.x, tmap.x, interp_frac, interp_size)
-        r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_ds.x, p1_ds.x, interp_frac, interp_size,
-                                                                  p0_ds.row_meta['cell_growth_rate'].values ** (
-                                                                      interp_frac))
-        r05_no_growth = wot.ot.interpolate_randomly(p0_ds.x, p1_ds.x, interp_frac, interp_size)
+        if compute_full_distances:
+            tmap = tmap_model.get_transport_map(t0, t1)
+            i05 = wot.ot.interpolate_with_ot(p0_ds.x, p1_ds.x, tmap.x, interp_frac, interp_size)
+            r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_ds.x, p1_ds.x, interp_frac, interp_size,
+                                                                      p0_ds.row_meta['cell_growth_rate'].values ** (
+                                                                          interp_frac))
+            r05_no_growth = wot.ot.interpolate_randomly(p0_ds.x, p1_ds.x, interp_frac, interp_size)
 
-        def update_full_summary(pop, t, name):
-            dist = wot.ot.earth_mover_distance(pop, p05_ds.x, eigenvals if local_pca > 0 else None)
-            summary.append([t0, t05, t1, t, t05, 'full', 'full', name, 'P', dist])
+            def update_full_summary(pop, t, name):
+                dist = wot.ot.earth_mover_distance(pop, p05_ds.x, eigenvals if local_pca > 0 else None)
+                summary.append([t0, t05, t1, t, t05, 'full', 'full', name, 'P', dist])
 
-        update_full_summary(i05, t05, 'I')
-        update_full_summary(r05_with_growth, t05, 'Rg')
-        update_full_summary(r05_no_growth, t05, 'R')
-        update_full_summary(p0_ds.x, t0, 'F')
-        update_full_summary(p1_ds.x, t1, 'L')
+            update_full_summary(i05, t05, 'I')
+            update_full_summary(r05_with_growth, t05, 'Rg')
+            update_full_summary(r05_no_growth, t05, 'R')
+            update_full_summary(p0_ds.x, t0, 'F')
+            update_full_summary(p1_ds.x, t1, 'L')
 
         p0 = p0_ds.split_by('covariate')
         p05 = p05_ds.split_by('covariate')
@@ -171,6 +173,7 @@ def main(argv):
     parser.add_argument('--covariate', help='Covariate values for each cell')
     parser.add_argument('--save_interpolated', type=bool, default=False,
                         help='Save interpolated and random point clouds')
+
     parser.add_argument('--interp_pattern', default='0.5,1',
                         help='The interpolation pattern "x,y" will compute transport maps from time t to t+y and interpolate at t+x')
     parser.add_argument('--out', default='./tmaps_val',
@@ -195,6 +198,8 @@ def main(argv):
                                        sampling_bias=args.sampling_bias,
                                        scaling_iter=args.scaling_iter,
                                        inner_iter_max=args.inner_iter_max,
+                                       ncells=args.ncells,
+                                       ncounts=args.ncounts,
                                        covariate=args.covariate
                                        )
     summary = compute_validation_summary(ot_model,

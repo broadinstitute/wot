@@ -57,7 +57,5 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--epsilon0', type=float, default=1,
                         help='Warm starting value for epsilon')
     parser.add_argument('--tau', type=float, default=10000)
-    # parser.add_argument('--ncells', type=int,
-    #                     help='Number of cells to downsample from each timepoint')
-    # parser.add_argument('--ncounts', type=int,
-    #                     help='Number of counts to downsample from each cell')
+    parser.add_argument('--ncells', type=int, help='Number of cells to downsample from each timepoint and covariate')
+    parser.add_argument('--ncounts', help='Sample ncounts from each cell', type=int)
