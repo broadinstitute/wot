@@ -46,6 +46,8 @@ class OTModel:
         cell_filter = kwargs.pop('cell_filter', None)
         gene_filter = kwargs.pop('gene_filter', None)
         day_filter = kwargs.pop('cell_day_filter', None)
+        ncounts = kwargs.pop('ncounts', None)
+        ncells = kwargs.pop('ncells', None)
         self.output_file_format = kwargs.pop('output_file_format', 'loom')
         if gene_filter is not None:
             if os.path.isfile(gene_filter):
@@ -80,6 +82,34 @@ class OTModel:
 
             wot.io.verbose('Successfuly applied day_filter: "{}"'.format(day_filter))
         self.timepoints = sorted(set(self.matrix.row_meta['day']))
+        cvs = sorted(set(self.matrix.row_meta['covariate'])) if 'covariate' in self.matrix.row_meta else [None]
+        if ncells is not None:
+            index_list = []
+            for day in self.timepoints:
+                day_query = self.matrix.row_meta['day'] == day
+                for cv in cvs:
+                    if cv is None:
+                        indices = np.where(day_query)[0]
+                    else:
+                        indices = np.where(day_query & (self.matrix.row_meta['covariate'] == cv))[0]
+                    if len(indices) > ncells:
+                        np.random.shuffle(indices)
+                        indices = indices[0:ncells]
+                    index_list.append(indices)
+            row_indices = np.concatenate(index_list)
+            self.matrix = wot.Dataset(self.matrix.x[row_indices, :],
+                                      self.matrix.row_meta.iloc[row_indices].copy(False), self.matrix.col_meta)
+        if ncounts is not None:
+            for i in range(self.matrix.x.shape[0]):
+                p = self.matrix.x[i]
+                if scipy.sparse.isspmatrix(p):
+                    p = p.toarray()
+                p = p.astype('float64')
+                total = p.sum()
+                if total > ncounts:
+                    p /= total
+                    self.matrix.x[i] = np.random.multinomial(ncounts, p, size=1)[0]
+
         if self.matrix.x.shape[0] is 0:
             print('No cells in matrix')
             exit(1)
