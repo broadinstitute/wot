@@ -57,7 +57,7 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
         print('Warning-no covariate specified.')
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
 
-    ot_model.compute_all_transport_maps(with_covariates=True, full_pairs=compute_full_distances)
+    ot_model.compute_all_transport_maps(with_covariates=True)
     # Now validate
     summary = []
     summary_columns = ['interval_start', 'interval_mid', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1',
