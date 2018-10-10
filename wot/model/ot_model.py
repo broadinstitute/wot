@@ -133,7 +133,9 @@ class OTModel:
         if self.max_threads > 1:
             wot.io.verbose("Warning : Multiple threads are being used. Time estimates will be inaccurate")
 
-        self.ot_config = {}
+        self.ot_config = {'local_pca': 30, 'growth_iters': 3, 'scaling_iter': 3000, 'inner_iter_max': 50,
+                          'epsilon': 0.05, 'lambda1': 1, 'lambda2': 50, 'epsilon0': 1, 'tau': 10000}
+
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
         local_pca = self.ot_config['local_pca']
@@ -227,8 +229,8 @@ class OTModel:
 
         Returns
         -------
-        None
-            Only computes and saves the transport maps, does not return it.
+        wot.Dataset
+            The transport map from t0 to t1
 
         Raises
         ------
@@ -256,6 +258,7 @@ class OTModel:
         wot.io.write_dataset(tmap, os.path.join(self.tmap_dir, path),
                              output_format=self.output_file_format)
         wot.io.verbose("Created tmap ({}, {}) : {}".format(t0, t1, path))
+        return tmap
 
     @staticmethod
     def compute_default_cost_matrix(a, b, eigenvals=None):

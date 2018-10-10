@@ -51,7 +51,7 @@ ds = wot.io.read_dataset(matrix_file)
 ot_model = wot.initialize_ot_model(matrix_file, days_file,
     epsilon=.05, lambda1=50)
 
-data = ot_model.transport_map(46, 47).x[:4900, :4900]
+data = ot_model.compute_transport_map(46, 47).x[:4900, :4900]
 ```
 
 #### Amplifying the signal ####
