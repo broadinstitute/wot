@@ -36,6 +36,7 @@ def main(argv):
                                        sampling_bias=args.sampling_bias,
                                        scaling_iter=args.scaling_iter,
                                        inner_iter_max=args.inner_iter_max,
+                                       force=args.force,
                                        ncells=args.ncells,
                                        ncounts=args.ncounts
                                        )

@@ -48,6 +48,7 @@ class OTModel:
         day_filter = kwargs.pop('cell_day_filter', None)
         ncounts = kwargs.pop('ncounts', None)
         ncells = kwargs.pop('ncells', None)
+        self.force = kwargs.pop('force', False)
         self.output_file_format = kwargs.pop('output_file_format', 'loom')
         if gene_filter is not None:
             if os.path.isfile(gene_filter):
@@ -247,16 +248,19 @@ class OTModel:
         else:
             local_config = {}
 
-        config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
-        tmap = OTModel.compute_single_transport_map(self.matrix, config)
         if covariate is None:
             path += "_{}_{}".format(t0, t1)
-
         else:
             path += "_{}_{}_cv{}_cv{}".format(t0, t1, *covariate)
+        output_file = os.path.join(self.tmap_dir, path)
+        output_file = wot.io.check_file_extension(output_file, self.output_format)
+        if os.path.exists(output_file) and not self.force:
+            print('Found existing tmap at ' + output_file + '. Use --force to overwrite.')
+            return wot.io.read_dataset(output_file)
 
-        wot.io.write_dataset(tmap, os.path.join(self.tmap_dir, path),
-                             output_format=self.output_file_format)
+        config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
+        tmap = OTModel.compute_single_transport_map(self.matrix, config)
+        wot.io.write_dataset(tmap, output_file, output_format=self.output_file_format)
         wot.io.verbose("Created tmap ({}, {}) : {}".format(t0, t1, path))
         return tmap
 

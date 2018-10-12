@@ -53,6 +53,7 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--tau', type=float, default=10000)
     parser.add_argument('--ncells', type=int, help='Number of cells to downsample from each timepoint and covariate')
     parser.add_argument('--ncounts', help='Sample ncounts from each cell', type=int)
+    parser.add_argument('--force', help='Overwrite existing transport maps if they exist', type=bool, default=False)
     # parser.add_argument('--max_iter', type=int, default=1e7,
     #                     help='Maximum number of scaling iterations. Abort if convergence was not reached')
     # parser.add_argument('--batch_size', type=int, default=50,

@@ -4,6 +4,7 @@ import os
 import h5py
 import numpy as np
 import pandas as pd
+
 import wot.io
 import wot.model
 from wot.population import Population
@@ -556,31 +557,40 @@ class TransportMapModel:
 
         return census
 
-    @staticmethod
-    def from_index_file(base_url, index_file_name, file_extension):
-        if base_url[len(base_url) - 1] != '/':
-            base_url += '/'
+    def to_json(self):
+        import json
+        meta = self.meta.to_dict(orient='list')
+        meta['id'] = self.meta.index.values.tolist()
+        paths = []
+        day_pairs = list(self.day_pairs)
+        for i in range(len(day_pairs)):
+            paths.append(self.tmaps[day_pairs[i]])
+        d = {'day_pairs': day_pairs, 'paths': paths, 'timepoints': list(self.timepoints),
+             'meta': meta}
+        return json.dumps(d).encode('utf-8')
 
-        index_path = base_url + index_file_name
-        tmp_file = None
+    @staticmethod
+    def from_json(index_path):
+        import json
+        delete_index = False
         if index_path.startswith('gs://'):
             import subprocess
             subprocess.check_call(['gsutil', '-q', '-m', 'cp', index_path, '/tmp/'])
-        if index_file_name.endswith('.npz'):
-            index_path = '/tmp/' + index_file_name
-            tmp_file = index_path
-        index_obj = np.load(index_path)
-        if tmp_file is not None:
-            os.remove(tmp_file)
-        cell_ids = index_obj['id']
-        day = index_obj['day']
-        meta = pd.DataFrame(index=cell_ids, data={'day': day})
-        timepoints = sorted(meta['day'].unique())
-        day_pairs = [(timepoints[i], timepoints[i + 1]) for i in range(len(timepoints) - 1)]
+            index_path = '/tmp/' + os.path.basename(index_path)
+            delete_index = True
+        tmap_info = json.load(index_path)
+        if delete_index:
+            os.remove(index_path)
+        meta = pd.DataFrame(index=tmap_info['meta']['id'], data={'day': tmap_info['meta']['day']})
+        timepoints = tmap_info['timepoints']
+        paths = tmap_info['paths']
+        day_pairs = tmap_info['day_pairs']
         tmaps = {}
-        for day_pair in day_pairs:
-            tmaps[day_pair] = base_url + '{}_{}.{}'.format(day_pair[0], day_pair[1], file_extension)
+        for i in range(len(day_pairs)):
+            tmaps[day_pairs[i]] = paths[i]
         return TransportMapModel(tmaps=tmaps, meta=meta, timepoints=timepoints, day_pairs=day_pairs)
+
+
 
     @staticmethod
     def from_directory(tmap_out, with_covariates=False, cache=False):
