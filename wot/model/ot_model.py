@@ -4,10 +4,10 @@ import itertools
 import os
 from multiprocessing import Process
 
-import pandas as pd
 import numpy as np
-import sklearn
+import pandas as pd
 import scipy
+import sklearn
 
 import wot.io
 import wot.model
@@ -253,7 +253,7 @@ class OTModel:
         else:
             path += "_{}_{}_cv{}_cv{}".format(t0, t1, *covariate)
         output_file = os.path.join(self.tmap_dir, path)
-        output_file = wot.io.check_file_extension(output_file, self.output_format)
+        output_file = wot.io.check_file_extension(output_file, self.output_file_format)
         if os.path.exists(output_file) and not self.force:
             print('Found existing tmap at ' + output_file + '. Use --force to overwrite.')
             return wot.io.read_dataset(output_file)
