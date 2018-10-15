@@ -4,19 +4,17 @@
 """The setup script."""
 
 import setuptools
-import numpy
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 requirements = [
-    'Cython', 'h5py', 'numpy', 'scipy', 'scanpy',
-    'scikit-learn', 'pandas>=0.21', 'Flask',
-    'gunicorn', 'numexpr', 'simplejson', 'psutil'
+    'numpy', 'pandas>=0.21', 'h5py', 'scipy'
 ]
 
 extras_require = {
-    'GRN': ["'gslrandom>=0.1'"],
+    'compute': ['Cython', 'scanpy', 'scikit-learn', 'psutil', 'POT'],
+    # 'GRN': ["'gslrandom>=0.1'", 'numexpr']
 }
 
 setup_requirements = [
@@ -29,7 +27,7 @@ test_requirements = [
 
 setuptools.setup(
     name='wot',
-    version='0.2.4',
+    version='0.2.5',
     description="Optimal transport for time-course single cell data",
     author="WOT Team",
     author_email='wot@broadinstitute.org',

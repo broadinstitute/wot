@@ -4,7 +4,6 @@ import os
 import h5py
 import numpy as np
 import pandas as pd
-
 import wot.io
 import wot.model
 from wot.population import Population
@@ -444,12 +443,12 @@ class TransportMapModel:
         df = self.meta[self.meta['day'] == day]
 
         def get_population(ids_el):
-            cell_inds = df.index.get_indexer_for(ids_el)
-            cell_inds = cell_inds[cell_inds > -1]
-            if len(cell_inds) is 0:
+            cell_indices = df.index.get_indexer_for(ids_el)
+            cell_indices = cell_indices[cell_indices > -1]
+            if len(cell_indices) is 0:
                 return None
             p = np.zeros(len(df), dtype=np.float64)
-            p[cell_inds] = 1.0
+            p[cell_indices] = 1.0
             return Population(day, p / np.sum(p))
 
         result = [get_population(ids_el) for ids_el in ids]
@@ -574,11 +573,11 @@ class TransportMapModel:
         import json
         delete_index = False
         if index_path.startswith('gs://'):
-            import subprocess
-            subprocess.check_call(['gsutil', '-q', '-m', 'cp', index_path, '/tmp/'])
-            index_path = '/tmp/' + os.path.basename(index_path)
+            index_path = wot.io.download_gs_url(index_path)
             delete_index = True
-        tmap_info = json.load(index_path)
+
+        with open(index_path, 'r') as r:
+            tmap_info = json.load(r)
         if delete_index:
             os.remove(index_path)
         meta = pd.DataFrame(index=tmap_info['meta']['id'], data={'day': tmap_info['meta']['day']})
@@ -587,10 +586,8 @@ class TransportMapModel:
         day_pairs = tmap_info['day_pairs']
         tmaps = {}
         for i in range(len(day_pairs)):
-            tmaps[day_pairs[i]] = paths[i]
+            tmaps[tuple(day_pairs[i])] = paths[i]
         return TransportMapModel(tmaps=tmaps, meta=meta, timepoints=timepoints, day_pairs=day_pairs)
-
-
 
     @staticmethod
     def from_directory(tmap_out, with_covariates=False, cache=False):

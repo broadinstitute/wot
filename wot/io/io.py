@@ -452,10 +452,8 @@ def read_dataset(path, **kwargs):
     path = str(path)
     tmp_path = None
     if path.startswith('gs://'):
-        import subprocess
-        subprocess.check_call(['gsutil', '-q', '-m', 'cp', path, '/tmp/'])
-        path = '/tmp/' + os.path.split(path)[1]
-        tmp_path = path
+        tmp_path = download_gs_url(path)
+        path = tmp_path
     basename_and_extension = get_filename_and_extension(path)
     ext = basename_and_extension[1]
     if ext == 'mtx':
@@ -674,6 +672,26 @@ def read_h5_attrs(f, path, filter):
         data[key] = values
 
     return {'attrs': data, 'indices': indices}
+
+
+def download_gs_url(gs_url):
+    from google.cloud import storage
+    client = storage.Client()
+    path = gs_url[len('gs://'):]
+    slash = path.find('/')
+    bucket_id = path[0:slash]
+    blob_path = path[slash + 1:]
+    bucket = client.get_bucket(bucket_id)
+    blob = bucket.blob(blob_path)
+    dot = path.rfind('.')
+    suffix = None
+    if dot != -1:
+        suffix = path[dot:]
+    import tempfile
+    tmp = tempfile.mkstemp(suffix=suffix)
+    path = tmp[1]
+    blob.download_to_filename(path)
+    return path
 
 
 def check_file_extension(name, output_format):
