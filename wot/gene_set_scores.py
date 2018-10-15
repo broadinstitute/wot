@@ -1,7 +1,6 @@
 import numpy as np
 import scipy.sparse
 import scipy.stats
-import sklearn.neighbors
 
 import wot
 
@@ -139,10 +138,10 @@ def score_gene_sets(dataset_to_score, gs, method='mean', permutations=None, n_ne
 
         # if quantile_bins:
         #     bin_values = scipy.stats.rankdata(bin_values, method='min')
-
-        nbrs = sklearn.neighbors.NearestNeighbors(algorithm='ball_tree',
-                                                  n_neighbors=min(n_neighbors, bin_values.shape[0]),
-                                                  metric='euclidean').fit(bin_values)
+        import sklearn.neighbors
+        nbrs = sklearn.neighbors.NearestNeighbors(
+            n_neighbors=min(n_neighbors, bin_values.shape[0]),
+            metric='euclidean').fit(bin_values)
 
         gene_indices = np.where((gs_1_0 > 0).toarray())[0]
         nn_matrix = nbrs.kneighbors_graph(bin_values[gene_indices], mode='connectivity')
