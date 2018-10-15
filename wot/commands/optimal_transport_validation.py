@@ -63,7 +63,7 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
     summary_columns = ['interval_start', 'interval_mid', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1',
                        'distance']
     local_pca = ot_model.ot_config['local_pca']
-    tmap_model = wot.model.TransportMapModel.from_directory(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix), True)
+    tmap_model = wot.tmap.TransportMapModel.from_directory(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix), True)
 
     for triplet in day_pairs_triplets:
         t0, t05, t1 = triplet

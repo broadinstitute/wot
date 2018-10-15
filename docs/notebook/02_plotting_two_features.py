@@ -1,6 +1,7 @@
 import numpy as np
-import wot
 from matplotlib import pyplot
+
+import wot
 
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'
@@ -14,7 +15,7 @@ color1 = [.08, .34, .59]  # first color
 color2 = [.08, .59, .34]  # final color
 
 ds = wot.io.read_dataset(matrix_file)
-wot.io.incorporate_days_information_in_dataset(ds, days_file)
+wot.io.add_row_metadata_to_dataset(ds, days_path=days_file)
 
 # you can use any of the columns here, or metadata information :
 cell_colors = np.asarray(ds.row_meta['day'])

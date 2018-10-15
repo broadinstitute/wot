@@ -236,7 +236,7 @@ class TestOT(unittest.TestCase):
             transport_maps.append({'transport_map': transport_map,
                                    't_minus_1': i, 't': i + 1})
         trajectory_id = ['c4-t3']
-        result = wot.ot.trajectory(trajectory_id, transport_maps, 3, False)
+        result = wot.tmap.trajectory(trajectory_id, transport_maps, 3, False)
         ancestors = result['ancestors']
 
         # not messing up already computed ancestors
@@ -266,7 +266,7 @@ class TestOT(unittest.TestCase):
                 index=ids), check_names=False)
 
         trajectory_id = ['c1-t1']
-        result = wot.ot.trajectory(trajectory_id, transport_maps, 1, False)
+        result = wot.tmap.trajectory(trajectory_id, transport_maps, 1, False)
         descendants = result['descendants']
         # t3
         ids = ['c1-t3', 'c2-t3', 'c3-t3', 'c4-t3', 'c5-t3', 'c6-t3']

@@ -5,8 +5,9 @@ import math
 import numpy as np
 import pandas as pd
 import scipy.sparse
-import wot
 import scipy.sparse
+
+import wot
 
 
 def list_of_days_in_dataset(dataset):
@@ -24,6 +25,21 @@ def cell_indices_by_day(dataset):
         indices = np.where(day_query)[0]
         day_to_indices[day] = indices
     return day_to_indices
+
+
+def get_cells_in_gene_sets(gene_sets, dataset, quantile=.99):
+    cell_sets = {}
+    for gene_set_index in range(gene_sets.x.shape[1]):
+        gene_indices = list(np.where(gene_sets.x[:, gene_set_index] == 1)[0])
+        extracted = dataset.x[:, gene_indices]
+        thresholds = np.percentile(extracted, axis=0, q=quantile * 100)
+        selected = []
+        for i in range(extracted.shape[0]):
+            if all(extracted[i] > thresholds):
+                selected.append(i)
+        cell_sets[gene_sets.col_meta.index[gene_set_index]] = \
+            dataset.row_meta.index[selected]
+    return cell_sets
 
 
 def mean_and_variance(x):
@@ -62,7 +78,7 @@ def merge_datasets(*args):
     row_columns = set(datasets[0].row_meta.columns)
     if not all([set(d.row_meta.columns) == row_columns for d in datasets]):
         raise ValueError("Unable to merge: incompatible metadata between datasets")
-    merged_row_meta = pd.concat([ d.row_meta for d in datasets ], sort=True)
+    merged_row_meta = pd.concat([d.row_meta for d in datasets], sort=True)
     if merged_row_meta.index.duplicated().any():
         raise ValueError("Unable to merge: duplicate rows between datasets, cannot lose information")
     col_index = datasets[0].col_meta.index
@@ -73,7 +89,7 @@ def merge_datasets(*args):
 
 
 def dataset_from_x(x, rows=None, columns=None,
-        row_prefix="cell_", column_prefix="gene_"):
+                   row_prefix="cell_", column_prefix="gene_"):
     x = np.asarray(x, dtype=np.float64)
     if x.ndim == 1:
         x = np.asarray([x]).T
@@ -84,6 +100,6 @@ def dataset_from_x(x, rows=None, columns=None,
         col_count_len = math.floor(math.log10(x.shape[1])) + 1
         columns = ["{}{:0{}}".format(column_prefix, i, col_count_len) for i in range(x.shape[1])]
     return wot.Dataset(x,
-            pd.DataFrame([], index=rows, columns=[]),
-            pd.DataFrame([], index=columns, columns=[])
-            )
+                       pd.DataFrame([], index=rows, columns=[]),
+                       pd.DataFrame([], index=columns, columns=[])
+                       )

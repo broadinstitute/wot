@@ -1,5 +1,6 @@
-import wot
 from matplotlib import pyplot
+
+import wot
 
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'
@@ -10,7 +11,7 @@ destination_file = "ancestor_census.png"
 # --------------------------------------
 
 
-tmap_model = wot.model.TransportMapModel.from_directory('tmaps')
+tmap_model = wot.tmap.TransportMapModel.from_directory('tmaps')
 
 cs_matrix = wot.io.read_sets(cell_sets_file)
 cell_sets = wot.io.convert_binary_dataset_to_dict(cs_matrix)

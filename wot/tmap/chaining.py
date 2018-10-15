@@ -1,5 +1,5 @@
-import wot.ot
-import wot.model
+import wot.tmap
+
 
 def chain_transport_maps(ot_model, pairs_list):
     """
@@ -27,19 +27,20 @@ def chain_transport_maps(ot_model, pairs_list):
         If any pair (a, b) in pairs_list has a >= b.
     """
     for i in range(len(pairs_list) - 1):
-        if pairs_list[i][1] != pairs_list[i+1][0]:
-            wot.io.verbose("Unable to glue ({} != {}) for path {}"\
-                    .format(pairs_list[i][1], pairs_list[i+1][0], pairs_list))
+        if pairs_list[i][1] != pairs_list[i + 1][0]:
+            wot.io.verbose("Unable to glue ({} != {}) for path {}" \
+                           .format(pairs_list[i][1], pairs_list[i + 1][0], pairs_list))
             raise ValueError("Transport maps cannot be glued together : invalid path")
     for a, b in pairs_list:
         if a >= b:
             raise ValueError("({}, {}) is not a valid transport map : it goes backwards in time".format(a, b))
 
-    tmap_0 = wot.model.load_transport_map(ot_model, *pairs_list.pop(0))
-    while len(pairs_list) > 0 :
-        tmap_1 = wot.model.load_transport_map(ot_model, *pairs_list.pop(0))
-        tmap_0 = wot.ot.glue_transport_maps(tmap_0, tmap_1)
+    tmap_0 = wot.tmap.load_transport_map(ot_model, *pairs_list.pop(0))
+    while len(pairs_list) > 0:
+        tmap_1 = wot.tmap.load_transport_map(ot_model, *pairs_list.pop(0))
+        tmap_0 = wot.tmap.glue_transport_maps(tmap_0, tmap_1)
     return tmap_0
+
 
 def find_path(t0, t1, available_pairs, timepoints):
     """
@@ -82,17 +83,17 @@ def find_path(t0, t1, available_pairs, timepoints):
     if available_pairs is None:
         t0_i = timepoints.index(t0)
         t1_i = timepoints.index(t1)
-        return [(timepoints[i], timepoints[i+1]) for i in range(t0_i, t1_i)]
+        return [(timepoints[i], timepoints[i + 1]) for i in range(t0_i, t1_i)]
 
     # forall a, b in available_pairs, a < b.
     # the increasing order on timepoints is thus a topological ordering of the graph of days.
-    reach = { t: [] for t in timepoints }
+    reach = {t: [] for t in timepoints}
     for a, b in available_pairs:
         reach[a].append(b)
-    reach = { t: sorted(reach[t]) for t in timepoints }
+    reach = {t: sorted(reach[t]) for t in timepoints}
 
     # FIXME: the longest path is not guaranteed to be the "finest resolution" in all cases
-    dist_prev = { t: (0, None) for t in timepoints }
+    dist_prev = {t: (0, None) for t in timepoints}
     for t in timepoints[timepoints.index(t0):]:
         d, _ = dist_prev[t]
         for u in reach[t]:

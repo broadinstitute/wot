@@ -3,8 +3,9 @@
 
 import numpy as np
 import pandas as pd
-import wot.model
 import scipy
+
+import wot.tmap
 
 
 def trajectory_similarity_score(p1, p2):
@@ -18,7 +19,7 @@ def trajectory_similarities(trajectory_ds):
     Parameters
     ----------
     trajectory_ds : wot.Dataset
-       Dataset returned by wot.model.TransportModel.compute_trajectories
+       Dataset returned by wot.tmap.TransportModel.compute_trajectories
 
     Returns
     -------
@@ -53,7 +54,7 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
     Parameters
     ----------
     trajectory_ds : wot.Dataset
-       Dataset returned by wot.model.TransportModel.compute_trajectories
+       Dataset returned by wot.tmap.TransportModel.compute_trajectories
     ds : wot.Dataset
         Dataset used to compute mean and variance
 
@@ -134,7 +135,7 @@ def compute_trajectory_trends(tmap_model, *populations):
     def update(head, populations):
         x = 0 if head else len(traj)
         m, v = tmap_model.population_mean_and_variance(*populations)
-        timepoints.insert(x, wot.model.unique_timepoint(*populations))
+        timepoints.insert(x, wot.tmap.unique_timepoint(*populations))
         traj.insert(x, m)
         variances.insert(x, v)
 

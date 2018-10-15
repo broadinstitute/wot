@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-from .model import initialize_ot_model
+import wot.graphics
+import wot.io
+import wot.simulate
+import wot.tmap
 from .dataset import *
 from .dataset_util import *
 from .gene_set_scores import *
-
-import wot.io
-import wot.model
-import wot.graphics
-import wot.simulate
-import wot.commands
+from .population import *

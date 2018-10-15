@@ -1,6 +1,7 @@
 import numpy as np
-import wot
 from matplotlib import pyplot
+
+import wot.graphics
 
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'
@@ -15,7 +16,7 @@ destination_file = "shared_ancestry.png"
 # --------------------------------------
 
 
-tmap_model = wot.model.TransportMapModel.from_directory('tmaps')
+tmap_model = wot.tmap.TransportMapModel.from_directory('tmaps')
 cell_sets = wot.io.read_sets(cell_sets_file, as_dict=True)
 populations = tmap_model.population_from_cell_sets(cell_sets,
                                                    at_time=target_timepoint)

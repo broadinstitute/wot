@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from wot.commands import *
 import argparse
+
+from wot.commands import *
 
 
 def main():

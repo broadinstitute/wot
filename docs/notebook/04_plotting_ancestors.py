@@ -1,6 +1,7 @@
 import numpy as np
-import wot
 from matplotlib import pyplot
+
+import wot
 
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'
@@ -15,7 +16,7 @@ destination_file = "ancestors.png"
 
 ds = wot.io.read_dataset(matrix_file)
 
-tmap_model = wot.model.TransportMapModel.from_directory('tmaps')
+tmap_model = wot.tmap.TransportMapModel.from_directory('tmaps')
 
 transparent = lambda x: wot.graphics.hexstring_of_rgba((.08, .34, .59, x))
 

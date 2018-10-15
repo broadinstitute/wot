@@ -17,7 +17,7 @@ def main(argv):
     parser.add_argument('--out', help='Prefix for output file names', default='trajectory')
 
     args = parser.parse_args(argv)
-    tmap_model = wot.model.TransportMapModel.from_directory(args.tmap)
+    tmap_model = wot.tmap.TransportMapModel.from_directory(args.tmap)
     cell_sets = wot.io.read_sets(args.cell_set, as_dict=True)
     populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.time)
 

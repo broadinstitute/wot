@@ -4,8 +4,9 @@ import os
 import h5py
 import numpy as np
 import pandas as pd
+
 import wot.io
-import wot.model
+import wot.tmap
 from wot.population import Population
 
 
@@ -62,7 +63,7 @@ class TransportMapModel:
 
         def update(head, populations):
             idx = 0 if head else len(trajectories)
-            # timepoints.insert(idx, wot.model.unique_timepoint(*populations))
+            # timepoints.insert(idx, wot.tmap.unique_timepoint(*populations))
             trajectories.insert(idx, np.array([pop.p for pop in populations]).T)
 
         update(True, populations)
@@ -136,8 +137,8 @@ class TransportMapModel:
             return ds
 
         else:
-            path = wot.model.find_path(t0, t1, self.day_pairs, self.timepoints)
-            return wot.model.chain_transport_maps(self, path)
+            path = wot.tmap.find_path(t0, t1, self.day_pairs, self.timepoints)
+            return wot.tmap.chain_transport_maps(self, path)
 
     def can_push_forward(self, *populations):
         """
@@ -158,7 +159,7 @@ class TransportMapModel:
         ValueError
             If all populations are not in the same timepoint
         """
-        return self.timepoints.index(wot.model.unique_timepoint(*populations)) \
+        return self.timepoints.index(wot.tmap.unique_timepoint(*populations)) \
                < len(self.timepoints) - 1
 
     def can_pull_back(self, *populations):
@@ -180,7 +181,7 @@ class TransportMapModel:
         ValueError
             If all populations are not in the same timepoint
         """
-        return self.timepoints.index(wot.model.unique_timepoint(*populations)) > 0
+        return self.timepoints.index(wot.tmap.unique_timepoint(*populations)) > 0
 
     def push_forward(self, *populations, to_time=None, normalize=True, as_list=False):
         """
@@ -220,7 +221,7 @@ class TransportMapModel:
         Same, but several populations at once
         >>> self.pull_back(* self.push_forward(pop1, pop2, pop3))
         """
-        i = self.timepoints.index(wot.model.unique_timepoint(*populations))
+        i = self.timepoints.index(wot.tmap.unique_timepoint(*populations))
         j = i + 1 if to_time is None else self.timepoints.index(to_time)
 
         if i == -1:
@@ -286,7 +287,7 @@ class TransportMapModel:
         Same, but several populations at once
         >>> self.pull_back(* self.push_forward(pop1, pop2, pop3))
         """
-        i = self.timepoints.index(wot.model.unique_timepoint(*populations))
+        i = self.timepoints.index(wot.tmap.unique_timepoint(*populations))
         j = i - 1 if to_time is None else self.timepoints.index(to_time)
 
         if i == -1:
@@ -498,7 +499,7 @@ class TransportMapModel:
 
         def update(head, populations):
             x = 0 if head else len(census)
-            timepoints.insert(x, wot.model.unique_timepoint(*populations))
+            timepoints.insert(x, wot.tmap.unique_timepoint(*populations))
             census.insert(x, self.population_census(cset_matrix, *populations))
 
         update(True, populations)
@@ -538,7 +539,7 @@ class TransportMapModel:
         -----
         If several populations are given, they must all live in the same timepoint.
         """
-        day = wot.model.unique_timepoint(*populations)
+        day = wot.tmap.unique_timepoint(*populations)
         df = self.meta[self.meta['day'] == day]
         inter_ids = cell_set_matrix.row_meta.index.intersection(df.index)
         if len(inter_ids) == 0:

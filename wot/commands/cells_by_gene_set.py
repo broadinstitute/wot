@@ -3,23 +3,7 @@
 
 import argparse
 
-import numpy as np
 import wot.io
-
-
-def get_cells_in_gene_sets(gene_sets, dataset, quantile=.99):
-    cell_sets = {}
-    for gene_set_index in range(gene_sets.x.shape[1]):
-        gene_indices = list(np.where(gene_sets.x[:, gene_set_index] == 1)[0])
-        extracted = dataset.x[:, gene_indices]
-        thresholds = np.percentile(extracted, axis=0, q=quantile * 100)
-        selected = []
-        for i in range(extracted.shape[0]):
-            if all(extracted[i] > thresholds):
-                selected.append(i)
-        cell_sets[gene_sets.col_meta.index[gene_set_index]] = \
-            dataset.row_meta.index[selected]
-    return cell_sets
 
 
 def main(argv):
@@ -43,5 +27,5 @@ def main(argv):
     dataset = wot.io.read_dataset(args.matrix)
     gene_sets = wot.io.read_sets(args.gene_sets, dataset.col_meta.index.values)
 
-    result = get_cells_in_gene_sets(gene_sets, dataset, quantile=float(args.quantile))
+    result = wot.get_cells_in_gene_sets(gene_sets, dataset, quantile=float(args.quantile))
     wot.io.write_gene_sets(result, args.out, args.format)

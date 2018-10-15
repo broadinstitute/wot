@@ -10,7 +10,7 @@ import scipy
 import sklearn
 
 import wot.io
-import wot.model
+import wot.ot
 
 
 class OTModel:
@@ -41,7 +41,7 @@ class OTModel:
         self.matrix = matrix
         self.tmap_dir = tmap_dir or '.'
         self.tmap_prefix = tmap_prefix or "tmaps"
-        self.day_pairs = wot.model.parse_configuration(kwargs.pop('day_pairs', None))
+        self.day_pairs = wot.ot.parse_configuration(kwargs.pop('day_pairs', None))
 
         cell_filter = kwargs.pop('cell_filter', None)
         gene_filter = kwargs.pop('gene_filter', None)

@@ -13,7 +13,7 @@ def main(argv):
     parser.add_argument('--time', help='Timepoint to consider', required=True)
     parser.add_argument('--out', help='Output file name', default='wot_trajectory.txt')
     args = parser.parse_args(argv)
-    tmap_model = wot.model.TransportMapModel.from_directory(args.tmap)
+    tmap_model = wot.tmap.TransportMapModel.from_directory(args.tmap)
     cell_sets = wot.io.read_sets(args.cell_set, as_dict=True)
     populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.time)
     trajectories = tmap_model.compute_trajectories(populations)

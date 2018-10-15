@@ -1,6 +1,7 @@
 import numpy as np
-import wot
 from matplotlib import pyplot
+
+import wot.commands
 
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'
@@ -9,8 +10,8 @@ covariate_file = 'covariate.txt'
 destination_file = 'validation_summary.png'
 # --------------------------------------
 
-ot_model = wot.initialize_ot_model(matrix_file, days_file,
-                                   covariate=covariate_file, growth_iters=1, tmap_prefix='val')
+ot_model = wot.ot.initialize_ot_model(matrix_file, days_file,
+                                      covariate=covariate_file, growth_iters=1, tmap_prefix='val')
 vs = wot.commands.compute_validation_summary(ot_model)
 vs['time'] = (vs['interval_start'] + vs['interval_end']) / 2
 vs['type'] = vs['pair0'].astype(str).str[0]

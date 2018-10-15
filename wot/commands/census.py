@@ -19,7 +19,7 @@ def main(argv):
 
     args = parser.parse_args(argv)
 
-    tmap_model = wot.model.TransportMapModel.from_directory(args.tmap)
+    tmap_model = wot.tmap.TransportMapModel.from_directory(args.tmap)
     cell_sets_matrix = wot.io.read_sets(args.cell_set)
     cell_sets = wot.io.convert_binary_dataset_to_dict(cell_sets_matrix)
     populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.time)
