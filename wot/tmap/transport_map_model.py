@@ -304,7 +304,7 @@ class TransportMapModel:
             t1 = self.timepoints[i]
             t0 = self.timepoints[i - 1]
             tmap = self.get_transport_map(t0, t1)
-            p = np.dot(tmap.x, p.T).T
+            p = (tmap.x @ p.T).T
             if normalize:
                 p = (p.T / np.sum(p, axis=1)).T
             i -= 1
