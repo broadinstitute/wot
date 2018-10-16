@@ -21,7 +21,7 @@ Note : You need to have a transport maps computed for this to work. Please refer
 ## Compute shared ancestry ##
 
 ```python
-import wot
+import wot.graphics
 import numpy
 import pandas
 from matplotlib import pyplot

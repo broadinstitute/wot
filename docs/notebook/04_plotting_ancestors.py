@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot
 
-import wot
+import wot.graphics
 
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'

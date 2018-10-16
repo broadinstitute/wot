@@ -42,7 +42,7 @@ it is very easy to plot the mean and standard deviation of the distances
 between all considered populations. The following function does that :
 
 ```python
-import wot
+import wot.graphics
 import numpy
 from matplotlib import pyplot
 

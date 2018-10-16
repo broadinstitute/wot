@@ -28,7 +28,7 @@ Note : You need to have a transport maps computed for this to work. Please refer
 This will create several census files, that you can then plot as follows :
 
 ```python
-import wot
+import wot.graphics
 from matplotlib import pyplot
 
 picture_title = "Ancestor census of cells from Tip 1 at day 10"

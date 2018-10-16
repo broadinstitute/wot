@@ -41,8 +41,7 @@ gene_x_plot = 0
 gene_y_plot = 1
 destination_file = "cell_sets.png"
 # --------------------------------------
-
-import wot
+import wot.graphics
 from matplotlib import pyplot
 
 ds = wot.io.read_dataset(matrix_file)

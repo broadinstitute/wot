@@ -42,13 +42,13 @@ Cells have been sorted by increasing value of the first coordinate for these plo
 #### Computing the transport map ####
 
 ```python
-import wot
+import wot.ot
 
 matrix_file = 'matrix.txt'
 days_file = 'days.txt'
 
 ds = wot.io.read_dataset(matrix_file)
-ot_model = wot.initialize_ot_model(matrix_file, days_file,
+ot_model = wot.ot.initialize_ot_model(matrix_file, days_file,
     epsilon=.05, lambda1=50)
 
 data = ot_model.compute_transport_map(46, 47).x[:4900, :4900]
