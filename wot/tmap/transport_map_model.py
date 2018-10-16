@@ -557,7 +557,7 @@ class TransportMapModel:
 
         return census
 
-    def to_json(self):
+    def to_json(self, path):
         import json
         meta = self.meta.to_dict(orient='list')
         meta['id'] = self.meta.index.values.tolist()
@@ -567,7 +567,8 @@ class TransportMapModel:
             paths.append(self.tmaps[day_pairs[i]])
         d = {'day_pairs': day_pairs, 'paths': paths, 'timepoints': list(self.timepoints),
              'meta': meta}
-        return json.dumps(d).encode('utf-8')
+        with open(path, 'w') as f:
+            json.dump(d, f, ensure_ascii=False)
 
     @staticmethod
     def from_json(index_path):
