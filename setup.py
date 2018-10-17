@@ -26,7 +26,7 @@ test_requirements = [
 
 setuptools.setup(
     name='wot',
-    version='0.3.3',
+    version='0.3.4',
     description="Optimal transport for time-course single cell data",
     author="WOT Team",
     author_email='wot@broadinstitute.org',
