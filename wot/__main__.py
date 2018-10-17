@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import argparse
-
 from wot.commands import *
 
 
@@ -10,7 +8,7 @@ def main():
     command_list = [convert_matrix, cells_by_gene_set, census, force_layout,
                     gene_set_scores, grn, local_enrichment, optimal_transport,
                     optimal_transport_validation, trajectory,
-                    trajectory_trends, transition_table, wot_server]
+                    trajectory_trends, transition_table]
     parser = argparse.ArgumentParser(description='Run a wot command')
     command_list_strings = list(map(lambda x: x.__name__[len('wot.commands.'):], command_list))
     parser.add_argument('command', help='The wot command', choices=command_list_strings)
