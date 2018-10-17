@@ -1,4 +1,5 @@
 ---
+---
 layout: documentation
 location: Documentation
 ---
@@ -166,7 +167,7 @@ You can either manually edit this type of file, or generate it from a gene set f
 using the [cells_by_gene_set](#cells_by_gene_set) tool.
 
 ```sh
-wot trajectory --tmap tmaps --cell_days days.txt \
+wot trajectory --tmap tmaps \
  --cell_set cell_sets.gmt --time 10 --out traj.txt
 ```
 
@@ -252,7 +253,7 @@ You can either manually edit this type of file, or generate it from a gene set f
 using the [cells_by_gene_set](#cells_by_gene_set) tool.
 
 ```sh
-wot trajectory_trends --tmap tmaps --cell_days days.txt \
+wot trajectory_trends --tmap tmaps \
  --cell_set cell_sets.gmt --matrix matrix.txt \
  --out trends --time 10
 ```
