@@ -4,7 +4,7 @@
 import argparse
 
 import wot.io
-import wot.ot
+import wot.tmap
 
 
 def main(argv):
@@ -26,7 +26,7 @@ def main(argv):
 
     trajectory_ds = tmap_model.compute_trajectories(populations)
     matrix = wot.io.read_dataset(args.matrix)
-    results = wot.ot.compute_trajectory_trends_from_trajectory(trajectory_ds, matrix)
+    results = wot.tmap.compute_trajectory_trends_from_trajectory(trajectory_ds, matrix)
     # output genes on columns, time on rows, one file per trajectory
 
     for j in range(len(results)):

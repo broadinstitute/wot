@@ -4,10 +4,10 @@
 import argparse
 import subprocess
 
-import h5py
 import numpy as np
 import pandas as pd
 import pkg_resources
+
 import wot.io
 
 

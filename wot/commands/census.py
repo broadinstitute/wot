@@ -3,8 +3,8 @@
 
 import argparse
 
-import numpy as np
 import pandas as pd
+
 import wot
 import wot.io
 
