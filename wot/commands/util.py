@@ -31,7 +31,7 @@ def add_ot_parameters_arguments(parser):
                              'python regular expression of cell ids to include')
     parser.add_argument('--cell_day_filter',
                         help='Comma separated list of days to include (e.g. 12,14,16)', type=str)
-    parser.add_argument('--scaling_iter', default=3000, help='Number of scaling iterations', type=int)
+    parser.add_argument('--scaling_iter', default=3000, help='Number of scaling iterations for OT solver', type=int)
     parser.add_argument('--inner_iter_max', type=int, default=50,
                         help='For OT solver')
     parser.add_argument('--epsilon', type=float, default=0.05,

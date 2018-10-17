@@ -12,4 +12,3 @@ from .trajectory import *
 from .trajectory_trends import *
 from .transition_table import *
 from .util import *
-from .wot_server import *
