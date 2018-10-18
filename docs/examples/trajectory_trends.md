@@ -18,11 +18,18 @@ wot optimal_transport --matrix matrix.txt \
  --cell_days days.txt --out tmaps --local_pca -1
 ```
 
-## Calculate the Trajecotory Trends
+## Calculate the Trajectories
+We can get the trajectories through
+[trajectory]({{site.baseurl}}/cli_documentation#trajectory).
+```sh
+wot trajectory --tmap . --cell_days days.txt --cell_set cell_sets.gmt 
+```
+
+## Calculate Trajectory Trends
 Now we can get the trajectory trends through
 [trajectory_trends]({{site.baseurl}}/cli_documentation#trajectory-trends).
 ```sh
-wot trajectory_trends --tmap . --cell_days days.txt --cell_set cell_sets.gmt --matrix matrix.txt
+wot trajectory_trends --trajectory trajectory.txt --cell_days days.txt --matrix matrix.txt
 ```
 
 ## Plot Trajectory Trends

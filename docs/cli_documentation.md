@@ -247,23 +247,19 @@ for more information.
 
 ### Trajectory trends ###
 
-The trajectory trends command computes the mean and variance of each gene
-in the ancestor distribution of each cell set.
+The trajectory trends command computes the mean and variance of each gene in the specified matrix for the given trajectories.
+Please use the trajectory tool to compute trajectories.
 
-You can select a **cell set** by specifying a [cell set file](#cellset_file).
-You can either manually edit this type of file, or generate it from a gene set file
-using the [cells_by_gene_set](#cells_by_gene_set) tool.
 
 ```sh
-wot trajectory_trends --tmap tmaps \
- --cell_set cell_sets.gmt --matrix matrix.txt \
- --out trends --time 10
+wot trajectory_trends --trajectory tmaps \
+ --matrix matrix.txt \
+ --out trends 
 ```
 
-This will create a file `trends_<cell set name>.txt` with the mean expression
-profile among ancestors and `trends_<cell set name>.variance.txt` with the
-variance for each feature at each timepoint, for all cell sets in the file
-specified with `--cell_set`.
+This will create a file `trends_<trajectory name>.txt` with the mean expression
+profile among ancestors/descendants and `trends_<trajectory name>.variance.txt` with the
+variance for each feature at each timepoint
 
 <table class="table table-hover" style="display: table">
   <thead class="thead-light">
@@ -274,20 +270,12 @@ specified with `--cell_set`.
   </thead>
   <tbody>
     <tr>
-      <td><b>--tmap</b></td>
-      <td>Prefix of the transport maps configuration file</td>
+      <td><b>--trajectory</b></td>
+      <td>The trajectory produced by the trajectory tool</td>
     </tr>
     <tr>
       <td><b>--matrix</b></td>
       <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
-    </tr>
-    <tr>
-      <td><b>--cell_set</b></td>
-      <td>Target cell sets. See <a href="#cellset_file">formats</a></td>
-    </tr>
-    <tr>
-      <td><b>--time</b></td>
-      <td>The target timepoint to consider if some cell sets span across multiple timepoints</td>
     </tr>
     <tr>
       <td>--out</td>

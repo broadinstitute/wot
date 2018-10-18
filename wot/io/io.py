@@ -608,18 +608,19 @@ def read_dataset(path, **kwargs):
         if tmp_path is not None:
             os.remove(tmp_path)
         return ds
-    else:
+    else:  # txt
         with open(path) as fp:
             row_ids = []
             header = fp.readline()
-
-            for s in ['\t', ' ', ',']:
-                test = header.split(s)
-                if len(test) > 1:
+            sep = None
+            for s in ['\t', ',', ' ']:
+                test_tokens = header.split(s)
+                if len(test_tokens) > 1:
                     sep = s
-                    column_ids = test
+                    column_ids = test_tokens
                     break
-
+            if sep is None:
+                sep = '\t'
             column_ids = column_ids[1:]
             column_ids[len(column_ids) - 1] = column_ids[
                 len(column_ids) - 1].rstrip()
