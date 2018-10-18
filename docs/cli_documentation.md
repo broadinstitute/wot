@@ -164,7 +164,8 @@ Ancestors and descendants in **wot** are computed through the `trajectory` tool.
 
 You can select a **cell set** by specifying a [cell set file](#cellset_file).
 You can either manually edit this type of file, or generate it from a gene set file
-using the [cells_by_gene_set](#cells_by_gene_set) tool.
+using the [cells_by_gene_set](#cells_by_gene_set) tool. Please note that the order of the cell ids in the output trajectory file
+may differ from that of the expression matrix used to generate transport maps.
 
 ```sh
 wot trajectory --tmap tmaps \
@@ -193,7 +194,8 @@ wot trajectory --tmap tmaps \
     </tr>
     <tr>
       <td>--out</td>
-      <td>Output filename<br/>default : wot_trajectory.txt</td>
+      <td>Output filename<br/>default : wot_trajectory.txt. Please note that the order of the cell ids in the output trajectory file
+		may differ from that of the expression matrix used to generate transport maps.</td>
     </tr>
   </tbody>
 </table>
