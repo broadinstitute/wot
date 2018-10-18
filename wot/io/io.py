@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import scipy.io
 import scipy.sparse
+
 import wot
 
 if os.getenv('wot_verbose', False) == False:

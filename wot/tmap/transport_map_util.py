@@ -65,6 +65,7 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
         The dataset has time on the rows and genes on the columns
     """
 
+    # align gene expression matrix with trajectory matrix
     ds_indices = trajectory_ds.row_meta.index.get_indexer_for(ds.row_meta.index)
     ds_indices = ds_indices[ds_indices != -1]
     if len(ds_indices) != trajectory_ds.x.shape[0]:
@@ -79,7 +80,7 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
 
     for day, group in trajectory_ds.row_meta.groupby('day'):
         timepoints.append(day)
-        indices = trajectory_ds.row_meta.index.get_indexer_for(group.index)
+        indices = trajectory_ds.row_meta.index.get_indexer_for(group.index)  # cell indices at day
         p = trajectory_ds.x[indices]
         values = ds.x[indices]
         if scipy.sparse.isspmatrix(values):
