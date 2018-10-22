@@ -9,7 +9,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 requirements = [
-    'numpy', 'pandas>=0.21', 'h5py', 'Cython', 'scanpy', 'scikit-learn', 'psutil', 'POT', 'scipy', 'matplotlib'
+    'numpy', 'pandas', 'joblib', 'h5py', 'Cython', 'scanpy', 'scikit-learn', 'scipy', 'matplotlib', 'POT'
 ]
 
 extras_require = {

@@ -11,18 +11,12 @@ Waddington-OT depends on [Python 3](https://www.python.org/downloads/).
 
 ### Dependencies ###
 
-You can install all dependencies for **wot** with [conda](https://conda.io/docs/) :
+You can install dependencies for **wot** with [conda](https://conda.io/docs/) :
 ```sh
-conda install cython h5py flask gunicorn numexpr numpy pandas scikit-learn scipy simplejson psutil
+conda install numpy pandas h5py cython scikit-learn scipy matplotlib
 conda install -c conda-forge pot
 ```
 
-Or with [pip][pip-install] :
-```sh
-pip install --user h5py docutils msgpack-python
-pip install --user cython
-pip install --user flask gunicorn numexpr numpy pandas scikit-learn scipy psutil pot
-```
 
 ### Install the **wot** package ###
 
@@ -39,14 +33,14 @@ pip install --user wot
 You can initialize an OT Model in python with :
 
 ```python
-ot_model = wot.initialize_ot_model('matrix.txt', 'days.txt')
+ot_model = wot.ot.initialize_ot_model('matrix.txt', 'days.txt')
 ```
 
 All Optimal Transport parameters can be customized when initializing the model.
 For instance, you could explicitely specify the defaults :
 
 ```python
-ot_model = wot.initialize_ot_model('matrix.txt', 'days.txt', tmap_prefix='tmaps',
+ot_model = wot.ot.initialize_ot_model('matrix.txt', 'days.txt', tmap_prefix='tmaps',
     epsilon=.05, lambda1=10, lambda2=50, batch_size=50, tolerance=1e-2)
 ```
 
@@ -61,7 +55,7 @@ ot_model.compute_all_transport_maps()
 Once the transport maps have been created, you can operate on the transport maps using the TransportMapModel interface :
 
 ```python
-tmap_model = wot.model.TransportMapModel.from_directory('.')
+tmap_model = wot.tmap.TransportMapModel.from_directory('.')
 ```
 
 

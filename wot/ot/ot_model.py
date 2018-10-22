@@ -2,7 +2,6 @@
 
 import itertools
 import os
-from multiprocessing import Process
 
 import numpy as np
 import pandas as pd
@@ -201,16 +200,8 @@ class OTModel:
             return
 
         if m > 1:
-            procs = []
-            for x in day_pairs:
-                p = Process(target=self.compute_transport_map, args=(*x,))
-                procs.append(p)
-
-            for i in range(len(procs) + m):
-                if i >= m:
-                    procs[i - m].join()
-                if i < len(procs):
-                    procs[i].start()
+            from joblib import Parallel, delayed
+            Parallel(n_jobs=m)(delayed(self.compute_transport_map)(*x) for x in day_pairs)
         else:
             for x in day_pairs:
                 self.compute_transport_map(*x)
