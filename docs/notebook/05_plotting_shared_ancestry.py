@@ -29,14 +29,14 @@ pyplot.figure(figsize=(5, 5))
 pyplot.axis('off')
 wot.graphics.plot_2d_dataset(pyplot, ds)
 
-probabilities = trajectories.x[:, trajectories.col_meta.index.get_indexer_for([cell_set_1, cell_set_2])]
+probabilities = trajectories.X[:, trajectories.var.index.get_indexer_for([cell_set_1, cell_set_2])]
 alphas = np.amax(probabilities, axis=1)
 t = np.log((probabilities.T[0] + 1e-9) / (probabilities.T[1] + 1e-9))
 t = np.clip(t / 8 + .5, 0, 1)
 alphas = alphas / max(alphas)
 colors = [wot.graphics.hexstring_of_rgba([t[i], 0, 1 - t[i], alphas[i]])
           for i in range(len(t))]
-ds.row_meta.loc[:, 'color'] = colors
+ds.obs.loc[:, 'color'] = colors
 
 wot.graphics.plot_2d_dataset(pyplot, ds)
 wot.graphics.legend_figure(pyplot,

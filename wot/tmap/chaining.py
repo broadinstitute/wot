@@ -14,7 +14,7 @@ def chain_transport_maps(ot_model, pairs_list):
 
     Returns
     -------
-    tmap : wot.Dataset
+    tmap : anndata.AnnData
         The final transport map
 
     Raises

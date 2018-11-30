@@ -3,6 +3,7 @@
 
 import argparse
 
+import anndata
 import pandas as pd
 
 import wot
@@ -26,9 +27,9 @@ def main(argv):
 
     timepoints, census = tmap_model.compute_ancestor_census(cell_sets_matrix, *populations.values())
 
-    row_meta = pd.DataFrame(index=timepoints)
+    obs = pd.DataFrame(index=timepoints)
     populations_keys = list(populations.keys())
     for i in range(len(census)):
         cs_name = populations_keys[i]
-        res = wot.Dataset(census[i], row_meta, cell_sets_matrix.col_meta)
+        res = anndata.AnnData(census[i], obs, cell_sets_matrix.var)
         wot.io.write_dataset(res, args.out + '_' + cs_name, output_format='txt')

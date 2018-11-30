@@ -1,12 +1,13 @@
-import argparse
 import io
 import os
 
+import anndata
 import numpy as np
 import pandas as pd
 import scipy
 import sklearn.decomposition
 import sklearn.metrics
+
 import wot.io
 import wot.ot
 
@@ -31,15 +32,15 @@ class OptimalTransportHelper:
         ds = wot.io.filter_ds_from_command_line(ds, args)
 
         if args.ncounts is not None:
-            for i in range(ds.x.shape[0]):
-                p = ds.x[i]
+            for i in range(ds.X.shape[0]):
+                p = ds.X[i]
                 if scipy.sparse.isspmatrix(p):
                     p = p.toarray()
                 p = p.astype('float64')
                 counts_p = p.sum()
                 if counts_p > args.ncounts:
                     p /= counts_p
-                    ds.x[i] = np.random.multinomial(args.ncounts, p, size=1)[0]
+                    ds.X[i] = np.random.multinomial(args.ncounts, p, size=1)[0]
 
         days_data_frame = wot.io.read_days_data_frame(args.cell_days)
         day_pairs = None
@@ -60,9 +61,9 @@ class OptimalTransportHelper:
         #     ext = wot.io.get_filename_and_extension(args.gene_set_scores)[1]
         #     if ext == 'loom' or ext == 'gct':
         #         gene_set_scores_ds = wot.io.read_dataset(args.gene_set_scores)
-        #         apoptosis = gene_set_scores_ds[:, np.where(gene_set_scores_ds.col_meta.columns == 'Apoptosis')[0]]
-        #         proliferation = gene_set_scores_ds[:, np.where(gene_set_scores_ds.col_meta.columns == 'Cell.cycle')[0]]
-        #         gene_set_scores_ids = gene_set_scores_ds.row_meta.index
+        #         apoptosis = gene_set_scores_ds[:, np.where(gene_set_scores_ds.var.columns == 'Apoptosis')[0]]
+        #         proliferation = gene_set_scores_ds[:, np.where(gene_set_scores_ds.var.columns == 'Cell.cycle')[0]]
+        #         gene_set_scores_ids = gene_set_scores_ds.obs.index
         #     else:
         #         gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0, engine='python', sep=None)
         #         apoptosis = gene_set_scores['Apoptosis'].values
@@ -77,17 +78,17 @@ class OptimalTransportHelper:
         if args.cell_growth_rates is not None:
             cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col='id', engine='python', sep=None)
         else:
-            cell_growth_rates = pd.DataFrame(index=ds.row_meta.index.values, data={'cell_growth_rate': 1})
+            cell_growth_rates = pd.DataFrame(index=ds.obs.index.values, data={'cell_growth_rate': 1})
             if args.verbose:
                 print('Using growth rate of 1')
-        ds.row_meta = ds.row_meta.join(cell_growth_rates).join(days_data_frame)
+        ds.obs = ds.obs.join(cell_growth_rates).join(days_data_frame)
         if day_pairs is None:
             unique_days = list(set(days_data_frame['day'].values))
             unique_days.sort()
             _unique_days = []
             for i in range(len(unique_days)):
                 if unique_days[i] >= 0:
-                    indices = np.where(ds.row_meta['day'] == unique_days[i])[0]
+                    indices = np.where(ds.obs['day'] == unique_days[i])[0]
                     if len(indices) > 0:
                         _unique_days.append(unique_days[i])
             unique_days = _unique_days
@@ -102,7 +103,7 @@ class OptimalTransportHelper:
             exit(1)
         if covariate_df is not None:
             self.covariate_df = covariate_df
-            ds.row_meta = ds.row_meta.join(covariate_df)
+            ds.obs = ds.obs.join(covariate_df)
             self.covariate_pairs = covariate_pairs + [[None, None]]
         else:
             self.covariate_df = None
@@ -132,12 +133,12 @@ class OptimalTransportHelper:
                     unique_days.add(t0_5)
             for day in unique_days:
                 index_list = []
-                day_query = ds.row_meta['day'] == day
+                day_query = ds.obs['day'] == day
                 for cv in unique_cvs:
                     if cv is None:
                         indices = np.where(day_query)[0]
                     else:
-                        indices = np.where(day_query & (ds.row_meta[covariate_df.columns[0]] == cv))[0]
+                        indices = np.where(day_query & (ds.obs[covariate_df.columns[0]] == cv))[0]
                     if len(indices) > args.ncells:
                         np.random.shuffle(indices)
                         indices = indices[0:args.ncells]
@@ -145,7 +146,7 @@ class OptimalTransportHelper:
                 day_to_indices[day] = np.concatenate(index_list)
 
         else:
-            days = ds.row_meta['day'].values
+            days = ds.obs['day'].values
             for i in range(len(days)):
                 val = days[i]
                 if val is not None:
@@ -183,15 +184,15 @@ class OptimalTransportHelper:
             if t1_indices is None:
                 print('No data for time ' + str(t1))
                 continue
-            p0_full = wot.Dataset(ds.x[t0_indices], ds.row_meta.iloc[t0_indices], ds.col_meta)
-            p1_full = wot.Dataset(ds.x[t1_indices], ds.row_meta.iloc[t1_indices], ds.col_meta)
+            p0_full = anndata.AnnData(ds.X[t0_indices], ds.obs.iloc[t0_indices], ds.var)
+            p1_full = anndata.AnnData(ds.X[t1_indices], ds.obs.iloc[t1_indices], ds.var)
             p0_5_full = None
 
             if self.t_interpolate is not None:
                 t0_5 = t0 + (t1 - t0) * self.t_interpolate
                 t0_5_indices = day_to_indices.get(t0_5)
                 if t0_5_indices is not None:
-                    p0_5_full = wot.Dataset(ds.x[t0_5_indices], ds.row_meta.iloc[t0_5_indices], ds.col_meta)
+                    p0_5_full = anndata.AnnData(ds.X[t0_5_indices], ds.obs.iloc[t0_5_indices], ds.var)
                 else:
                     print('Unable to find time ' + str(t0_5) + ' - skipping.')
                     continue
@@ -199,8 +200,8 @@ class OptimalTransportHelper:
             if args.local_pca is not None and args.local_pca > 0:
                 import scipy.sparse
                 matrices = list()
-                matrices.append(p0_full.x if not scipy.sparse.isspmatrix(p0_full.x) else p0_full.x.toarray())
-                matrices.append(p1_full.x if not scipy.sparse.isspmatrix(p1_full.x) else p1_full.x.toarray())
+                matrices.append(p0_full.X if not scipy.sparse.isspmatrix(p0_full.X) else p0_full.X.toarray())
+                matrices.append(p1_full.X if not scipy.sparse.isspmatrix(p1_full.X) else p1_full.X.toarray())
 
                 x = np.vstack(matrices)
                 mean_shift = x.mean(axis=0)
@@ -208,41 +209,41 @@ class OptimalTransportHelper:
                 pca = sklearn.decomposition.PCA(n_components=args.local_pca)
                 pca.fit(x.T)
                 x = pca.components_.T
-                p0_full = wot.Dataset(x[0:len(t0_indices)],
-                                      p0_full.row_meta,
-                                      pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
+                p0_full = anndata.AnnData(x[0:len(t0_indices)],
+                                          p0_full.obs,
+                                          pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
 
-                p1_full = wot.Dataset(x[len(t0_indices):len(t0_indices) + len(t1_indices)],
-                                      p1_full.row_meta,
-                                      pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
+                p1_full = anndata.AnnData(x[len(t0_indices):len(t0_indices) + len(t1_indices)],
+                                          p1_full.obs,
+                                          pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 if p0_5_full is not None:  # compute PCA only on local coordinates
                     U = np.vstack(matrices).T.dot(pca.components_.T).dot(np.diag(1 / pca.singular_values_))
-                    y = p0_5_full.x - mean_shift
-                    p0_5_full = wot.Dataset(np.diag(1 / pca.singular_values_).dot(U.T.dot(y.T)).T, p0_5_full.row_meta,
-                                            pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
+                    y = p0_5_full.X - mean_shift
+                    p0_5_full = anndata.AnnData(np.diag(1 / pca.singular_values_).dot(U.T.dot(y.T)).T, p0_5_full.obs,
+                                                pd.DataFrame(index=pd.RangeIndex(start=0, stop=args.local_pca, step=1)))
                 self.eigenvals = np.diag(pca.singular_values_)
                 print(self.eigenvals)
 
             delta_t = t1 - t0
             for covariate_pair in covariate_pairs:
                 cv0 = covariate_pair[0]
-                p0_expr = None if cv0 is None else np.where(p0_full.row_meta[covariate_df.columns[0]] == cv0)[0]
+                p0_expr = None if cv0 is None else np.where(p0_full.obs[covariate_df.columns[0]] == cv0)[0]
                 cv1 = covariate_pair[1]
-                p1_expr = None if cv1 is None else np.where(p1_full.row_meta[covariate_df.columns[0]] == cv1)[0]
+                p1_expr = None if cv1 is None else np.where(p1_full.obs[covariate_df.columns[0]] == cv1)[0]
 
                 if p0_expr is None:
-                    p0 = wot.Dataset(p0_full.x, p0_full.row_meta, p0_full.col_meta)
+                    p0 = anndata.AnnData(p0_full.X, p0_full.obs, p0_full.var)
                 else:
-                    p0 = wot.Dataset(p0_full.x[p0_expr], p0_full.row_meta.iloc[p0_expr], p0_full.col_meta)
+                    p0 = anndata.AnnData(p0_full.X[p0_expr], p0_full.obs.iloc[p0_expr], p0_full.var)
                 if p1_expr is None:
-                    p1 = wot.Dataset(p1_full.x, p1_full.row_meta, p1_full.col_meta)
+                    p1 = anndata.AnnData(p1_full.X, p1_full.obs, p1_full.var)
                 else:
-                    p1 = wot.Dataset(p1_full.x[p1_expr], p1_full.row_meta.iloc[p1_expr], p1_full.col_meta)
+                    p1 = anndata.AnnData(p1_full.X[p1_expr], p1_full.obs.iloc[p1_expr], p1_full.var)
 
                 if args.verbose:
-                    print('Computing cost matrix in ' + str(p0.x.shape[1]) + ' dimensions...', end='')
+                    print('Computing cost matrix in ' + str(p0.X.shape[1]) + ' dimensions...', end='')
 
-                cost_matrix = self.compute_cost_matrix(p0.x, p1.x)
+                cost_matrix = self.compute_cost_matrix(p0.X, p1.X)
                 if args.verbose:
                     print('done')
 
@@ -257,7 +258,7 @@ class OptimalTransportHelper:
                             'Computing transport map from ' + str(
                                 t0) + ' to ' + str(
                                 t1) + '...', end='')
-                growth_rate = p0.row_meta['cell_growth_rate'].values
+                growth_rate = p0.obs['cell_growth_rate'].values
                 solver = 'unbalanced'
                 result = wot.ot.optimal_transport(cost_matrix=cost_matrix,
                                                   growth_rate=growth_rate,
@@ -275,7 +276,7 @@ class OptimalTransportHelper:
                 if args.verbose:
                     print('done')
 
-                callback({'t0': t0, 't1': t1, 'result': result, 'df0': p0.row_meta, 'df1': p1.row_meta,
+                callback({'t0': t0, 't1': t1, 'result': result, 'df0': p0.obs, 'df1': p1.obs,
                           'P0': p0, 'P1': p1, 'P0.5': p0_5_full, 'g': growth_rate ** delta_t,
                           'P0_suffix': '_cv-' + str(cv0) if cv0 is not None else '',
                           'P1_suffix': '_cv-' + str(cv1) if cv1 is not None else '',

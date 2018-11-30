@@ -18,7 +18,7 @@ ds = wot.io.read_dataset(matrix_file)
 wot.io.add_row_metadata_to_dataset(ds, days_path=days_file)
 
 # you can use any of the columns here, or metadata information :
-cell_colors = np.asarray(ds.row_meta['day'])
+cell_colors = np.asarray(ds.obs['day'])
 cell_colors = cell_colors / max(cell_colors)
 cell_colors = [wot.graphics.color_mix(color1, color2, d)
                for d in cell_colors]

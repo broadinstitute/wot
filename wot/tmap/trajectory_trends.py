@@ -1,5 +1,7 @@
+import anndata
 import numpy as np
 import scipy
+
 import wot
 
 
@@ -9,7 +11,7 @@ class TrajectoryTrends:
     def __weighted_average(weights, ds, value_transform=None):
         if weights is not None:
             weights = weights / np.sum(weights)
-        values = ds.x
+        values = ds.X
         if value_transform is not None:
             values = value_transform(values)
         if scipy.sparse.isspmatrix(values):
@@ -51,10 +53,10 @@ class TrajectoryTrends:
                     times.append(trajectory['t'])
                     ncells.append(len(cell_ids))
                     # align dataset with cell_ids
-                    ds_order = unaligned_ds.row_meta.index.get_indexer_for(cell_ids)
+                    ds_order = unaligned_ds.obs.index.get_indexer_for(cell_ids)
                     ds_order = ds_order[ds_order != -1]
-                    aligned_dataset = wot.Dataset(unaligned_ds.x[ds_order], unaligned_ds.row_meta.iloc[ds_order],
-                                                  unaligned_ds.col_meta)
+                    aligned_dataset = anndata.AnnData(unaligned_ds.X[ds_order], unaligned_ds.obs.iloc[ds_order],
+                                                      unaligned_ds.var)
                     mean_and_variance = TrajectoryTrends.__weighted_average(weights=p, ds=aligned_dataset,
                                                                             value_transform=value_transform)
                     means.append(mean_and_variance['mean'])
@@ -64,6 +66,6 @@ class TrajectoryTrends:
                 variance = np.array(variances)
                 trends.append(
                     {'mean': mean, 'variance': variance, 'times': times, 'ncells': ncells, 'cell_set': cell_set_name,
-                     'features': unaligned_ds.col_meta.index.values})
+                     'features': unaligned_ds.var.index.values})
             dataset_name_to_trends[dataset_names[ds_index]] = trends
         return dataset_name_to_trends

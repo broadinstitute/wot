@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import anndata
 import numpy as np
 import pandas as pd
 import scipy
@@ -18,8 +19,8 @@ def trajectory_similarities(trajectory_ds):
 
     Parameters
     ----------
-    trajectory_ds : wot.Dataset
-       Dataset returned by wot.tmap.TransportModel.compute_trajectories
+    trajectory_ds : anndata.AnnData
+       anndata.AnnData returned by wot.tmap.TransportModel.compute_trajectories
 
     Returns
     -------
@@ -30,19 +31,19 @@ def trajectory_similarities(trajectory_ds):
     # group by time
 
     distances = {}
-    split_by_day_dict = trajectory_ds.split_by('day')
+    split_by_day_dict = wot.split_anndata(trajectory_ds, 'day')
     split_by_day_keys = list(split_by_day_dict.keys())
     # for each pair of trajectories
-    for i in range(1, trajectory_ds.x.shape[1]):
+    for i in range(1, trajectory_ds.X.shape[1]):
         for j in range(i):
             similarities = np.zeros(len(split_by_day_dict))
             times = np.zeros(len(split_by_day_dict))
             for k in range(len(split_by_day_keys)):
                 split_by_day_ds = split_by_day_dict[split_by_day_keys[k]]
-                similarities[k] = trajectory_similarity_score(split_by_day_ds.x[:, i], split_by_day_ds.x[:, j])
-                times[k] = split_by_day_ds.row_meta.day.values[0]
+                similarities[k] = trajectory_similarity_score(split_by_day_ds.X[:, i], split_by_day_ds.X[:, j])
+                times[k] = split_by_day_ds.obs.day.values[0]
 
-            distances[(trajectory_ds.col_meta.index.values[i], trajectory_ds.col_meta.index.values[j])] = {
+            distances[(trajectory_ds.var.index.values[i], trajectory_ds.var.index.values[j])] = {
                 'similarity': similarities, 'time': times}
     return distances
 
@@ -53,9 +54,9 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
 
     Parameters
     ----------
-    trajectory_ds : wot.Dataset
-       Dataset returned by wot.tmap.TransportModel.compute_trajectories
-    ds : wot.Dataset
+    trajectory_ds : anndata.AnnData
+       anndata.AnnData returned by wot.tmap.TransportModel.compute_trajectories
+    ds : anndata.AnnData
         Dataset used to compute mean and variance
 
     Returns
@@ -66,26 +67,26 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
     """
 
     # align gene expression matrix with trajectory matrix
-    ds_indices = trajectory_ds.row_meta.index.get_indexer_for(ds.row_meta.index)
+    ds_indices = trajectory_ds.obs.index.get_indexer_for(ds.obs.index)
     ds_indices = ds_indices[ds_indices != -1]
-    if len(ds_indices) != trajectory_ds.x.shape[0]:
+    if len(ds_indices) != trajectory_ds.X.shape[0]:
         raise ValueError('Dataset does not match transport map')
-    ds = wot.Dataset(ds.x[ds_indices], ds.row_meta.iloc[ds_indices], ds.col_meta)
+    ds = anndata.AnnData(ds.X[ds_indices], ds.obs.iloc[ds_indices], ds.var)
     timepoints = []
     mean_list = []
     variance_list = []
-    for j in range(trajectory_ds.x.shape[1]):
+    for j in range(trajectory_ds.X.shape[1]):
         mean_list.append(None)
         variance_list.append(None)
 
-    for day, group in trajectory_ds.row_meta.groupby('day'):
+    for day, group in trajectory_ds.obs.groupby('day'):
         timepoints.append(day)
-        indices = trajectory_ds.row_meta.index.get_indexer_for(group.index)  # cell indices at day
-        p = trajectory_ds.x[indices]
-        values = ds.x[indices]
+        indices = trajectory_ds.obs.index.get_indexer_for(group.index)  # cell indices at day
+        p = trajectory_ds.X[indices]
+        values = ds.X[indices]
         if scipy.sparse.isspmatrix(values):
             values = values.toarray()
-        for j in range(trajectory_ds.x.shape[1]):  # each trajectory
+        for j in range(trajectory_ds.X.shape[1]):  # each trajectory
             mean = np.average(values, weights=p[:, j], axis=0)
             var = np.average((values - mean) ** 2, weights=p[:, j], axis=0)
 
@@ -95,11 +96,11 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
             else:
                 mean_list[j] = np.vstack((mean_list[j], mean.T))
                 variance_list[j] = np.vstack((variance_list[j], var.T))
-    row_meta = pd.DataFrame(index=timepoints)
+    obs = pd.DataFrame(index=timepoints)
     results = []
     for j in range(len(variance_list)):
-        mean_ds = wot.Dataset(mean_list[j], row_meta, ds.col_meta)
-        variance_ds = wot.Dataset(variance_list[j], row_meta, ds.col_meta)
+        mean_ds = anndata.AnnData(mean_list[j], obs, ds.var)
+        variance_ds = anndata.AnnData(variance_list[j], obs, ds.var)
         results.append((mean_ds, variance_ds))
 
     return results

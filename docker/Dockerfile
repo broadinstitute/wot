@@ -4,10 +4,10 @@ cython \
 h5py \
 numpy \
 pandas \
-scanpy \
+psutil \
 scikit-learn \
 scipy \
 && conda install -q -y -c conda-forge pot \
-&& conda clean --all -y
-RUN pip install wot
+&& conda clean --all -y && \
+pip install scanpy wot
 

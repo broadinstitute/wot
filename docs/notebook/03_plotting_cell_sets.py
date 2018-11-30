@@ -27,7 +27,7 @@ wot.io.add_row_metadata_to_dataset(ds, days_path=days_file)
 
 # Compute the cell sets for the given quantile
 
-gene_sets = wot.io.read_sets(gene_sets_file, ds.col_meta.index.values)
+gene_sets = wot.io.read_sets(gene_sets_file, ds.var.index.values)
 cell_sets = wot.get_cells_in_gene_sets(gene_sets, ds,
                                        quantile=quantile_for_cell_sets)
 wot.io.write_gene_sets(cell_sets, cell_sets_file, "gmt")

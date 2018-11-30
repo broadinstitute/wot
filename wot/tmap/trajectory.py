@@ -137,7 +137,7 @@ class Trajectory:
         pvec_array_at_t = []
         for cell_set_index in range(len(cell_sets)):
             cell_ids_in_set = cell_sets[cell_set_index]['set']
-            membership = tmap_at_t.row_meta.index.isin(cell_ids_in_set) if use_t1 else tmap_at_t.col_meta.index.isin(
+            membership = tmap_at_t.obs.index.isin(cell_ids_in_set) if use_t1 else tmap_at_t.var.index.isin(
                 cell_ids_in_set)
             membership = membership.astype(np.float)
             membership /= membership.sum()
@@ -148,7 +148,7 @@ class Trajectory:
                  'p': membership,
                  'entropy': entropy,
                  'normalized_entropy': entropy / len(membership), 't': time,
-                 'cell_ids': tmap_at_t.row_meta.index.values if use_t1 else tmap_at_t.col_meta.index.values
+                 'cell_ids': tmap_at_t.obs.index.values if use_t1 else tmap_at_t.var.index.values
                  })
 
         trajectory_ranges = []
@@ -181,9 +181,9 @@ class Trajectory:
                 for cell_set_index in range(len(cell_sets)):
                     p = pvec_array[cell_set_index]
                     if is_back:
-                        p = tmap_ds.x.dot(p)
+                        p = tmap_ds.X.dot(p)
                     else:
-                        p = p.dot(tmap_ds.x)
+                        p = p.dot(tmap_ds.X)
                     p /= p.sum()
                     entropy = np.exp(scipy.stats.entropy(p))
                     results.append(
@@ -192,7 +192,7 @@ class Trajectory:
                          'entropy': entropy,
                          'normalized_entropy': entropy / len(p),
                          't': tmap_dict['t1'] if is_back else tmap_dict['t2'],
-                         'cell_ids': tmap_ds.row_meta.index.values if is_back else tmap_ds.col_meta.index.values})
+                         'cell_ids': tmap_ds.obs.index.values if is_back else tmap_ds.var.index.values})
                     # n_choose = int(np.ceil(entropy))
                     # n_choose = min(ncells, n_choose)
                     # n_choose = ncells

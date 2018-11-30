@@ -83,8 +83,8 @@ ds = wot.merge_datasets(*dataset_list)
 
 wot.io.write_gene_sets(gene_sets, gene_sets_file, "gmt")
 wot.io.write_dataset(ds, matrix_file)
-wot.io.write_dataset_metadata(ds.row_meta, days_file, 'day')
-wot.io.write_dataset_metadata(ds.row_meta, covariate_file, 'covariate')
+wot.io.write_dataset_metadata(ds.obs, days_file, 'day')
+wot.io.write_dataset_metadata(ds.obs, covariate_file, 'covariate')
 ```
 
 
@@ -126,7 +126,7 @@ color2 = [ .08, .59, .34 ] # final color
 wot.io.incorporate_days_information_in_dataset(ds, 'days.txt')
 
 # you can use any of the columns here, or metadata information :
-cell_colors = numpy.asarray(ds.row_meta['day'])
+cell_colors = numpy.asarray(ds.obs['day'])
 cell_colors = cell_colors / max(cell_colors)
 cell_colors = [ wot.graphics.color_mix(color1, color2, d)
         for d in cell_colors ]

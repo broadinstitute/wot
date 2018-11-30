@@ -16,8 +16,8 @@ def compute_force_layout(ds, n_neighbors=100, n_comps=100, neighbors_diff=20, n_
     import anndata
     import scanpy.api as sc
 
-    if type(ds) == wot.Dataset:
-        adata = anndata.AnnData(ds.x, ds.row_meta, ds.col_meta)
+    if type(ds) == anndata.AnnData:
+        adata = anndata.AnnData(ds.X, ds.obs, ds.var)
     else:
         adata = ds
     if n_neighbors > 0:
@@ -54,7 +54,7 @@ def run_gephi(input_graph_file, output_coord_file, n_steps):
     import psutil
     memory = int(0.5 * psutil.virtual_memory()[0] * 1e-9)
     classpath = os.path.dirname(
-        pkg_resources.resource_filename('wot', 'commands/resources/graph_layout/GraphLayout.class')) + ':' + \
+        pkg_resources.resource_filename('wot', 'commands/resources/graph_layout/dist/graph-layout.jar')) + ':' + \
                 pkg_resources.resource_filename('wot', 'commands/resources/graph_layout/gephi-toolkit-0.9.2-all.jar')
     subprocess.check_call(['java', '-Djava.awt.headless=true', '-Xmx{memory}g'.format(memory=memory), '-cp', classpath, \
                            'GraphLayout', '--input', input_graph_file, '--output', output_coord_file, '--layout',
@@ -68,12 +68,11 @@ def main(argv):
     parser.add_argument('--neighbors', help='Number of nearest neighbors', type=int, default=100)
     parser.add_argument('--neighbors_diff', help='Number of nearest neighbors to use in diffusion component space',
                         type=int, default=20)
-
     parser.add_argument('--graph',
                         help='Precomputed graph to use instead of matrix. See https://gephi.org/users/supported-graph-formats/')
-
     parser.add_argument('--n_steps', help='Number of force layout iterations', type=int, default=1000)
     parser.add_argument('--out', help='Output file name')
+
     args = parser.parse_args(argv)
     if args.out is None:
         args.out = 'wot'

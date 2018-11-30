@@ -4,6 +4,7 @@
 import argparse
 import subprocess
 
+import anndata
 import numpy as np
 import pandas as pd
 import pkg_resources
@@ -12,15 +13,15 @@ import wot.io
 
 
 def get_scores(ds1, ds2, ds1_time_index, ds2_time_index, score_function):
-    scores = np.zeros(shape=ds1.x.shape[1])
-    for feature_idx in range(ds1.x.shape[1]):  # each feature
-        m1 = ds1.x[ds1_time_index, feature_idx]
-        m2 = ds2.x[ds2_time_index, feature_idx]
+    scores = np.zeros(shape=ds1.X.shape[1])
+    for feature_idx in range(ds1.X.shape[1]):  # each feature
+        m1 = ds1.X[ds1_time_index, feature_idx]
+        m2 = ds2.X[ds2_time_index, feature_idx]
         v1 = ds1.variance[ds1_time_index, feature_idx]
         v2 = ds2.variance[ds2_time_index, feature_idx]
 
-        n1 = ds1.row_meta.iloc[ds1_time_index]
-        n2 = ds2.row_meta.iloc[ds2_time_index]
+        n1 = ds1.obs.iloc[ds1_time_index]
+        n2 = ds2.obs.iloc[ds2_time_index]
         scores[feature_idx] = score_function(m1, m2, v1, v2, n1, n1)
     return scores
 
@@ -46,16 +47,16 @@ def main(argv):
     args = parser.parse_args(argv)
     # dataset has time on rows, genes on columns
     ds1 = wot.io.read_dataset(args.matrix1)
-    ds1.variance = wot.io.read_dataset(args.variance1).x
+    ds1.variance = wot.io.read_dataset(args.variance1).X
     ds2 = ds1
     if args.matrix2 is not None:
         ds2 = wot.io.read_dataset(args.matrix2)
-        ds2.variance = wot.io.read_dataset(args.variance2).x
-        ds_indices = ds1.col_meta.index.get_indexer_for(ds2.col_meta.index)
+        ds2.variance = wot.io.read_dataset(args.variance2).X
+        ds_indices = ds1.var.index.get_indexer_for(ds2.var.index)
 
         if (ds_indices[ds_indices == -1]).sum() > 0:
             raise ValueError('Unable to align datasets')
-        ds2 = wot.Dataset(ds2.x[:, ds_indices], row_meta=ds2.row_meta, col_meta=ds2.col_meta.iloc[ds_indices])
+        ds2 = anndata.AnnData(ds2.X[:, ds_indices], obs=ds2.obs, var=ds2.var.iloc[ds_indices])
         ds2.variance = ds2.variance[:, ds_indices]
 
     def s2n(m1, m2, v1, v2, *varargs):
@@ -77,27 +78,27 @@ def main(argv):
     if args.comparisons is not None:
         comparisons = pd.read_table(args.comparisons, header=None, index_col=False, engine='python', sep=None)
         for comparison_idx in range(comparisons.shape[0]):
-            i = np.where(ds1.row_meta.index.values == comparisons.iloc[comparison_idx, 0])[0][0]
-            j = np.where(ds2.row_meta.index.values == comparisons.iloc[comparison_idx, 1])[0][0]
-            name = str(ds1.row_meta.index.values[i]) + '_' + str(ds2.row_meta.index.values[j])
+            i = np.where(ds1.obs.index.values == comparisons.iloc[comparison_idx, 0])[0][0]
+            j = np.where(ds2.obs.index.values == comparisons.iloc[comparison_idx, 1])[0][0]
+            name = str(ds1.obs.index.values[i]) + '_' + str(ds2.obs.index.values[j])
             scores = get_scores(ds1, ds2, i, j, score_function)
             names.append(name)
-            pd.DataFrame(index=ds1.col_meta.index.str.upper().values, data={'scores': scores}).to_csv(
+            pd.DataFrame(index=ds1.var.index.str.upper().values, data={'scores': scores}).to_csv(
                 name + '.rnk', sep='\t', header=False)
     else:
         if ds2 is not None:
-            for i in range(ds1.x.shape[0]):  # each time
+            for i in range(ds1.X.shape[0]):  # each time
                 scores = get_scores(ds1, ds2, i, i, score_function)
-                name = str(ds1.row_meta.index.values[i])
+                name = str(ds1.obs.index.values[i])
                 names.append(name)
-                pd.DataFrame(index=ds1.col_meta.index.str.upper().values, data={'scores': scores}).to_csv(
+                pd.DataFrame(index=ds1.var.index.str.upper().values, data={'scores': scores}).to_csv(
                     name + '.rnk', sep='\t', header=False)
         else:
-            for i in range(1, ds1.x.shape[0]):
+            for i in range(1, ds1.X.shape[0]):
                 scores = get_scores(ds1, ds1, i - 1, i, score_function)
-                name = str(ds1.row_meta.index.values[i - 1]) + '_' + str(ds1.row_meta.index.values[i])
+                name = str(ds1.obs.index.values[i - 1]) + '_' + str(ds1.obs.index.values[i])
                 names.append(name)
-                pd.DataFrame(index=ds1.col_meta.index.str.upper().values, data={'scores': scores}).to_csv(
+                pd.DataFrame(index=ds1.var.index.str.upper().values, data={'scores': scores}).to_csv(
                     name + '.rnk', sep='\t',
                     header=False)
 

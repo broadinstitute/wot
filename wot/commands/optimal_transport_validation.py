@@ -3,15 +3,17 @@
 
 import argparse
 import os
-from itertools import product
 
+import anndata
 import numpy as np
 import pandas as pd
 import scipy.sparse
+from itertools import product
 
 import wot
 import wot.io
 import wot.ot
+import wot.graphics
 
 
 def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpolated=False, compute_full_distances=False,
@@ -38,7 +40,6 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
     day_pairs = {}
     day_pairs_triplets = []
     tol = 0.01
-
     for i in range(len(times)):
         t0 = times[i]
         t05_value = t0 + interp_pattern[0]
@@ -53,11 +54,13 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
             day_pairs_triplets.append((t0, t05, t1))
 
     ot_model.day_pairs = day_pairs
-    if 'covariate' not in ot_model.matrix.row_meta.columns:
+    if 'covariate' not in ot_model.matrix.obs.columns:
         print('Warning-no covariate specified.')
         wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
 
     ot_model.compute_all_transport_maps(with_covariates=True)
+    if compute_full_distances:
+        ot_model.compute_all_transport_maps()
     # Now validate
     summary = []
     summary_columns = ['interval_start', 'interval_mid', 'interval_end', 't0', 't1', 'cv0', 'cv1', 'pair0', 'pair1',
@@ -68,55 +71,60 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
     for triplet in day_pairs_triplets:
         t0, t05, t1 = triplet
         interp_frac = (t05 - t0) / (t1 - t0)
-        p0_ds = ot_model.matrix.where(day=t0)
-        p05_ds = ot_model.matrix.where(day=t05)
-        p1_ds = ot_model.matrix.where(day=t1)
+
+        p0_ds = ot_model.matrix[ot_model.matrix.obs['day'] == float(t0), :]
+        p05_ds = ot_model.matrix[ot_model.matrix.obs['day'] == float(t05), :]
+        p1_ds = ot_model.matrix[ot_model.matrix.obs['day'] == float(t1), :]
 
         if local_pca > 0:
             matrices = list()
-            matrices.append(p0_ds.x if not scipy.sparse.isspmatrix(p0_ds.x) else p0_ds.x.toarray())
-            matrices.append(p1_ds.x if not scipy.sparse.isspmatrix(p1_ds.x) else p1_ds.x.toarray())
-            p0_ds.x, p1_ds.x, pca, mean_shift = wot.ot.compute_pca(p0_ds.x, p1_ds.x, local_pca)
+            matrices.append(p0_ds.X if not scipy.sparse.isspmatrix(p0_ds.X) else p0_ds.X.toarray())
+            matrices.append(p1_ds.X if not scipy.sparse.isspmatrix(p1_ds.X) else p1_ds.X.toarray())
+            p0_pca, p1_pca, pca, mean_shift = wot.ot.compute_pca(p0_ds.X, p1_ds.X, local_pca)
+            p0_ds = anndata.AnnData(p0_pca, obs=p0_ds.obs,
+                                    var=pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1)))
+            p1_ds = anndata.AnnData(p1_pca, obs=p1_ds.obs,
+                                    var=pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1)))
+
             eigenvals = np.diag(pca.singular_values_)
             U = np.vstack(matrices).T.dot(pca.components_.T).dot(np.diag(1 / pca.singular_values_))
-            y = p05_ds.x - mean_shift
-            p05_ds.x = np.diag(1 / pca.singular_values_).dot(U.T.dot(y.T)).T
-            p0_ds.col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1))
-            p1_ds.col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1))
-            p05_ds.col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1))
+            y = p05_ds.X - mean_shift
+
+            p05_ds = anndata.AnnData(np.diag(1 / pca.singular_values_).dot(U.T.dot(y.T)).T, obs=p05_ds.obs,
+                                     var=pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1)))
 
         if compute_full_distances:
             tmap = tmap_model.get_transport_map(t0, t1)
-            i05 = wot.ot.interpolate_with_ot(p0_ds.x, p1_ds.x, tmap.x, interp_frac, interp_size)
-            r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_ds.x, p1_ds.x, interp_frac, interp_size,
-                                                                      p0_ds.row_meta['cell_growth_rate'].values ** (
+            i05 = wot.ot.interpolate_with_ot(p0_ds.X, p1_ds.X, tmap.X, interp_frac, interp_size)
+            r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_ds.X, p1_ds.X, interp_frac, interp_size,
+                                                                      p0_ds.obs['cell_growth_rate'].values ** (
                                                                           interp_frac))
-            r05_no_growth = wot.ot.interpolate_randomly(p0_ds.x, p1_ds.x, interp_frac, interp_size)
+            r05_no_growth = wot.ot.interpolate_randomly(p0_ds.X, p1_ds.X, interp_frac, interp_size)
 
             def update_full_summary(pop, t, name):
-                dist = wot.ot.earth_mover_distance(pop, p05_ds.x, eigenvals if local_pca > 0 else None)
+                dist = wot.ot.earth_mover_distance(pop, p05_ds.X, eigenvals if local_pca > 0 else None)
                 summary.append([t0, t05, t1, t, t05, 'full', 'full', name, 'P', dist])
 
             update_full_summary(i05, t05, 'I')
             update_full_summary(r05_with_growth, t05, 'Rg')
             update_full_summary(r05_no_growth, t05, 'R')
-            update_full_summary(p0_ds.x, t0, 'F')
-            update_full_summary(p1_ds.x, t1, 'L')
+            update_full_summary(p0_ds.X, t0, 'F')
+            update_full_summary(p1_ds.X, t1, 'L')
 
-        p0 = p0_ds.split_by('covariate')
-        p05 = p05_ds.split_by('covariate')
-        p1 = p1_ds.split_by('covariate')
+        p0 = wot.split_anndata(p0_ds, 'covariate')
+        p05 = wot.split_anndata(p05_ds, 'covariate')
+        p1 = wot.split_anndata(p1_ds, 'covariate')
         for cv0, cv1 in product(p0.keys(), p1.keys()):
             tmap = tmap_model.get_transport_map(t0, t1, covariate=(cv0, cv1))
             # interp_size = (len(p0[cv0]) + len(p1[cv1])) / 2
-            # pca, mean = wot.ot.get_pca(local_pca, p0[cv0].x, p1[cv1].x)
-            # p0_x = wot.ot.pca_transform(pca, mean, p0[cv0].x)
-            # p1_x = wot.ot.pca_transform(pca, mean, p1[cv1].x)
-            p0_x = p0[cv0].x
-            p1_x = p1[cv1].x
-            i05 = wot.ot.interpolate_with_ot(p0_x, p1_x, tmap.x, interp_frac, interp_size)
+            # pca, mean = wot.ot.get_pca(local_pca, p0[cv0].X, p1[cv1].X)
+            # p0_x = wot.ot.pca_transform(pca, mean, p0[cv0].X)
+            # p1_x = wot.ot.pca_transform(pca, mean, p1[cv1].X)
+            p0_x = p0[cv0].X
+            p1_x = p1[cv1].X
+            i05 = wot.ot.interpolate_with_ot(p0_x, p1_x, tmap.X, interp_frac, interp_size)
             r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_x, p1_x, interp_frac, interp_size,
-                                                                      p0[cv0].row_meta['cell_growth_rate'].values ** (
+                                                                      p0[cv0].obs['cell_growth_rate'].values ** (
                                                                           interp_frac))
             r05_no_growth = wot.ot.interpolate_randomly(p0_x, p1_x, interp_frac, interp_size)
 
@@ -129,8 +137,8 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
                 #                      prefix + '_random.txt')
 
             for cv05 in p05.keys():
-                # p05_x = wot.ot.pca_transform(pca, mean, p05[cv05].x)
-                p05_x = p05[cv05].x
+                # p05_x = wot.ot.pca_transform(pca, mean, p05[cv05].X)
+                p05_x = p05[cv05].X
 
                 def update_summary(pop, t, name):
                     name_05 = 'P_cv{}'.format(cv05)
@@ -141,8 +149,8 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
                     update_summary(p0_x, t0, 'F_cv{}'.format(cv0))
                     update_summary(p1_x, t1, 'L_cv{}'.format(cv1))
                 if cv0 == cv1 and cv0 < cv05:
-                    # p05_cv0_x = wot.ot.pca_transform(pca, mean, p05[cv0].x)
-                    update_summary(p05[cv0].x, t05, 'P_cv{}'.format(cv0))
+                    # p05_cv0_x = wot.ot.pca_transform(pca, mean, p05[cv0].X)
+                    update_summary(p05[cv0].X, t05, 'P_cv{}'.format(cv0))
 
                 update_summary(i05, t05, 'I_cv{}_cv{}'.format(cv0, cv1))
                 update_summary(r05_with_growth, t05, 'Rg_cv{}_cv{}'.format(cv0, cv1))

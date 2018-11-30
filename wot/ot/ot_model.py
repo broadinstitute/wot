@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import itertools
 import os
 
+import anndata
+import itertools
 import numpy as np
 import pandas as pd
 import scipy
@@ -18,7 +19,7 @@ class OTModel:
 
     Parameters
     ----------
-    matrix : wot.Dataset
+    matrix : anndata.AnnData
         The gene expression matrix for this OTModel. Matrix must have the row meta data field 'day'.
     transport_maps_directory : str
         Path to the transport map directory, where transport maps are written.
@@ -48,7 +49,7 @@ class OTModel:
         ncounts = kwargs.pop('ncounts', None)
         ncells = kwargs.pop('ncells', None)
         self.force = kwargs.pop('force', False)
-        self.output_file_format = kwargs.pop('output_file_format', 'loom')
+        self.output_file_format = kwargs.pop('output_file_format', 'h5ad')
         if gene_filter is not None:
             if os.path.isfile(gene_filter):
                 gene_ids = pd.read_table(gene_filter, index_col=0, header=None) \
@@ -56,10 +57,10 @@ class OTModel:
             else:
                 import re
                 expr = re.compile(gene_filter)
-                gene_ids = [e for e in self.matrix.col_meta.index.values if expr.match(e)]
-            col_indices = self.matrix.col_meta.index.isin(gene_ids)
-            self.matrix = wot.Dataset(self.matrix.x[:, col_indices],
-                                      self.matrix.row_meta, self.matrix.col_meta[col_indices].copy(False))
+                gene_ids = [e for e in self.matrix.var.index.values if expr.match(e)]
+            col_indices = self.matrix.var.index.isin(gene_ids)
+            self.matrix = anndata.AnnData(self.matrix.X[:, col_indices],
+                                          self.matrix.obs, self.matrix.var[col_indices].copy(False))
             wot.io.verbose('Successfuly applied gene_filter: "{}"'.format(gene_filter))
         if cell_filter is not None:
             if os.path.isfile(cell_filter):
@@ -68,49 +69,49 @@ class OTModel:
             else:
                 import re
                 expr = re.compile(cell_filter)
-                cell_ids = [e for e in self.matrix.row_meta.index.values if expr.match(e)]
-            row_indices = self.matrix.row_meta.index.isin(cell_ids)
-            self.matrix = wot.Dataset(self.matrix.x[row_indices, :],
-                                      self.matrix.row_meta[row_indices].copy(False), self.matrix.col_meta)
+                cell_ids = [e for e in self.matrix.obs.index.values if expr.match(e)]
+            row_indices = self.matrix.obs.index.isin(cell_ids)
+            self.matrix = anndata.AnnData(self.matrix.X[row_indices, :],
+                                          self.matrix.obs[row_indices].copy(False), self.matrix.var)
 
             wot.io.verbose('Successfuly applied cell_filter: "{}"'.format(cell_filter))
         if day_filter is not None:
             days = day_filter.split(',')
-            row_indices = self.matrix.row_meta['day'].isin(days)
-            self.matrix = wot.Dataset(self.matrix.x[row_indices, :],
-                                      self.matrix.row_meta[row_indices].copy(False), self.matrix.col_meta)
+            row_indices = self.matrix.obs['day'].isin(days)
+            self.matrix = anndata.AnnData(self.matrix.X[row_indices, :],
+                                          self.matrix.obs[row_indices].copy(False), self.matrix.var)
 
             wot.io.verbose('Successfuly applied day_filter: "{}"'.format(day_filter))
-        self.timepoints = sorted(set(self.matrix.row_meta['day']))
-        cvs = sorted(set(self.matrix.row_meta['covariate'])) if 'covariate' in self.matrix.row_meta else [None]
+        self.timepoints = sorted(set(self.matrix.obs['day']))
+        cvs = sorted(set(self.matrix.obs['covariate'])) if 'covariate' in self.matrix.obs else [None]
         if ncells is not None:
             index_list = []
             for day in self.timepoints:
-                day_query = self.matrix.row_meta['day'] == day
+                day_query = self.matrix.obs['day'] == day
                 for cv in cvs:
                     if cv is None:
                         indices = np.where(day_query)[0]
                     else:
-                        indices = np.where(day_query & (self.matrix.row_meta['covariate'] == cv))[0]
+                        indices = np.where(day_query & (self.matrix.obs['covariate'] == cv))[0]
                     if len(indices) > ncells:
                         np.random.shuffle(indices)
                         indices = indices[0:ncells]
                     index_list.append(indices)
             row_indices = np.concatenate(index_list)
-            self.matrix = wot.Dataset(self.matrix.x[row_indices, :],
-                                      self.matrix.row_meta.iloc[row_indices].copy(False), self.matrix.col_meta)
+            self.matrix = anndata.AnnData(self.matrix.X[row_indices, :],
+                                          self.matrix.obs.iloc[row_indices].copy(False), self.matrix.var)
         if ncounts is not None:
-            for i in range(self.matrix.x.shape[0]):
-                p = self.matrix.x[i]
+            for i in range(self.matrix.X.shape[0]):
+                p = self.matrix.X[i]
                 if scipy.sparse.isspmatrix(p):
                     p = p.toarray()
                 p = p.astype('float64')
                 total = p.sum()
                 if total > ncounts:
                     p /= total
-                    self.matrix.x[i] = np.random.multinomial(ncounts, p, size=1)[0]
+                    self.matrix.X[i] = np.random.multinomial(ncounts, p, size=1)[0]
 
-        if self.matrix.x.shape[0] is 0:
+        if self.matrix.X.shape[0] is 0:
             print('No cells in matrix')
             exit(1)
         wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
@@ -139,23 +140,23 @@ class OTModel:
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
         local_pca = self.ot_config['local_pca']
-        if local_pca > self.matrix.x.shape[1]:
+        if local_pca > self.matrix.X.shape[1]:
             print("Warning : local_pca set to {}, above gene count of {}. Disabling PCA" \
-                  .format(local_pca, self.matrix.x.shape[1]))
+                  .format(local_pca, self.matrix.X.shape[1]))
             self.ot_config['local_pca'] = 0
-        if 'day' not in self.matrix.row_meta.columns:
+        if 'day' not in self.matrix.obs.columns:
             raise ValueError("Days information not available for matrix")
-        if any(self.matrix.row_meta['day'].isnull()):
-            query = self.matrix.row_meta['day'].isnull()
-            faulty = list(self.matrix.row_meta.index[query])
+        if any(self.matrix.obs['day'].isnull()):
+            query = self.matrix.obs['day'].isnull()
+            faulty = list(self.matrix.obs.index[query])
             raise ValueError("Days information missing for cells : {}".format(faulty))
 
     def get_covariate_pairs(self):
         """Get all covariate pairs in the dataset"""
-        if 'covariate' not in self.matrix.row_meta.columns:
+        if 'covariate' not in self.matrix.obs.columns:
             raise ValueError("Covariate value not available in dataset")
         from itertools import product
-        covariate = sorted(set(self.matrix.row_meta['covariate']))
+        covariate = sorted(set(self.matrix.obs['covariate']))
         return product(covariate, covariate)
 
     def compute_all_transport_maps(self, with_covariates=False):
@@ -182,9 +183,9 @@ class OTModel:
 
         if with_covariates:
             covariate_day_pairs = [(*d, c) for d, c in itertools.product(day_pairs, self.get_covariate_pairs())]
-            if type(day_pairs) is dict:
-                day_pairs = list(day_pairs.keys())
-            day_pairs = day_pairs + covariate_day_pairs
+            # if type(day_pairs) is dict:
+            #     day_pairs = list(day_pairs.keys())
+            day_pairs = covariate_day_pairs
 
         # if not force:
         #     if with_covariates:
@@ -221,7 +222,7 @@ class OTModel:
 
         Returns
         -------
-        wot.Dataset
+        anndata.AnnData
             The transport map from t0 to t1
 
         Raises
@@ -246,7 +247,7 @@ class OTModel:
         output_file = os.path.join(self.tmap_dir, path)
         output_file = wot.io.check_file_extension(output_file, self.output_file_format)
         if os.path.exists(output_file) and not self.force:
-            print('Found existing tmap at ' + output_file + '. Use --force to overwrite.')
+            wot.io.verbose('Found existing tmap at ' + output_file + '. Use --force to overwrite.')
             return wot.io.read_dataset(output_file)
 
         config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
@@ -275,7 +276,7 @@ class OTModel:
 
         Parameters
         ----------
-        ds : wot.Dataset
+        ds : anndata.AnnData
             The gene expression matrix to consider.
             It is assumed to have a valid day column for each cell.
         config : dict
@@ -290,30 +291,33 @@ class OTModel:
 
         covariate = config.pop('covariate', None)
         if covariate is None:
-            p0 = ds.where(day=float(t0))
-            p1 = ds.where(day=float(t1))
+            p0_indices = ds.obs['day'] == float(t0)
+            p1_indices = ds.obs['day'] == float(t1)
         else:
-            p0 = ds.where(day=float(t0), covariate=int(covariate[0]))
-            p1 = ds.where(day=float(t1), covariate=int(covariate[1]))
+            p0_indices = (ds.obs['day'] == float(t0)) & (ds.obs['covariate'] == covariate[0])
+            p1_indices = (ds.obs['day'] == float(t1)) & (ds.obs['covariate'] == covariate[1])
 
-        if 'cell_growth_rate' in p0.row_meta.columns:
-            config['g'] = np.asarray(p0.row_meta['cell_growth_rate'].values)
-        if 'pp' in p0.row_meta.columns:
-            config['pp'] = np.asarray(p0.row_meta['pp'].values)
-        if 'pp' in p1.row_meta.columns:
-            config['qq'] = np.asarray(p1.row_meta['pp'].values)
+        p0 = ds[p0_indices, :]
+        p1 = ds[p1_indices, :]
+
+        if 'cell_growth_rate' in p0.obs.columns:
+            config['g'] = np.asarray(p0.obs['cell_growth_rate'].values)
+        if 'pp' in p0.obs.columns:
+            config['pp'] = np.asarray(p0.obs['pp'].values)
+        if 'pp' in p1.obs.columns:
+            config['qq'] = np.asarray(p1.obs['pp'].values)
 
         local_pca = config.pop('local_pca', None)
         eigenvals = None
         if local_pca is not None and local_pca > 0:
-            # pca, mean = wot.ot.get_pca(local_pca, p0.x, p1.x)
-            # p0_x = wot.ot.pca_transform(pca, mean, p0.x)
-            # p1_x = wot.ot.pca_transform(pca, mean, p1.x)
-            p0_x, p1_x, pca, mean = wot.ot.compute_pca(p0.x, p1.x, local_pca)
+            # pca, mean = wot.ot.get_pca(local_pca, p0.X, p1.X)
+            # p0_x = wot.ot.pca_transform(pca, mean, p0.X)
+            # p1_x = wot.ot.pca_transform(pca, mean, p1.X)
+            p0_x, p1_x, pca, mean = wot.ot.compute_pca(p0.X, p1.X, local_pca)
             eigenvals = np.diag(pca.singular_values_)
         else:
-            p0_x = p0.x
-            p1_x = p1.x
+            p0_x = p0.X
+            p1_x = p1.X
 
         C = OTModel.compute_default_cost_matrix(p0_x, p1_x, eigenvals)
         if config.get('g') is None:
@@ -321,4 +325,4 @@ class OTModel:
         delta_days = t1 - t0
         config['g'] = config['g'] ** delta_days
         tmap = wot.ot.transport_stable_learn_growth(C, **config)
-        return wot.Dataset(tmap, p0.row_meta.copy(), p1.row_meta.copy())
+        return anndata.AnnData(tmap, p0.obs.copy(), p1.obs.copy())

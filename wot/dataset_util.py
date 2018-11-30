@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import anndata
 import math
-
 import numpy as np
 import pandas as pd
 import scipy.sparse
 import scipy.sparse
 
-import wot
-
 
 def list_of_days_in_dataset(dataset):
-    if 'day' not in dataset.row_meta.columns:
+    if 'day' not in dataset.obs.columns:
         raise ValueError("No day information available for this dataset")
-    return sorted(list(set(dataset.row_meta['day'].values)))
+    return sorted(list(set(dataset.obs['day'].values)))
 
 
 def cell_indices_by_day(dataset):
@@ -21,7 +19,7 @@ def cell_indices_by_day(dataset):
     day_to_indices = {}
     unique_days = list_of_days_in_dataset(dataset)
     for day in unique_days:
-        day_query = dataset.row_meta['day'] == day
+        day_query = dataset.obs['day'] == day
         indices = np.where(day_query)[0]
         day_to_indices[day] = indices
     return day_to_indices
@@ -29,17 +27,47 @@ def cell_indices_by_day(dataset):
 
 def get_cells_in_gene_sets(gene_sets, dataset, quantile=.99):
     cell_sets = {}
-    for gene_set_index in range(gene_sets.x.shape[1]):
-        gene_indices = list(np.where(gene_sets.x[:, gene_set_index] == 1)[0])
-        extracted = dataset.x[:, gene_indices]
+    for gene_set_index in range(gene_sets.X.shape[1]):
+        gene_indices = list(np.where(gene_sets.X[:, gene_set_index] == 1)[0])
+        extracted = dataset.X[:, gene_indices]
         thresholds = np.percentile(extracted, axis=0, q=quantile * 100)
         selected = []
         for i in range(extracted.shape[0]):
             if all(extracted[i] > thresholds):
                 selected.append(i)
-        cell_sets[gene_sets.col_meta.index[gene_set_index]] = \
-            dataset.row_meta.index[selected]
+        cell_sets[gene_sets.var.index[gene_set_index]] = \
+            dataset.obs.index[selected]
     return cell_sets
+
+
+def split_anndata(dataset, metadata):
+    """
+    Split AnnData into sub-datasets according to a metadata
+
+    Parameters
+    ----------
+    metadata : str
+        The metadata to use for the split
+
+    Returns
+    -------
+    splits : dict of t: anndata.AnnData
+        Dictionnary of datasets. t is the type of the 'metadata' column.
+        Each cell in splits[k] has its 'metadata' column constant to k.
+
+    Raises
+    ------
+    ValueError
+        If the metadata is not present
+    """
+    if metadata not in dataset.obs.columns:
+        raise ValueError("Cannot split on '{}' : column not present".format(metadata))
+
+    def extract(group):
+        indices = dataset.obs.index.get_indexer_for(group.index)
+        return anndata.AnnData(dataset.X[indices], dataset.obs.iloc[indices].copy(), dataset.var.copy())
+
+    return {name: extract(group) for name, group in dataset.obs.groupby(metadata)}
 
 
 def mean_and_variance(x):
@@ -55,37 +83,37 @@ def mean_and_variance(x):
 
 
 def extract_cells_at_indices(ds, indices):
-    return wot.Dataset(ds.x[indices], ds.row_meta.iloc[indices].copy(), ds.col_meta.copy())
+    return anndata.AnnData(ds.X[indices], ds.obs.iloc[indices].copy(), ds.var.copy())
 
 
 def add_cell_metadata(dataset, name, data):
-    dataset.row_meta[name] = data
+    dataset.obs[name] = data
 
 
 def set_cell_metadata(dataset, name, data, indices=None):
     if indices is None:
-        dataset.row_meta[name] = data
+        dataset.obs[name] = data
     else:
         if isinstance(indices, set) or isinstance(indices[0], str):
-            dataset.row_meta.loc[indices, name] = data
+            dataset.obs.loc[indices, name] = data
         else:
-            dataset.row_meta.loc[dataset.row_meta.index[indices], name] = data
+            dataset.obs.loc[dataset.obs.index[indices], name] = data
 
 
 def merge_datasets(*args):
     datasets = list(args)
-    merged_x = np.concatenate([d.x for d in datasets])
-    row_columns = set(datasets[0].row_meta.columns)
-    if not all([set(d.row_meta.columns) == row_columns for d in datasets]):
+    merged_x = np.concatenate([d.X for d in datasets])
+    row_columns = set(datasets[0].obs.columns)
+    if not all([set(d.obs.columns) == row_columns for d in datasets]):
         raise ValueError("Unable to merge: incompatible metadata between datasets")
-    merged_row_meta = pd.concat([d.row_meta for d in datasets], sort=True)
+    merged_row_meta = pd.concat([d.obs for d in datasets], sort=True)
     if merged_row_meta.index.duplicated().any():
         raise ValueError("Unable to merge: duplicate rows between datasets, cannot lose information")
-    col_index = datasets[0].col_meta.index
-    if not all([d.col_meta.index.equals(col_index) for d in datasets]):
+    col_index = datasets[0].var.index
+    if not all([d.var.index.equals(col_index) for d in datasets]):
         raise ValueError("Unable to merge: incompatible genes between datasets")
-    merged_col_meta = datasets[0].col_meta
-    return wot.Dataset(merged_x, merged_row_meta, merged_col_meta)
+    merged_col_meta = datasets[0].var
+    return anndata.AnnData(merged_x, merged_row_meta, merged_col_meta)
 
 
 def dataset_from_x(x, rows=None, columns=None,
@@ -99,7 +127,7 @@ def dataset_from_x(x, rows=None, columns=None,
     if columns is None:
         col_count_len = math.floor(math.log10(x.shape[1])) + 1
         columns = ["{}{:0{}}".format(column_prefix, i, col_count_len) for i in range(x.shape[1])]
-    return wot.Dataset(x,
-                       pd.DataFrame([], index=rows, columns=[]),
-                       pd.DataFrame([], index=columns, columns=[])
-                       )
+    return anndata.AnnData(x,
+                           pd.DataFrame([], index=rows, columns=[]),
+                           pd.DataFrame([], index=columns, columns=[])
+                           )

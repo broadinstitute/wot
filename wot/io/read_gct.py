@@ -1,3 +1,5 @@
+import anndata
+
 """ Reads in a gct file .
 
 The main method is parse. parse_into_3 creates the row
@@ -61,7 +63,6 @@ assemble_multi_index_df method in GCToo.py assembles them.
 
 import numpy as np
 import pandas as pd
-import wot
 
 __author__ = "Lev Litichevskiy, Oana Enache"
 __email__ = "lev@broadinstitute.org"
@@ -74,7 +75,7 @@ def read_gct(file_path):
         - file_path (string): full path to gct file you want to parse
 
     Returns:
-        wot.Dataset
+        anndata.AnnData
 
     """
 
@@ -91,7 +92,7 @@ def read_gct(file_path):
     col_metadata.index.name = None
     row_metadata.columns.name = None
     col_metadata.columns.name = None
-    return wot.Dataset(data, row_metadata, col_metadata)
+    return anndata.AnnData(data, row_metadata, col_metadata)
 
 
 def read_version_and_dims(file_path):

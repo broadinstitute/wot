@@ -28,7 +28,7 @@ def main(argv):
 
     for j in range(len(results)):
         mean, variance = results[j]
-        trajectory_name = trajectory_ds.col_meta.index.values[j]
+        trajectory_name = trajectory_ds.var.index.values[j]
         basename = args.out + '_' + trajectory_name
         wot.io.write_dataset(mean, basename + '.mean')
         wot.io.write_dataset(variance, basename + '.variance')

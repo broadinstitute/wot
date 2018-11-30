@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import time
-
 import numpy as np
 import ot as pot
 import scipy.sparse
 import scipy.stats
 import sklearn.decomposition
+import time
 
 import wot
 

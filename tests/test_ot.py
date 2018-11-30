@@ -1,11 +1,10 @@
 import unittest
+
 import numpy as np
 import pandas as pd
 import scipy.stats
 import sklearn.metrics
 
-import subprocess
-import os
 import wot.ot
 
 
@@ -58,170 +57,12 @@ class TestOT(unittest.TestCase):
             self.assertTrue(sum > last)
             last = sum
 
-    def test_transport_maps_by_time(self):
-        clusters = pd.DataFrame([1, 1, 2, 3, 1, 1, 2, 1],
-                                index=['a', 'b', 'c', 'd', 'e', 'f', 'g',
-                                       'h'])
-        map1 = pd.DataFrame([[1, 2, 3], [4, 5, 6], [7, 8, 9]],
-                            index=[1, 2, 3], columns=[1, 2, 3])
-        map2 = pd.DataFrame([[10, 11, 12], [13, 14, 15], [16, 17, 18]],
-                            index=[1, 2, 3], columns=[1, 2, 3])
-        # weighted average across time
-        cluster_weights_by_time = [[0.4, 0.5, 0], [0.6, 0.5, 1]]
-        result = wot.ot.transport_maps_by_time([map1, map2],
-                                               cluster_weights_by_time)
-        pd.testing.assert_frame_equal(
-            result,
-            pd.DataFrame(
-                [[6.4, 6.5, 12.0],
-                 [9.4, 9.5, 15.0],
-                 [12.4, 12.5, 18.0],
-                 ],
-                index=[1, 2, 3], columns=[1, 2, 3]))
-
-    def test_get_weights_intersection(self):
-        clusters = pd.DataFrame([1, 1, 2, 3, 1, 1, 2, 1],
-                                index=['a', 'b', 'c', 'd', 'e', 'f', 'g',
-                                       'h'], columns=['cluster'])
-        map1 = pd.DataFrame(index=['x', 'y', 'z'], columns=['a', 'b', 'c'])
-        # note f, g, h are not present in map2
-        map2 = pd.DataFrame(index=['a', 'b', 'c'], columns=['d', 'e'])
-        # weighted average across time
-
-        grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
-        cluster_ids = list(grouped_by_cluster.groups.keys())
-        all_cell_ids = set()
-        column_cell_ids_by_time = []
-        for transport_map in [map1, map2]:
-            all_cell_ids.update(transport_map.columns)
-            column_cell_ids_by_time.append(transport_map.columns)
-            all_cell_ids.update(transport_map.index)
-        result = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time,
-                                    grouped_by_cluster, cluster_ids)
-
-        self.assertTrue(
-            np.array_equal(result['cluster_weights_by_time'],
-                           [[2 / 3, 1 / 1, 0 / 1], [1 / 3, 0 / 1, 1 / 1]]))
-        self.assertTrue(
-            np.array_equal(result['cluster_size'],
-                           [3, 1, 1]))
-
-    def test_get_weights(self):
-        clusters = pd.DataFrame([1, 1, 2, 3, 1, 1, 2, 1],
-                                index=['a', 'b', 'c', 'd', 'e', 'f', 'g',
-                                       'h'], columns=['cluster'])
-        map1 = pd.DataFrame(index=['x', 'y', 'z'], columns=['a', 'b', 'c'])
-        map2 = pd.DataFrame(index=['a', 'b', 'c'], columns=['d', 'e',
-                                                            'f', 'g', 'h'])
-        # weighted average across time
-        grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
-        cluster_ids = list(grouped_by_cluster.groups.keys())
-        all_cell_ids = set()
-        column_cell_ids_by_time = []
-        for transport_map in [map1, map2]:
-            all_cell_ids.update(transport_map.columns)
-            column_cell_ids_by_time.append(transport_map.columns)
-            all_cell_ids.update(transport_map.index)
-        result = wot.ot.get_weights(all_cell_ids, column_cell_ids_by_time,
-                                    grouped_by_cluster, cluster_ids)
-
-        self.assertTrue(
-            np.array_equal(result['cluster_weights_by_time'],
-                           [[2 / 5, 1 / 2, 0 / 1], [3 / 5, 1 / 2, 1 / 1]]))
-        self.assertTrue(
-            np.array_equal(result['cluster_size'],
-                           [5, 2, 1]))
-
-    def test_transport_map_by_cluster(self):
-        row_ids = ['a', 'b', 'c']
-        column_ids = ['d', 'e', 'f', 'g', 'h'];
-        clusters = pd.DataFrame([3, 1, 2, 3, 1, 1, 2, 3],
-                                index=['a', 'b', 'c', 'd', 'e', 'f', 'g',
-                                       'h'])
-        grouped_by_cluster = clusters.groupby(clusters.columns[0], axis=0)
-        cluster_ids = [1, 2, 3]
-        transport_map = pd.DataFrame(
-            [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13, 14, 15]],
-            index=row_ids,
-            columns=column_ids)
-
-        # sum mass by cluster
-        result = wot.ot.transport_map_by_cluster(transport_map, grouped_by_cluster,
-                                                 cluster_ids)
-
-        pd.testing.assert_frame_equal(
-            result,
-            pd.DataFrame(
-                [[15, 9, 16],
-                 [25, 14, 26],
-                 [5, 4, 6]
-                 ],
-                index=cluster_ids, columns=cluster_ids))
-
     def test_growth_scores(self):
         scores = wot.ot.compute_growth_scores(np.array([-0.399883307]),
                                               np.array([0.006853961]))
         np.testing.assert_allclose(np.array([0.705444456674597]),
                                    scores,
                                    atol=0.000001)
-
-    def test_ot_commmand_line(self):
-        subprocess.call(args=['python', os.path.abspath('../bin/optimal_transport'),
-                              '--matrix',
-                              os.path.abspath(
-                                  '../finalInput/dmap_2i_normalized.txt'),
-                              '--cell_growth_rates', os.path.abspath(
-                '../paper/growth_rates.txt'),
-                              '--cell_days', os.path.abspath(
-                '../paper/days.txt'),
-                              '--day_pairs', os.path.abspath(
-                '../paper/pairs_2i.txt'),
-                              '--prefix', 'mytest',
-                              '--verbose',
-                              '--compress'],
-                        cwd=os.getcwd(),
-                        stderr=subprocess.STDOUT)
-        timepoints = [0, 2, 4, 6, 8, 9, 10, 11, 12, 16]
-        for timepoint in range(0, len(timepoints) - 1):
-            my_transport = pd.read_table(
-                'mytest_' + str(
-                    timepoints[timepoint]) + '_' + str(
-                    timepoints[timepoint + 1]) +
-                '.txt.gz', index_col=0)
-
-            # precomputed_transport_map = np.load(
-            #     '../paper/transport_maps/2i/npy/lineage.day-' + str(
-            #         timepoints[timepoint + 1]) + '.npy')
-            precomputed_transport_map = precomputed_transport_map = \
-                pd.read_table(
-                    '../paper/transport_maps/2i/lineage.day-' + str(
-                        timepoints[timepoint + 1]) +
-                    '.txt', index_col=0)
-            pd.testing.assert_index_equal(left=my_transport.index,
-                                          right=precomputed_transport_map.index,
-                                          check_names=False)
-            pd.testing.assert_index_equal(left=my_transport.columns,
-                                          right=precomputed_transport_map.columns,
-                                          check_names=False)
-            total = 0
-            count = 0
-            for i in range(my_transport.shape[0]):
-                for j in range(my_transport.shape[1]):
-                    diff = abs(precomputed_transport_map.values[i,
-                                                                j] -
-                               my_transport.values[
-                                   i, j])
-                    total += diff
-                    if diff > 0.000001:
-                        count += 1
-            print('lineage_' + str(
-                timepoints[timepoint]) + '_' + str(
-                timepoints[timepoint + 1]))
-            print('total diff: ' + str(total))
-            print('pre total: ' + str(precomputed_transport_map.sum().sum()))
-            print('my total: ' + str(my_transport.sum().sum()))
-            print('count: ' + str(count) + '/' + str(
-                my_transport.shape[0] * my_transport.shape[1]))
 
     def test_trajectory(self):
         transport_maps = list()
@@ -283,76 +124,6 @@ class TestOT(unittest.TestCase):
             pd.DataFrame(
                 {trajectory_id[0]: [25450]},
                 index=ids), check_names=False)
-
-    def test_ot_known_output(self):
-        gene_expression = pd.read_table('../paper/2i_dmap_20.txt',
-                                        index_col=0)  # cells on rows,
-        # diffusion components on columns
-        growth_scores = pd.read_table('../paper/growth_scores.txt',
-                                      index_col=0, header=None,
-                                      names=['id', 'growth_score'])
-        days = pd.read_table(
-            '../paper/days.txt', header=None,
-            index_col=0, names=['id', 'days'])
-
-        gene_expression = gene_expression.join(growth_scores).join(days)
-        growth_score_field_name = growth_scores.columns[0]
-        day_field_name = days.columns[0]
-        group_by_day = gene_expression.groupby(day_field_name)
-        timepoints = list(group_by_day.groups.keys())
-        timepoints.sort()
-        self.assertTrue(timepoints[0] == 0)
-        max_transport_fraction = 0.4
-        min_transport_fraction = 0.05
-        min_growth_fit = 0.9
-        l0_max = 100
-        lambda1 = 1
-        lambda2 = 1
-        epsilon = 0.1
-        growth_ratio = 2.5
-        scaling_iter = 250
-        expected_lambda_t0_t2 = 1.5
-        expected_epsilon_t0_t2 = \
-            0.01015255979947704383092865754179001669399440288543701171875
-        for i in range(0, len(timepoints) - 1):
-            m1 = group_by_day.get_group(timepoints[i])
-            m2 = group_by_day.get_group(timepoints[i + 1])
-            delta_t = timepoints[i + 1] - timepoints[i]
-            cost_matrix = sklearn.metrics.pairwise.pairwise_distances(
-                m1.drop([day_field_name, growth_score_field_name], axis=1),
-                Y=m2.drop([day_field_name, growth_score_field_name], axis=1),
-                metric='sqeuclidean')
-            cost_matrix = cost_matrix / np.median(cost_matrix)
-            growth_rate = m1.growth_score.values
-            result = wot.ot.optimal_transport(cost_matrix, growth_rate,
-                                              delta_days=delta_t,
-                                              max_transport_fraction=max_transport_fraction,
-                                              min_transport_fraction=min_transport_fraction,
-                                              min_growth_fit=min_growth_fit,
-                                              l0_max=l0_max, lambda1=lambda1,
-                                              lambda2=lambda2, epsilon=epsilon,
-                                              growth_ratio=growth_ratio,
-                                              scaling_iter=scaling_iter)
-            if i == 0:
-                self.assertTrue(result['epsilon'] == expected_epsilon_t0_t2)
-                self.assertTrue(result['lambda1'] == expected_lambda_t0_t2)
-                self.assertTrue(result['lambda2'] == expected_lambda_t0_t2)
-            transport = pd.DataFrame(result['transport'], index=m1.index,
-                                     columns=m2.index)
-
-            precomputed_transport_map = pd.read_table(
-                '../paper/transport_maps/lineage_' + str(timepoints[i])
-                + '_' + str(timepoints[i + 1]) + '.txt', index_col=0)
-            pd.testing.assert_index_equal(left=transport.index,
-                                          right=precomputed_transport_map.index,
-                                          check_names=False)
-            pd.testing.assert_index_equal(left=transport.columns,
-                                          right=precomputed_transport_map.columns,
-                                          check_names=False)
-
-            np.testing.assert_allclose(transport.values,
-                                       precomputed_transport_map.values,
-                                       atol=0.0004)
 
 
 if __name__ == '__main__':
