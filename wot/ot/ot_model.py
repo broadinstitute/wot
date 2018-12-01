@@ -184,7 +184,7 @@ class OTModel:
             covariate_day_pairs = [(*d, c) for d, c in itertools.product(day_pairs, self.get_covariate_pairs())]
             if type(day_pairs) is dict:
                 day_pairs = list(day_pairs.keys())
-            day_pairs = day_pairs + covariate_day_pairs
+            day_pairs = covariate_day_pairs
 
         # if not force:
         #     if with_covariates:
