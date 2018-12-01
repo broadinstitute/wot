@@ -46,8 +46,8 @@ legend = [
 ds = wot.io.read_dataset(census_file)
 
 wot.graphics.legend_figure(pyplot, legend)
-for i in range(ds.x.shape[1]):
-    pyplot.plot(ds.x[:,i], color=legend[i][0])
+for i in range(ds.X.shape[1]):
+    pyplot.plot(ds.X[:,i], color=legend[i][0])
 
 pyplot.title(picture_title)
 pyplot.xlabel("time")

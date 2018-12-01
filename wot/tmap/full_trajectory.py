@@ -9,7 +9,7 @@ def full_trajectory(transport_maps, time, ids=None, normalize=False):
 
         Args:
             transport_maps (list): A sorted list of dictionaries
-            containing 'transport_map' (wot.Dataset), 't1', and 't2'. The
+            containing 'transport_map' (anndata.AnnData), 't1', and 't2'. The
             ids (list): A list of ids to compute the trajectory for.
             time (float): The time at which the ids were measured.
             normalize (bool) Whether to normalize total mass to one at each

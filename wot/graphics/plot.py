@@ -14,9 +14,9 @@ def __make_figure(y=1, x=1, projection=None):
 
 def plot_2d_dataset(figure, dataset, x=0, y=1, title=None):
     colors = "#808080"
-    if 'color' in dataset.row_meta.columns:
-        colors = dataset.row_meta['color'].values
-    figure.scatter(dataset.x[:, x], dataset.x[:, y], c=colors,
+    if 'color' in dataset.obs.columns:
+        colors = dataset.obs['color'].values
+    figure.scatter(dataset.X[:, x], dataset.X[:, y], c=colors,
                    s=.2, marker=',', edgecolors='none')
     if title is not None:
         figure.title.set_text(title)

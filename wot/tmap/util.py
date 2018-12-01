@@ -31,18 +31,18 @@ def glue_transport_maps(tmap_0, tmap_1):
 
     Parameters
     ----------
-    tmap_0 : wot.Dataset
+    tmap_0 : anndata.AnnData
         The first transport map (from t0 to t1)
-    tmap_1 : wot.Dataset
+    tmap_1 : anndata.AnnData
         The second transport map (from t1 to t2)
 
     Returns
     -------
-    result : wot.Dataset
+    result : anndata.AnnData
         The resulting transport map (from t0 to t2)
     """
     # FIXME: Column sum normalization is needed before gluing. Can be skipped only if lambda2 is high enough
-    cells_at_intermediate_tpt = tmap_0.col_meta.index
-    cait_index = tmap_1.row_meta.index.get_indexer_for(cells_at_intermediate_tpt)
-    result_x = np.dot(tmap_0.x, tmap_1.x[cait_index, :])
-    return wot.Dataset(result_x, tmap_0.row_meta.copy(), tmap_1.col_meta.copy())
+    cells_at_intermediate_tpt = tmap_0.var.index
+    cait_index = tmap_1.obs.index.get_indexer_for(cells_at_intermediate_tpt)
+    result_x = np.dot(tmap_0.X, tmap_1.X[cait_index, :])
+    return anndata.AnnData(result_x, tmap_0.obs.copy(), tmap_1.var.copy())

@@ -48,15 +48,15 @@ import matplotlib.pyplot as plt
 
 data_tip1 = wot.io.read_dataset("matrix_Tip1_100.0_trajectory_trends.loom")
 
-a=data_tip1.x
-b=data_tip1.row_meta
+a=data_tip1.X
+b=data_tip1.obs
 print(a)
 
 x=np.linspace(0,100,101)
 
 fig,ax=plt.subplots()
 
-data = data_tip1.x
+data = data_tip1.X
 plt.plot(data[:,2],c='#E00000',label='Gene 2',linewidth=1)
 plt.plot(data[:,3],c='#00E000',label='Gene 3',linewidth=1)
 plt.plot(data[:,4],c='#0000E0',label='Gene 4',linewidth=1)

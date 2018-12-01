@@ -25,7 +25,7 @@ def main(argv):
         args.out = 'stdout'
 
     dataset = wot.io.read_dataset(args.matrix)
-    gene_sets = wot.io.read_sets(args.gene_sets, dataset.col_meta.index.values)
+    gene_sets = wot.io.read_sets(args.gene_sets, dataset.var.index.values)
 
     result = wot.get_cells_in_gene_sets(gene_sets, dataset, quantile=float(args.quantile))
     wot.io.write_gene_sets(result, args.out, args.format)

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import ot as pot
-import sklearn.metrics
 import scipy.sparse
+import sklearn.metrics
 
 
 def compute_growth_scores(proliferation, apoptosis, beta_max=1.7, beta_center=0.25, delta_max=1.7, delta_min=0.3,

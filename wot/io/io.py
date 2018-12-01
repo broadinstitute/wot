@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import glob
 import os
-import sys
 
+import anndata
 import h5py
 import numpy as np
 import pandas as pd
 import scipy.io
 import scipy.sparse
+import sys
 
 import wot
 
@@ -64,9 +65,9 @@ def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
         cell_set_paths = [cell_set_paths]
     for path in cell_set_paths:
         cell_set_ds = wot.io.read_sets(path)
-        for i in range(cell_set_ds.x.shape[1]):
-            cell_set_name = cell_set_ds.col_meta.index.values[i]
-            cell_ids_in_set = cell_set_ds.row_meta.index.values[cell_set_ds.x[:, i] > 0]
+        for i in range(cell_set_ds.X.shape[1]):
+            cell_set_name = cell_set_ds.var.index.values[i]
+            cell_ids_in_set = cell_set_ds.obs.index.values[cell_set_ds.X[:, i] > 0]
 
             grouped = group_by_df[group_by_df.index.isin(cell_ids_in_set)].groupby(group_by_key)
             for name, group in grouped:
@@ -83,35 +84,35 @@ def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
 def filter_ds_from_command_line(ds, args):
     params = vars(args)
     if params.get('gene_filter') is not None:
-        prior = ds.x.shape[1]
+        prior = ds.X.shape[1]
         gene_ids = pd.read_table(args.gene_filter, index_col=0, header=None).index.values
-        column_indices = ds.col_meta.index.isin(gene_ids)
+        column_indices = ds.var.index.isin(gene_ids)
         nkeep = np.sum(column_indices)
         if params.get('verbose') and len(gene_ids) > nkeep:
             print(str(len(gene_ids) - nkeep) + ' are in gene filter, but not in matrix')
 
-        ds = wot.Dataset(ds.x[:, column_indices], ds.row_meta, ds.col_meta.iloc[column_indices])
+        ds = anndata.AnnData(ds.X[:, column_indices], ds.obs, ds.var.iloc[column_indices])
         if params.get('verbose'):
-            print('Keeping ' + str(ds.x.shape[1]) + '/' + str(prior) + ' genes')
+            print('Keeping ' + str(ds.X.shape[1]) + '/' + str(prior) + ' genes')
 
     if params.get('cell_filter') is not None:
-        prior = ds.x.shape[0]
+        prior = ds.X.shape[0]
         if not os.path.isfile(args.cell_filter):
             import re
             expr = re.compile(args.cell_filter)
-            cell_ids = [elem for elem in ds.row_meta.index.values if expr.match(elem)]
+            cell_ids = [elem for elem in ds.obs.index.values if expr.match(elem)]
         else:
             cell_ids = pd.read_table(args.cell_filter, index_col=0, header=None).index.values
 
-        # row_indices = np.isin(ds.row_meta.index.values, cell_ids, assume_unique=True)
-        row_indices = ds.row_meta.index.isin(cell_ids)
+        # row_indices = np.isin(ds.obs.index.values, cell_ids, assume_unique=True)
+        row_indices = ds.obs.index.isin(cell_ids)
         nkeep = np.sum(row_indices)
         if params.get('verbose') and len(cell_ids) > nkeep:
             print(str(len(cell_ids) - nkeep) + ' are in cell filter, but not in matrix')
 
-        ds = wot.Dataset(ds.x[row_indices], ds.row_meta.iloc[row_indices], ds.col_meta)
+        ds = anndata.AnnData(ds.X[row_indices], ds.obs.iloc[row_indices], ds.var)
         if params.get('verbose'):
-            print('Keeping ' + str(ds.x.shape[0]) + '/' + str(prior) + ' cells')
+            print('Keeping ' + str(ds.X.shape[0]) + '/' + str(prior) + ' cells')
     return ds
 
 
@@ -163,7 +164,7 @@ def read_transport_maps(input_dir, ids=None, time=None):
 
     Returns
     -------
-    transport_maps : list of { 't1': float, 't2': float, 'transport_map': wot.Dataset }
+    transport_maps : list of { 't1': float, 't2': float, 'transport_map': anndata.AnnData }
         The list of all transport maps
 
     Raises
@@ -212,12 +213,12 @@ def read_transport_maps(input_dir, ids=None, time=None):
             ds = wot.io.read_dataset(path)
             if ids is not None and t1 == time:
                 # subset rows
-                indices = ds.row_meta.index.isin(ids)
-                ds = wot.Dataset(ds.x[indices], ds.row_meta.iloc[indices], ds.col_meta)
+                indices = ds.obs.index.isin(ids)
+                ds = anndata.AnnData(ds.X[indices], ds.obs.iloc[indices], ds.var)
             if ids is not None and t2 == time:
                 # subset columns
-                indices = ds.col_meta.index.isin(ids)
-                ds = wot.Dataset(ds.x[:, indices], ds.row_meta, ds.col_meta.iloc[indices])
+                indices = ds.var.index.isin(ids)
+                ds = anndata.AnnData(ds.X[:, indices], ds.obs, ds.var.iloc[indices])
 
             if (t1, t2) in tmap_times:
                 raise ValueError("Multiple transport maps found for times ({},{})".format(t1, t2))
@@ -250,8 +251,8 @@ def read_sets(path, feature_ids=None, as_dict=False):
     else:
         raise ValueError('Unknown file format "{}"'.format(ext))
     if set_names is not None:
-        gs_filter = gs.col_meta.index.isin(set_names)
-        gs = wot.Dataset(gs.x[:, gs_filter], gs.row_meta, gs.col_meta.iloc[gs_filter])
+        gs_filter = gs.var.index.isin(set_names)
+        gs = anndata.AnnData(gs.X[:, gs_filter], gs.obs, gs.var.iloc[gs_filter])
     if as_dict:
         return wot.io.convert_binary_dataset_to_dict(gs)
     return gs
@@ -294,9 +295,9 @@ def read_grp(path, feature_ids=None):
             row_index = row_id_lc_to_index.get(id.lower())
             x[row_index, 0] = 1
 
-        row_meta = pd.DataFrame(index=feature_ids)
-        col_meta = pd.DataFrame(index=[wot.io.get_filename_and_extension(os.path.basename(path))[0]])
-        return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
+        obs = pd.DataFrame(index=feature_ids)
+        var = pd.DataFrame(index=[wot.io.get_filename_and_extension(os.path.basename(path))[0]])
+        return anndata.AnnData(X=x, obs=obs, var=var)
 
 
 def read_gmt(path, feature_ids=None):
@@ -352,9 +353,9 @@ def read_gmt(path, feature_ids=None):
                 row_index = row_id_lc_to_index.get(id.lower())
                 x[row_index, j] = 1
 
-        row_meta = pd.DataFrame(index=feature_ids)
-        col_meta = pd.DataFrame(data={'description': set_descriptions}, index=set_names)
-        return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
+        obs = pd.DataFrame(index=feature_ids)
+        var = pd.DataFrame(data={'description': set_descriptions}, index=set_names)
+        return anndata.AnnData(X=x, obs=obs, var=var)
 
 
 def read_gmx(path, feature_ids=None):
@@ -400,10 +401,10 @@ def read_gmx(path, feature_ids=None):
 
         if array_of_arrays is not None:
             x = np.array(array_of_arrays)
-        row_meta = pd.DataFrame(index=feature_ids)
-        col_meta = pd.DataFrame(data={'description': descriptions},
-                                index=set_ids)
-        return wot.Dataset(x, row_meta=row_meta, col_meta=col_meta)
+        obs = pd.DataFrame(index=feature_ids)
+        var = pd.DataFrame(data={'description': descriptions},
+                           index=set_ids)
+        return anndata.AnnData(x, obs=obs, var=var)
 
 
 def write_gene_sets(gene_sets, path, format=None):
@@ -435,21 +436,13 @@ def write_gmt(gene_sets, f):
 
 def convert_binary_dataset_to_dict(ds):
     cell_sets = {}
-    for i in range(ds.x.shape[1]):
-        selected = np.where(ds.x[:, i] == 1)
-        cell_sets[ds.col_meta.index[i]] = list(ds.row_meta.index[selected])
+    for i in range(ds.X.shape[1]):
+        selected = np.where(ds.X[:, i] == 1)
+        cell_sets[ds.var.index[i]] = list(ds.obs.index[selected])
     return cell_sets
 
 
-def read_dataset(path, **kwargs):
-    chunks = kwargs.pop('chunks', (500, 500))
-    use_dask = kwargs.pop('use_dask', False)
-    genome10x = kwargs.pop('genome10x', None)
-    row_filter = kwargs.pop('row_filter', None)
-    col_filter = kwargs.pop('col_filter', None)
-    force_sparse = kwargs.pop('force_sparse', False)
-    backed = kwargs.pop('backed', False)
-
+def read_dataset(path):
     path = str(path)
     tmp_path = None
     if path.startswith('gs://'):
@@ -463,146 +456,102 @@ def read_dataset(path, **kwargs):
         # look for .barcodes.txt and .genes.txt
         import itertools
         sp = os.path.split(path)
-        row_meta = None
+        obs = None
+
         for sep_ext in itertools.product(['.', '_', '-'], ['tsv', 'txt']):
-            f = os.path.join(sp[0],
-                             basename_and_extension[0] + sep_ext[0] + 'barcodes.' + sep_ext[1])
-            if os.path.isfile(f) or os.path.isfile(f + '.gz'):
-                row_meta = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
-                                         header=None)
-                break
-        col_meta = None
+            for prefix in ['', basename_and_extension[0] + sep_ext[0]]:
+                f = os.path.join(sp[0], prefix + 'barcodes.' + sep_ext[1])
+                if os.path.isfile(f) or os.path.isfile(f + '.gz'):
+                    obs = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
+                                        header=None)
+                    break
+        var = None
         for sep_ext in itertools.product(['.', '_', '-'], ['tsv', 'txt']):
-            f = os.path.join(sp[0],
-                             basename_and_extension[0] + sep_ext[0] + 'genes.' + sep_ext[1])
-            if os.path.isfile(f) or os.path.isfile(f + '.gz'):
-                col_meta = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
-                                         header=None)
+            for prefix in ['', basename_and_extension[0] + sep_ext[0]]:
+                f = os.path.join(sp[0], prefix + 'genes.' + sep_ext[1])
+                if os.path.isfile(f) or os.path.isfile(f + '.gz'):
+                    var = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
+                                        header=None)
                 break
 
-        if col_meta is None:
+        if var is None:
             print(basename_and_extension[0] + '.genes.txt not found')
-            col_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1))
-        if row_meta is None:
+            var = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1))
+        if obs is None:
             print(basename_and_extension[0] + '.barcodes.txt not found')
-            row_meta = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
+            obs = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
 
         cell_count, gene_count = x.shape
-        if len(row_meta) != cell_count:
+        if len(obs) != cell_count:
             raise ValueError("Wrong number of cells : matrix has {} cells, barcodes file has {}" \
-                             .format(cell_count, len(row_meta)))
-        if len(col_meta) != gene_count:
+                             .format(cell_count, len(obs)))
+        if len(var) != gene_count:
             raise ValueError("Wrong number of genes : matrix has {} genes, genes file has {}" \
-                             .format(gene_count, len(col_meta)))
+                             .format(gene_count, len(var)))
 
-        return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
+        return anndata.AnnData(X=x, obs=obs, var=var)
     elif ext == 'npz':
         obj = np.load(path)
         if tmp_path is not None:
             os.remove(tmp_path)
-        return wot.Dataset(x=obj['x'], row_meta=pd.DataFrame(index=obj['rid']), col_meta=pd.DataFrame(index=obj['cid']))
+        return anndata.AnnData(X=obj['x'], obs=pd.DataFrame(index=obj['rid']), var=pd.DataFrame(index=obj['cid']))
     elif ext == 'npy':
         x = np.load(path)
         if tmp_path is not None:
             os.remove(tmp_path)
-        return wot.Dataset(x=x, row_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1)),
-                           col_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1)))
-    elif ext == 'hdf5' or ext == 'h5' or ext == 'loom' or ext == 'h5ad':
+        return anndata.AnnData(X=x, obs=pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1)),
+                               var=pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1)))
+    elif ext == 'loom':
+        # in loom file, convention is rows are genes :(
+        # return anndata.read_loom(path, X_name='matrix', sparse=True)
         f = h5py.File(path, 'r')
-        if ext == 'h5ad':
-            h5_x = '/X'
-            h5_row_meta = '/obs'
-            h5_col_meta = '/var'
-        elif ext == 'loom':
-            h5_x = '/matrix'
-            h5_row_meta = '/row_attrs'
-            h5_col_meta = '/col_attrs'
+        x = f['/matrix']
+        is_x_sparse = x.attrs.get('sparse')
+        if is_x_sparse:
+            # read in blocks of 1000
+            chunk_start = 0
+            nrows = x.shape[0]
+            chunk_step = min(nrows, 1000)
+            chunk_stop = chunk_step
+            nchunks = int(np.ceil(max(1, nrows / chunk_step)))
+            sparse_arrays = []
+            for chunk in range(nchunks):
+                chunk_stop = min(nrows, chunk_stop)
+                subset = scipy.sparse.csr_matrix(x[chunk_start:chunk_stop])
+                sparse_arrays.append(subset)
+                chunk_start += chunk_step
+                chunk_stop += chunk_step
+
+            x = scipy.sparse.vstack(sparse_arrays)
         else:
-            if genome10x is None:
-                keys = list(f.keys())
-                if len(keys) > 0:
-                    genome10x = keys[0]
-            group = f['/' + genome10x]
+            x = x[()]
+        row_meta = {}
+        row_attrs = f['/row_attrs']
+        for key in row_attrs:
+            values = row_attrs[key][()]
+            if values.dtype.kind == 'S':
+                values = values.astype(str)
+            row_meta[key] = values
+        row_meta = pd.DataFrame(data=row_meta)
+        if row_meta.get('id') is not None:
+            row_meta.set_index('id', inplace=True)
 
-            M, N = group['shape'][()]
-            data = group['data'][()]
-            x = scipy.sparse.csr_matrix((data, group['indices'][()], group['indptr'][()]), shape=(N, M))
-            col_meta = pd.DataFrame(index=group['gene_names'][()].astype(str),
-                                    data={'ensembl': group['genes'][()].astype(str)})
-            row_meta = pd.DataFrame(index=group['barcodes'][()].astype(str))
-
-            return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta)
-        if ext == 'h5ad':
-            row_meta = pd.DataFrame.from_records(f[h5_row_meta][()], index='index')
-            col_meta = pd.DataFrame.from_records(f[h5_col_meta][()], index='index')
-            row_meta.index = row_meta.index.values.astype(str)
-            col_meta.index = col_meta.index.values.astype(str)
-
-        else:
-            row_attrs = read_h5_attrs(f, h5_row_meta, row_filter)
-            nrows = len(row_attrs['indices']) if row_attrs['indices'] is not None else f[h5_x].shape[0]
-            row_meta = pd.DataFrame(row_attrs['attrs'], index=pd.RangeIndex(start=0, stop=nrows, step=1))
-            if row_meta.get('id') is not None:
-                row_meta.set_index('id', inplace=True)
-
-            col_attrs = read_h5_attrs(f, h5_col_meta, col_filter)
-            ncols = len(col_attrs['indices']) if col_attrs['indices'] is not None else f[h5_x].shape[1]
-
-            col_meta = pd.DataFrame(col_attrs['attrs'], index=pd.RangeIndex(start=0, stop=ncols, step=1))
-            if col_meta.get('id') is not None:
-                col_meta.set_index('id', inplace=True)
-
-        if not use_dask:
-            x = f[h5_x]
-            if type(x) == h5py.Group:
-                data = x['data'][()]
-                x = scipy.sparse.csr_matrix((data, x['indices'][()], x['indptr'][()]),
-                                            shape=x.attrs['h5sparse_shape'])
-                backed = False
-            else:
-                is_x_sparse = x.attrs.get('sparse')
-                if not backed and (is_x_sparse or force_sparse) and (row_filter is None and col_filter is None):
-                    # read in blocks of 1000
-                    chunk_start = 0
-                    chunk_step = min(nrows, 1000)
-                    chunk_stop = chunk_step
-                    nchunks = int(np.ceil(max(1, nrows / chunk_step)))
-                    sparse_arrays = []
-                    for chunk in range(nchunks):
-                        chunk_stop = min(nrows, chunk_stop)
-                        subset = scipy.sparse.csr_matrix(x[chunk_start:chunk_stop])
-                        sparse_arrays.append(subset)
-                        chunk_start += chunk_step
-                        chunk_stop += chunk_step
-
-                    x = scipy.sparse.vstack(sparse_arrays)
-                else:
-                    if row_filter is None and col_filter is None and not backed:
-                        x = x[()]
-                    elif row_filter is not None and col_filter is not None:
-                        x = x[row_attrs['indices']]
-                        x = x[:, col_attrs['indices']]
-                    elif row_filter is not None:
-                        x = x[row_attrs['indices']]
-                    elif col_filter is not None:
-                        x = x[:, col_attrs['indices']]
-
-                    if not backed and (is_x_sparse or force_sparse):
-                        x = scipy.sparse.csr_matrix(x)
-
-            if not backed:
-                f.close()
-                if tmp_path is not None:
-                    os.remove(tmp_path)
-            return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta, backed=backed)
-        else:
-
-            import dask.array as da
-            x = da.from_array(f[h5_x], chunks=chunks)
-            # TODO load in chunks
-            # row_meta = dd.from_pandas(row_meta, npartitions=4, sort=False)
-            # col_meta = dd.from_pandas(col_meta, npartitions=4, sort=False)
-        return wot.Dataset(x=x, row_meta=row_meta, col_meta=col_meta, backed=backed)
+        col_meta = {}
+        col_attrs = f['/col_attrs']
+        for key in col_attrs:
+            values = col_attrs[key][()]
+            if values.dtype.kind == 'S':
+                values = values.astype(str)
+            col_meta[key] = values
+        col_meta = pd.DataFrame(data=col_meta)
+        if col_meta.get('id') is not None:
+            col_meta.set_index('id', inplace=True)
+        f.close()
+        return anndata.AnnData(X=x, obs=row_meta, var=col_meta)
+    elif ext == 'h5ad':
+        return anndata.read_h5ad(path)
+    elif ext == 'hdf5' or ext == 'h5':
+        return anndata.read_hdf(path)
     elif ext == 'gct':
         ds = wot.io.read_gct(path)
         if tmp_path is not None:
@@ -636,44 +585,9 @@ def read_dataset(path, **kwargs):
                     i += 1
             if tmp_path is not None:
                 os.remove(tmp_path)
-            return wot.Dataset(x=np.array(np_arrays),
-                               row_meta=pd.DataFrame(index=row_ids),
-                               col_meta=pd.DataFrame(index=column_ids))
-
-
-def read_h5_attrs(f, path, filter):
-    g = f[path]
-    indices = None
-    if filter is not None:
-        for key in filter.keys():
-            values = g[key][()]
-            f = filter[key]
-            if values.dtype.kind == 'S':
-                values = values.astype(str)
-            _indices = []
-            for i in range(len(values)):
-                if f(values[i]):
-                    _indices.append(i)
-            if indices is not None:
-                indices = np.intersect1d(_indices, indices, assume_unique=True)
-            else:
-                indices = _indices
-
-        if len(indices) is 0:
-            raise ValueError('No indices passed filter')
-
-    data = {}
-    for key in g:
-        values = g[key]
-        if indices is None:
-            values = values[()]
-        else:
-            values = values[indices]
-        if values.dtype.kind == 'S':
-            values = values.astype(str)
-        data[key] = values
-
-    return {'attrs': data, 'indices': indices}
+            return anndata.AnnData(X=np.array(np_arrays),
+                                   obs=pd.DataFrame(index=row_ids),
+                                   var=pd.DataFrame(index=column_ids))
 
 
 def download_gs_url(gs_url):
@@ -708,6 +622,8 @@ def check_file_extension(name, output_format):
         expected = '.loom'
     elif output_format == 'gct':
         expected = '.gct'
+    elif output_format == 'h5ad':
+        expected = '.h5ad'
     if expected is not None:
         if not str(name).lower().endswith(expected):
             name += expected
@@ -732,9 +648,95 @@ def get_filename_and_extension(name):
     return basename, ext
 
 
+def write_ds_slice(ds, data_dir, cols):
+    import pandas as pd
+    for j in cols:
+        c = ds.X[:, j]
+        c = c.toarray().flatten() if scipy.sparse.isspmatrix(c) else c
+        series_path = os.path.join(data_dir, str(ds.var.index.values[j])) + '.txt'
+        pd.Series(c).to_csv(series_path, float_format='%.2f', compression='gzip', header=False, index=False)
+
+
+def write_ds_meta(meta, columns, output_dir):
+    for field in columns:
+        series_path = os.path.join(output_dir, str(field) + '.txt')
+        meta[field].to_csv(series_path, float_format='%.2f' if meta[field].dtype == np.float32 else None,
+                           header=False, compression='gzip', index=False)
+
+
+def write_ds_view(ds, fields, output_dir):
+    for field in fields:
+        x = ds[field]
+        if x.shape[1] > 3:
+            x = x[:, [0, 1, 2]]
+        view_path = os.path.join(output_dir, str(field) + '.txt')
+        pd.DataFrame(data=x).to_csv(view_path, float_format='%.2f', header=False, compression='gzip', index=False)
+
+
+def get_meta_json(meta):
+    result = []
+    for field in meta.columns:
+        dtype = meta[field].dtype
+        str_type = str(dtype)
+        is_categorical = False
+        if str_type is 'category':
+            is_categorical = True
+            str_type = str(meta[field].dtype.categories.dtype)
+        result.append({'name': field, 'dtype': str_type, 'is_categorical': is_categorical})
+    return result
+
+
+def write_dataset_json(ds, path):
+    import json
+    import gzip
+    import multiprocessing
+    from joblib import Parallel, delayed
+    feature_dir = os.path.join(path, 'X')
+    view_dir = os.path.join(path, 'views')
+    obs_dir = os.path.join(path, 'obs')
+    var_dir = os.path.join(path, 'var')
+    if not os.path.exists(path):
+        os.mkdir(path)
+    for d in [feature_dir, view_dir, obs_dir, var_dir]:
+        if not os.path.exists(d):
+            os.mkdir(d)
+
+    njobs = multiprocessing.cpu_count()
+    njobs += int(njobs * 0.25)
+
+    chunks = np.array_split(np.arange(0, ds.X.shape[1]), njobs)
+    Parallel(n_jobs=njobs)(delayed(write_ds_slice)(ds, feature_dir, chunk) for chunk in chunks)
+
+    chunks = np.array_split(ds.obs.columns, njobs)
+    Parallel(n_jobs=njobs)(delayed(write_ds_meta)(ds.obs, chunk, obs_dir) for chunk in chunks)
+
+    chunks = np.array_split(ds.var.columns, njobs)
+    Parallel(n_jobs=njobs)(delayed(write_ds_meta)(ds.var, chunk, var_dir) for chunk in chunks)
+
+    if ds.obsm is not None:
+        chunks = np.array_split(list(ds.obsm.keys()), njobs)
+        Parallel(n_jobs=njobs)(delayed(write_ds_view)(ds.obsm, chunk, view_dir) for chunk in chunks)
+
+    idx = {}
+    if ds.obsm is not None:
+        views = []
+        for field in ds.obsm.keys():
+            views.append({'name': field})
+        idx['views'] = views
+    idx['var_id'] = ds.var.index.values.tolist()  # genes
+    idx['obs_id'] = ds.obs.index.values.tolist()
+    idx['obs'] = get_meta_json(ds.obs)  # cells
+    idx['var'] = get_meta_json(ds.var)
+
+    with gzip.GzipFile(os.path.join(path, 'index.json'), 'w') as fout:
+        fout.write(json.dumps(idx).encode('utf-8'))
+
+
 def write_dataset(ds, path, output_format='txt'):
     path = check_file_extension(path, output_format)
-    if output_format == 'txt' or output_format == 'gct' or output_format == 'csv':
+    if output_format == 'json':
+        return write_dataset_json(ds, path)
+    elif output_format == 'txt' or output_format == 'gct' or output_format == 'csv':
         sep = '\t'
         if output_format is 'csv':
             sep = ','
@@ -745,41 +747,43 @@ def write_dataset(ds, path, output_format='txt'):
 
             if output_format == 'gct':
                 f.write('#1.3\n')
-                f.write(str(ds.x.shape[0]) + '\t' + str(ds.x.shape[1]) + '\t' + str(len(ds.row_meta.columns)) +
-                        '\t' + str(len(ds.col_meta.columns)) + '\n')
+                f.write(str(ds.X.shape[0]) + '\t' + str(ds.X.shape[1]) + '\t' + str(len(ds.obs.columns)) +
+                        '\t' + str(len(ds.var.columns)) + '\n')
             f.write('id' + sep)
-            f.write(sep.join(str(x) for x in ds.row_meta.columns))
-            if len(ds.row_meta.columns) > 0:
+            f.write(sep.join(str(x) for x in ds.obs.columns))
+            if len(ds.obs.columns) > 0:
                 f.write(sep)
-            f.write(sep.join(str(x) for x in ds.col_meta.index.values))
+            f.write(sep.join(str(x) for x in ds.var.index.values))
             f.write('\n')
-            spacer = ''.join(np.full(len(ds.row_meta.columns), sep, dtype=object))
+            spacer = ''.join(np.full(len(ds.obs.columns), sep, dtype=object))
             # column metadata fields + values
-            for field in ds.col_meta.columns:
-                f.write(field)
+            for field in ds.var.columns:
+                f.write(str(field))
                 f.write(spacer)
-                for val in ds.col_meta[field].values:
+                for val in ds.var[field].values:
                     f.write(sep)
                     f.write(str(val))
 
                 f.write('\n')
             # TODO write as sparse array
-            pd.DataFrame(index=ds.row_meta.index, data=np.hstack(
-                (ds.row_meta.values, ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x))).to_csv(f, sep=sep,
-                                                                                                         header=False
-                                                                                                         )
+            pd.DataFrame(index=ds.obs.index, data=np.hstack(
+                (ds.obs.values, ds.X.toarray() if scipy.sparse.isspmatrix(ds.X) else ds.X))).to_csv(f, sep=sep,
+                                                                                                    header=False
+                                                                                                    )
             f.close()
         else:
-            pd.DataFrame(ds.x.toarray() if scipy.sparse.isspmatrix(ds.x) else ds.x, index=ds.row_meta.index,
-                         columns=ds.col_meta.index).to_csv(path,
-                                                           index_label='id',
-                                                           sep=sep,
-                                                           doublequote=False)
+            pd.DataFrame(ds.X.toarray() if scipy.sparse.isspmatrix(ds.X) else ds.X, index=ds.obs.index,
+                         columns=ds.var.index).to_csv(path,
+                                                      index_label='id',
+                                                      sep=sep,
+                                                      doublequote=False)
     elif output_format == 'npy':
-        np.save(path, ds.x)
+        np.save(path, ds.X)
+    elif output_format == 'h5ad':
+        ds.write(path)
     elif output_format == 'loom':
         f = h5py.File(path, 'w')
-        x = ds.x
+        x = ds.X
         is_sparse = scipy.sparse.isspmatrix(x)
         is_dask = str(type(x)) == "<class 'dask.array.core.Array'>"
         save_in_chunks = is_sparse or is_dask
@@ -825,8 +829,8 @@ def write_dataset(ds, path, output_format='txt'):
         #                      compression='gzip', compression_opts=9,
         #                      data=x)
 
-        wot.io.save_loom_attrs(f, False, ds.row_meta, ds.x.shape[0])
-        wot.io.save_loom_attrs(f, True, ds.col_meta, ds.x.shape[1])
+        wot.io.save_loom_attrs(f, False, ds.obs, ds.X.shape[0])
+        wot.io.save_loom_attrs(f, True, ds.var, ds.X.shape[1])
 
         f.close()
 
@@ -870,17 +874,17 @@ def read_days_data_frame(path):
 
 def add_row_metadata_to_dataset(dataset, days_path, growth_rates_path=None, sampling_bias_path=None,
                                 covariate_path=None):
-    dataset.row_meta = dataset.row_meta.join(read_days_data_frame(days_path))
+    dataset.obs = dataset.obs.join(read_days_data_frame(days_path))
     if growth_rates_path is not None:
-        dataset.row_meta = dataset.row_meta.join(
+        dataset.obs = dataset.obs.join(
             pd.read_table(growth_rates_path, index_col='id', engine='python', sep=None))
     else:
-        dataset.row_meta['cell_growth_rate'] = 1.0
+        dataset.obs['cell_growth_rate'] = 1.0
     if sampling_bias_path is not None:
-        dataset.row_meta = dataset.row_meta.join(
+        dataset.obs = dataset.obs.join(
             pd.read_table(sampling_bias_path, index_col='id', engine='python', sep=None))
     if covariate_path is not None:
-        dataset.row_meta = dataset.row_meta.join(
+        dataset.obs = dataset.obs.join(
             pd.read_table(covariate_path, index_col='id', engine='python', sep=None))
 
 

@@ -210,17 +210,17 @@ def main(argsv):
     lda_u = args.u2
 
     ds = wot.io.read_dataset(args.matrix)
-    if scipy.sparse.isspmatrix(ds.x):
-        ds.x = ds.x.toarray()
+    if scipy.sparse.isspmatrix(ds.X):
+        ds.X = ds.X.toarray()
     if args.exp2:
-        ds.x = 2 ** ds.x - 1
+        ds.X = 2 ** ds.X - 1
 
     if args.percentile is not None:
-        thresh = np.percentile(ds.x, args.percentile)
-        ds.x[(ds.x > thresh)] = thresh
+        thresh = np.percentile(ds.X, args.percentile)
+        ds.X[(ds.X > thresh)] = thresh
 
     tf_ids = pd.read_table(args.tf, index_col=0, header=None).index.values
-    tf_column_indices = ds.col_meta.index.isin(tf_ids)
+    tf_column_indices = ds.var.index.isin(tf_ids)
     ntf_sum = tf_column_indices.sum()
     if ntf_sum == 0:
         print('No transcription factors found')
@@ -255,38 +255,38 @@ def main(argsv):
             tmap_dict = transport_maps[i]
             tmap = wot.io.read_dataset(tmap_dict['path'])
             if i == 0:  # first timepoint, align dataset with tmap rows
-                aligned_order = ds.row_meta.index.get_indexer_for(tmap.row_meta.index.values.astype(str))
+                aligned_order = ds.obs.index.get_indexer_for(tmap.obs.index.values.astype(str))
                 if (aligned_order == -1).sum() > 0:
-                    print(tmap.row_meta.index.values[aligned_order == -1])
+                    print(tmap.obs.index.values[aligned_order == -1])
                     nmissing = (aligned_order == -1).sum()
                     raise ValueError(str(nmissing) + ' missing ids for ' + tmap_dict['path'])
 
-                ds_t = wot.Dataset(ds.x[aligned_order], ds.row_meta.iloc[aligned_order], ds.col_meta)
-                Xg.append(ds_t.x[:, non_tf_column_indices])
-                Xr.append(ds_t.x[:, tf_column_indices])
+                ds_t = anndata.AnnData(ds.X[aligned_order], ds.obs.iloc[aligned_order], ds.var)
+                Xg.append(ds_t.X[:, non_tf_column_indices])
+                Xr.append(ds_t.X[:, tf_column_indices])
                 TP.append(tmap_dict['t1'])
                 if len(TP) > 0 and TP[len(TP) - 1] < TP[len(TP) - 2]:
                     Lineage.append([])
 
             # align dataset with tmap columns
-            aligned_order = ds.row_meta.index.get_indexer_for(tmap.col_meta.index.values.astype(str))
+            aligned_order = ds.obs.index.get_indexer_for(tmap.var.index.values.astype(str))
             if (aligned_order == -1).sum() > 0:
-                print(tmap.col_meta.index.values[aligned_order == -1])
+                print(tmap.var.index.values[aligned_order == -1])
                 nmissing = (aligned_order == -1).sum()
                 raise ValueError(str(nmissing) + ' missing ids for ' + tmap_dict['path'])
 
-            ds_t = wot.Dataset(ds.x[aligned_order], ds.row_meta.iloc[aligned_order], ds.col_meta)
-            Xg.append(ds_t.x[:, non_tf_column_indices])
-            Xr.append(ds_t.x[:, tf_column_indices])
+            ds_t = anndata.AnnData(ds.X[aligned_order], ds.obs.iloc[aligned_order], ds.var)
+            Xg.append(ds_t.X[:, non_tf_column_indices])
+            Xr.append(ds_t.X[:, tf_column_indices])
             TP.append(tmap_dict['t2'])
-            Lineage.append(tmap.x)
+            Lineage.append(tmap.X)
 
     # if args.U is None:
     # rows are modules, columns are genes
     U = initialize_modules(Xg, N, threads=threads)
 
     # else:
-    #     U = wot.io.read_dataset(args.U).x
+    #     U = wot.io.read_dataset(args.U).X
     # TODO ensure in same order as ds
 
     Uinv = np.linalg.pinv(U)
@@ -330,14 +330,14 @@ def main(argsv):
 
     # U has modules on rows, non-TFs on columns
     wot.io.write_dataset(
-        wot.Dataset(U, row_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=U.shape[0], step=1)),
-                    col_meta=ds.col_meta.iloc[non_tf_column_indices]),
+        anndata.AnnData(U, obs=pd.DataFrame(index=pd.RangeIndex(start=0, stop=U.shape[0], step=1)),
+                    var=ds.var.iloc[non_tf_column_indices]),
         args.out + '_U', output_format='loom')
 
     # # Z has TFs on rows, modules on columns
     wot.io.write_dataset(
-        wot.Dataset(Z, row_meta=ds.col_meta.iloc[tf_column_indices],
-                    col_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=Z.shape[1], step=1))),
+        anndata.AnnData(Z, obs=ds.var.iloc[tf_column_indices],
+                    var=pd.DataFrame(index=pd.RangeIndex(start=0, stop=Z.shape[1], step=1))),
         args.out + '_Z', output_format='loom')
 
     with open(args.out + '_kbyx.txt', 'w') as writer:
@@ -357,6 +357,6 @@ def main(argsv):
     #         # genes on columns, modules on rows
     #         name = args.out + '_regulators_deltaX.day-%d' % tp
     #         wot.io.write_dataset(
-    #             wot.Dataset(Xh[i], row_meta=pd.DataFrame(index=pd.RangeIndex(start=0, stop=Xh[i].shape[0], step=1)),
-    #                         col_meta=ds.col_meta.iloc[non_tf_column_indices]),
+    #             anndata.AnnData(Xh[i], obs=pd.DataFrame(index=pd.RangeIndex(start=0, stop=Xh[i].shape[0], step=1)),
+    #                         var=ds.var.iloc[non_tf_column_indices]),
     #             name, output_format='loom')

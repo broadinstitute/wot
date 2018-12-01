@@ -50,7 +50,7 @@ t = numpy.clip(t + .5, 0, 1)
 alphas = numpy.clip(alphas / numpy.mean(alphas), 0, 1)
 colors = [ wot.graphics.hexstring_of_rgba([t[i], 0, 1-t[i], alphas[i]])
            for i in range(len(t)) ]
-ds.row_meta.loc[:, 'color']  = colors
+ds.obs.loc[:, 'color']  = colors
 
 wot.graphics.plot_2d_dataset(pyplot, ds)
 pyplot.show()

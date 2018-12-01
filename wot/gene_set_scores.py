@@ -77,10 +77,10 @@ def score_gene_sets(dataset_to_score, gs, method='mean', permutations=None, n_ne
 
     if permutations is None:
         permutations = 0
-    x = dataset_to_score.x
-    if gs.x.shape[1] > 1:
+    x = dataset_to_score.X
+    if gs.X.shape[1] > 1:
         raise ValueError('Only one gene set allowed as input')
-    gs_1_0 = gs.x
+    gs_1_0 = gs.X
 
     if not scipy.sparse.issparse(gs_1_0):
         gs_1_0 = scipy.sparse.csr_matrix(gs_1_0)
@@ -107,7 +107,7 @@ def score_gene_sets(dataset_to_score, gs, method='mean', permutations=None, n_ne
     elif method == 'mean_rank':
         ranks = np.zeros(x.shape)
         is_sparse = scipy.sparse.issparse(x)
-        for i in range(dataset_to_score.x.shape[0]):  # rank each cell separately
+        for i in range(dataset_to_score.X.shape[0]):  # rank each cell separately
             row = x[i, :]
             if is_sparse:
                 row = row.toarray()

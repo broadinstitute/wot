@@ -1,6 +1,6 @@
-import glob
 import os
 
+import anndata
 import h5py
 import numpy as np
 import pandas as pd
@@ -33,6 +33,7 @@ class TransportMapModel:
         if timepoints is None:
             timepoints = sorted(meta['day'].unique())
         self.timepoints = timepoints
+
         if day_pairs is None:
             day_pairs = [(timepoints[i], timepoints[i + 1]) for i in range(len(timepoints) - 1)]
         self.day_pairs = day_pairs
@@ -50,7 +51,7 @@ class TransportMapModel:
     
         Returns
         -------
-        trajectories : wot.Dataset
+        trajectories : anndata.AnnData
             Rows : all cells, Columns : populations index. At point (i, j) : the probability that cell i is an
             ancestor/descendant of population j
         """
@@ -84,16 +85,16 @@ class TransportMapModel:
         #     t = timepoints[i]
         #     probs = trajectories[i]
         #     ncells = probs.shape[0]
-        #     row_meta = self.matrix.row_meta.iloc[np.arange(start, start + ncells)].copy()
-        #     row_meta['day'] = t
+        #     obs = self.matrix.obs.iloc[np.arange(start, start + ncells)].copy()
+        #     obs['day'] = t
         #
         #     for j in range(probs.shape[1]):
         #         name_to_list[population_names[j]].append(
-        #             wot.Dataset(x=probs[:, j], row_meta=row_meta, col_meta=pd.DataFrame(index=[population_names[j]])))
+        #             anndata.AnnData(X=probs[:, j], obs=obs, var=pd.DataFrame(index=[population_names[j]])))
         #     start += ncells
         # return list(name_to_list.values())
-        return wot.Dataset(x=np.concatenate(trajectories), row_meta=self.meta,
-                           col_meta=pd.DataFrame(index=population_names))
+        return anndata.AnnData(X=np.concatenate(trajectories), obs=self.meta,
+                               var=pd.DataFrame(index=population_names))
 
     def get_transport_map(self, t0, t1, covariate=None):
         """
@@ -110,7 +111,7 @@ class TransportMapModel:
 
         Returns
         -------
-        tmap : wot.Dataset
+        tmap : anndata.AnnData
             The transport map from t0 to t1
         """
         if t0 not in self.timepoints or t1 not in self.timepoints:
@@ -129,7 +130,7 @@ class TransportMapModel:
                 cv0, cv1 = covariate
                 key = (t0, t1, cv0, cv1)
             ds_or_path = self.tmaps.get(key)
-            if type(ds_or_path) is wot.Dataset:
+            if type(ds_or_path) is anndata.AnnData:
                 return ds_or_path
             ds = wot.io.read_dataset(ds_or_path)
             if self.cache:
@@ -238,7 +239,7 @@ class TransportMapModel:
             t0 = self.timepoints[i]
             t1 = self.timepoints[i + 1]
             tmap = self.get_transport_map(t0, t1)
-            p = p @ tmap.x
+            p = p @ tmap.X
             if normalize:
                 p = (p.T / np.sum(p, axis=1)).T
             i += 1
@@ -304,7 +305,7 @@ class TransportMapModel:
             t1 = self.timepoints[i]
             t0 = self.timepoints[i - 1]
             tmap = self.get_transport_map(t0, t1)
-            p = (tmap.x @ p.T).T
+            p = (tmap.X @ p.T).T
             if normalize:
                 p = (p.T / np.sum(p, axis=1)).T
             i -= 1
@@ -488,7 +489,7 @@ class TransportMapModel:
         ----------
         self : wot.TransportMapModel
             The OTModel used to find ancestors and descendants of the population
-        cset_matrix : wot.Dataset
+        cset_matrix : anndata.AnnData
             The cell set matrix, cells as rows, cell sets as columns. 1s denote membership.
         *populations : wot.Population
             The target populations
@@ -522,7 +523,7 @@ class TransportMapModel:
 
         Parameters
         ----------
-        cell_set_matrix : wot.Dataset
+        cell_set_matrix : anndata.AnnData
             Dataset of 0s and 1s denoting membership in each cell set.
             Cells as rows, cell sets as columns.
         *populations : wot.Population or list of wot.Population
@@ -541,15 +542,15 @@ class TransportMapModel:
         """
         day = wot.tmap.unique_timepoint(*populations)
         df = self.meta[self.meta['day'] == day]
-        inter_ids = cell_set_matrix.row_meta.index.intersection(df.index)
+        inter_ids = cell_set_matrix.obs.index.intersection(df.index)
         if len(inter_ids) == 0:
-            census = [[0] * cell_set_matrix.x.shape[1]] * len(populations)
+            census = [[0] * cell_set_matrix.X.shape[1]] * len(populations)
         else:
             pop_indexer = df.index.get_indexer_for(inter_ids)
-            csm_indexer = cell_set_matrix.row_meta.index.get_indexer_for(inter_ids)
+            csm_indexer = cell_set_matrix.obs.index.get_indexer_for(inter_ids)
 
             def get_census(p):
-                return np.dot(p[pop_indexer], cell_set_matrix.x[csm_indexer, :])
+                return np.dot(p[pop_indexer], cell_set_matrix.X[csm_indexer, :])
 
             norm = lambda p: p if np.isclose(np.sum(p), 0) else p / np.sum(p)
             census = np.asarray([get_census(norm(pop.p)) for pop in populations],
@@ -606,48 +607,38 @@ class TransportMapModel:
         tmap_dir = tmap_dir or '.'
         tmap_prefix = tmap_prefix or "tmaps"
         tmaps = {}
-
-        covariate_pattern = None
+        import re
+        files = os.listdir(tmap_dir)
+        pattern = None
         if with_covariates:
-            covariate_pattern = tmap_prefix + '_[0-9]*.[0-9]*_[0-9]*.[0-9]*_cv[0-9]*_cv[0-9]*.*loom'
-
-        pattern = tmap_prefix + '_[0-9]*.[0-9]*_[0-9]*.[0-9]*.*loom'
-
-        for path in glob.glob(os.path.join(tmap_dir, pattern)):
-            if not os.path.isfile(path):
-                continue
-            basename, ext = wot.io.get_filename_and_extension(path)
-            tokens = basename.split('_')
-            try:
-                t1 = float(tokens[-2])
-                t2 = float(tokens[-1])
-                tmaps[(t1, t2)] = path
-            except ValueError:
-                pass
-
-        if covariate_pattern is not None:
-            for path in glob.glob(os.path.join(tmap_dir, covariate_pattern)):
-                if not os.path.isfile(path):
-                    continue
-                basename, ext = wot.io.get_filename_and_extension(path)
-                tokens = basename.split('_')
-                try:
-                    t1 = float(tokens[-4])
-                    t2 = float(tokens[-3])
-                    cv1 = int(tokens[-2][2:])
-                    cv2 = int(tokens[-1][2:])
-                    tmaps[(t1, t2, cv1, cv2)] = path
-                except ValueError:
-                    pass
+            pattern = re.compile(
+                tmap_prefix + '_([0-9]+\.[0-9])+_([0-9]+\.[0-9]+)_cv([0-9]+)_cv([0-9]+)[\.h5ad|\.loom]')
+        else:
+            pattern = re.compile(tmap_prefix + '_([0-9]+\.[0-9]+)_([0-9]+\.[0-9])+[\.h5ad|\.loom]')
+        for f in files:
+            if os.path.isfile(f):
+                m = pattern.match(f)
+                if m is not None:
+                    path = os.path.join(tmap_dir, f)
+                    try:
+                        t1 = float(m.group(1))
+                        t2 = float(m.group(2))
+                        if with_covariates:
+                            cv1 = int(m.group(3))
+                            cv2 = int(m.group(4))
+                            tmaps[(t1, t2, cv1, cv2)] = path
+                        else:
+                            tmaps[(t1, t2)] = path
+                    except ValueError:
+                        print('Unable to find day pair for ' + f)
+                        pass
 
         if len(tmaps) is 0:
-            raise ValueError('No transport maps found')
+            raise ValueError('No transport maps found in ' + tmap_dir + ' with prefix ' + tmap_prefix)
         day_pairs = set()
         unique_timepoints = set()
         timepoint_to_ids = {}
         for key in tmaps:
-            if len(key) != 2:
-                continue
             t0 = key[0]
             t1 = key[1]
             day_pairs.add((t0, t1))
@@ -659,11 +650,17 @@ class TransportMapModel:
                 path = tmaps[key]
                 f = h5py.File(path, 'r')
                 if load_t0:
-                    ids = f['/row_attrs/id'][()].astype(str)
+                    if path.endswith('loom'):
+                        ids = f['/row_attrs/id'][()].astype(str)
+                    else:
+                        ids = f['/obs']['index'][()].astype(str)
                     df = pd.DataFrame(index=ids, data={'day': t0})
                     timepoint_to_ids[t0] = df
                 if load_t1:
-                    ids = f['/col_attrs/id'][()].astype(str)
+                    if path.endswith('loom'):
+                        ids = f['/col_attrs/id'][()].astype(str)
+                    else:
+                        ids = f['/var']['index'][()].astype(str)
                     df = pd.DataFrame(index=ids, data={'day': t1})
                     timepoint_to_ids[t1] = df
                 f.close()

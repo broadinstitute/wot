@@ -4,8 +4,10 @@
 import argparse
 import os
 
+import anndata
 import numpy as np
 import pandas as pd
+
 import wot.io
 
 
@@ -20,42 +22,42 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
         print('Read ' + matrix)
     if cell_filter is not None:
         cell_filter = wot.io.read_sets(cell_filter)
-        cells_ids = cell_filter.row_meta.index.values[np.where(cell_filter.x[:, 0] > 0)[0]]
-        cell_filter = ds.row_meta.index.isin(cells_ids)
-        ds = wot.Dataset(ds.x[cell_filter], ds.row_meta.iloc[cell_filter], ds.col_meta)
+        cells_ids = cell_filter.obs.index.values[np.where(cell_filter.X[:, 0] > 0)[0]]
+        cell_filter = ds.obs.index.isin(cells_ids)
+        ds = anndata.AnnData(ds.X[cell_filter], ds.obs.iloc[cell_filter], ds.var)
 
     background_ds = None
     if background_cell_set is not None:
         background_cells_ds = wot.io.read_sets(background_cell_set)
-        background_cells_ids = background_cells_ds.row_meta.index.values[np.where(background_cells_ds.x[:, 0] > 0)[0]]
-        cell_filter = ds.row_meta.index.isin(background_cells_ids)
-        background_ds = wot.Dataset(ds.x[cell_filter], ds.row_meta.iloc[cell_filter], ds.col_meta)
+        background_cells_ids = background_cells_ds.obs.index.values[np.where(background_cells_ds.X[:, 0] > 0)[0]]
+        cell_filter = ds.obs.index.isin(background_cells_ids)
+        background_ds = anndata.AnnData(ds.X[cell_filter], ds.obs.iloc[cell_filter], ds.var)
 
-    gs = wot.io.read_sets(gene_sets, ds.col_meta.index.values)
+    gs = wot.io.read_sets(gene_sets, ds.var.index.values)
     if progress:
         print('Read ' + gene_sets)
-    if gs.x.shape[1] is 0:
+    if gs.X.shape[1] is 0:
         raise ValueError('No overlap of genes in gene sets and dataset')
     if gene_set_filter is not None:
         if os.path.exists(gene_set_filter):
             set_names = pd.read_table(gene_set_filter, header=None, index_col=0, engine='python', sep='\n').index.values
         else:
             set_names = gene_set_filter.split(',')
-        gs_filter = gs.col_meta.index.isin(set_names)
-        gs = wot.Dataset(gs.x[:, gs_filter], gs.row_meta, gs.col_meta.iloc[gs_filter])
-    if gs.x.shape[1] is 0:
+        gs_filter = gs.var.index.isin(set_names)
+        gs = anndata.AnnData(gs.X[:, gs_filter], gs.obs, gs.var.iloc[gs_filter])
+    if gs.X.shape[1] is 0:
         raise ValueError('No gene sets')
 
     # scores contains cells on rows, gene sets on columns
-    for j in range(gs.x.shape[1]):
-        if progress and gs.x.shape[1] > 1:
-            print(gs.col_meta.index.values[j])
+    for j in range(gs.X.shape[1]):
+        if progress and gs.X.shape[1] > 1:
+            print(gs.var.index.values[j])
         result = wot.score_gene_sets(dataset_to_score=ds,
-                                     gs=wot.Dataset(gs.x[:, [j]], gs.row_meta, gs.col_meta.iloc[[j]]),
+                                     gs=anndata.AnnData(gs.X[:, [j]], gs.obs, gs.var.iloc[[j]]),
                                      permutations=permutations, method=method, n_neighbors=n_neighbors,
                                      drop_frequency=drop_frequency, drop_p_value_threshold=drop_p_value_threshold,
                                      progress=progress, neighbors_method=neighbors_method)
-        column_names = [str(gs.col_meta.index.values[j])]
+        column_names = [str(gs.var.index.values[j])]
         if permutations is not None and permutations > 0:
             column_names.append('p_value')
             column_names.append('FDR_BH')
@@ -74,10 +76,10 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
 
         else:
             x = result['score']
-        wot.io.write_dataset(ds=wot.Dataset(x=x, row_meta=ds.row_meta, col_meta=pd.DataFrame(index=column_names)),
+        wot.io.write_dataset(ds=anndata.AnnData(X=x, obs=ds.obs, var=pd.DataFrame(index=column_names)),
                              path=out + '_' + column_names[0], output_format=format)
     # import dask.array as da
-    # da.to_npy_stack('/Users/jgould/git/wot/bin/data/', result.x, axis=0)
+    # da.to_npy_stack('/Users/jgould/git/wot/bin/data/', result.X, axis=0)
 
 
 def main(argv):

@@ -3,8 +3,10 @@
 
 import argparse
 
+import anndata
 import numpy as np
 import pandas as pd
+
 import wot.io
 
 
@@ -53,8 +55,8 @@ def summarize_transport_map(transport_maps, start_cell_sets, end_cell_sets, star
                 continue
             summary[i, j] += tmap_r[:, column_indices].sum()
 
-    row_meta = pd.DataFrame(index=rids)
-    col_meta = pd.DataFrame(index=cids)
+    obs = pd.DataFrame(index=rids)
+    var = pd.DataFrame(index=cids)
     cells_start = np.zeros(nrows)
     g = np.zeros(nrows)
     for i in range(nrows):
@@ -66,7 +68,7 @@ def summarize_transport_map(transport_maps, start_cell_sets, end_cell_sets, star
             g[i] = start_time_g[row_indices].sum()
     g /= start_time_g.sum()
     cells_start /= start_time_ncells
-    row_meta['cells_start'] = cells_start
+    obs['cells_start'] = cells_start
     cells_end = np.zeros(ncols)
     for j in range(ncols):
         column_indices = cell_set_id_to_column_indices[cids[j]]
@@ -75,25 +77,25 @@ def summarize_transport_map(transport_maps, start_cell_sets, end_cell_sets, star
         cells_end[j] = len(column_indices)
 
     cells_end /= end_time_ncells
-    col_meta['cells_end'] = cells_end
+    var['cells_end'] = cells_end
     if start_time_g is not None:
-        row_meta['g'] = g
+        obs['g'] = g
 
     tmap_sum = tmap.values.sum()
     row_sums = summary.sum(axis=1)
     row_sums /= tmap_sum
-    row_meta['sum'] = row_sums
+    obs['sum'] = row_sums
     # row_filter = row_sums > 0
 
     column_sums = summary.sum(axis=0)
     column_sums /= tmap_sum
-    col_meta['sum'] = column_sums
+    var['sum'] = column_sums
     # column_filter = column_sums > 0
 
     # summary = summary[row_filter]
     # summary = summary[:, column_filter]
-    # row_meta = row_meta.iloc[row_filter]
-    # col_meta = col_meta.iloc[column_filter]
+    # obs = obs.iloc[row_filter]
+    # var = var.iloc[column_filter]
 
     summary /= tmap_sum
 
@@ -102,7 +104,7 @@ def summarize_transport_map(transport_maps, start_cell_sets, end_cell_sets, star
     # summary.to_csv(prefix + '_' + str(start_time) + '_' + str(end_time) + '_transition_summary.txt', index_label='id',
     #                sep='\t', doublequote=False, quoting=csv.QUOTE_NONE)
 
-    return wot.Dataset(summary, row_meta=row_meta, col_meta=col_meta)
+    return anndata.AnnData(summary, obs=obs, var=var)
 
 
 def multiply_tmaps(start_time, end_time, transport_maps, store=False):
@@ -131,12 +133,12 @@ def multiply_tmaps(start_time, end_time, transport_maps, store=False):
     for i in range(start_time_index, end_time_index + 1):
         ds = wot.io.read_dataset(transport_maps[i]['path'])
         if i == start_time_index:
-            start_time_ncells = ds.x.shape[0]
-            if ds.row_meta.get('g') is not None:
-                start_time_g = ds.row_meta['g'].values
+            start_time_ncells = ds.X.shape[0]
+            if ds.obs.get('g') is not None:
+                start_time_g = ds.obs['g'].values
         elif i == end_time_index:
-            end_time_ncells = ds.x.shape[1]
-        tmap_i = pd.DataFrame(index=ds.row_meta.index, columns=ds.col_meta.index, data=ds.x)
+            end_time_ncells = ds.X.shape[1]
+        tmap_i = pd.DataFrame(index=ds.obs.index, columns=ds.var.index, data=ds.X)
         if tmap is None:
             tmap = tmap_i
         else:
@@ -162,7 +164,7 @@ def main(argv):
                         required=True, type=float)
     parser.add_argument('--end_time', help='The end time', required=True, type=float)
     parser.add_argument('--out', help='Prefix for ouput file.')
-    parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='loom', choices=wot.commands.FORMAT_CHOICES)
+    parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='h5ad', choices=wot.commands.FORMAT_CHOICES)
 
     args = parser.parse_args(argv)
 

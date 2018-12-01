@@ -24,11 +24,11 @@ population = all_populations[target_cell_set]
 trajectory_ds = tmap_model.compute_trajectories({target_cell_set: all_populations[target_cell_set]})
 results = wot.ot.compute_trajectory_trends_from_trajectory(trajectory_ds, ds)
 means, variances = results[0]
-timepoints = means.row_meta.index.values
+timepoints = means.obs.index.values
 pyplot.figure(figsize=(5, 5))
-means = means.x
-stds = numpy.sqrt(variances.x)
-genes = ds.col_meta.index
+means = means.X
+stds = numpy.sqrt(variances.X)
+genes = ds.var.index
 for i in range(skip_first_n_genes, means.shape[1]):
     pyplot.plot(timepoints, means[:, i], label=genes[i])
     pyplot.fill_between(timepoints, means[:, i] - stds[:, i],
