@@ -17,7 +17,7 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
     if out is None:
         out = ''
     use_dask = False
-    ds = wot.io.read_dataset(matrix, use_dask=use_dask, chunks=(10000, None))
+    ds = wot.io.read_dataset(matrix)
     if progress:
         print('Read ' + matrix)
     if cell_filter is not None:
@@ -110,7 +110,6 @@ def main(argv):
     if args.out is None:
         args.out = wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0] + '_gene_set_scores'
 
-    use_dask = False
     # use_dask = args.dask is not None
     # if use_dask:
     #     from dask.distributed import Client
