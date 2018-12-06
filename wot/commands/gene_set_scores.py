@@ -53,7 +53,7 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
         if progress and gs.X.shape[1] > 1:
             print(gs.var.index.values[j])
         result = wot.score_gene_sets(dataset_to_score=ds,
-                                     gs=anndata.AnnData(gs.X[:, [j]], gs.obs, gs.var.iloc[[j]]),
+                                     gs=gs[:, [j]],
                                      permutations=permutations, method=method, n_neighbors=n_neighbors,
                                      drop_frequency=drop_frequency, drop_p_value_threshold=drop_p_value_threshold,
                                      progress=progress, neighbors_method=neighbors_method)

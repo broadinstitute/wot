@@ -78,9 +78,9 @@ def score_gene_sets(dataset_to_score, gs, method='mean', permutations=None, n_ne
     if permutations is None:
         permutations = 0
     x = dataset_to_score.X
-    if gs.X.shape[1] > 1:
-        raise ValueError('Only one gene set allowed as input')
     gs_1_0 = gs.X
+    if not scipy.sparse.issparse(gs.X) and len(gs.X.shape) is 1:
+        gs_1_0 = np.array([gs_1_0]).T
 
     if not scipy.sparse.issparse(gs_1_0):
         gs_1_0 = scipy.sparse.csr_matrix(gs_1_0)
