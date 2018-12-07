@@ -472,7 +472,7 @@ def read_dataset(path):
                 if os.path.isfile(f) or os.path.isfile(f + '.gz'):
                     var = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
                                         header=None)
-                break
+                    break
 
         if var is None:
             print(basename_and_extension[0] + '.genes.txt not found')
