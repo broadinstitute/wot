@@ -41,14 +41,14 @@ class TransportMapModel:
     def compute_trajectories(self, population_dict):
         """
         Computes a trajectory for each population
-    
+
         Parameters
         ----------
         self : wot.TransportMapModel
             The TransportMapModel used to find ancestors and descendants of the population
         *population_dict : dict of str: wot.Population
             The target populations such as ones from self.population_from_cell_sets
-    
+
         Returns
         -------
         trajectories : anndata.AnnData
@@ -616,10 +616,10 @@ class TransportMapModel:
         else:
             pattern = re.compile(tmap_prefix + '_([0-9]+\.[0-9]+)_([0-9]+\.[0-9])+[\.h5ad|\.loom]')
         for f in files:
-            if os.path.isfile(f):
+            path = os.path.join(tmap_dir, f)
+            if os.path.isfile(path):
                 m = pattern.match(f)
                 if m is not None:
-                    path = os.path.join(tmap_dir, f)
                     try:
                         t1 = float(m.group(1))
                         t2 = float(m.group(2))
