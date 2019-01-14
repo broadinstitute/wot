@@ -17,7 +17,7 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--local_pca', type=int, default=30,
                         help='Convert day pairs matrix to local PCA coordinates.'
                              'Set to 0 to disable')
-    parser.add_argument('--growth_iters', type=int, default=3,
+    parser.add_argument('--growth_iters', type=int, default=1,
                         help='Number of growth iterations for learning the growth rate.')
     parser.add_argument('--cell_growth_rates',
                         help='File with "id" and "cell_growth_rate"'
