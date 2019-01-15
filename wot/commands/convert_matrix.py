@@ -15,6 +15,7 @@ def main(argv):
     parser.add_argument('matrix', help='File(s) to convert', nargs='+')
     parser.add_argument('--obs', help='Row metadata to join with ids in matrix', action='append')
     parser.add_argument('--var', help='Column metadata to join with ids in matrix', action='append')
+    parser.add_argument('--transpose', help='Transpose the matrix before saving', action='store_true')
     args = parser.parse_args(argv)
     files = args.matrix
     obs = []
@@ -32,4 +33,4 @@ def main(argv):
             ds.obs = ds.obs.join(df)
         for df in var:
             ds.var = ds.var.join(df)
-        wot.io.write_dataset(ds, name, output_format=args.format)
+        wot.io.write_dataset(ds.T if args.transpose else ds, name, output_format=args.format)
