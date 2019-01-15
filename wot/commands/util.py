@@ -2,7 +2,7 @@ CELL_SET_HELP = 'gmt, gmx, or grp file of cell sets.'
 CELL_DAYS_HELP = 'File with headers "id" and "day" corresponding to cell id and days'
 TMAP_HELP = 'Directory of transport maps as produced by optimal transport'
 MATRIX_HELP = 'A matrix with cells on rows and features, such as genes or pathways on columns'
-CONFIG_HELP = 'Optional detailed configuration file to specify time-dependant OT parameters'
+CONFIG_HELP = 'Optional detailed configuration file to specify time-dependent OT parameters'
 FORMAT_HELP = 'Output file format'
 FORMAT_CHOICES = ['gct', 'h5ad', 'loom', 'txt']
 
@@ -11,6 +11,7 @@ def add_model_arguments(parser):
     parser.add_argument('--matrix', help=MATRIX_HELP, required=True)
     parser.add_argument('--cell_days', help=CELL_DAYS_HELP, required=True)
     parser.add_argument('--config', help=CONFIG_HELP)
+    parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
 
 
 def add_ot_parameters_arguments(parser):
@@ -22,7 +23,6 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--cell_growth_rates',
                         help='File with "id" and "cell_growth_rate"'
                              'headers corresponding to cell id and growth rate per day.')
-    parser.add_argument('--sampling_bias', help='File with "id" and "pp" to correct sampling bias.')
     parser.add_argument('--gene_filter',
                         help='File with one gene id per line to use for computing'
                              'cost matrices (e.g. variable genes)')
@@ -54,6 +54,8 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--ncells', type=int, help='Number of cells to downsample from each timepoint and covariate')
     parser.add_argument('--ncounts', help='Sample ncounts from each cell', type=int)
     parser.add_argument('--force', help='Overwrite existing transport maps if they exist', type=bool, default=False)
+    parser.add_argument('--sampling_bias', help='File with "id" and "pp" to correct sampling bias.')
+
     # parser.add_argument('--max_iter', type=int, default=1e7,
     #                     help='Maximum number of scaling iterations. Abort if convergence was not reached')
     # parser.add_argument('--batch_size', type=int, default=50,

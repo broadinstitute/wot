@@ -36,6 +36,8 @@ def initialize_ot_model(matrix, days, tmap_out=None, **kwargs):
     >>> initialize_ot_model('matrix.txt', 'days.txt', lambda1=50, lambda2=80, epsilon=.01)
     """
     ds = wot.io.read_dataset(matrix)
+    if kwargs.pop('transpose', False):
+        ds = ds.T
     wot.io.add_row_metadata_to_dataset(dataset=ds, days_path=days,
                                        growth_rates_path=kwargs.pop('cell_growth_rates', None),
                                        sampling_bias_path=kwargs.pop('sampling_bias', None),

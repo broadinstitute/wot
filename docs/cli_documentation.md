@@ -397,8 +397,9 @@ all the information needed to evaluate the accuracy of the predictions.
       <td>The filename for the validation summary<br/>default : validation_summary.txt</td>
     </tr>
     <tr>
-      <td>--interp_pattern</td>
-      <td>Two comma-separated values to specify the interpolation pattern<br />default : 1,2</td>
+      <td>--day_triplets</td>
+      <td>Three column file without a header containing start time (t0), interpolation time, and end time (t1). Default is to compute transport maps from time t to time t+2
+      and interpolate at time t+1</td>
     </tr>
   </tbody>
 </table>
@@ -407,18 +408,7 @@ The validation tool also accepts all options of the
 [optimal_transport tool](#transport-maps). Mandatory options are
 reproduced here for convenience.
 
-##### Interpolation pattern #####
 
-Validation is done by transporting cells from time t to t+y and interpolating at t+x.
-
-You can change these two values using the parameter `--interp_pattern x,y`.
-
-If you have timepoints 0, 1, 2, ... to 10, the pattern is `1,2`,
-which means you would transport from 0 to 2 and interpolate at 1, and then
-transport from 1 to 3 and interpolate at 2, etc. Using pattern `2,4` would
-transport from 0 to 4 and interpolate at 2, then 1 to 5 and interpolate at 3, etc.
-But you might want to not interpolate in the middle, for instance with `1,4`, you
-would transport from 0 to 4 and interpolate at 1, etc.
 
 ##### Covariate #####
 

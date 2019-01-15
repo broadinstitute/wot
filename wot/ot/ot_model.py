@@ -59,6 +59,8 @@ class OTModel:
                 expr = re.compile(gene_filter)
                 gene_ids = [e for e in self.matrix.var.index.values if expr.match(e)]
             col_indices = self.matrix.var.index.isin(gene_ids)
+            if np.sum(col_indices) is 0:
+                raise ValueError('No genes passed the gene filter')
             self.matrix = anndata.AnnData(self.matrix.X[:, col_indices],
                                           self.matrix.obs, self.matrix.var[col_indices].copy(False))
             wot.io.verbose('Successfuly applied gene_filter: "{}"'.format(gene_filter))
@@ -71,6 +73,8 @@ class OTModel:
                 expr = re.compile(cell_filter)
                 cell_ids = [e for e in self.matrix.obs.index.values if expr.match(e)]
             row_indices = self.matrix.obs.index.isin(cell_ids)
+            if np.sum(row_indices) is 0:
+                raise ValueError('No cells passed the cell filter')
             self.matrix = anndata.AnnData(self.matrix.X[row_indices, :],
                                           self.matrix.obs[row_indices].copy(False), self.matrix.var)
 
@@ -252,8 +256,9 @@ class OTModel:
 
         config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
         tmap = OTModel.compute_single_transport_map(self.matrix, config)
-        wot.io.write_dataset(tmap, output_file, output_format=self.output_file_format)
-        wot.io.verbose("Created tmap ({}, {}) : {}".format(t0, t1, path))
+        if tmap is not None:
+            wot.io.write_dataset(tmap, output_file, output_format=self.output_file_format)
+            wot.io.verbose("Created tmap ({}, {}) : {}".format(t0, t1, path))
         return tmap
 
     @staticmethod
@@ -272,7 +277,8 @@ class OTModel:
     @staticmethod
     def compute_single_transport_map(ds, config):
         """
-        Computes a single transport map
+        Computes a single transport map.
+        Note that None is returned if no data is available at the specified timepoints or covariates.
 
         Parameters
         ----------
@@ -297,8 +303,15 @@ class OTModel:
             p0_indices = (ds.obs['day'] == float(t0)) & (ds.obs['covariate'] == covariate[0])
             p1_indices = (ds.obs['day'] == float(t1)) & (ds.obs['covariate'] == covariate[1])
 
+        if p0_indices.sum() == 0 or p1_indices.sum() == 0:
+            return None
         p0 = ds[p0_indices, :]
         p1 = ds[p1_indices, :]
+
+        print(t0)
+        print(covariate)
+        print(p0_indices.sum())
+        print(p1_indices.sum())
 
         if 'cell_growth_rate' in p0.obs.columns:
             config['g'] = np.asarray(p0.obs['cell_growth_rate'].values)

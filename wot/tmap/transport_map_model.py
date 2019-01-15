@@ -609,10 +609,9 @@ class TransportMapModel:
         tmaps = {}
         import re
         files = os.listdir(tmap_dir)
-        pattern = None
         if with_covariates:
             pattern = re.compile(
-                tmap_prefix + '_([0-9]+\.[0-9])+_([0-9]+\.[0-9]+)_cv([0-9]+)_cv([0-9]+)[\.h5ad|\.loom]')
+                tmap_prefix + '_([0-9]+\.[0-9])+_([0-9]+\.[0-9]+)_cv([a-zA-Z0-9]+)_cv([a-zA-Z0-9]+)[\.h5ad|\.loom]')
         else:
             pattern = re.compile(tmap_prefix + '_([0-9]+\.[0-9]+)_([0-9]+\.[0-9])+[\.h5ad|\.loom]')
         for f in files:
@@ -624,8 +623,8 @@ class TransportMapModel:
                         t1 = float(m.group(1))
                         t2 = float(m.group(2))
                         if with_covariates:
-                            cv1 = int(m.group(3))
-                            cv2 = int(m.group(4))
+                            cv1 = m.group(3)
+                            cv2 = m.group(4)
                             tmaps[(t1, t2, cv1, cv2)] = path
                         else:
                             tmaps[(t1, t2)] = path
@@ -650,14 +649,14 @@ class TransportMapModel:
                 path = tmaps[key]
                 f = h5py.File(path, 'r')
                 if load_t0:
-                    if path.endswith('loom'):
+                    if path.endswith('.loom'):
                         ids = f['/row_attrs/id'][()].astype(str)
                     else:
                         ids = f['/obs']['index'][()].astype(str)
                     df = pd.DataFrame(index=ids, data={'day': t0})
                     timepoint_to_ids[t0] = df
                 if load_t1:
-                    if path.endswith('loom'):
+                    if path.endswith('.loom'):
                         ids = f['/col_attrs/id'][()].astype(str)
                     else:
                         ids = f['/var']['index'][()].astype(str)

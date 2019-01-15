@@ -11,12 +11,12 @@ import scipy.sparse
 from itertools import product
 
 import wot
+import wot.graphics
 import wot.io
 import wot.ot
-import wot.graphics
 
 
-def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpolated=False, compute_full_distances=False,
+def compute_validation_summary(ot_model, day_pairs_triplets, save_interpolated=False, compute_full_distances=False,
                                interp_size=10000):
     """
     Compute the validation summary for the given OTModel
@@ -35,24 +35,9 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
     validation_summary : pandas.DataFrame
         The validation summary
     """
-
-    times = np.array(ot_model.timepoints)
     day_pairs = {}
-    day_pairs_triplets = []
-    tol = 0.01
-    for i in range(len(times)):
-        t0 = times[i]
-        t05_value = t0 + interp_pattern[0]
-        t1_value = t0 + interp_pattern[1]
-        t1_indices = np.where(np.isclose(times, t1_value, tol))[0]
-        t05_indices = np.where(np.isclose(times, t05_value, tol))[0]
-
-        if len(t1_indices) is 1 and len(t05_indices) is 1:
-            t1 = times[t1_indices[0]]
-            t05 = times[t05_indices[0]]
-            day_pairs[(t0, t1)] = {}
-            day_pairs_triplets.append((t0, t05, t1))
-
+    for triplet in day_pairs_triplets:
+        day_pairs[(triplet[0], triplet[2])] = {}
     ot_model.day_pairs = day_pairs
     if 'covariate' not in ot_model.matrix.obs.columns:
         print('Warning-no covariate specified.')
@@ -116,6 +101,9 @@ def compute_validation_summary(ot_model, interp_pattern=(0.5, 1), save_interpola
         p1 = wot.split_anndata(p1_ds, 'covariate')
         for cv0, cv1 in product(p0.keys(), p1.keys()):
             tmap = tmap_model.get_transport_map(t0, t1, covariate=(cv0, cv1))
+            if tmap is None:
+                # no data from combination of day and covariate
+                continue
             # interp_size = (len(p0[cv0]) + len(p1[cv1])) / 2
             # pca, mean = wot.ot.get_pca(local_pca, p0[cv0].X, p1[cv1].X)
             # p0_x = wot.ot.pca_transform(pca, mean, p0[cv0].X)
@@ -181,12 +169,13 @@ def main(argv):
     parser.add_argument('--save_interpolated', type=bool, default=False,
                         help='Save interpolated and random point clouds')
 
-    parser.add_argument('--interp_pattern', default='0.5,1',
-                        help='The interpolation pattern "x,y" will compute transport maps from time t to t+y and interpolate at t+x')
-    parser.add_argument('--out', default='./tmaps_val',
+    parser.add_argument('--day_triplets',
+                        help='Three column file without a header containing start time, interpolation time, and end time')
+    parser.add_argument('--out', default='tmaps_val',
                         help='Prefix for output file names')
     parser.add_argument('--interp_size', default=10000, type=int)
     args = parser.parse_args(argv)
+
     ot_model = wot.ot.initialize_ot_model(args.matrix, args.cell_days,
                                           tmap_out=args.out,
                                           local_pca=args.local_pca,
@@ -208,11 +197,33 @@ def main(argv):
                                           force=args.force,
                                           ncells=args.ncells,
                                           ncounts=args.ncounts,
-                                          covariate=args.covariate
+                                          covariate=args.covariate,
+                                          transpose=args.transpose
                                           )
+    day_pairs_triplets = []
+    if args.day_triplets is None:
+        unique_times = np.array(ot_model.timepoints)
+        for i in range(len(unique_times) - 2):
+            t0 = unique_times[i]
+            t05 = unique_times[i + 1]
+            t1 = unique_times[i + 2]
+            day_pairs_triplets.append((t0, t05, t1))
+    else:
+        day_triplets_df = pd.read_table(args.day_triplets)
+        unique_times = np.array(ot_model.timepoints)
+
+        for i in range(len(day_triplets_df.shape[0])):
+            t0 = unique_times[np.abs(unique_times - day_triplets_df.iloc[i, 0]).argmin()]
+
+            t05 = unique_times[np.abs(unique_times - day_triplets_df.iloc[i, 1]).argmin()]
+            t1 = unique_times[np.abs(unique_times - day_triplets_df.iloc[i, 2]).argmin()]
+
+            day_pairs_triplets.append((t0, t05, t1))
+
     summary = compute_validation_summary(ot_model,
-                                         interp_pattern=[float(x) for x in args.interp_pattern.split(',')],
-                                         save_interpolated=args.save_interpolated, interp_size=args.interp_size)
+                                         day_pairs_triplets=day_pairs_triplets,
+                                         save_interpolated=args.save_interpolated,
+                                         interp_size=args.interp_size)
 
     summary.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary.txt'), sep='\t',
                    index=False)

@@ -38,6 +38,7 @@ def main(argv):
                                           inner_iter_max=args.inner_iter_max,
                                           force=args.force,
                                           ncells=args.ncells,
-                                          ncounts=args.ncounts
+                                          ncounts=args.ncounts,
+                                          transpose=args.transpose
                                           )
     ot_model.compute_all_transport_maps()
