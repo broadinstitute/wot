@@ -648,95 +648,9 @@ def get_filename_and_extension(name):
     return basename, ext
 
 
-def write_ds_slice(ds, data_dir, cols):
-    import pandas as pd
-    for j in cols:
-        c = ds.X[:, j]
-        c = c.toarray().flatten() if scipy.sparse.isspmatrix(c) else c
-        series_path = os.path.join(data_dir, str(ds.var.index.values[j])) + '.txt'
-        pd.Series(c).to_csv(series_path, float_format='%.2f', compression='gzip', header=False, index=False)
-
-
-def write_ds_meta(meta, columns, output_dir):
-    for field in columns:
-        series_path = os.path.join(output_dir, str(field) + '.txt')
-        meta[field].to_csv(series_path, float_format='%.2f' if meta[field].dtype == np.float32 else None,
-                           header=False, compression='gzip', index=False)
-
-
-def write_ds_view(ds, fields, output_dir):
-    for field in fields:
-        x = ds[field]
-        if x.shape[1] > 3:
-            x = x[:, [0, 1, 2]]
-        view_path = os.path.join(output_dir, str(field) + '.txt')
-        pd.DataFrame(data=x).to_csv(view_path, float_format='%.2f', header=False, compression='gzip', index=False)
-
-
-def get_meta_json(meta):
-    result = []
-    for field in meta.columns:
-        dtype = meta[field].dtype
-        str_type = str(dtype)
-        is_categorical = False
-        if str_type is 'category':
-            is_categorical = True
-            str_type = str(meta[field].dtype.categories.dtype)
-        result.append({'name': field, 'dtype': str_type, 'is_categorical': is_categorical})
-    return result
-
-
-def write_dataset_json(ds, path):
-    import json
-    import gzip
-    import multiprocessing
-    from joblib import Parallel, delayed
-    feature_dir = os.path.join(path, 'X')
-    view_dir = os.path.join(path, 'views')
-    obs_dir = os.path.join(path, 'obs')
-    var_dir = os.path.join(path, 'var')
-    if not os.path.exists(path):
-        os.mkdir(path)
-    for d in [feature_dir, view_dir, obs_dir, var_dir]:
-        if not os.path.exists(d):
-            os.mkdir(d)
-
-    njobs = multiprocessing.cpu_count()
-    njobs += int(njobs * 0.25)
-
-    chunks = np.array_split(np.arange(0, ds.X.shape[1]), njobs)
-    Parallel(n_jobs=njobs)(delayed(write_ds_slice)(ds, feature_dir, chunk) for chunk in chunks)
-
-    chunks = np.array_split(ds.obs.columns, njobs)
-    Parallel(n_jobs=njobs)(delayed(write_ds_meta)(ds.obs, chunk, obs_dir) for chunk in chunks)
-
-    chunks = np.array_split(ds.var.columns, njobs)
-    Parallel(n_jobs=njobs)(delayed(write_ds_meta)(ds.var, chunk, var_dir) for chunk in chunks)
-
-    if ds.obsm is not None:
-        chunks = np.array_split(list(ds.obsm.keys()), njobs)
-        Parallel(n_jobs=njobs)(delayed(write_ds_view)(ds.obsm, chunk, view_dir) for chunk in chunks)
-
-    idx = {}
-    if ds.obsm is not None:
-        views = []
-        for field in ds.obsm.keys():
-            views.append({'name': field})
-        idx['views'] = views
-    idx['var_id'] = ds.var.index.values.tolist()  # genes
-    idx['obs_id'] = ds.obs.index.values.tolist()
-    idx['obs'] = get_meta_json(ds.obs)  # cells
-    idx['var'] = get_meta_json(ds.var)
-
-    with gzip.GzipFile(os.path.join(path, 'index.json'), 'w') as fout:
-        fout.write(json.dumps(idx).encode('utf-8'))
-
-
 def write_dataset(ds, path, output_format='txt'):
     path = check_file_extension(path, output_format)
-    if output_format == 'json':
-        return write_dataset_json(ds, path)
-    elif output_format == 'txt' or output_format == 'gct' or output_format == 'csv':
+    if output_format == 'txt' or output_format == 'gct' or output_format == 'csv':
         sep = '\t'
         if output_format is 'csv':
             sep = ','
