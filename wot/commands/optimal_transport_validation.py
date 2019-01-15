@@ -99,6 +99,7 @@ def compute_validation_summary(ot_model, day_pairs_triplets, save_interpolated=F
         p0 = wot.split_anndata(p0_ds, 'covariate')
         p05 = wot.split_anndata(p05_ds, 'covariate')
         p1 = wot.split_anndata(p1_ds, 'covariate')
+        seen_cvs = set()
         for cv0, cv1 in product(p0.keys(), p1.keys()):
             tmap = tmap_model.get_transport_map(t0, t1, covariate=(cv0, cv1))
             if tmap is None:
@@ -128,21 +129,22 @@ def compute_validation_summary(ot_model, day_pairs_triplets, save_interpolated=F
                 # p05_x = wot.ot.pca_transform(pca, mean, p05[cv05].X)
                 p05_x = p05[cv05].X
 
-                def update_summary(pop, t, name):
+                def distance_to_p05(pop, t, name):
                     name_05 = 'P_cv{}'.format(cv05)
                     dist = wot.ot.earth_mover_distance(pop, p05_x, eigenvals if local_pca > 0 else None)
                     summary.append([t0, t05, t1, t, t05, cv0, cv1, name, name_05, dist])
 
                 if cv0 == cv1:
-                    update_summary(p0_x, t0, 'F_cv{}'.format(cv0))
-                    update_summary(p1_x, t1, 'L_cv{}'.format(cv1))
-                if cv0 == cv1 and cv0 < cv05:
+                    distance_to_p05(p0_x, t0, 'F_cv{}'.format(cv0))
+                    distance_to_p05(p1_x, t1, 'L_cv{}'.format(cv1))
+                if cv0 == cv1 and p05.get(cv0, None) is not None and cv0 not in seen_cvs:
                     # p05_cv0_x = wot.ot.pca_transform(pca, mean, p05[cv0].X)
-                    update_summary(p05[cv0].X, t05, 'P_cv{}'.format(cv0))
+                    seen_cvs.add(cv0)
+                    distance_to_p05(p05[cv0].X, t05, 'P_cv{}'.format(cv0))
 
-                update_summary(i05, t05, 'I_cv{}_cv{}'.format(cv0, cv1))
-                update_summary(r05_with_growth, t05, 'Rg_cv{}_cv{}'.format(cv0, cv1))
-                update_summary(r05_no_growth, t05, 'R_cv{}_cv{}'.format(cv0, cv1))
+                distance_to_p05(i05, t05, 'I_cv{}_cv{}'.format(cv0, cv1))
+                distance_to_p05(r05_with_growth, t05, 'Rg_cv{}_cv{}'.format(cv0, cv1))
+                distance_to_p05(r05_no_growth, t05, 'R_cv{}_cv{}'.format(cv0, cv1))
 
     return pd.DataFrame(summary, columns=summary_columns)
 

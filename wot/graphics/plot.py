@@ -46,12 +46,12 @@ def kernel_smooth(xi, yi, start, stop, steps, sigma):
 
 
 ot_validation_legend = {
-    'P': ["#a6cee3", "between real batches"],
-    'I': ["#1f78b4", "between interpolated and real"],
-    'F': ["#b2df8a", "between first and real"],
-    'L': ["#33a02c", "between last and real"],
-    'R': ["#fb9a99", "between random (no growth) and real"],
-    'Rg': ["#e31a1c", "between random (with growth) and real"]
+    'P': ["#e41a1c", "between real batches"],
+    'I': ["#377eb8", "between interpolated and real"],
+    'F': ["#4daf4a", "between first and real"],
+    'L': ["#984ea3", "between last and real"],
+    'R': ["#ff7f00", "between random (no growth) and real"],
+    'Rg': ["#ffff33", "between random (with growth) and real"]
 }
 
 
