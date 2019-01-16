@@ -22,12 +22,16 @@ layout: base
             <h2 class="featurette-heading">Command line</h2>
             <p class="lead"><b>wot</b> features a command line interface that offers fine-grained control over all
                 calculations.</p>
-            <p class="mt-5 text-center"><a class="btn-secondary btn-lg nounderline" href="{{site.baseurl}}/cli_documentation">View
+            <p class="mt-5 text-center"><a class="btn-secondary btn-lg nounderline"
+                                           href="{{site.baseurl}}/cli_documentation">View
                 documentation &raquo;</a></p>
         </div>
         <div class="col-md-5">
-            <img class="featurette-image img-responsive d-block mx-auto" src="{{site.baseurl}}/images/cli_image.png"
-                 height=300 width=300></img>
+            <!--<img class="featurette-image img-responsive d-block mx-auto" src="{{site.baseurl}}/images/cli_image.png"-->
+            <!--height=300 width=300></img>-->
+            <div class="terminal-wrap">
+                <span class="terminal-body" id="terminal"></span>
+            </div>
         </div>
     </div>
 
@@ -87,3 +91,14 @@ layout: base
 
     <hr class="featurette-divider">
 </div>
+<script>
+  setTimeout(function () {
+    new Typed('#terminal', {
+      strings: [
+        'wot optimal_transport --matrix my_matrix.txt --cell_days my_cell_days.txt'],
+      typeSpeed: 50,
+    });
+  }, 500);
+
+
+</script>

@@ -99,3 +99,24 @@ a.nostyle, a.nostyle:hover, a.nostyle:active, a.nostyle:focus {
     background-color: $header-bg-color;
   }
 }
+
+.terminal-wrap {
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.85);
+  margin: auto;
+  max-width: 530px;;
+  clear: both;
+  overflow: hidden;
+  min-height: 120px;
+}
+
+.terminal-body {
+  color: #f0f0f0;
+  font-family: "Consolas", "Courier New", "Courier";
+  font-size: 1.45em;
+  line-height: 1.40em;
+  font-weight: 500;
+  text-align: left;
+  overflow: hidden;
+
+}
