@@ -74,5 +74,5 @@ def plot_ot_validation_summary(df, filename, bandwidth=None):
             x, s = kernel_smooth(t, s, 0, t[len(t) - 1], 1000, bandwidth)
             t = x
         pyplot.plot(t, m, '-o', color=ot_validation_legend[p][0])
-        pyplot.fill_between(t, m - s, m + s, color=ot_validation_legend[p][0] + "50")
+        pyplot.fill_between(t, m - s, m + s, color=ot_validation_legend[p][0], alpha=0.2)
     pyplot.savefig(filename)

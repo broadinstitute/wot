@@ -172,7 +172,6 @@ class OptimalTransportHelper:
         day_to_indices = self.day_to_indices
         callback_call_count = 0
         ds = self.ds
-        print(args)
         for day_index in range(day_pairs.shape[0]):
             t0 = day_pairs.iloc[day_index, 0]
             t1 = day_pairs.iloc[day_index, 1]
