@@ -3,7 +3,7 @@ theme: jekyll-theme-cayman
 title: Waddington Optimal Transport
 description: Optimal-transport based software tools for single-cell RNA sequencing analysis
 
-repository: robindar/wot
+repository: broadinstitute/wot
 
 show_downloads: false
 

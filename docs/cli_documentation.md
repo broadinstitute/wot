@@ -1,25 +1,7 @@
----
----
-layout: documentation
-location: Documentation
----
-
-Waddington Optimal Transport uses time-course data to infer how the
+Waddington Optimal Transport (wot) uses time-course data to infer how the
 probability distribution of cells in gene-expression space evolves
-over time, by using the mathematical approach of Optimal Transport (OT).
+over time, by using the mathematical approach of optimal transport.
 
-> <button class="btn-success rounded border-0 px-3 py-1" disabled>Interactive</button>
->
-> Alternatively, **wot** features an interactive web interface to visualize
-> your data and perform many of the tasks described below.
->
-> <div class="center-block text-center py-2">
->   <a class="nounderline btn-outline-secondary btn-md rounded border px-3 py-2"
->      role="button" href="{{site.baseurl}}/interactive_documentation">
->      View documentation for web interface &raquo;
->   </a>
-> </div>
->
 
 
 ## Installation ##
@@ -77,8 +59,8 @@ wot optimal_transport --matrix matrix.txt \
  --cell_days days.txt --out tmaps
 ```
 
-This command will create a file `tmaps_{A}_{B}.loom` for each pair `{A}`, `{B}`
-of consecutive timepoints. These maps can then be translated to any format you find
+This command will create a file `tmaps_{A}_{B}.h5ad` for each pair `{A}`, `{B}`
+of consecutive timepoints. These transport maps can then be converted to any format you find
 convenient with the [convert_matrix tool](#matrix_file).
 
 
@@ -99,6 +81,10 @@ convenient with the [convert_matrix tool](#matrix_file).
       <td>Timestamps for each cell. See <a href="#days_file">formats</a></td>
     </tr>
     <tr>
+	  <td>--tranpose</td>
+	  <td>Swap the rows and column of the input matrix</td>
+	</tr>
+    <tr>
       <td>--epsilon</td>
       <td>Regularization parameter that controls the entropy of the transport map<br/>default : 0.05</td>
     </tr>
@@ -111,45 +97,31 @@ convenient with the [convert_matrix tool](#matrix_file).
       <td>Regularization parameter that controls the fidelity of the constraint on q<br/>default : 50</td>
     </tr>
     <tr>
-      <td>--batch_size</td>
-      <td>Number of iterations performed between two duality_gap checks<br/>default : 50</td>
-    </tr>
-    <tr>
-      <td>--tolerance</td>
-      <td>Threshold on the ratio between duality gap and primal objective<br/>default : 0.01</td>
-    </tr>
-    <tr>
       <td>--local_pca</td>
       <td>Number of dimensions to use when doing PCA<br/>default : 30</td>
     </tr>
     <tr>
-      <td>--config</td>
-      <td>Configuration file for fine-graing control over OT parameters at each timepoint. See <a href="#ot-configuration-file">formats</a></td>
+          <td>--growth_iters</td>
+          <td>Number of growth iterations for learning the growth rate.<br/>default : 1</td>
+        </tr>
+<tr>
+<td>--cell_growth_rates</td>
+<td>File with "id" and "cell_growth_rate" headers corresponding to cell id and growth rate per day.</td>
+</tr>
+    <tr>
+    <td>--gene_filter</td>
+    <td>File with one gene id per line to use for computing cost matrices (e.g. variable genes)</td>
     </tr>
   </tbody>
 </table>
 
-##### Convergence #####
 
-The convergence of the calculation of the transport maps is checked
-through the use of the duality gap for the optimization problem.
-When this gap reaches 0, the transport map is guaranteed to be optimal.
-However, close-to-optimal transport maps are often acceptable and are
-a lot faster to compute. **wot** lets you choose the tolerance you
-want on the duality gap through the `--tolerance` parameter.
-
-Checking the duality gap is computationally expensive, that is why
-it is not done on every iteration, but rather after each batch of
-iterations. You can change the batch size with the `--batch_size`
-parameter. It is difficult to estimate the best batch size, as this
-depends heavily on the data being considered. Nonetheless, batch sizes
-too small (&lt; 10) or too big (&gt; 1000) are not recommended.
 
 
 ##### Local PCA #####
 
 The default transport cost uses Principal Component Analysis to reduce the
-dimension of the data before computing distances between cells.
+dimension of the data before computing distances pairs of timepoints.
 By default, **wot** uses 30 dimensions.
 
 Dimensionality reduction can be disabled with `--local_pca 0`
@@ -395,11 +367,6 @@ all the information needed to evaluate the accuracy of the predictions.
     <tr>
       <td>--out</td>
       <td>The filename for the validation summary<br/>default : validation_summary.txt</td>
-    </tr>
-    <tr>
-      <td>--day_triplets</td>
-      <td>Three column file without a header containing start time (t0), interpolation time, and end time (t1). Default is to compute transport maps from time t to time t+2
-      and interpolate at time t+1</td>
     </tr>
   </tbody>
 </table>
