@@ -87,7 +87,8 @@ class OTModel:
 
             wot.io.verbose('Successfuly applied day_filter: "{}"'.format(day_filter))
         self.timepoints = sorted(set(self.matrix.obs['day']))
-        cvs = sorted(set(self.matrix.obs['covariate'])) if 'covariate' in self.matrix.obs else [None]
+
+        cvs = set(self.matrix.obs['covariate']) if 'covariate' in self.matrix.obs else [None]
         if ncells is not None:
             index_list = []
             for day in self.timepoints:
@@ -160,7 +161,7 @@ class OTModel:
         if 'covariate' not in self.matrix.obs.columns:
             raise ValueError("Covariate value not available in dataset")
         from itertools import product
-        covariate = sorted(set(self.matrix.obs['covariate']))
+        covariate = set(self.matrix.obs['covariate'])
         return product(covariate, covariate)
 
     def compute_all_transport_maps(self, with_covariates=False):
@@ -307,11 +308,6 @@ class OTModel:
             return None
         p0 = ds[p0_indices, :]
         p1 = ds[p1_indices, :]
-
-        print(t0)
-        print(covariate)
-        print(p0_indices.sum())
-        print(p1_indices.sum())
 
         if 'cell_growth_rate' in p0.obs.columns:
             config['g'] = np.asarray(p0.obs['cell_growth_rate'].values)

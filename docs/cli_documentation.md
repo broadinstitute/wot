@@ -110,7 +110,7 @@ convenient with the [convert_matrix tool](#matrix_file).
 </tr>
     <tr>
     <td>--gene_filter</td>
-    <td>File with one gene id per line to use for computing cost matrices (e.g. variable genes)</td>
+    <td>File with one gene id per line to use (e.g. variable genes)</td>
     </tr>
   </tbody>
 </table>
@@ -424,14 +424,16 @@ Each line contains information about the relation between two cell sets :
 when covariates are used, to indicate which batch they were extracted from.
 
 
-### Force-directed Layout Embedding ###
+### Embedding ###
 
-In order to visualize data in two dimensions, **wot** uses
-[Force-directed Layout Embedding (FLE)](https://en.wikipedia.org/wiki/Force-directed_graph_drawing). Intuitively, the FLE searches for a 2D layout of a nearest neighbor graph of the data. 
+One method of visualizing data in two or three dimensions is
+[Force-directed Layout Embedding (FLE)](https://en.wikipedia.org/wiki/Force-directed_graph_drawing).
 We compute this nearest neighbor graph in diffusion component space.
+We recommend using [forceatlas2-3d](https://github.com/klarman-cell-observatory/forceatlas2-3d) to run the force directed layout.
+You can generate a graph to use as input to force directed layout using the command neighborhood_graph
 
 ```sh
-wot force_layout --matrix matrix.txt --out fdlayout
+wot neighborhood_graph --matrix matrix.txt
 ```
 
 <table class="table table-hover" style="display: table">
@@ -458,13 +460,13 @@ wot force_layout --matrix matrix.txt --out fdlayout
       <td>--n_comps</td>
       <td>Number of diffusion components<br/>default : 20</td>
     </tr>
-    <tr>
-      <td>--n_steps</td>
-      <td>Force-directed layout iteration count<br/>default : 1000</td>
-    </tr>
+     <tr>
+        <td>--gene_filter</td>
+        <td>File with one gene id per line to use (e.g. variable genes)</td>
+	</tr>
     <tr>
       <td>--out</td>
-      <td>Output filename prefix<br/>default : 'wot'</td>
+      <td>Output filename</td>
     </tr>
   </tbody>
 </table>

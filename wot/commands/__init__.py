@@ -4,6 +4,7 @@ from .census import *
 from .convert_matrix import *
 from .gene_set_scores import *
 from .local_enrichment import *
+from .neighborhood_graph import *
 from .optimal_transport import *
 from .optimal_transport_validation import *
 from .trajectory import *

@@ -66,7 +66,7 @@ def plot_ot_validation_summary(df, filename, bandwidth=None):
     for p, d in df.groupby('type'):
         if p not in ot_validation_legend.keys():
             continue
-        t = np.asarray(d['time'])
+        t = np.asarray(d['interval_mid'])
         m = np.asarray(d['mean'])
         s = np.asarray(d['std'])
         if bandwidth is not None:

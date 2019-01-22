@@ -162,13 +162,13 @@ def compute_validation_summary(ot_model, day_pairs_triplets, save_interpolated=F
 
 def group_ot_validation_summary(df):
     df = df.copy()
-    df['time'] = (df['interval_start'] + df['interval_end']) / 2
+
     df['type'] = df['pair0'].astype(str).str.split('_').str.get(0)
     # full_df = df[df['cv0'] == 'full']
     # full_df.set_index(['time', 'type'], inplace=True)
     # full_df = full_df.rename(columns={'distance': 'mean'})['mean']
     cv_df = df[df['cv0'].astype(str) != 'full']
-    cv_agg = cv_df.groupby(['time', 'type'])['distance'].agg([np.mean, np.std])
+    cv_agg = cv_df.groupby(['interval_mid', 'type'])['distance'].agg([np.mean, np.std])
     # cv_agg.update(full_df)
     # mean and std from covariates only CVs
     return cv_agg
