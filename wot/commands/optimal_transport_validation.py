@@ -225,7 +225,7 @@ def main(argv):
         day_triplets_df = pd.read_table(args.day_triplets)
         unique_times = np.array(ot_model.timepoints)
 
-        for i in range(len(day_triplets_df.shape[0])):
+        for i in range(day_triplets_df.shape[0]):
             t0 = unique_times[np.abs(unique_times - day_triplets_df.iloc[i, 0]).argmin()]
 
             t05 = unique_times[np.abs(unique_times - day_triplets_df.iloc[i, 1]).argmin()]
