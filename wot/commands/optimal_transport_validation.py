@@ -143,10 +143,10 @@ def compute_validation_summary(ot_model, day_pairs_triplets, save_interpolated=F
                 distance_to_p05(r05_no_growth, t05, 'R_cv{}_cv{}'.format(cv0, cv1), (cv0, cv1))
 
                 if cv0 == cv05 and cv0 not in seen_first:
-                    seen_first.update(cv0)
+                    seen_first.add(cv0)
                     distance_to_p05(p0_x, t0, 'F_cv{}'.format(cv0), cv0)
                 if cv1 == cv05 and cv1 not in seen_last:
-                    seen_last.update(cv1)
+                    seen_last.add(cv1)
                     distance_to_p05(p1_x, t1, 'L_cv{}'.format(cv1), cv1)
 
                 if save_interpolated:
