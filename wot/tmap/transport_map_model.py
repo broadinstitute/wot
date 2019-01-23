@@ -128,8 +128,10 @@ class TransportMapModel:
                 key = (t0, t1)
             else:
                 cv0, cv1 = covariate
-                key = (t0, t1, cv0, cv1)
+                key = (t0, t1, str(cv0), str(cv1))
             ds_or_path = self.tmaps.get(key)
+            if ds_or_path is None:
+                raise ValueError('No transport map found for {}', key)
             if type(ds_or_path) is anndata.AnnData:
                 return ds_or_path
             ds = wot.io.read_dataset(ds_or_path)
@@ -636,40 +638,31 @@ class TransportMapModel:
             raise ValueError('No transport maps found in ' + tmap_dir + ' with prefix ' + tmap_prefix)
         day_pairs = set()
         unique_timepoints = set()
-        timepoint_to_ids = {}
+        meta = None
         for key in tmaps:
             t0 = key[0]
             t1 = key[1]
             day_pairs.add((t0, t1))
             unique_timepoints.add(t0)
             unique_timepoints.add(t1)
-            load_t0 = timepoint_to_ids.get(t0) is None
-            load_t1 = timepoint_to_ids.get(t1) is None
-            if load_t0 or load_t1:
+            if not with_covariates:
                 path = tmaps[key]
                 f = h5py.File(path, 'r')
-                if load_t0:
-                    if path.endswith('.loom'):
-                        ids = f['/row_attrs/id'][()].astype(str)
-                    else:
-                        ids = f['/obs']['index'][()].astype(str)
-                    df = pd.DataFrame(index=ids, data={'day': t0})
-                    timepoint_to_ids[t0] = df
-                if load_t1:
-                    if path.endswith('.loom'):
-                        ids = f['/col_attrs/id'][()].astype(str)
-                    else:
-                        ids = f['/var']['index'][()].astype(str)
-                    df = pd.DataFrame(index=ids, data={'day': t1})
-                    timepoint_to_ids[t1] = df
-                f.close()
-        meta = None
-        timepoints = sorted(unique_timepoints)
-        for t in timepoints:
-            df = timepoint_to_ids[t]
-            if meta is None:
-                meta = df
-            else:
-                meta = pd.concat((meta, df), copy=False)
 
+                if path.endswith('.loom'):
+                    ids = f['/row_attrs/id'][()].astype(str)
+                else:
+                    ids = f['/obs']['index'][()].astype(str)
+                df1 = pd.DataFrame(index=ids, data={'day': t0})
+
+                if path.endswith('.loom'):
+                    ids = f['/col_attrs/id'][()].astype(str)
+                else:
+                    ids = f['/var']['index'][()].astype(str)
+                df2 = pd.DataFrame(index=ids, data={'day': t1})
+
+                meta = pd.concat((meta, df1, df2), copy=False) if meta is not None else pd.concat((df1, df2),
+                                                                                                  copy=False)
+                f.close()
+        timepoints = sorted(unique_timepoints)
         return TransportMapModel(tmaps=tmaps, meta=meta, timepoints=timepoints, day_pairs=day_pairs, cache=cache)
