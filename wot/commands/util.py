@@ -53,7 +53,7 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--tau', type=float, default=10000)
     parser.add_argument('--ncells', type=int, help='Number of cells to downsample from each timepoint and covariate')
     parser.add_argument('--ncounts', help='Sample ncounts from each cell', type=int)
-    parser.add_argument('--force', help='Overwrite existing transport maps if they exist', type=bool, default=False)
+    parser.add_argument('--force', help='Overwrite existing transport maps if they exist', action='store_true')
     parser.add_argument('--sampling_bias', help='File with "id" and "pp" to correct sampling bias.')
 
     # parser.add_argument('--max_iter', type=int, default=1e7,
