@@ -48,6 +48,9 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
     if gs.X.shape[1] is 0:
         raise ValueError('No gene sets')
 
+    output_prefix = out
+    if output_prefix != '':
+        output_prefix = output_prefix + '_'
     # scores contains cells on rows, gene sets on columns
     for j in range(gs.X.shape[1]):
         if progress and gs.X.shape[1] > 1:
@@ -76,8 +79,9 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
 
         else:
             x = result['score']
+        # separate file for each gene set
         wot.io.write_dataset(ds=anndata.AnnData(X=x, obs=ds.obs, var=pd.DataFrame(index=column_names)),
-                             path=out + '_' + column_names[0], output_format=format)
+                             path=output_prefix + column_names[0], output_format=format)
     # import dask.array as da
     # da.to_npy_stack('/Users/jgould/git/wot/bin/data/', result.X, axis=0)
 
@@ -89,10 +93,10 @@ def main(argv):
                         help='Gene sets in gmx, gmt, or grp format', required=True)
     parser.add_argument('--cell_filter', help='Cells to include')
     parser.add_argument('--gene_set_filter', help='Gene sets to include')
-    parser.add_argument('--out', help='Output file name prefix')
+    parser.add_argument('--out', help='Output file name prefix', default='')
     # parser.add_argument('--dask', help='Dask scheduler URL')
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='txt', choices=wot.commands.FORMAT_CHOICES)
-    parser.add_argument('--nperm', help='Number of permutations', default=10000, type=int)
+    parser.add_argument('--nperm', help='Number of permutations', default=0, type=int)
     parser.add_argument('--method', help='Method to compute gene set scores',
                         choices=['mean_z_score', 'mean', 'mean_rank'], required=True)
     parser.add_argument('--n_neighbors', help='Number of neighbors for sampling', default=20, type=int)
