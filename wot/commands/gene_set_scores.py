@@ -13,11 +13,13 @@ import wot.io
 
 def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_set=None,
             permutations=None, method=None, n_neighbors=None, drop_frequency=None,
-            drop_p_value_threshold=None, gene_set_filter=None, progress=False, neighbors_method=None):
+            drop_p_value_threshold=None, gene_set_filter=None, progress=False, neighbors_method=None, transpose=False):
     if out is None:
         out = ''
     use_dask = False
     ds = wot.io.read_dataset(matrix)
+    if transpose:
+        ds = ds.T
     if progress:
         print('Read ' + matrix)
     if cell_filter is not None:
@@ -36,7 +38,8 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
     gs = wot.io.read_sets(gene_sets, ds.var.index.values)
     if progress:
         print('Read ' + gene_sets)
-    if gs.X.shape[1] is 0:
+
+    if gs.shape[1] is 0:
         raise ValueError('No overlap of genes in gene sets and dataset')
     if gene_set_filter is not None:
         if os.path.exists(gene_set_filter):
@@ -45,15 +48,15 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
             set_names = gene_set_filter.split(',')
         gs_filter = gs.var.index.isin(set_names)
         gs = anndata.AnnData(gs.X[:, gs_filter], gs.obs, gs.var.iloc[gs_filter])
-    if gs.X.shape[1] is 0:
+    if gs.shape[1] is 0:
         raise ValueError('No gene sets')
 
     output_prefix = out
     if output_prefix != '':
         output_prefix = output_prefix + '_'
     # scores contains cells on rows, gene sets on columns
-    for j in range(gs.X.shape[1]):
-        if progress and gs.X.shape[1] > 1:
+    for j in range(gs.shape[1]):
+        if progress and gs.shape[1] > 1:
             print(gs.var.index.values[j])
         result = wot.score_gene_sets(dataset_to_score=ds,
                                      gs=gs[:, [j]],
@@ -80,8 +83,10 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
         else:
             x = result['score']
         # separate file for each gene set
+        name = output_prefix + column_names[0]
+        name = name.replace(' ', '_')
         wot.io.write_dataset(ds=anndata.AnnData(X=x, obs=ds.obs, var=pd.DataFrame(index=column_names)),
-                             path=output_prefix + column_names[0], output_format=format)
+                             path=name, output_format=format)
     # import dask.array as da
     # da.to_npy_stack('/Users/jgould/git/wot/bin/data/', result.X, axis=0)
 
@@ -89,6 +94,7 @@ def compute(matrix, gene_sets, out, format, cell_filter=None, background_cell_se
 def main(argv):
     parser = argparse.ArgumentParser(description='Compute cell gene set scores')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
+    parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
     parser.add_argument('--gene_sets',
                         help='Gene sets in gmx, gmt, or grp format', required=True)
     parser.add_argument('--cell_filter', help='Cells to include')
@@ -128,4 +134,5 @@ def main(argv):
     compute(matrix=args.matrix, cell_filter=args.cell_filter, gene_sets=gene_sets, out=args.out,
             format=args.format, permutations=args.nperm, method=args.method, n_neighbors=args.n_neighbors,
             drop_frequency=args.drop_frequency, drop_p_value_threshold=args.drop_p_value_threshold,
-            gene_set_filter=args.gene_set_filter, progress=args.progress, neighbors_method=args.neighbors_method)
+            gene_set_filter=args.gene_set_filter, progress=args.progress, neighbors_method=args.neighbors_method,
+            transpose=args.transpose)
