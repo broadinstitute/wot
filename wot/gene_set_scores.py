@@ -118,6 +118,7 @@ def score_gene_sets(dataset_to_score, gs, method='mean', permutations=None, n_ne
     if hasattr(observed_scores, 'toarray'):
         observed_scores = observed_scores.toarray()
     ngenes_in_set = gs_1_0.sum(axis=0)
+
     if progress:
         print('# of genes in gene set ' + str(ngenes_in_set))
 
@@ -204,7 +205,6 @@ def score_gene_sets(dataset_to_score, gs, method='mean', permutations=None, n_ne
                 print(
                     'permutation ' + str(total_permutations) + '/' + str(permutations))
 
-        observed_scores = observed_scores / ngenes_in_set
         k = p_values
         if smooth_p_values:
             p_values = (p_values + 1) / (npermutations + 2)
@@ -220,6 +220,8 @@ def score_gene_sets(dataset_to_score, gs, method='mean', permutations=None, n_ne
             p_high = k / npermutations + p_value_ci
             p_high[p_high > 1] = 1
             fdr_high = fdr(p_high)
+        observed_scores /= ngenes_in_set
         return {'score': observed_scores, 'p_value': p_values, 'fdr': fdr(p_values), 'k': k, 'n': npermutations,
                 'p_value_ci': p_value_ci, 'fdr_low': fdr_low, 'fdr_high': fdr_high}
+    observed_scores /= ngenes_in_set
     return {'score': observed_scores}
