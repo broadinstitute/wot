@@ -2,6 +2,7 @@
 noheader: true
 permalink: cli_documentation/
 layout: documentation
+location: Documentation
 ---
 
 Waddington Optimal Transport (wot) uses time-course data to infer how the
