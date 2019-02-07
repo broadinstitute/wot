@@ -20,6 +20,7 @@ def main(argv):
     tmap_model = wot.tmap.TransportMapModel.from_directory(args.tmap)
     cell_sets = wot.io.read_sets(args.cell_set, as_dict=True)
     populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.time)
+
     trajectory_ds = tmap_model.compute_trajectories(populations)
     # for each timepoint, compute all pairwise distances
 

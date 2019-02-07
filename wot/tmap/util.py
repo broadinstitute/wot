@@ -1,6 +1,5 @@
+import anndata
 import numpy as np
-
-import wot.io
 
 
 def unique_timepoint(*populations):

@@ -47,7 +47,7 @@ class TransportMapModel:
         self : wot.TransportMapModel
             The TransportMapModel used to find ancestors and descendants of the population
         *population_dict : dict of str: wot.Population
-            The target populations such as ones from self.population_from_cell_sets
+            The target populations such as ones from self.population_from_cell_sets. THe populations must be from the same time.
 
         Returns
         -------
@@ -60,11 +60,10 @@ class TransportMapModel:
         population_names = list(population_dict.keys())
         initial_populations = populations
 
-        # timepoints = []
+        day = wot.tmap.unique_timepoint(*populations)
 
         def update(head, populations):
             idx = 0 if head else len(trajectories)
-            # timepoints.insert(idx, wot.tmap.unique_timepoint(*populations))
             trajectories.insert(idx, np.array([pop.p for pop in populations]).T)
 
         update(True, populations)
@@ -76,24 +75,7 @@ class TransportMapModel:
             populations = self.push_forward(*populations, as_list=True)
             update(False, populations)
 
-        # # list of trajectories. Each trajectory is a list of wot.Datasets split by time
-        # name_to_list = {}
-        # start = 0
-        # for j in range(len(population_names)):
-        #     name_to_list[population_names[j]] = []
-        # for i in range(len(timepoints)):
-        #     t = timepoints[i]
-        #     probs = trajectories[i]
-        #     ncells = probs.shape[0]
-        #     obs = self.matrix.obs.iloc[np.arange(start, start + ncells)].copy()
-        #     obs['day'] = t
-        #
-        #     for j in range(probs.shape[1]):
-        #         name_to_list[population_names[j]].append(
-        #             anndata.AnnData(X=probs[:, j], obs=obs, var=pd.DataFrame(index=[population_names[j]])))
-        #     start += ncells
-        # return list(name_to_list.values())
-        return anndata.AnnData(X=np.concatenate(trajectories), obs=self.meta,
+        return anndata.AnnData(X=np.concatenate(trajectories), obs=self.meta.copy(),
                                var=pd.DataFrame(index=population_names))
 
     def get_transport_map(self, t0, t1, covariate=None):
@@ -449,10 +431,12 @@ class TransportMapModel:
         def get_population(ids_el):
             cell_indices = df.index.get_indexer_for(ids_el)
             cell_indices = cell_indices[cell_indices > -1]
+
             if len(cell_indices) is 0:
                 return None
             p = np.zeros(len(df), dtype=np.float64)
             p[cell_indices] = 1.0
+
             return Population(day, p / np.sum(p))
 
         result = [get_population(ids_el) for ids_el in ids]
@@ -637,32 +621,35 @@ class TransportMapModel:
         if len(tmaps) is 0:
             raise ValueError('No transport maps found in ' + tmap_dir + ' with prefix ' + tmap_prefix)
         day_pairs = set()
-        unique_timepoints = set()
+        timepoints = []
+        tmap_keys = list(tmaps.keys())
+        tmap_keys.sort(key=lambda x: x[0])
         meta = None
-        for key in tmaps:
+        for i in range(len(tmap_keys)):
+            key = tmap_keys[i]
             t0 = key[0]
             t1 = key[1]
             day_pairs.add((t0, t1))
-            unique_timepoints.add(t0)
-            unique_timepoints.add(t1)
+            timepoints.append(t0)
+            if i == len(tmap_keys) - 1:
+                timepoints.append(t1)
             if not with_covariates:
                 path = tmaps[key]
                 f = h5py.File(path, 'r')
 
                 if path.endswith('.loom'):
-                    ids = f['/row_attrs/id'][()].astype(str)
+                    rids = f['/row_attrs/id'][()].astype(str)
+                    cids = f['/col_attrs/id'][()].astype(str) if i == len(tmap_keys) - 1 else None
                 else:
-                    ids = f['/obs']['index'][()].astype(str)
-                df1 = pd.DataFrame(index=ids, data={'day': t0})
-
-                if path.endswith('.loom'):
-                    ids = f['/col_attrs/id'][()].astype(str)
+                    rids = f['/obs']['index'][()].astype(str)
+                    cids = f['/var']['index'][()].astype(str) if i == len(tmap_keys) - 1 else None
+                rdf = pd.DataFrame(index=rids, data={'day': t0})
+                cdf = pd.DataFrame(index=cids, data={'day': t1}) if cids is not None else None
+                if meta is None:
+                    meta = rdf
                 else:
-                    ids = f['/var']['index'][()].astype(str)
-                df2 = pd.DataFrame(index=ids, data={'day': t1})
+                    meta = pd.concat((meta, rdf), copy=False) if cdf is None else pd.concat((meta, rdf, cdf),
+                                                                                            copy=False)
 
-                meta = pd.concat((meta, df1, df2), copy=False) if meta is not None else pd.concat((df1, df2),
-                                                                                                  copy=False)
                 f.close()
-        timepoints = sorted(unique_timepoints)
         return TransportMapModel(tmaps=tmaps, meta=meta, timepoints=timepoints, day_pairs=day_pairs, cache=cache)

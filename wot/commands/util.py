@@ -5,6 +5,12 @@ MATRIX_HELP = 'A matrix with cells on rows and features, such as genes or pathwa
 CONFIG_HELP = 'Optional detailed configuration file to specify time-dependent OT parameters'
 FORMAT_HELP = 'Output file format'
 FORMAT_CHOICES = ['gct', 'h5ad', 'loom', 'txt']
+try:
+    import pyarrow
+
+    FORMAT_CHOICES.append('parquet')
+except:
+    pass
 
 
 def add_model_arguments(parser):
