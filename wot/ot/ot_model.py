@@ -52,7 +52,7 @@ class OTModel:
         self.output_file_format = kwargs.pop('output_file_format', 'h5ad')
         if gene_filter is not None:
             if os.path.isfile(gene_filter):
-                gene_ids = pd.read_table(gene_filter, index_col=0, header=None) \
+                gene_ids = pd.read_csv(gene_filter, index_col=0, header=None) \
                     .index.values
             else:
                 import re
@@ -66,7 +66,7 @@ class OTModel:
             wot.io.verbose('Successfuly applied gene_filter: "{}"'.format(gene_filter))
         if cell_filter is not None:
             if os.path.isfile(cell_filter):
-                cell_ids = pd.read_table(cell_filter, index_col=0, header=None) \
+                cell_ids = pd.read_csv(cell_filter, index_col=0, header=None) \
                     .index.values
             else:
                 import re

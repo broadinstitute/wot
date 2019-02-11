@@ -85,7 +85,7 @@ def filter_ds_from_command_line(ds, args):
     params = vars(args)
     if params.get('gene_filter') is not None:
         prior = ds.X.shape[1]
-        gene_ids = pd.read_table(args.gene_filter, index_col=0, header=None).index.values
+        gene_ids = pd.read_csv(args.gene_filter, index_col=0, header=None).index.values
         column_indices = ds.var.index.isin(gene_ids)
         nkeep = np.sum(column_indices)
         if params.get('verbose') and len(gene_ids) > nkeep:
@@ -102,7 +102,7 @@ def filter_ds_from_command_line(ds, args):
             expr = re.compile(args.cell_filter)
             cell_ids = [elem for elem in ds.obs.index.values if expr.match(elem)]
         else:
-            cell_ids = pd.read_table(args.cell_filter, index_col=0, header=None).index.values
+            cell_ids = pd.read_csv(args.cell_filter, index_col=0, header=None).index.values
 
         # row_indices = np.isin(ds.obs.index.values, cell_ids, assume_unique=True)
         row_indices = ds.obs.index.isin(cell_ids)
@@ -270,7 +270,7 @@ def read_grp(path, feature_ids=None):
 
         ids_in_set = set()
         for line in fp:
-            if line == '' or line[0] == '#':
+            if line == '' or line[0] == '#' or line[0] == '>':
                 continue
             value = line.strip()
             if value != '':
@@ -462,16 +462,16 @@ def read_dataset(path):
             for prefix in ['', basename_and_extension[0] + sep_ext[0]]:
                 f = os.path.join(sp[0], prefix + 'barcodes.' + sep_ext[1])
                 if os.path.isfile(f) or os.path.isfile(f + '.gz'):
-                    obs = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
-                                        header=None)
+                    obs = pd.read_csv(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
+                                      header=None)
                     break
         var = None
         for sep_ext in itertools.product(['.', '_', '-'], ['tsv', 'txt']):
             for prefix in ['', basename_and_extension[0] + sep_ext[0]]:
                 f = os.path.join(sp[0], prefix + 'genes.' + sep_ext[1])
                 if os.path.isfile(f) or os.path.isfile(f + '.gz'):
-                    var = pd.read_table(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
-                                        header=None)
+                    var = pd.read_csv(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
+                                      header=None)
                     break
 
         if var is None:
@@ -624,6 +624,8 @@ def check_file_extension(name, output_format):
         expected = '.gct'
     elif output_format == 'h5ad':
         expected = '.h5ad'
+    elif output_format == 'parquet':
+        expected = '.parquet'
     if expected is not None:
         if not str(name).lower().endswith(expected):
             name += expected
@@ -648,9 +650,58 @@ def get_filename_and_extension(name):
     return basename, ext
 
 
+def write_parquet(ds, path,
+                  view_whitelist=['X_pca', 'X_rpca', 'X_tsne', 'X_umap', 'X_fle', 'X_diffmap', 'X_diffmap_sym',
+                                  'X_diffmap_pca']):
+    import pyarrow.pandas_compat
+    import pyarrow
+    import json
+    import pyarrow.parquet as pq
+    df = ds.obs.reset_index()
+    views = []
+    dimensions = []
+    obs = []
+
+    for key in df.keys():
+        dtype = df[key].dtype
+        if str(dtype) == 'category':
+            dimensions.append(key)
+        elif key.endswith('_X'):  # heuristic for views within obs
+            key = key[0:len(key) - 2]  # remove _X
+            if key in view_whitelist:
+                dim = 2
+                if key + '_Z' in df.keys():
+                    dim = 3
+                views.append({'name': key, 'dimensions': dim})
+        else:
+            obs.append(key)
+
+    for key in ds.obsm.keys():
+        if key in view_whitelist:
+            val = ds.obsm[key]
+            df[key + '_X'] = val[:, 0]
+            df[key + '_Y'] = val[:, 1]
+            dim = 2
+            if val.shape[1] > 2:
+                dim = 3
+                df[key + '_Z'] = val[:, 2]
+            views.append({'name': key, 'dimensions': dim})
+    df = pd.concat((df, pd.DataFrame(data=ds.X.toarray(), columns=ds.var_names)), axis=1)
+    views.sort(key=lambda x: x['name'])
+    dimensions.sort()
+    names, arrays, metadata = pyarrow.pandas_compat.dataframe_to_arrays(df, None, False)
+    metadata[b'sccloud'] = json.dumps(
+        {'matrix': {'rows': ds.shape[0], 'columns': ds.shape[1]}, 'views': views,
+         'dimensions': dimensions, 'obs': obs}).encode('utf8')
+    table = pyarrow.Table.from_arrays(arrays, names=names, metadata=metadata)
+    pq.write_table(table, path)
+
+
 def write_dataset(ds, path, output_format='txt'):
     path = check_file_extension(path, output_format)
-    if output_format == 'txt' or output_format == 'gct' or output_format == 'csv':
+    if output_format == 'parquet':
+        write_parquet(ds, path)
+    elif output_format == 'txt' or output_format == 'gct' or output_format == 'csv':
         sep = '\t'
         if output_format is 'csv':
             sep = ','
@@ -782,8 +833,8 @@ def save_loom_attrs(f, is_columns, metadata, length):
 
 
 def read_days_data_frame(path):
-    return pd.read_table(path, index_col='id',
-                         engine='python', sep=None, dtype={'day': np.float64})
+    return pd.read_csv(path, index_col='id',
+                       engine='python', sep=None, dtype={'day': np.float64})
 
 
 def add_row_metadata_to_dataset(dataset, days_path, growth_rates_path=None, sampling_bias_path=None,
@@ -791,15 +842,15 @@ def add_row_metadata_to_dataset(dataset, days_path, growth_rates_path=None, samp
     dataset.obs = dataset.obs.join(read_days_data_frame(days_path))
     if growth_rates_path is not None:
         dataset.obs = dataset.obs.join(
-            pd.read_table(growth_rates_path, index_col='id', engine='python', sep=None))
+            pd.read_csv(growth_rates_path, index_col='id', engine='python', sep=None))
     else:
         dataset.obs['cell_growth_rate'] = 1.0
     if sampling_bias_path is not None:
         dataset.obs = dataset.obs.join(
-            pd.read_table(sampling_bias_path, index_col='id', engine='python', sep=None))
+            pd.read_csv(sampling_bias_path, index_col='id', engine='python', sep=None))
     if covariate_path is not None:
         dataset.obs = dataset.obs.join(
-            pd.read_table(covariate_path, index_col='id', engine='python', sep=None))
+            pd.read_csv(covariate_path, index_col='id', engine='python', sep=None))
 
 
 def read_day_pairs(day_pairs):
@@ -810,4 +861,4 @@ def read_day_pairs(day_pairs):
         import io
         target = io.StringIO(day_pairs)
         args = {'sep': ',', 'lineterminator': ';'}
-    return pd.read_table(target, **args)
+    return pd.read_csv(target, **args)

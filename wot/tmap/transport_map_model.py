@@ -97,7 +97,7 @@ class TransportMapModel:
             The transport map from t0 to t1
         """
         if t0 not in self.timepoints or t1 not in self.timepoints:
-            raise ValueError("Timepoints {}, {} not found".format(t0, t1))
+            raise ValueError("Day pairs {}, {} not found".format(t0, t1))
 
         atomic = (self.day_pairs is not None and (t0, t1) in self.day_pairs) \
                  or self.timepoints.index(t1) == self.timepoints.index(t0) + 1
@@ -621,7 +621,7 @@ class TransportMapModel:
         if len(tmaps) is 0:
             raise ValueError('No transport maps found in ' + tmap_dir + ' with prefix ' + tmap_prefix)
         day_pairs = set()
-        timepoints = []
+        timepoints = set()
         tmap_keys = list(tmaps.keys())
         tmap_keys.sort(key=lambda x: x[0])
         meta = None
@@ -630,9 +630,8 @@ class TransportMapModel:
             t0 = key[0]
             t1 = key[1]
             day_pairs.add((t0, t1))
-            timepoints.append(t0)
-            if i == len(tmap_keys) - 1:
-                timepoints.append(t1)
+            timepoints.add(t0)
+            timepoints.add(t1)
             if not with_covariates:
                 path = tmaps[key]
                 f = h5py.File(path, 'r')
@@ -652,4 +651,5 @@ class TransportMapModel:
                                                                                             copy=False)
 
                 f.close()
+        timepoints = sorted(timepoints)
         return TransportMapModel(tmaps=tmaps, meta=meta, timepoints=timepoints, day_pairs=day_pairs, cache=cache)

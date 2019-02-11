@@ -76,7 +76,7 @@ def main(argv):
     score_function = locals()[args.score]
     names = []
     if args.comparisons is not None:
-        comparisons = pd.read_table(args.comparisons, header=None, index_col=False, engine='python', sep=None)
+        comparisons = pd.read_csv(args.comparisons, header=None, index_col=False, engine='python', sep=None)
         for comparison_idx in range(comparisons.shape[0]):
             i = np.where(ds1.obs.index.values == comparisons.iloc[comparison_idx, 0])[0][0]
             j = np.where(ds2.obs.index.values == comparisons.iloc[comparison_idx, 1])[0][0]

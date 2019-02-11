@@ -21,11 +21,11 @@ def main(argv):
     obs = []
     if args.obs is not None:
         for path in args.obs:
-            obs.append(pd.read_table(path, index_col='id', engine='python', sep=None))
+            obs.append(pd.read_csv(path, index_col='id', engine='python', sep=None))
     var = []
     if args.var is not None:
         for path in args.var:
-            var.append(pd.read_table(path, index_col='id', engine='python', sep=None))
+            var.append(pd.read_csv(path, index_col='id', engine='python', sep=None))
     for f in files:
         name = wot.io.get_filename_and_extension(f)[0]
         ds = wot.io.read_dataset(f)

@@ -32,7 +32,7 @@ def main(argv):
         adata = adata.T
     if args.gene_filter is not None:
         if os.path.isfile(args.gene_filter):
-            gene_ids = pd.read_table(args.gene_filter, index_col=0, header=None) \
+            gene_ids = pd.read_csv(args.gene_filter, index_col=0, header=None) \
                 .index.values
         else:
             import re

@@ -19,7 +19,7 @@ class OptimalTransportHelper:
         eigenvals = None
         # if args.diagonal is not None:
         #     eigenvals = \
-        #         pd.read_table(args.diagonal, header=None, names=['eigenvals'], index_col=False, dtype=np.float64)[
+        #         pd.read_csv(args.diagonal, header=None, names=['eigenvals'], index_col=False, dtype=np.float64)[
         #             'eigenvals'].values
         # if eigenvals is not None and args.power is not None:
         #     eigenvals = np.power(eigenvals, args.power)
@@ -46,13 +46,13 @@ class OptimalTransportHelper:
         day_pairs = None
         if args.day_pairs is not None:
             if not os.path.isfile(args.day_pairs):
-                day_pairs = pd.read_table(io.StringIO(args.day_pairs), header=None, names=['t0', 't1'],
-                                          index_col=False, lineterminator=';', sep=',',
-                                          dtype={'t0': np.float64, 't1': np.float64})
+                day_pairs = pd.read_csv(io.StringIO(args.day_pairs), header=None, names=['t0', 't1'],
+                                        index_col=False, lineterminator=';', sep=',',
+                                        dtype={'t0': np.float64, 't1': np.float64})
             else:
-                day_pairs = pd.read_table(args.day_pairs, header=None, names=['t0', 't1'],
-                                          index_col=False, engine='python', sep=None,
-                                          dtype={'t0': np.float64, 't1': np.float64})
+                day_pairs = pd.read_csv(args.day_pairs, header=None, names=['t0', 't1'],
+                                        index_col=False, engine='python', sep=None,
+                                        dtype={'t0': np.float64, 't1': np.float64})
 
         # self.eigenvals = np.diag(eigenvals) if eigenvals is not None else None
         self.eigenvals = None
@@ -65,7 +65,7 @@ class OptimalTransportHelper:
         #         proliferation = gene_set_scores_ds[:, np.where(gene_set_scores_ds.var.columns == 'Cell.cycle')[0]]
         #         gene_set_scores_ids = gene_set_scores_ds.obs.index
         #     else:
-        #         gene_set_scores = pd.read_table(args.gene_set_scores, index_col=0, engine='python', sep=None)
+        #         gene_set_scores = pd.read_csv(args.gene_set_scores, index_col=0, engine='python', sep=None)
         #         apoptosis = gene_set_scores['Apoptosis'].values
         #         proliferation = gene_set_scores['Cell.cycle'].values
         #         gene_set_scores_ids = gene_set_scores.index
@@ -76,7 +76,7 @@ class OptimalTransportHelper:
         #     cell_growth_rates = pd.DataFrame(index=gene_set_scores_ids, data={'cell_growth_rate': g})
 
         if args.cell_growth_rates is not None:
-            cell_growth_rates = pd.read_table(args.cell_growth_rates, index_col='id', engine='python', sep=None)
+            cell_growth_rates = pd.read_csv(args.cell_growth_rates, index_col='id', engine='python', sep=None)
         else:
             cell_growth_rates = pd.DataFrame(index=ds.obs.index.values, data={'cell_growth_rate': 1})
             if args.verbose:

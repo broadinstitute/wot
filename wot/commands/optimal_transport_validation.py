@@ -222,7 +222,7 @@ def main(argv):
             t1 = unique_times[i + 2]
             day_pairs_triplets.append((t0, t05, t1))
     else:
-        day_triplets_df = pd.read_table(args.day_triplets)
+        day_triplets_df = pd.read_csv(args.day_triplets, engine='python', sep=None)
         unique_times = np.array(ot_model.timepoints)
 
         for i in range(day_triplets_df.shape[0]):

@@ -87,7 +87,7 @@ def get_ids(expr):
         return list(map(lambda x: x.strip(), set_ids))
     else:
         import pd
-        return list(pd.read_table(expr, index_col=0, header=None).index.values)
+        return list(pd.read_csv(expr, index_col=0, header=None).index.values)
 
 
 def sample_uniformly(exp1, exp2, tm, npairs):
