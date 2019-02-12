@@ -16,7 +16,7 @@ import wot.io
 import wot.ot
 
 
-def compute_validation_summary(ot_model, day_pairs_triplets, save_interpolated=False, compute_full_distances=False,
+def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpolated=False, compute_full_distances=False,
                                interp_size=10000):
     """
     Compute the validation summary for the given OTModel
@@ -35,6 +35,14 @@ def compute_validation_summary(ot_model, day_pairs_triplets, save_interpolated=F
     validation_summary : pandas.DataFrame
         The validation summary
     """
+    if day_pairs_triplets is None:
+        unique_times = np.array(ot_model.timepoints)
+        for i in range(len(unique_times) - 2):
+            t0 = unique_times[i]
+            t05 = unique_times[i + 1]
+            t1 = unique_times[i + 2]
+            day_pairs_triplets.append((t0, t05, t1))
+
     day_pairs = {}
     for triplet in day_pairs_triplets:
         day_pairs[(triplet[0], triplet[2])] = {}
@@ -213,15 +221,9 @@ def main(argv):
                                           covariate=args.covariate,
                                           transpose=args.transpose
                                           )
-    day_pairs_triplets = []
-    if args.day_triplets is None:
-        unique_times = np.array(ot_model.timepoints)
-        for i in range(len(unique_times) - 2):
-            t0 = unique_times[i]
-            t05 = unique_times[i + 1]
-            t1 = unique_times[i + 2]
-            day_pairs_triplets.append((t0, t05, t1))
-    else:
+    day_pairs_triplets = None
+    if args.day_triplets is not None:
+        day_pairs_triplets = []
         day_triplets_df = pd.read_csv(args.day_triplets, engine='python', sep=None)
         unique_times = np.array(ot_model.timepoints)
 
