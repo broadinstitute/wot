@@ -36,6 +36,7 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
         The validation summary
     """
     if day_pairs_triplets is None:
+        day_pairs_triplets = []
         unique_times = np.array(ot_model.timepoints)
         for i in range(len(unique_times) - 2):
             t0 = unique_times[i]
