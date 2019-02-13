@@ -97,7 +97,7 @@ class TransportMapModel:
             The transport map from t0 to t1
         """
         if t0 not in self.timepoints or t1 not in self.timepoints:
-            raise ValueError("Day pairs {}, {} not found".format(t0, t1))
+            raise ValueError("Day pair {}, {} not found".format(t0, t1))
 
         atomic = (self.day_pairs is not None and (t0, t1) in self.day_pairs) \
                  or self.timepoints.index(t1) == self.timepoints.index(t0) + 1
@@ -595,16 +595,18 @@ class TransportMapModel:
         tmaps = {}
         import re
         files = os.listdir(tmap_dir)
+        day_regex = '([0-9]*\.?[0-9]+)'
         if with_covariates:
             pattern = re.compile(
-                tmap_prefix + '_([0-9]+\.[0-9])+_([0-9]+\.[0-9]+)_cv([a-zA-Z0-9]+)_cv([a-zA-Z0-9]+)[\.h5ad|\.loom]')
+                tmap_prefix + '_{}_{}_cv([a-zA-Z0-9]+)_cv([a-zA-Z0-9]+)[\.h5ad|\.loom]'.format(day_regex, day_regex))
         else:
-            pattern = re.compile(tmap_prefix + '_([0-9]+\.[0-9]+)_([0-9]+\.[0-9])+[\.h5ad|\.loom]')
+            pattern = re.compile(tmap_prefix + '_{}_{}[\.h5ad|\.loom]'.format(day_regex, day_regex))
         for f in files:
             path = os.path.join(tmap_dir, f)
             if os.path.isfile(path):
                 m = pattern.match(f)
                 if m is not None:
+
                     try:
                         t1 = float(m.group(1))
                         t2 = float(m.group(2))

@@ -51,7 +51,8 @@ ot_validation_legend = {
     'F': ["#4daf4a", "between first and real"],
     'L': ["#984ea3", "between last and real"],
     'R': ["#ff7f00", "between random (no growth) and real"],
-    'Rg': ["#ffff33", "between random (with growth) and real"]
+    'Rg': ["#ffff33", "between random (with growth) and real"],
+    'A': ["#bdbdbd", "between first and last"]
 }
 
 
@@ -63,7 +64,7 @@ def plot_ot_validation_summary(df, filename, bandwidth=None):
     pyplot.ylabel("distance")
     wot.graphics.legend_figure(pyplot, ot_validation_legend.values())
 
-    for p, d in df.groupby('type'):
+    for p, d in df.groupby('name'):
         if p not in ot_validation_legend.keys():
             continue
         t = np.asarray(d['interval_mid'])

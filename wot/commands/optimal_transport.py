@@ -39,6 +39,7 @@ def main(argv):
                                           force=args.force,
                                           ncells=args.ncells,
                                           ncounts=args.ncounts,
-                                          transpose=args.transpose
+                                          transpose=args.transpose,
+                                          format=args.format
                                           )
     ot_model.compute_all_transport_maps()

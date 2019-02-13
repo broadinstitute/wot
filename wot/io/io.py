@@ -664,7 +664,7 @@ def write_parquet(ds, path,
 
     for key in df.keys():
         dtype = df[key].dtype
-        if str(dtype) == 'category':
+        if str(dtype) == 'category' or str(dtype) == 'object':
             dimensions.append(key)
         elif key.endswith('_X'):  # heuristic for views within obs
             key = key[0:len(key) - 2]  # remove _X
@@ -823,9 +823,7 @@ def save_loom_attrs(f, is_columns, metadata, length):
         f[path] = array
 
     if metadata is not None:
-        save_metadata_array(attrs_path + '/' + ('id' if metadata.index.name is
-                                                        None or metadata.index.name is 0 else
-                                                str(metadata.index.name)), metadata.index.values)
+        save_metadata_array(attrs_path + '/id', metadata.index.values)
         for name in metadata.columns:
             save_metadata_array(attrs_path + '/' + str(name), metadata[name].values)
     else:
