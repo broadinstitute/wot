@@ -70,7 +70,7 @@ def main(argv):
 
     # scores contains cells on rows, gene sets on columns
     drop_frequency = -1
-    permutations = args.nperm
+    permutations = None
     for j in range(gs.shape[1]):
         if args.progress and gs.shape[1] > 1:
             print(gs.var.index.values[j])
