@@ -61,7 +61,7 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--ncounts', help='Sample ncounts from each cell', type=int)
     parser.add_argument('--force', help='Overwrite existing transport maps if they exist', action='store_true')
     parser.add_argument('--sampling_bias', help='File with "id" and "pp" to correct sampling bias.')
-    parser.add_argument('--format', help='Output file format', default='loom')
+    parser.add_argument('--format', help='Output file format', default='loom', choices=['h5ad', 'loom'])
 
     # parser.add_argument('--max_iter', type=int, default=1e7,
     #                     help='Maximum number of scaling iterations. Abort if convergence was not reached')
