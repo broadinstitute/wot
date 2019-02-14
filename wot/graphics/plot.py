@@ -62,7 +62,7 @@ def plot_ot_validation_summary(df, filename, bandwidth=None):
     pyplot.title("OT Validation")
     pyplot.xlabel("time")
     pyplot.ylabel("distance")
-    wot.graphics.legend_figure(pyplot, ot_validation_legend.values())
+    legend = {}
 
     for p, d in df.groupby('name'):
         if p not in ot_validation_legend.keys():
@@ -70,10 +70,12 @@ def plot_ot_validation_summary(df, filename, bandwidth=None):
         t = np.asarray(d['interval_mid'])
         m = np.asarray(d['mean'])
         s = np.asarray(d['std'])
+        legend[p] = ot_validation_legend[p]
         if bandwidth is not None:
             x, m = kernel_smooth(t, m, 0, t[len(t) - 1], 1000, bandwidth)
             x, s = kernel_smooth(t, s, 0, t[len(t) - 1], 1000, bandwidth)
             t = x
         pyplot.plot(t, m, '-o', color=ot_validation_legend[p][0])
         pyplot.fill_between(t, m - s, m + s, color=ot_validation_legend[p][0], alpha=0.2)
+    wot.graphics.legend_figure(pyplot, legend.values())
     pyplot.savefig(filename)
