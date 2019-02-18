@@ -22,7 +22,7 @@ population = all_populations[target_cell_set]
 
 # timepoints, means, variances = tmap_model.compute_trajectory_trends(ds, population)
 trajectory_ds = tmap_model.compute_trajectories({target_cell_set: all_populations[target_cell_set]})
-results = wot.ot.compute_trajectory_trends_from_trajectory(trajectory_ds, ds)
+results = wot.tmap.compute_trajectory_trends_from_trajectory(trajectory_ds, ds)
 means, variances = results[0]
 timepoints = means.obs.index.values
 pyplot.figure(figsize=(5, 5))
