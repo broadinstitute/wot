@@ -535,7 +535,8 @@ def read_dataset(path):
         row_meta = pd.DataFrame(data=row_meta)
         if row_meta.get('id') is not None:
             row_meta.set_index('id', inplace=True)
-
+        elif row_meta.shape[1] == 1:
+            row_meta.set_index(row_meta.columns[0], inplace=True)
         col_meta = {}
         col_attrs = f['/col_attrs']
         for key in col_attrs:
@@ -546,6 +547,8 @@ def read_dataset(path):
         col_meta = pd.DataFrame(data=col_meta)
         if col_meta.get('id') is not None:
             col_meta.set_index('id', inplace=True)
+        elif col_meta.shape[1] == 1:
+            col_meta.set_index(col_meta.columns[0], inplace=True)
         f.close()
         return anndata.AnnData(X=x, obs=row_meta, var=col_meta)
     elif ext == 'h5ad':
