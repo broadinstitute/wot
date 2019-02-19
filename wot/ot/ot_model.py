@@ -49,7 +49,7 @@ class OTModel:
         ncounts = kwargs.pop('ncounts', None)
         ncells = kwargs.pop('ncells', None)
         self.force = kwargs.pop('force', False)
-        self.output_file_format = kwargs.pop('format', 'h5ad')
+        self.output_file_format = kwargs.pop('format', 'loom')
         if gene_filter is not None:
             if os.path.isfile(gene_filter):
                 gene_ids = pd.read_csv(gene_filter, index_col=0, header=None) \

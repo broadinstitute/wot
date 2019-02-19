@@ -48,11 +48,13 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
     for triplet in day_pairs_triplets:
         day_pairs[(triplet[0], triplet[2])] = {}
     ot_model.day_pairs = day_pairs
-    if 'covariate' not in ot_model.matrix.obs.columns:
-        print('Warning-no covariate specified.')
-        wot.add_cell_metadata(ot_model.matrix, 'covariate', 0)
+    has_covariate = 'covariate' in ot_model.matrix.obs.columns
+    if not has_covariate and not compute_full_distances:
+        print('No covariate specified. Please provide a covariate or compute full distances')
+        exit(1)
 
-    ot_model.compute_all_transport_maps(with_covariates=True)
+    if has_covariate:
+        ot_model.compute_all_transport_maps(with_covariates=True)
     if compute_full_distances:
         ot_model.compute_all_transport_maps()
     # Now validate
@@ -130,6 +132,8 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
             update_full_summary(p1_ds.X, t1, 'L')
             update_full_summary(p0_ds.X, t1, 'A', p1_ds.X)
 
+        if not has_covariate:
+            continue
         p0 = wot.split_anndata(p0_ds, 'covariate')
         p05 = wot.split_anndata(p05_ds, 'covariate')
         p1 = wot.split_anndata(p1_ds, 'covariate')
@@ -240,8 +244,16 @@ def main(argv):
     day_pairs_triplets = None
     if args.day_triplets is not None:
         day_pairs_triplets = []
-        day_triplets_df = pd.read_csv(args.day_triplets, engine='python', sep=None)
-        unique_times = np.array(ot_model.timepoints)
+        if os.path.isfile(args.day_triplets):
+            day_triplets_df = pd.read_csv(args.day_triplets, engine='python', sep=None)
+        else:
+            triplets = args.day_triplets.split(';')
+            array_of_arrays = []
+            for triplet in triplets:
+                tokens = triplet.split(',')
+                array_of_arrays.append([float(tokens[0].strip()), float(tokens[1].strip()), float(tokens[2].strip())])
+            day_triplets_df = pd.DataFrame(array_of_arrays)
+        unique_times = np.array(ot_model.timepoints)  # find closest to actual time
 
         for i in range(day_triplets_df.shape[0]):
             t0 = unique_times[np.abs(unique_times - day_triplets_df.iloc[i, 0]).argmin()]
@@ -260,12 +272,13 @@ def main(argv):
     summary.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary.txt'), sep='\t',
                    index=False)
 
-    summary_stats = summary[summary['full'] == False]
-    summary_stats = summary_stats.groupby(['interval_mid', 'name'])['distance'].agg([np.mean, np.std])
-    summary_stats.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_cv_validation_summary_stats.txt'),
-                         sep="\t", )
-    wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(ot_model.tmap_dir,
-                                                                        ot_model.tmap_prefix + '_cv_validation_summary.png'))
+    if args.covariate is not None:
+        summary_stats = summary[summary['full'] == False]
+        summary_stats = summary_stats.groupby(['interval_mid', 'name'])['distance'].agg([np.mean, np.std])
+        summary_stats.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_cv_validation_summary_stats.txt'),
+                             sep="\t", )
+        wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(ot_model.tmap_dir,
+                                                                            ot_model.tmap_prefix + '_cv_validation_summary.png'))
 
     if args.full_distances:
         summary_stats = summary[summary['full']]
