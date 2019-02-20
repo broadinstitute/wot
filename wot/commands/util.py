@@ -1,8 +1,10 @@
+import wot.ot
+
 CELL_SET_HELP = 'gmt, gmx, or grp file of cell sets.'
 CELL_DAYS_HELP = 'File with headers "id" and "day" corresponding to cell id and days'
 TMAP_HELP = 'Directory of transport maps as produced by optimal transport'
 MATRIX_HELP = 'A matrix with cells on rows and features, such as genes or pathways on columns'
-CONFIG_HELP = 'Optional detailed configuration file to specify time-dependent OT parameters'
+
 FORMAT_HELP = 'Output file format'
 FORMAT_CHOICES = ['gct', 'h5ad', 'loom', 'txt']
 try:
@@ -16,8 +18,37 @@ except:
 def add_model_arguments(parser):
     parser.add_argument('--matrix', help=MATRIX_HELP, required=True)
     parser.add_argument('--cell_days', help=CELL_DAYS_HELP, required=True)
-    parser.add_argument('--config', help=CONFIG_HELP)
+    parser.add_argument('--parameters', help='Optional two column parameter file containing parameter name and value')
+    parser.add_argument('--config', help='Configuration per timepoint or pair of timepoints')
     parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
+
+
+def initialize_ot_model_from_args(args):
+    return wot.ot.initialize_ot_model(args.matrix, args.cell_days,
+                                      tmap_out=args.out,
+                                      local_pca=args.local_pca,
+                                      growth_iters=args.growth_iters,
+                                      epsilon=args.epsilon,
+                                      lambda1=args.lambda1,
+                                      lambda2=args.lambda2,
+                                      max_threads=args.max_threads,
+                                      epsilon0=args.epsilon0,
+                                      tau=args.tau,
+                                      config=args.config,
+                                      parameters=args.parameters,
+                                      cell_day_filter=args.cell_day_filter,
+                                      cell_growth_rates=args.cell_growth_rates,
+                                      gene_filter=args.gene_filter,
+                                      cell_filter=args.cell_filter,
+                                      sampling_bias=args.sampling_bias,
+                                      scaling_iter=args.scaling_iter,
+                                      inner_iter_max=args.inner_iter_max,
+                                      force=args.force,
+                                      ncells=args.ncells,
+                                      ncounts=args.ncounts,
+                                      transpose=args.transpose,
+                                      format=args.format
+                                      )
 
 
 def add_ot_parameters_arguments(parser):

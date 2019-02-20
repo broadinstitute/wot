@@ -215,32 +215,7 @@ def main(argv):
                         help='Prefix for output file names')
     parser.add_argument('--interp_size', default=10000, type=int)
     args = parser.parse_args(argv)
-
-    ot_model = wot.ot.initialize_ot_model(args.matrix, args.cell_days,
-                                          tmap_out=args.out,
-                                          local_pca=args.local_pca,
-                                          growth_iters=args.growth_iters,
-                                          epsilon=args.epsilon,
-                                          lambda1=args.lambda1,
-                                          lambda2=args.lambda2,
-                                          max_threads=args.max_threads,
-                                          epsilon0=args.epsilon0,
-                                          tau=args.tau,
-                                          day_pairs=args.config,
-                                          cell_day_filter=args.cell_day_filter,
-                                          cell_growth_rates=args.cell_growth_rates,
-                                          gene_filter=args.gene_filter,
-                                          cell_filter=args.cell_filter,
-                                          sampling_bias=args.sampling_bias,
-                                          scaling_iter=args.scaling_iter,
-                                          inner_iter_max=args.inner_iter_max,
-                                          force=args.force,
-                                          ncells=args.ncells,
-                                          ncounts=args.ncounts,
-                                          covariate=args.covariate,
-                                          transpose=args.transpose,
-                                          format=args.format
-                                          )
+    ot_model = wot.commands.initialize_ot_model_from_args(args)
     day_pairs_triplets = None
     if args.day_triplets is not None:
         day_pairs_triplets = []

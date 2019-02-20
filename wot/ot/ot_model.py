@@ -41,7 +41,7 @@ class OTModel:
         self.matrix = matrix
         self.tmap_dir = tmap_dir or '.'
         self.tmap_prefix = tmap_prefix or "tmaps"
-        self.day_pairs = wot.ot.parse_configuration(kwargs.pop('day_pairs', None))
+        self.day_pairs = wot.ot.parse_configuration(kwargs.pop('config', None))
 
         cell_filter = kwargs.pop('cell_filter', None)
         gene_filter = kwargs.pop('gene_filter', None)
@@ -144,6 +144,11 @@ class OTModel:
 
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
+        if kwargs.get('parameters', None) is not None:
+            config_dict = wot.ot.parse_parameter_file(kwargs.pop('parameters'))
+            for k in config_dict.keys():
+                self.ot_config[k] = config_dict[k]
+
         local_pca = self.ot_config['local_pca']
         if local_pca > self.matrix.X.shape[1]:
             print("Warning : local_pca set to {}, above gene count of {}. Disabling PCA" \

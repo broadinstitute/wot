@@ -130,6 +130,15 @@ def parse_per_timepoint_configuration(config):
         raise ValueError("Unrecognized argument type for per-timepoint configuration. Use DataFrame, str or None")
 
 
+def parse_parameter_file(path):
+    df = pd.read_csv(path, engine='python', delimiter=None, header=None)
+    #  two column file containing parameter and value
+    result = {}
+    for i in range(len(df)):
+        result[df.iloc[i, 0]] = df.iloc[i, 1]
+    return result
+
+
 def parse_per_timepair_configuration(config):
     """
     Build a valid per-timepair configuration from the argument
