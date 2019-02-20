@@ -27,7 +27,7 @@ wot.set_cell_metadata(ds, 'color', cell_colors)
 pyplot.figure(figsize=(5, 5))
 pyplot.axis('off')
 wot.graphics.plot_2d_dataset(pyplot, ds,
-                             x=gene_x_plot, y=gene_y_plot)
+                             x=gene_x_plot, y=gene_y_plot, colors=ds.obs['color'].values)
 pyplot.autoscale(enable=True, tight=True)
 pyplot.tight_layout(pad=0)
 pyplot.savefig(destination_file)

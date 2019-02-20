@@ -6,7 +6,7 @@ import wot
 matrix_file = 'matrix.txt'
 cell_sets_file = 'cell_sets.gmt'
 target_cell_set = 'Red blood cells'
-target_timepoint = 50
+target_timepoint = 7
 destination_file = "ancestor_census.png"
 # --------------------------------------
 

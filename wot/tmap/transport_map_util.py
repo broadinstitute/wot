@@ -75,7 +75,7 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
     timepoints = []
     mean_list = []
     variance_list = []
-    for j in range(trajectory_ds.X.shape[1]):
+    for j in range(trajectory_ds.shape[1]):
         mean_list.append(None)
         variance_list.append(None)
 
@@ -84,11 +84,13 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
         indices = trajectory_ds.obs.index.get_indexer_for(group.index)  # cell indices at day
         p = trajectory_ds.X[indices]
         values = ds.X[indices]
+
         if scipy.sparse.isspmatrix(values):
             values = values.toarray()
-        for j in range(trajectory_ds.X.shape[1]):  # each trajectory
-            mean = np.average(values, weights=p[:, j], axis=0)
-            var = np.average((values - mean) ** 2, weights=p[:, j], axis=0)
+        for j in range(trajectory_ds.shape[1]):  # each trajectory
+            weights = p[:, j] if len(p.shape) > 1 else p
+            mean = np.average(values, weights=weights, axis=0)
+            var = np.average((values - mean) ** 2, weights=weights, axis=0)
 
             if mean_list[j] is None:
                 mean_list[j] = mean.T

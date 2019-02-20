@@ -1,7 +1,8 @@
 import numpy as np
-import wot.simulate
 from numpy.random import randint
 from numpy.random import random
+
+import wot.simulate
 
 # ------ Configuration variables -------
 matrix_file = 'matrix.txt'
@@ -9,9 +10,10 @@ days_file = 'days.txt'
 covariate_file = 'covariate.txt'
 gene_sets_file = 'gene_sets.gmt'
 
-number_of_timepoints = 51
-covariates_count = 5
-average_cell_count_per_timepoint = 3000
+number_of_timepoints = 8
+covariates_count = 2
+average_cell_count_per_timepoint = 1000
+np.random.seed(1234)
 
 gene_sets = {
     'Stem cells': ['Stem_gene'],

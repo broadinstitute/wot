@@ -10,7 +10,7 @@ gene_x_plot = 0
 gene_y_plot = 1
 cell_sets_file = 'cell_sets.gmt'
 target_cell_set = "Red blood cells"
-target_timepoint = 50
+target_timepoint = 7
 destination_file = "ancestors.png"
 # --------------------------------------
 
@@ -33,6 +33,7 @@ def color_cells(population):
 pyplot.figure(figsize=(5, 5))
 pyplot.axis('off')
 wot.set_cell_metadata(ds, 'color', bg_color)
+
 wot.graphics.plot_2d_dataset(pyplot, ds, x=gene_x_plot, y=gene_y_plot)
 
 cell_sets = wot.io.read_sets(cell_sets_file, as_dict=True)
@@ -46,7 +47,7 @@ while tmap_model.can_pull_back(population):
     color_cells(population)
 
 wot.graphics.plot_2d_dataset(pyplot, ds,
-                             x=gene_x_plot, y=gene_y_plot)
+                             x=gene_x_plot, y=gene_y_plot, s=1, colors=ds.obs['color'].values)
 wot.graphics.legend_figure(pyplot,
                            [["#316DA2", "Ancestors of {}".format(target_cell_set)]])
 pyplot.autoscale(enable=True, tight=True)

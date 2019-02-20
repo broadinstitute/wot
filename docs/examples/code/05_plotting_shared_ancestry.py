@@ -11,7 +11,7 @@ gene_y_plot = 1
 cell_set_1 = "Red blood cells"
 cell_set_2 = "Granulocytes"
 cell_sets_file = 'cell_sets.gmt'
-target_timepoint = 50
+target_timepoint = 7
 destination_file = "shared_ancestry.png"
 # --------------------------------------
 
@@ -38,7 +38,7 @@ colors = [wot.graphics.hexstring_of_rgba([t[i], 0, 1 - t[i], alphas[i]])
           for i in range(len(t))]
 ds.obs.loc[:, 'color'] = colors
 
-wot.graphics.plot_2d_dataset(pyplot, ds)
+wot.graphics.plot_2d_dataset(pyplot, ds, s=1, colors=ds.obs['color'].values)
 wot.graphics.legend_figure(pyplot,
                            [["#A00000", "Ancestors of " + cell_set_1],
                             ["#0000A0", "Ancestors of " + cell_set_2]],
