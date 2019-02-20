@@ -48,14 +48,6 @@ a table containing the core options. Required options are in bold font.
 
 <hr />
 
-> <button class="btn-info rounded border-0 px-3 py-1" disabled>Note</button>
->
-> To help you get started with **wot**, we provide an archive containing all
-> the simulated data that was used to compute all the pictures shown throughout
-> this documentation. You can download it here and run the commands described
-> thereafter in the same directory.
->
-> <div class="center-block text-center py-2"><a class="nounderline btn-outline-secondary btn-lg border px-4 py-2" role="button" href="http://www.mediafire.com/file/01ahkjrsjjzt56l/all_simulated_data.zip">Download .zip</a></div>
 
 
 
