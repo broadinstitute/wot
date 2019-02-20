@@ -13,11 +13,9 @@ requirements = [
 ]
 
 extras_require = {
-    # 'GRN': ["'gslrandom>=0.1'", 'numexpr']
 }
 
 setup_requirements = [
-    # put setup requirements (distutils extensions, etc.) here
 ]
 
 test_requirements = [
@@ -26,7 +24,7 @@ test_requirements = [
 
 setuptools.setup(
     name='wot',
-    version='0.4.8',
+    version='0.4.9',
     description="Optimal transport for time-course single cell data",
     author="WOT Team",
     author_email='wot@broadinstitute.org',

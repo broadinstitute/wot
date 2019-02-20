@@ -19,6 +19,7 @@ def main(argv):
                         help='Gene sets in gmx, gmt, or grp format', required=True)
     parser.add_argument('--cell_filter', help='Cells to include')
     parser.add_argument('--gene_set_filter', help='Gene sets to include')
+    parser.add_argument('--nperm', help='Number of permutations to perform', type=int)
     parser.add_argument('--out', help='Output file name prefix', default='')
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='txt', choices=wot.commands.FORMAT_CHOICES)
     parser.add_argument('--method', help='Method to compute gene set scores',
@@ -38,9 +39,8 @@ def main(argv):
         print('Read ' + args.matrix)
     if args.cell_filter is not None:
         cell_filter = wot.io.read_sets(args.cell_filter)
-        cells_ids = cell_filter.obs.index.values[np.where(cell_filter.X[:, 0] > 0)[0]]
-        cell_filter = ds.obs.index.isin(cells_ids)
-        ds = anndata.AnnData(ds.X[cell_filter], ds.obs.iloc[cell_filter], ds.var)
+        cell_filter = ds.obs.index.isin(cell_filter.obs.index.values)
+        ds = ds[cell_filter]
 
     # background_ds = None
     # if background_cell_set is not None:
@@ -69,8 +69,7 @@ def main(argv):
     output_prefix = args.out + '_'
 
     # scores contains cells on rows, gene sets on columns
-    drop_frequency = -1
-    permutations = None
+    permutations = args.nperm
     for j in range(gs.shape[1]):
         if args.progress and gs.shape[1] > 1:
             print(gs.var.index.values[j])
@@ -83,17 +82,8 @@ def main(argv):
             column_names.append('p_value')
             column_names.append('FDR_BH')
             column_names.append('k')
-            column_names.append('n')
-            if drop_frequency > 0:
-                column_names.append('p_value_ci')
-                column_names.append('FDR_BH_low')
-                column_names.append('FDR_BH_high')
-                x = np.hstack((result['score'], np.vstack(
-                    (result['p_value'], result['fdr'], result['k'], result['n'], result['p_value_ci'],
-                     result['fdr_low'], result['fdr_high'])).T))
-            else:
-                x = np.hstack((np.array([result['score']]).T, np.array([result['p_value']]).T,
-                               np.array([result['fdr']]).T, np.array([result['k']]).T, np.array([result['n']]).T))
+            x = np.hstack((np.array([result['score']]).T, np.array([result['p_value']]).T,
+                           np.array([result['fdr']]).T, np.array([result['k']]).T))
 
         else:
             x = np.array([result['score']]).T

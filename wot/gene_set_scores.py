@@ -125,4 +125,25 @@ def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
     # ds has cells on rows, genes on columns
     # scores contains cells on rows, gene sets on columns
 
+    if permutations is not None and permutations > 0:
+        if random_state:
+            np.random.seed(random_state)
+        p_values = np.zeros(x.shape[0])
+        permuted_X = x.T.copy()  # put genes on rows to shuffle each row indendently
+        for i in range(permutations):
+            for _x in permuted_X:
+                np.random.shuffle(_x)
+            # count number of times permuted score is >= than observed score
+            p_values += permuted_X.mean(axis=0) >= observed_scores
+            if progress:
+                print(
+                    'permutation ' + str(i) + '/' + str(permutations))
+
+        k = p_values
+        if smooth_p_values:
+            p_values = (p_values + 1) / (permutations + 2)
+        else:
+            p_values = p_values / permutations
+        return {'score': observed_scores, 'p_value': p_values, 'fdr': fdr(p_values), 'k': k}
+
     return {'score': observed_scores}
