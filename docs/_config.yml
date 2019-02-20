@@ -12,9 +12,9 @@ navbar_items:
     url: /
   - title: Documentation
     url: /cli_documentation
-  - title: Citing wot
-    url: /citing_wot
   - title: Examples
     url: /examples
-  - title: Github
+  - title: Citing
+    url: /citing_wot
+  - title: Source Code
     url: /github
