@@ -159,9 +159,8 @@ class OTModel:
         if 'day' not in self.matrix.obs.columns:
             raise ValueError("Days information not available for matrix")
         if any(self.matrix.obs['day'].isnull()):
-            query = self.matrix.obs['day'].isnull()
-            faulty = list(self.matrix.obs.index[query])
-            raise ValueError("Days information missing for cells : {}".format(faulty))
+            print("Days information missing for {} cells".format(self.matrix.obs['day'].isnull().sum()))
+            self.matrix = self.matrix[self.matrix.obs['day'].isnull() == False]
 
     def get_covariate_pairs(self):
         """Get all covariate pairs in the dataset"""
