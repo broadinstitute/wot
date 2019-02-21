@@ -24,7 +24,8 @@ def add_model_arguments(parser):
 
 
 def initialize_ot_model_from_args(args):
-    return wot.ot.initialize_ot_model(args.matrix, args.cell_days,
+    return wot.ot.initialize_ot_model(args.matrix,
+                                      args.cell_days,
                                       tmap_out=args.out,
                                       local_pca=args.local_pca,
                                       growth_iters=args.growth_iters,
@@ -40,14 +41,15 @@ def initialize_ot_model_from_args(args):
                                       cell_growth_rates=args.cell_growth_rates,
                                       gene_filter=args.gene_filter,
                                       cell_filter=args.cell_filter,
-                                      sampling_bias=args.sampling_bias,
+                                      # sampling_bias=args.sampling_bias,
                                       scaling_iter=args.scaling_iter,
                                       inner_iter_max=args.inner_iter_max,
                                       force=args.force,
                                       ncells=args.ncells,
                                       ncounts=args.ncounts,
                                       transpose=args.transpose,
-                                      format=args.format
+                                      format=args.format,
+                                      covariate=args.covariate if hasattr(args, 'covariate') else None
                                       )
 
 
@@ -91,7 +93,7 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--ncells', type=int, help='Number of cells to downsample from each timepoint and covariate')
     parser.add_argument('--ncounts', help='Sample ncounts from each cell', type=int)
     parser.add_argument('--force', help='Overwrite existing transport maps if they exist', action='store_true')
-    parser.add_argument('--sampling_bias', help='File with "id" and "pp" to correct sampling bias.')
+    # parser.add_argument('--sampling_bias', help='File with "id" and "pp" to correct sampling bias.')
     parser.add_argument('--format', help='Output file format', default='loom', choices=['h5ad', 'loom'])
 
     # parser.add_argument('--max_iter', type=int, default=1e7,

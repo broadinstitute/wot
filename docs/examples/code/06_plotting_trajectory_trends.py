@@ -16,11 +16,9 @@ destination_file = "trajectory_trends.png"
 ds = wot.io.read_dataset(matrix_file)
 tmap_model = wot.tmap.TransportMapModel.from_directory('tmaps')
 cell_sets = wot.io.read_sets(cell_sets_file, as_dict=True)
-all_populations = tmap_model.population_from_cell_sets(cell_sets,
-                                                       at_time=target_timepoint)
+all_populations = tmap_model.population_from_cell_sets(cell_sets, at_time=target_timepoint)
 population = all_populations[target_cell_set]
 
-# timepoints, means, variances = tmap_model.compute_trajectory_trends(ds, population)
 trajectory_ds = tmap_model.compute_trajectories({target_cell_set: all_populations[target_cell_set]})
 
 results = wot.tmap.compute_trajectory_trends_from_trajectory(trajectory_ds, ds)

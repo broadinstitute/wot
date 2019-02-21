@@ -55,7 +55,7 @@ data = [wot.simulate.multivariate_normal_mixture(means[i],
                                                  covs, size=sizes[i]) for i in range(N)]
 data_to_dataset = lambda i: \
     wot.dataset_from_x(data[i],
-                       row_prefix="cell_g{:02}_".format(i),
+                       row_prefix="cell_d{:02}_".format(i),
                        columns=gene_names)
 dataset_list = [data_to_dataset(i) for i in range(N)]
 

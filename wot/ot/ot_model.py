@@ -142,10 +142,12 @@ class OTModel:
         self.ot_config = {'local_pca': 30, 'growth_iters': 3, 'scaling_iter': 3000, 'inner_iter_max': 50,
                           'epsilon': 0.05, 'lambda1': 1, 'lambda2': 50, 'epsilon0': 1, 'tau': 10000}
 
+        parameters_from_file = kwargs.pop('parameters', None)
         for k in kwargs.keys():
             self.ot_config[k] = kwargs[k]
-        if kwargs.get('parameters', None) is not None:
-            config_dict = wot.ot.parse_parameter_file(kwargs.pop('parameters'))
+
+        if parameters_from_file is not None:
+            config_dict = wot.ot.parse_parameter_file(parameters_from_file)
             for k in config_dict.keys():
                 self.ot_config[k] = config_dict[k]
 

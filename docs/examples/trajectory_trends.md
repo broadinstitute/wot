@@ -22,7 +22,7 @@ wot optimal_transport --matrix matrix.txt \
 We can get the trajectories through
 [trajectory]({{site.baseurl}}/cli_documentation#trajectory).
 ```sh
-wot trajectory --tmap . --cell_days days.txt --cell_set cell_sets.gmt 
+wot trajectory --tmap . --cell_set cell_sets.gmt --day 7
 ```
 
 ## Calculate Trajectory Trends

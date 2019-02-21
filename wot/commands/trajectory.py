@@ -13,14 +13,13 @@ def main(argv):
         'Generate ancestors and descendants of cell sets generated at the given time and computes divergence between trajectories across time')
     parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
     parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True)
-    parser.add_argument('--time', help='Timepoint to consider', required=True)
+    parser.add_argument('--day', help='Day to consider', required=True, type=float)
     parser.add_argument('--out', help='Output file name', default='wot_trajectory')
     parser.add_argument('--format', help='Output trajectory matrix file format', default='txt')
     args = parser.parse_args(argv)
     tmap_model = wot.tmap.TransportMapModel.from_directory(args.tmap)
     cell_sets = wot.io.read_sets(args.cell_set, as_dict=True)
-    populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.time)
-
+    populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.day)
     trajectory_ds = tmap_model.compute_trajectories(populations)
     # for each timepoint, compute all pairwise distances
 
