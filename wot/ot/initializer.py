@@ -131,7 +131,7 @@ def parse_per_timepoint_configuration(config):
 
 
 def parse_parameter_file(path):
-    df = pd.read_csv(path, engine='python', delimiter=None, header=None)
+    df = pd.read_csv(path, engine='python', sep=None, header=None)
     #  two column file containing parameter and value
     result = {}
     for i in range(len(df)):
