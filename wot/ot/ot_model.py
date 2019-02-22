@@ -86,7 +86,6 @@ class OTModel:
                                           self.matrix.obs[row_indices].copy(False), self.matrix.var)
 
             wot.io.verbose('Successfuly applied day_filter: "{}"'.format(day_filter))
-        self.timepoints = sorted(set(self.matrix.obs['day']))
 
         cvs = set(self.matrix.obs['covariate']) if 'covariate' in self.matrix.obs else [None]
         if ncells is not None:
@@ -119,7 +118,6 @@ class OTModel:
         if self.matrix.X.shape[0] is 0:
             print('No cells in matrix')
             exit(1)
-        wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
 
         if max_threads is None or max_threads == 0:
             try:
@@ -161,6 +159,8 @@ class OTModel:
         if any(self.matrix.obs['day'].isnull()):
             print("Days information missing for {} cells".format(self.matrix.obs['day'].isnull().sum()))
             self.matrix = self.matrix[self.matrix.obs['day'].isnull() == False]
+        self.timepoints = sorted(set(self.matrix.obs['day']))
+        wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
 
     def get_covariate_pairs(self):
         """Get all covariate pairs in the dataset"""
