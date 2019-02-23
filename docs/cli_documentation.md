@@ -18,19 +18,21 @@ over time, by using the mathematical approach of optimal transport.
 
 This packages depends on [Python 3](https://www.python.org/downloads/).
 
-Several other python packages are required, but they can easily be installed through [pip][pip-install] or [conda](https://www.anaconda.com/download/)
+Several other python packages are required, but they can be installed through [pip][pip-install] or [conda](https://www.anaconda.com/download/)
+
+Install dependencies:
+```sh
+conda install numpy pandas h5py cython scikit-learn scipy matplotlib
+conda install -c conda-forge pot
+```
 
 ### Install from pip ###
 
-The recommended and easiest way to install **wot** is via [pip][pip-install]
+Install **wot**
 
 ```sh
-pip install --user wot
+pip install wot
 ```
-
-**wot** is then installed and ready to use.
-
-
 
 ## Usage ##
 -----------
