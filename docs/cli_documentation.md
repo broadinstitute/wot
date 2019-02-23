@@ -26,9 +26,7 @@ conda install numpy pandas h5py cython scikit-learn scipy matplotlib
 conda install -c conda-forge pot
 ```
 
-### Install from pip ###
-
-Install **wot**
+Install wot
 
 ```sh
 pip install wot
