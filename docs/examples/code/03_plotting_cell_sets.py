@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot
 
 import wot.graphics
@@ -17,13 +18,13 @@ cell_sets_to_color = [
     ['purple', 'Myeloid stem cells'],
     ['black', 'Stem cells'],
 ]
-gene_x_plot = 0
-gene_y_plot = 1
+embedding_file = 'embedding.csv'
 destination_file = "cell_sets.png"
 # --------------------------------------
 
 
 ds = wot.io.read_dataset(matrix_file)
+ds.obs = ds.obs.join(pd.read_csv(embedding_file, index_col='id'))
 wot.io.add_row_metadata_to_dataset(ds, days_path=days_file)
 
 # Compute the cell sets for the given quantile
@@ -43,8 +44,9 @@ for color, cset_name in cell_sets_to_color:
 
 pyplot.figure(figsize=(5, 5))
 pyplot.axis('off')
-wot.graphics.plot_2d_dataset(pyplot, ds,
-                             x=gene_x_plot, y=gene_y_plot, s=1, colors=colors)
+pyplot.scatter(ds.obs['x'], ds.obs['y'], c=colors,
+               s=0.8, marker=',', edgecolors='none')
+
 wot.graphics.legend_figure(pyplot, cell_sets_to_color)
 pyplot.autoscale(enable=True, tight=True)
 pyplot.tight_layout(pad=0)

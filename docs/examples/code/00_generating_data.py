@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+import scanpy as sc
 from numpy.random import randint
 from numpy.random import random
 
@@ -69,3 +71,6 @@ wot.io.write_gene_sets(gene_sets, gene_sets_file, "gmt")
 wot.io.write_dataset(ds, matrix_file)
 wot.io.write_dataset_metadata(ds.obs, days_file, 'day')
 wot.io.write_dataset_metadata(ds.obs, covariate_file, 'covariate')
+sc.tl.pca(ds)
+pd.DataFrame(index=ds.obs.index, columns=['x', 'y'], data=ds.obsm['X_pca'][:, 0:2]).to_csv('embedding.csv',
+                                                                                           index_label='id')

@@ -16,11 +16,9 @@ def main(argv):
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--trajectory', help='Trajectory dataset as produced by the trajectory tool', required=True)
     parser.add_argument('--out', help='Prefix for output file names', default='trends')
+    parser.add_argument('--plot', help='Generate plots for each trajectory', action='store_true')
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     args = parser.parse_args(argv)
-    # tmap_model = wot.tmap.TransportMapModel.from_directory(args.tmap)
-    # cell_sets = wot.io.read_sets(args.cell_set, as_dict=True)
-    # populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.time)
 
     trajectory_ds = wot.io.read_dataset(args.trajectory)
     wot.io.add_row_metadata_to_dataset(dataset=trajectory_ds, days_path=args.cell_days)
@@ -36,17 +34,19 @@ def main(argv):
         basename = args.out + '_' + trajectory_name
         wot.io.write_dataset(mean, basename + '.mean')
         wot.io.write_dataset(variance, basename + '.variance')
-        pyplot.figure(figsize=(5, 5))
 
-        stds = np.sqrt(variance.X)
-        timepoints = mean.obs.index.values
+        if args.plot:
+            pyplot.figure(figsize=(5, 5))
 
-        for i in range(mean.shape[1]):  # each gene
-            pyplot.plot(timepoints, mean.X[:, i], label=genes[i])
-            pyplot.fill_between(timepoints, mean.X[:, i] - stds[:, i],
-                                mean.X[:, i] + stds[:, i], alpha=.5)
+            stds = np.sqrt(variance.X)
+            timepoints = mean.obs.index.values
 
-        pyplot.xlabel("Day")
-        pyplot.ylabel("Gene expression")
-        pyplot.legend()
-        pyplot.savefig(basename + '.png')
+            for i in range(mean.shape[1]):  # each gene
+                pyplot.plot(timepoints, mean.X[:, i], label=genes[i])
+                pyplot.fill_between(timepoints, mean.X[:, i] - stds[:, i],
+                                    mean.X[:, i] + stds[:, i], alpha=.5)
+
+            pyplot.xlabel("Day")
+            pyplot.ylabel("Gene expression")
+            pyplot.legend()
+            pyplot.savefig(basename + '.png')

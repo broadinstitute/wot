@@ -9,11 +9,11 @@ wot cells_by_gene_set --matrix matrix.txt --gene_sets gene_sets.gmt --out cell_s
 # compute transport maps
 wot optimal_transport --matrix matrix.txt --cell_days days.txt
 
-# compute trajectories
-wot trajectory --tmap tmaps --cell_set cell_sets.gmt --day 7
+# compute and plot trajectories
+wot trajectory --tmap tmaps --cell_set cell_sets.gmt --day 7 --embedding embedding.csv --plot_divergence
 
-# compute trajectory trends
-wot trajectory_trends --trajectory wot_trajectory.txt --cell_days days.txt --matrix matrix.txt
+# compute and plot trajectory trends
+wot trajectory_trends --trajectory wot_trajectory.txt --cell_days days.txt --matrix matrix.txt --plot
 
-# compute validation summary
+# compute and plot validation summary
 wot optimal_transport_validation --matrix matrix.txt --cell_days days.txt --covariate covariate.txt
