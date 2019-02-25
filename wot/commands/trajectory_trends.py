@@ -3,6 +3,9 @@
 
 import argparse
 
+import numpy as np
+from matplotlib import pyplot
+
 import wot.io
 import wot.tmap
 
@@ -26,9 +29,24 @@ def main(argv):
     results = wot.tmap.compute_trajectory_trends_from_trajectory(trajectory_ds, matrix)
     # output genes on columns, time on rows, one file per trajectory
 
-    for j in range(len(results)):
+    genes = matrix.var.index
+    for j in range(len(results)):  # each trajectory
         mean, variance = results[j]
         trajectory_name = trajectory_ds.var.index.values[j]
         basename = args.out + '_' + trajectory_name
         wot.io.write_dataset(mean, basename + '.mean')
         wot.io.write_dataset(variance, basename + '.variance')
+        pyplot.figure(figsize=(5, 5))
+
+        stds = np.sqrt(variance.X)
+        timepoints = mean.obs.index.values
+
+        for i in range(mean.shape[1]):  # each gene
+            pyplot.plot(timepoints, mean.X[:, i], label=genes[i])
+            pyplot.fill_between(timepoints, mean.X[:, i] - stds[:, i],
+                                mean.X[:, i] + stds[:, i], alpha=.5)
+
+        pyplot.xlabel("Day")
+        pyplot.ylabel("Gene expression")
+        pyplot.legend()
+        pyplot.savefig(basename + '.png')
