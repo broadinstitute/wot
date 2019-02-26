@@ -19,8 +19,8 @@ workflow optimal_transport {
    	Int? ncounts
    	String? format
    	String? out = "wot"
-	Int? num_cpu = 1
-	String? memory = "4GB"
+	Int? num_cpu = 8
+	String? memory = "52GB"
 	Int? preemptible = 2
 	Boolean run_validation = false
 	Boolean run_ot = false

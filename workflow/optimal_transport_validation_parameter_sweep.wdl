@@ -1,4 +1,4 @@
-import "https://api.firecloud.org/ga4gh/v1/tools/regev:optimal_transport/versions/11/plain-WDL/descriptor" as wot
+import "https://api.firecloud.org/ga4gh/v1/tools/regev:optimal_transport/versions/12/plain-WDL/descriptor" as wot
 
 
 workflow optimal_transport_validation_parameter_sweep {
@@ -11,8 +11,8 @@ workflow optimal_transport_validation_parameter_sweep {
     String? cell_day_filter
     String? format = "loom"
     String? out = "wot"
-    Int? num_cpu = 64
-    String? memory = "57.6GB"
+   	Int? num_cpu = 8
+   	String? memory = "52GB"
     Int? preemptible = 2
     File? covariate
 
