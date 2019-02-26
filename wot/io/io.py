@@ -756,9 +756,9 @@ def write_dataset(ds, path, output_format='txt'):
         is_dask = str(type(x)) == "<class 'dask.array.core.Array'>"
         save_in_chunks = is_sparse or is_dask
 
-        dset = f.create_dataset('/matrix', shape=x.shape, chunks=(1000, 1000) if
-        x.shape[0] >= 1000 and x.shape[1] >= 1000 else None,
-                                maxshape=(None, x.shape[1]),
+        dset = f.create_dataset('/matrix', shape=ds.shape, chunks=(1000, 1000) if
+        ds.shape[0] >= 1000 and ds.shape[1] >= 1000 else None,
+                                maxshape=(None, ds.shape[1]),
                                 compression='gzip', compression_opts=9,
                                 data=None if save_in_chunks else x)
         if is_dask:
@@ -797,8 +797,8 @@ def write_dataset(ds, path, output_format='txt'):
         #                      compression='gzip', compression_opts=9,
         #                      data=x)
 
-        wot.io.save_loom_attrs(f, False, ds.obs, ds.X.shape[0])
-        wot.io.save_loom_attrs(f, True, ds.var, ds.X.shape[1])
+        wot.io.save_loom_attrs(f, False, ds.obs, ds.shape[0])
+        wot.io.save_loom_attrs(f, True, ds.var, ds.shape[1])
 
         f.close()
 
