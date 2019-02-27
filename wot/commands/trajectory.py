@@ -25,7 +25,6 @@ def main(argv):
     cell_sets = wot.io.read_sets(args.cell_set, as_dict=True)
     populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.day)
     trajectory_ds = tmap_model.compute_trajectories(populations)
-    # for each timepoint, compute all pairwise distances
 
     # dataset has cells on rows and cell sets on columns
     wot.io.write_dataset(trajectory_ds, args.out, args.format)
@@ -38,13 +37,13 @@ def main(argv):
             np.interp(full_embedding_df['x'], [xrange[0], xrange[1]], [0, nbins - 1])).astype(int)
         full_embedding_df['y'] = np.floor(
             np.interp(full_embedding_df['y'], [yrange[0], yrange[1]], [0, nbins - 1])).astype(int)
-
+        population_list = list(populations.values())
         for j in range(trajectory_ds.shape[1]):
             color_df = pd.DataFrame(index=trajectory_ds.obs.index, data={'color': trajectory_ds[:, j].X})
             embedding_df = color_df.join(full_embedding_df)
             figure = pyplot.figure(figsize=(10, 10))
             pyplot.axis('off')
-            pyplot.tight_layout(pad=0)
+            pyplot.tight_layout()
 
             pyplot.scatter(full_embedding_df['x'], full_embedding_df['y'], c='#f0f0f0',
                            s=6, marker=',', edgecolors='none')
@@ -53,7 +52,8 @@ def main(argv):
             pyplot.scatter(summed_df['x'], summed_df['y'], c=summed_df['color'],
                            s=6, marker=',', edgecolors='none', cmap='Reds', alpha=1)
             pyplot.colorbar()
-            pyplot.title(str(trajectory_ds.var.index[j]))
+            ncells = (population_list[j].p > 0).sum()
+            pyplot.title('{}, day {}, {} cells'.format(trajectory_ds.var.index[j], args.day, ncells))
             figure.savefig(args.out + '_' + str(trajectory_ds.var.index[j]) + '.png')
         # plot probabilties on embedding
 
