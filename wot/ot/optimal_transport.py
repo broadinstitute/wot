@@ -502,6 +502,7 @@ def compute_pca(m1, m2, n_components):
     x = np.vstack(matrices)
     mean_shift = x.mean(axis=0)
     x = x - mean_shift
+    n_components = min(n_components, x.shape[0])  # n_components must be <= ncells
     pca = sklearn.decomposition.PCA(n_components=n_components, random_state=58951)
     pca.fit(x.T)
     comp = pca.components_.T

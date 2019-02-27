@@ -61,8 +61,7 @@ class OTModel:
             col_indices = self.matrix.var.index.isin(gene_ids)
             if np.sum(col_indices) is 0:
                 raise ValueError('No genes passed the gene filter')
-            self.matrix = anndata.AnnData(self.matrix.X[:, col_indices],
-                                          self.matrix.obs, self.matrix.var[col_indices].copy(False))
+            self.matrix = self.matrix[:, col_indices]
             wot.io.verbose('Successfuly applied gene_filter: "{}"'.format(gene_filter))
         if cell_filter is not None:
             if os.path.isfile(cell_filter):
@@ -75,15 +74,13 @@ class OTModel:
             row_indices = self.matrix.obs.index.isin(cell_ids)
             if np.sum(row_indices) is 0:
                 raise ValueError('No cells passed the cell filter')
-            self.matrix = anndata.AnnData(self.matrix.X[row_indices, :],
-                                          self.matrix.obs[row_indices].copy(False), self.matrix.var)
+            self.matrix = self.matrix[row_indices, :]
 
             wot.io.verbose('Successfuly applied cell_filter: "{}"'.format(cell_filter))
         if day_filter is not None:
             days = day_filter.split(',')
             row_indices = self.matrix.obs['day'].isin(days)
-            self.matrix = anndata.AnnData(self.matrix.X[row_indices, :],
-                                          self.matrix.obs[row_indices].copy(False), self.matrix.var)
+            self.matrix = self.matrix[row_indices, :]
 
             wot.io.verbose('Successfuly applied day_filter: "{}"'.format(day_filter))
 
@@ -102,11 +99,10 @@ class OTModel:
                         indices = indices[0:ncells]
                     index_list.append(indices)
             row_indices = np.concatenate(index_list)
-            self.matrix = anndata.AnnData(self.matrix.X[row_indices, :],
-                                          self.matrix.obs.iloc[row_indices].copy(False), self.matrix.var)
+            self.matrix = self.matrix[row_indices]
         if ncounts is not None:
             for i in range(self.matrix.X.shape[0]):
-                p = self.matrix.X[i]
+                p = self.matrix[i].X
                 if scipy.sparse.isspmatrix(p):
                     p = p.toarray()
                 p = p.astype('float64')

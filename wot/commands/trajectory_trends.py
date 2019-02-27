@@ -30,6 +30,7 @@ def main(argv):
     genes = matrix.var.index
     for j in range(len(results)):  # each trajectory
         mean, variance = results[j]
+        mean.obs.index = mean.obs.index.astype('category')
         trajectory_name = trajectory_ds.var.index.values[j]
         basename = args.out + '_' + trajectory_name
         wot.io.write_dataset(mean, basename + '.mean')
@@ -39,12 +40,13 @@ def main(argv):
             pyplot.figure(figsize=(5, 5))
 
             stds = np.sqrt(variance.X)
-            timepoints = mean.obs.index.values
+            timepoints = mean.obs.index.values.astype(float)
 
             for i in range(mean.shape[1]):  # each gene
-                pyplot.plot(timepoints, mean.X[:, i], label=genes[i])
-                pyplot.fill_between(timepoints, mean.X[:, i] - stds[:, i],
-                                    mean.X[:, i] + stds[:, i], alpha=.5)
+                mean_i = mean[:, i].X
+                pyplot.plot(timepoints, mean_i, label=genes[i])
+                pyplot.fill_between(timepoints, mean_i - stds[:, i],
+                                    mean_i + stds[:, i], alpha=.5)
 
             pyplot.xlabel("Day")
             pyplot.ylabel("Gene expression")

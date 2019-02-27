@@ -65,9 +65,9 @@ def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
         cell_set_paths = [cell_set_paths]
     for path in cell_set_paths:
         cell_set_ds = wot.io.read_sets(path)
-        for i in range(cell_set_ds.X.shape[1]):
+        for i in range(cell_set_ds.shape[1]):
             cell_set_name = cell_set_ds.var.index.values[i]
-            cell_ids_in_set = cell_set_ds.obs.index.values[cell_set_ds.X[:, i] > 0]
+            cell_ids_in_set = cell_set_ds.obs.index.values[cell_set_ds[:, i].X > 0]
 
             grouped = group_by_df[group_by_df.index.isin(cell_ids_in_set)].groupby(group_by_key)
             for name, group in grouped:
@@ -91,7 +91,7 @@ def filter_ds_from_command_line(ds, args):
         if params.get('verbose') and len(gene_ids) > nkeep:
             print(str(len(gene_ids) - nkeep) + ' are in gene filter, but not in matrix')
 
-        ds = anndata.AnnData(ds.X[:, column_indices], ds.obs, ds.var.iloc[column_indices])
+        ds = ds[:, column_indices]
         if params.get('verbose'):
             print('Keeping ' + str(ds.X.shape[1]) + '/' + str(prior) + ' genes')
 
@@ -110,7 +110,7 @@ def filter_ds_from_command_line(ds, args):
         if params.get('verbose') and len(cell_ids) > nkeep:
             print(str(len(cell_ids) - nkeep) + ' are in cell filter, but not in matrix')
 
-        ds = anndata.AnnData(ds.X[row_indices], ds.obs.iloc[row_indices], ds.var)
+        ds = ds[row_indices]
         if params.get('verbose'):
             print('Keeping ' + str(ds.X.shape[0]) + '/' + str(prior) + ' cells')
     return ds
@@ -214,11 +214,11 @@ def read_transport_maps(input_dir, ids=None, time=None):
             if ids is not None and t1 == time:
                 # subset rows
                 indices = ds.obs.index.isin(ids)
-                ds = anndata.AnnData(ds.X[indices], ds.obs.iloc[indices], ds.var)
+                ds = ds[indices]
             if ids is not None and t2 == time:
                 # subset columns
                 indices = ds.var.index.isin(ids)
-                ds = anndata.AnnData(ds.X[:, indices], ds.obs, ds.var.iloc[indices])
+                ds = ds[:, indices]
 
             if (t1, t2) in tmap_times:
                 raise ValueError("Multiple transport maps found for times ({},{})".format(t1, t2))
@@ -252,7 +252,7 @@ def read_sets(path, feature_ids=None, as_dict=False):
         raise ValueError('Unknown file format "{}"'.format(ext))
     if set_names is not None:
         gs_filter = gs.var.index.isin(set_names)
-        gs = anndata.AnnData(gs.X[:, gs_filter], gs.obs, gs.var.iloc[gs_filter])
+        gs = gs[:, gs_filter]
     if as_dict:
         return wot.io.convert_binary_dataset_to_dict(gs)
     return gs
@@ -436,8 +436,8 @@ def write_gmt(gene_sets, f):
 
 def convert_binary_dataset_to_dict(ds):
     cell_sets = {}
-    for i in range(ds.X.shape[1]):
-        selected = np.where(ds.X[:, i] == 1)
+    for i in range(ds.shape[1]):
+        selected = np.where(ds[:, i].X == 1)
         cell_sets[ds.var.index[i]] = list(ds.obs.index[selected])
     return cell_sets
 

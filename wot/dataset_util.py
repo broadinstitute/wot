@@ -27,14 +27,13 @@ def cell_indices_by_day(dataset):
 
 def get_cells_in_gene_sets(gene_sets, dataset, quantile=.99):
     cell_sets = {}
-    for gene_set_index in range(gene_sets.X.shape[1]):
-        gene_indices = list(np.where(gene_sets.X[:, gene_set_index] == 1)[0])
-        extracted = dataset.X[:, gene_indices]
-        thresholds = np.percentile(extracted, axis=0, q=quantile * 100)
-        selected = []
-        for i in range(extracted.shape[0]):
-            if all(extracted[i] > thresholds):
-                selected.append(i)
+
+    for gene_set_index in range(gene_sets.shape[1]):
+        gene_indices = list(np.where(gene_sets[:, gene_set_index].X == 1)[0])
+        extracted = dataset[:, gene_indices]
+
+        thresholds = np.percentile(extracted.X, axis=0, q=quantile * 100)
+        selected = extracted.X > thresholds
         cell_sets[gene_sets.var.index[gene_set_index]] = \
             dataset.obs.index[selected]
     return cell_sets
@@ -65,7 +64,7 @@ def split_anndata(dataset, metadata):
 
     def extract(group):
         indices = dataset.obs.index.get_indexer_for(group.index)
-        return anndata.AnnData(dataset.X[indices], dataset.obs.iloc[indices].copy(), dataset.var.copy())
+        return dataset[indices]
 
     return {name: extract(group) for name, group in dataset.obs.groupby(metadata)}
 
@@ -83,7 +82,7 @@ def mean_and_variance(x):
 
 
 def extract_cells_at_indices(ds, indices):
-    return anndata.AnnData(ds.X[indices], ds.obs.iloc[indices].copy(), ds.var.copy())
+    return ds[indices]
 
 
 def add_cell_metadata(dataset, name, data):

@@ -62,7 +62,7 @@ def main(argv):
         else:
             set_names = args.gene_set_filter.split(',')
         gs_filter = gs.var.index.isin(set_names)
-        gs = anndata.AnnData(gs.X[:, gs_filter], gs.obs, gs.var.iloc[gs_filter])
+        gs = gs[:, gs_filter]
     if gs.shape[1] is 0:
         raise ValueError('No gene sets')
 

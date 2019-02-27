@@ -4,7 +4,6 @@
 import argparse
 import subprocess
 
-import anndata
 import numpy as np
 import pandas as pd
 import pkg_resources
@@ -15,8 +14,8 @@ import wot.io
 def get_scores(ds1, ds2, ds1_time_index, ds2_time_index, score_function):
     scores = np.zeros(shape=ds1.X.shape[1])
     for feature_idx in range(ds1.X.shape[1]):  # each feature
-        m1 = ds1.X[ds1_time_index, feature_idx]
-        m2 = ds2.X[ds2_time_index, feature_idx]
+        m1 = ds1[ds1_time_index, feature_idx].X
+        m2 = ds2[ds2_time_index, feature_idx].X
         v1 = ds1.variance[ds1_time_index, feature_idx]
         v2 = ds2.variance[ds2_time_index, feature_idx]
 
@@ -56,7 +55,7 @@ def main(argv):
 
         if (ds_indices[ds_indices == -1]).sum() > 0:
             raise ValueError('Unable to align datasets')
-        ds2 = anndata.AnnData(ds2.X[:, ds_indices], obs=ds2.obs, var=ds2.var.iloc[ds_indices])
+        ds2 = ds2[:, ds_indices]
         ds2.variance = ds2.variance[:, ds_indices]
 
     def s2n(m1, m2, v1, v2, *varargs):

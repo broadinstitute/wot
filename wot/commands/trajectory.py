@@ -30,15 +30,28 @@ def main(argv):
     # dataset has cells on rows and cell sets on columns
     wot.io.write_dataset(trajectory_ds, args.out, args.format)
     if args.embedding:
+        nbins = 500
         full_embedding_df = pd.read_csv(args.embedding, sep=None, engine='python', index_col='id')
+        xrange = full_embedding_df['x'].min(), full_embedding_df['x'].max()
+        yrange = full_embedding_df['y'].min(), full_embedding_df['y'].max()
+        full_embedding_df['x'] = np.floor(
+            np.interp(full_embedding_df['x'], [xrange[0], xrange[1]], [0, nbins - 1])).astype(int)
+        full_embedding_df['y'] = np.floor(
+            np.interp(full_embedding_df['y'], [yrange[0], yrange[1]], [0, nbins - 1])).astype(int)
+
         for j in range(trajectory_ds.shape[1]):
-            color_df = pd.DataFrame(index=trajectory_ds.obs.index, data={'color': trajectory_ds.X[:, j]})
-            embedding_df = full_embedding_df.copy().join(color_df)
+            color_df = pd.DataFrame(index=trajectory_ds.obs.index, data={'color': trajectory_ds[:, j].X})
+            embedding_df = color_df.join(full_embedding_df)
             figure = pyplot.figure(figsize=(10, 10))
             pyplot.axis('off')
             pyplot.tight_layout(pad=0)
-            pyplot.scatter(embedding_df['x'], embedding_df['y'], c=embedding_df['color'],
-                           s=0.8, marker=',', edgecolors='none', cmap='viridis')
+
+            pyplot.scatter(full_embedding_df['x'], full_embedding_df['y'], c='#f0f0f0',
+                           s=6, marker=',', edgecolors='none')
+            summed_df = embedding_df.groupby(['x', 'y'], as_index=False).agg('sum')
+
+            pyplot.scatter(summed_df['x'], summed_df['y'], c=summed_df['color'],
+                           s=6, marker=',', edgecolors='none', cmap='Reds', alpha=1)
             pyplot.colorbar()
             pyplot.title(str(trajectory_ds.var.index[j]))
             figure.savefig(args.out + '_' + str(trajectory_ds.var.index[j]) + '.png')
@@ -55,32 +68,33 @@ def main(argv):
         trajectory_at_day = trajectory_ds[trajectory_ds.obs['day'] == day]
         for i in range(trajectory_ds.shape[1]):
             for j in range(i):
-                divergence = 0.5 * np.sum(np.abs(trajectory_at_day.X[:, i] - trajectory_at_day.X[:, j]))
+                divergence = 0.5 * np.sum(np.abs(trajectory_at_day[:, i].X - trajectory_at_day[:, j].X))
                 pair_to_divergenes[trajectory_ds.var.index[i], trajectory_ds.var.index[j]].append(divergence)
 
-    with open(args.out + '_divergence.txt', 'w') as f:
-        f.write('pair' + '\t' + 'time' + '\t' + 'divergence' + '\n')
-        for pair in pair_to_divergenes:
-            divergenes = pair_to_divergenes[pair]
-            for i in range(len(divergenes)):
-                f.write(pair[0] + ' vs. ' + pair[1])
-                f.write('\t')
-                f.write(str(unique_days[i]))
-                f.write('\t')
-                f.write(str(divergenes[i]))
-                f.write('\n')
+    if len(populations) > 1:
+        with open(args.out + '_divergence.txt', 'w') as f:
+            f.write('pair' + '\t' + 'time' + '\t' + 'divergence' + '\n')
+            for pair in pair_to_divergenes:
+                divergenes = pair_to_divergenes[pair]
+                for i in range(len(divergenes)):
+                    f.write(pair[0] + ' vs. ' + pair[1])
+                    f.write('\t')
+                    f.write(str(unique_days[i]))
+                    f.write('\t')
+                    f.write(str(divergenes[i]))
+                    f.write('\n')
 
-    if args.plot_divergence:
-        divergence_df = pd.read_csv(args.out + '_divergence.txt', sep='\t')
-        pyplot.figure(figsize=(10, 10))
+        if args.plot_divergence:
+            divergence_df = pd.read_csv(args.out + '_divergence.txt', sep='\t')
+            pyplot.figure(figsize=(10, 10))
 
-        pyplot.xlabel("Day")
-        pyplot.ylabel("Divergence")
+            pyplot.xlabel("Day")
+            pyplot.ylabel("Divergence")
 
-        for p, d in divergence_df.groupby('pair'):
-            day = np.asarray(d['time'])
-            divergence = np.asarray(d['divergence'])
-            pyplot.plot(day, divergence, label=p)
-        pyplot.legend()
-        pyplot.savefig(args.out + '_divergence.png')
-        # plot all pairs over time
+            for p, d in divergence_df.groupby('pair'):
+                day = np.asarray(d['time'])
+                divergence = np.asarray(d['divergence'])
+                pyplot.plot(day, divergence, label=p)
+            pyplot.legend()
+            pyplot.savefig(args.out + '_divergence.png')
+            # plot all pairs over time

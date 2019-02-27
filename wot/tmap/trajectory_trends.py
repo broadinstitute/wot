@@ -55,8 +55,7 @@ class TrajectoryTrends:
                     # align dataset with cell_ids
                     ds_order = unaligned_ds.obs.index.get_indexer_for(cell_ids)
                     ds_order = ds_order[ds_order != -1]
-                    aligned_dataset = anndata.AnnData(unaligned_ds.X[ds_order], unaligned_ds.obs.iloc[ds_order],
-                                                      unaligned_ds.var)
+                    aligned_dataset = unaligned_ds[ds_order]
                     mean_and_variance = TrajectoryTrends.__weighted_average(weights=p, ds=aligned_dataset,
                                                                             value_transform=value_transform)
                     means.append(mean_and_variance['mean'])

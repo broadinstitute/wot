@@ -71,7 +71,7 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
     ds_indices = ds_indices[ds_indices != -1]
     if len(ds_indices) != trajectory_ds.X.shape[0]:
         raise ValueError('Dataset does not match transport map')
-    ds = anndata.AnnData(ds.X[ds_indices], ds.obs.iloc[ds_indices], ds.var)
+    ds = ds[ds_indices]
     timepoints = []
     mean_list = []
     variance_list = []
@@ -82,8 +82,8 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
     for day, group in trajectory_ds.obs.groupby('day'):
         timepoints.append(day)
         indices = trajectory_ds.obs.index.get_indexer_for(group.index)  # cell indices at day
-        p = trajectory_ds.X[indices]
-        values = ds.X[indices]
+        p = trajectory_ds[indices].X
+        values = ds[indices].X
 
         if scipy.sparse.isspmatrix(values):
             values = values.toarray()
