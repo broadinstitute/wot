@@ -19,7 +19,7 @@ def get_set_id_to_indices(cell_sets, tmap, is_columns):
             indices = np.where(np.isin(tmap.columns, cell_ids))[0]
         else:
             indices = np.where(tmap.index.isin(cell_ids))[0]
-        if len(indices) is 0:
+        if len(indices) == 0:
             print(cell_set_name + ' has zero members in dataset')
         else:
             cell_set_id_to_indices[cell_set_name] = indices

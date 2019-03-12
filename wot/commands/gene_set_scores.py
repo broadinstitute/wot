@@ -53,7 +53,7 @@ def main(argv):
     if args.progress:
         print('Read ' + gene_sets)
 
-    if gs.shape[1] is 0:
+    if gs.shape[1] == 0:
         raise ValueError('No overlap of genes in gene sets and dataset')
     if args.gene_set_filter is not None:
         if os.path.exists(args.gene_set_filter):
@@ -63,7 +63,7 @@ def main(argv):
             set_names = args.gene_set_filter.split(',')
         gs_filter = gs.var.index.isin(set_names)
         gs = gs[:, gs_filter]
-    if gs.shape[1] is 0:
+    if gs.shape[1] == 0:
         raise ValueError('No gene sets')
 
     output_prefix = args.out + '_'
