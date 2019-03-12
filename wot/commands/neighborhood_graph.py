@@ -56,7 +56,7 @@ def main(argv):
             expr = re.compile(args.gene_filter)
             gene_ids = [e for e in adata.var.index.values if expr.match(e)]
         col_indices = adata.var.index.isin(gene_ids)
-        if np.sum(col_indices) is 0:
+        if np.sum(col_indices) == 0:
             raise ValueError('No genes passed the gene filter')
         adata = adata[:, col_indices]
 
