@@ -31,4 +31,4 @@ be used for that purpose :
 
 ## Result ##
 
-![cell sets plot]({{site.baseurl}}/images/notebook_cell_sets.png)
+![cell sets plot]({{site.baseurl}}/images/cell_sets.png)

@@ -32,4 +32,4 @@ Note : You need to have a transport maps computed for this to work. Please refer
 
 ## Result ##
 
-![ancestors plot]({{site.baseurl}}/images/notebook_ancestors.png)
+![ancestors plot]({{site.baseurl}}/images/ancestors.png)
