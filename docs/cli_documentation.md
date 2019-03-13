@@ -140,7 +140,7 @@ may differ from that of the expression matrix used to generate transport maps.
 
 ```sh
 wot trajectory --tmap tmaps \
- --cell_set cell_sets.gmt --time 10 --out traj.txt
+ --cell_set cell_sets.gmt --day 10 --out traj.txt
 ```
 
 <table class="table table-hover" style="display: table">
@@ -160,7 +160,7 @@ wot trajectory --tmap tmaps \
       <td>Target cell set. See <a href="#cellset_file">formats</a></td>
     </tr>
     <tr>
-      <td><b>--time</b></td>
+      <td><b>--day</b></td>
       <td>The target timepoint to consider if some cell sets span across multiple timepoints</td>
     </tr>
     <tr>
@@ -181,7 +181,7 @@ ancestor distribution falls into each cell set.
 ```sh
 wot census --tmap tmaps  \
  --cell_set cell_sets.gmt \
- --out census --time 10
+ --out census --day 10
 ```
 
 This command creates several census files named `<prefix>_<cellset>.txt`,
@@ -205,7 +205,7 @@ for more information.
       <td>Target cell sets. See <a href="#cellset_file">formats</a></td>
     </tr>
     <tr>
-      <td><b>--time</b></td>
+      <td><b>--day</b></td>
       <td>The target timepoint to consider if some cell sets span across multiple timepoints</td>
     </tr>
     <tr>
@@ -256,74 +256,10 @@ variance for each feature at each timepoint
 </table>
 
 
-### Local regulatory model via differential expression ###
+### Differential expression ###
 
-The local enrichment command finds the genes that are differentially expressed between two sets of cells.
-
-The input matrices must have timepoints on rows, and genes on columns. This is the format created
-by the [trajectory trends command](#trajectory-trends).
-
-```sh
-wot local_enrichment --score t_test \
- --matrix1 trends_set1.mean.txt --variance1 trends_set1.variance.txt \
- --matrix2 trends_set2.mean.txt --variance2 trends_set2.variance.txt
-```
-
-This will create files `<timepoint>.rnk` for each timepoint, containing each gene's score.
-
-<table class="table table-hover" style="display: table">
-  <thead class="thead-light">
-    <tr>
-      <th>Option</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><b>--matrix1</b></td>
-      <td>A matrix with timepoints on rows and features, such as genes or pathways on columns See <a href="#matrix_file">formats</a></td>
-    </tr>
-    <tr>
-      <td><b>--variance1</b></td>
-      <td>A matrix with timepoints on rows and features on columns with the variance of each gene, associated with matrix1. See <a href="#matrix_file">formats</a></td>
-    </tr>
-    <tr>
-      <td>--matrix2</td>
-      <td>A matrix with timepoints on rows and features, such as genes or pathways on columns See <a href="#matrix_file">formats</a></td>
-    </tr>
-    <tr>
-      <td>--variance2</td>
-      <td>A matrix with timepoints on rows and features on columns with the variance of each gene, associated with matrix2. See <a href="#matrix_file">formats</a></td>
-    </tr>
-    <tr>
-      <td><b>--score</b></td>
-      <td>Method to compute differential expression score.<br/>
-      Available:
-      <ul>
-      <li>signal to noise (s2n)</li>
-      <li>mean difference (mean_difference)</li>
-      <li>t-test (t_test)</li>
-      <li>fold change (fold_change)</li>
-      </ul></td>
-    </tr>
-    <tr>
-      <td>--comparisons</td>
-      <td>The timepoints to compare. See detailled description below</td>
-    </tr>
-  </tbody>
-</table>
-
-This commands accepts two types of input configurations. The first one is as presented in the example with two matrices.
-It will compare the two matrices for all matching timepoints, and output a `<timepoint>.rnk` file for each of those.
-
-Alternatively, you can specify a single matrix, and the default behavior will be to compare entries of the matrix
-for all consecutives timepoints. This would create files names `<timepoint1>_<timepoint2>.rnk` instead.
-
-For more control over which comparisons are performed, you can specify a file with a tab-separated pair
-of timepoints on each line with the `--comparisons` parameter. The first of the two will refer to the
-timepoint of the selected entry in the first matrix, and the second to the timpepoints of the selected entry in the
-second matrix, which is identical to the first one if only one was specified. You will then get a file named
-`<timepoint1>_<timepoint2>.rnk` for each pair of timepoints in the comparisons file.
+The local enrichment command finds the genes that are differentially expressed between two sets of cells. You input one or more trajectories created using
+the trajectory tool, an expression matrix, and the tools outputs a table with statistics about differential expression along the cellular trajectory.
 
 ### Validation ###
 
