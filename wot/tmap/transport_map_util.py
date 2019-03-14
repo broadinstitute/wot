@@ -4,8 +4,7 @@
 import anndata
 import numpy as np
 import pandas as pd
-import scipy
-
+import scipy.sparse
 import wot.tmap
 
 
@@ -48,7 +47,7 @@ def trajectory_similarities(trajectory_ds):
     return distances
 
 
-def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
+def compute_trajectory_trends_from_trajectory(trajectory_ds, expression_ds):
     """
     Computes the mean and variance of each gene over time for the given trajectories
 
@@ -67,11 +66,11 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
     """
 
     # align gene expression matrix with trajectory matrix
-    ds_indices = trajectory_ds.obs.index.get_indexer_for(ds.obs.index)
+    ds_indices = trajectory_ds.obs.index.get_indexer_for(expression_ds.obs.index)
     ds_indices = ds_indices[ds_indices != -1]
     if len(ds_indices) != trajectory_ds.X.shape[0]:
         raise ValueError('Dataset does not match transport map')
-    ds = ds[ds_indices]
+    expression_ds = expression_ds[ds_indices].copy()
     timepoints = []
     mean_list = []
     variance_list = []
@@ -81,16 +80,19 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
 
     for day, group in trajectory_ds.obs.groupby('day'):
         timepoints.append(day)
-        indices = trajectory_ds.obs.index.get_indexer_for(group.index)  # cell indices at day
-        p = trajectory_ds[indices].X
-        values = ds[indices].X
+        cell_indices_at_day = trajectory_ds.obs.index.get_indexer_for(group.index)
+        trajectory_weights = trajectory_ds[cell_indices_at_day].X
+        expression_values = expression_ds[cell_indices_at_day].X
+        if scipy.sparse.isspmatrix(expression_values):
+            expression_values = expression_values.toarray()
+        # if inverse_log:
+        #     expression_values = np.expm1(expression_values)
 
-        if scipy.sparse.isspmatrix(values):
-            values = values.toarray()
         for j in range(trajectory_ds.shape[1]):  # each trajectory
-            weights = p[:, j] if len(p.shape) > 1 else p
-            mean = np.average(values, weights=weights, axis=0)
-            var = np.average((values - mean) ** 2, weights=weights, axis=0)
+            weights_per_cell = trajectory_weights[:, j] if len(trajectory_weights.shape) > 1 else trajectory_weights
+
+            mean = np.average(expression_values, weights=weights_per_cell, axis=0)
+            var = np.average((expression_values - mean) ** 2, weights=weights_per_cell, axis=0)
 
             if mean_list[j] is None:
                 mean_list[j] = mean.T
@@ -98,11 +100,11 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, ds):
             else:
                 mean_list[j] = np.vstack((mean_list[j], mean.T))
                 variance_list[j] = np.vstack((variance_list[j], var.T))
-    obs = pd.DataFrame(index=timepoints)
+
     results = []
-    for j in range(len(variance_list)):
-        mean_ds = anndata.AnnData(mean_list[j], obs, ds.var)
-        variance_ds = anndata.AnnData(variance_list[j], obs, ds.var)
+    for j in range(len(mean_list)):
+        mean_ds = anndata.AnnData(mean_list[j], pd.DataFrame(index=timepoints), expression_ds.var.copy())
+        variance_ds = anndata.AnnData(variance_list[j], pd.DataFrame(index=timepoints), expression_ds.var.copy())
         results.append((mean_ds, variance_ds))
 
     return results

@@ -18,12 +18,6 @@ wot optimal_transport_validation --matrix matrix.txt --cell_days days.txt \
 ```
 
 
-```python
-{% include_relative code/08_plotting_validation_summary.py %}
-
-```
-
-
 
 ## Result ##
 

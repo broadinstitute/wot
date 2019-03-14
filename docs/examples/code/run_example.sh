@@ -15,8 +15,8 @@ wot trajectory --tmap tmaps --cell_set cell_sets.gmt --day 7 --embedding embeddi
 # compute and plot trajectory trends
 wot trajectory_trends --trajectory wot_trajectory.txt --cell_days days.txt --matrix matrix.txt --plot
 
-# compute differentially expressed along trajectory
-wot local_enrichment --matrix matrix.txt --cell_days days.txt --trajectory wot_trajectory.txt
+# compute differentially expressed genes along trajectory
+wot diff_exp --matrix matrix.txt --cell_days days.txt --trajectory wot_trajectory.txt
 
 # compute and plot validation summary
 wot optimal_transport_validation --matrix matrix.txt --cell_days days.txt --covariate covariate.txt

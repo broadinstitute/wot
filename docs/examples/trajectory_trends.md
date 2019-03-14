@@ -37,11 +37,6 @@ The result of trajectory trends are mean value of one tip's ancestors and descen
 
 
 
-```python
-{% include_relative code/06_plotting_trajectory_trends.py %}
-
-```
-
 
 
 ## The Plot

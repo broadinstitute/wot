@@ -258,7 +258,7 @@ variance for each feature at each timepoint
 
 ### Differential expression ###
 
-The local enrichment command finds the genes that are differentially expressed between two sets of cells. You input one or more trajectories created using
+The diff_exp command finds the genes that are differentially expressed between two sets of cells. You input one or more trajectories created using
 the trajectory tool, an expression matrix, and the tools outputs a table with statistics about differential expression along the cellular trajectory.
 
 ### Validation ###

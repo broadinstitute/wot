@@ -44,18 +44,11 @@ wot.commands.gene\_set\_scores module
     :undoc-members:
     :show-inheritance:
 
-wot.commands.grn module
------------------------
 
-.. automodule:: wot.commands.grn
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-wot.commands.local\_enrichment module
+wot.commands.diff\_exp module
 -------------------------------------
 
-.. automodule:: wot.commands.local_enrichment
+.. automodule:: wot.commands.diff_exp
     :members:
     :undoc-members:
     :show-inheritance:

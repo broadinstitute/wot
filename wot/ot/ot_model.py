@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import itertools
 import os
 
 import anndata
-import itertools
 import numpy as np
 import pandas as pd
 import scipy
 import sklearn
-
 import wot.io
 import wot.ot
 
@@ -74,13 +73,13 @@ class OTModel:
             row_indices = self.matrix.obs.index.isin(cell_ids)
             if np.sum(row_indices) is 0:
                 raise ValueError('No cells passed the cell filter')
-            self.matrix = self.matrix[row_indices, :]
+            self.matrix = self.matrix[row_indices].copy()
 
             wot.io.verbose('Successfuly applied cell_filter: "{}"'.format(cell_filter))
         if day_filter is not None:
             days = day_filter.split(',')
             row_indices = self.matrix.obs['day'].isin(days)
-            self.matrix = self.matrix[row_indices, :]
+            self.matrix = self.matrix[row_indices]
 
             wot.io.verbose('Successfuly applied day_filter: "{}"'.format(day_filter))
 
@@ -166,7 +165,7 @@ class OTModel:
         covariate = set(self.matrix.obs['covariate'])
         return product(covariate, covariate)
 
-    def compute_all_transport_maps(self, with_covariates=False):
+    def compute_all_transport_maps(self, with_covariates=False, save_learned_growth=False):
         """
         Computes all required transport maps.
 
@@ -211,8 +210,18 @@ class OTModel:
             from joblib import Parallel, delayed
             Parallel(n_jobs=m)(delayed(self.compute_transport_map)(*x) for x in day_pairs)
         else:
+            learned_growth_df = None
+            save_learned_growth = save_learned_growth and self.ot_config.get('growth_iters', 1) > 1
             for x in day_pairs:
-                self.compute_transport_map(*x)
+                result = self.compute_transport_map(*x)
+                if save_learned_growth and len(result) == 2:
+                    learned_growth = result[1]
+                    learned_growth_df = learned_growth if learned_growth_df is None else pd.concat(
+                        (learned_growth_df, learned_growth), copy=False)
+            if learned_growth_df is not None:
+                path = self.tmap_prefix
+                output_file = os.path.join(self.tmap_dir, path + '_learned_growth.txt')
+                learned_growth_df.to_csv(output_file, sep='\t', index_label='id')
 
     def compute_transport_map(self, t0, t1, covariate=None):
         """
@@ -258,11 +267,11 @@ class OTModel:
             return wot.io.read_dataset(output_file)
 
         config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
-        tmap = OTModel.compute_single_transport_map(self.matrix, config)
+        tmap, learned_growth = OTModel.compute_single_transport_map(self.matrix, config)
         if tmap is not None:
             wot.io.write_dataset(tmap, output_file, output_format=self.output_file_format)
             wot.io.verbose("Created tmap ({}, {}) : {}".format(t0, t1, path))
-        return tmap
+        return tmap, learned_growth
 
     @staticmethod
     def compute_default_cost_matrix(a, b, eigenvals=None):
@@ -307,7 +316,8 @@ class OTModel:
             p1_indices = (ds.obs['day'] == float(t1)) & (ds.obs['covariate'] == covariate[1])
 
         if p0_indices.sum() == 0 or p1_indices.sum() == 0:
-            return None
+            return None, None
+
         p0 = ds[p0_indices, :]
         p1 = ds[p1_indices, :]
 
@@ -335,5 +345,8 @@ class OTModel:
             config['g'] = np.ones(C.shape[0])
         delta_days = t1 - t0
         config['g'] = config['g'] ** delta_days
-        tmap = wot.ot.transport_stable_learn_growth(C, **config)
-        return anndata.AnnData(tmap, p0.obs.copy(), p1.obs.copy())
+        tmap, learned_growth = wot.ot.transport_stable_learn_growth(C, **config)
+        learned_growth = np.power(learned_growth, 1.0 / delta_days)
+        return anndata.AnnData(tmap, p0.obs.copy(), p1.obs.copy()), pd.DataFrame(index=p0.obs.index,
+                                                                                 data={
+                                                                                     'cell_growth_rate': learned_growth})

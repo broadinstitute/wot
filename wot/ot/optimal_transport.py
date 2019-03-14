@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import time
+
 import numpy as np
 import ot as pot
 import scipy.sparse
 import scipy.stats
 import sklearn.decomposition
-import time
-
 import wot
 
 
@@ -33,7 +33,7 @@ def transport_stable_learn_growth(C, lambda1, lambda2, epsilon, scaling_iter, g,
                                   scaling_iter=scaling_iter, g=rowSums, tau=tau,
                                   epsilon0=epsilon0, pp=pp, qq=qq, numInnerItermax=inner_iter_max,
                                   extra_iter=1000)
-    return Tmap
+    return Tmap, rowSums
 
 
 def transport_stablev_learn_growth_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau, epsilon0,

@@ -5,9 +5,8 @@ import argparse
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot
-
 import wot.io
+from matplotlib import pyplot
 
 
 def main(argv):
@@ -27,7 +26,7 @@ def main(argv):
     trajectory_ds = tmap_model.compute_trajectories(populations)
 
     # dataset has cells on rows and cell sets on columns
-    wot.io.write_dataset(trajectory_ds, args.out, args.format)
+    wot.io.write_dataset(trajectory_ds, args.out + '_trajectory', args.format)
     if args.embedding:
         nbins = 500
         full_embedding_df = pd.read_csv(args.embedding, sep=None, engine='python', index_col='id')
@@ -46,15 +45,16 @@ def main(argv):
             pyplot.tight_layout()
 
             pyplot.scatter(full_embedding_df['x'], full_embedding_df['y'], c='#f0f0f0',
-                           s=6, marker=',', edgecolors='none')
+                           s=4, marker=',', edgecolors='none', alpha=0.8)
             summed_df = embedding_df.groupby(['x', 'y'], as_index=False).agg('sum')
 
             pyplot.scatter(summed_df['x'], summed_df['y'], c=summed_df['color'],
-                           s=6, marker=',', edgecolors='none', cmap='Reds', alpha=1)
+                           s=6, marker=',', edgecolors='none', cmap='viridis_r', alpha=1)
             pyplot.colorbar()
             ncells = (population_list[j].p > 0).sum()
-            pyplot.title('{}, day {}, {} cells'.format(trajectory_ds.var.index[j], args.day, ncells))
-            figure.savefig(args.out + '_' + str(trajectory_ds.var.index[j]) + '.png')
+            pyplot.title('{}, day {}, {}/{} cells'.format(trajectory_ds.var.index[j], args.day, ncells,
+                                                          len(population_list[j].p)))
+            figure.savefig(args.out + '_' + str(trajectory_ds.var.index[j]) + '_trajectory.png')
         # plot probabilties on embedding
 
     unique_days = list(set(trajectory_ds.obs['day']))
@@ -72,7 +72,7 @@ def main(argv):
                 pair_to_divergenes[trajectory_ds.var.index[i], trajectory_ds.var.index[j]].append(divergence)
 
     if len(populations) > 1:
-        with open(args.out + '_divergence.txt', 'w') as f:
+        with open(args.out + '_trajectory_divergence.txt', 'w') as f:
             f.write('pair' + '\t' + 'time' + '\t' + 'divergence' + '\n')
             for pair in pair_to_divergenes:
                 divergenes = pair_to_divergenes[pair]
@@ -85,7 +85,7 @@ def main(argv):
                     f.write('\n')
 
         if args.plot_divergence:
-            divergence_df = pd.read_csv(args.out + '_divergence.txt', sep='\t')
+            divergence_df = pd.read_csv(args.out + '__trajectory_divergence.txt', sep='\t')
             pyplot.figure(figsize=(10, 10))
 
             pyplot.xlabel("Day")
@@ -96,5 +96,5 @@ def main(argv):
                 divergence = np.asarray(d['divergence'])
                 pyplot.plot(day, divergence, label=p)
             pyplot.legend()
-            pyplot.savefig(args.out + '_divergence.png')
+            pyplot.savefig(args.out + '_trajectory_divergence.png')
             # plot all pairs over time

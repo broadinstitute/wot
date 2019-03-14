@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import argparse
 import os
 
 import anndata
+import argparse
 import itertools
 import numpy as np
 import pandas as pd
@@ -123,6 +123,8 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
                 i05 = wot.ot.interpolate_with_ot(p0_ds.X, p1_ds.X, tmap_full.X, interp_frac,
                                                  interp_size)  # TODO handle downsampling cells case
                 update_full_summary(i05, t05, 'I')
+                update_full_summary(i05, t05, 'I1', p0_ds.X)
+                update_full_summary(i05, t05, 'I2', p1_ds.X)
             except ValueError:
                 pass
 
@@ -237,6 +239,8 @@ def main(argv):
             t1 = unique_times[np.abs(unique_times - day_triplets_df.iloc[i, 2]).argmin()]
 
             day_pairs_triplets.append((t0, t05, t1))
+    if args.covariate is None:
+        ot_model.matrix.obs['covariate'] = 1
 
     summary = compute_validation_summary(ot_model,
                                          day_pairs_triplets=day_pairs_triplets,
@@ -247,14 +251,15 @@ def main(argv):
     summary.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary.txt'), sep='\t',
                    index=False)
 
-    if args.covariate is not None:
-        summary_stats = summary[summary['full'] == False]
-        summary_stats = summary_stats.groupby(['interval_mid', 'name'])['distance'].agg([np.mean, np.std])
-        summary_stats.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_cv_validation_summary_stats.txt'),
-                             sep="\t", )
-        wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(ot_model.tmap_dir,
-                                                                            ot_model.tmap_prefix + '_cv_validation_summary.png'))
+    summary_stats = summary[summary['full'] == False]
+    summary_stats = summary_stats.groupby(['interval_mid', 'name'])['distance'].agg([np.mean, np.std])
+    summary_stats.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_cv_validation_summary_stats.txt'),
+                         sep="\t", )
+    wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(ot_model.tmap_dir,
+                                                                        ot_model.tmap_prefix + '_cv_validation_summary.png'))
 
+    wot.graphics.plot.plot_ot_validation_ratio(summary_stats, os.path.join(ot_model.tmap_dir,
+                                                                           ot_model.tmap_prefix + '_cv_validation_summary_ratio.png'))
     if args.full_distances:
         summary_stats = summary[summary['full']]
         summary_stats = summary_stats.groupby(['interval_mid', 'name'])['distance'].agg([np.mean, np.std])

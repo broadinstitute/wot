@@ -1,22 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import wot.graphics
 from matplotlib import patches
 from matplotlib import pyplot
-
-import wot.graphics
 
 
 def __make_figure(y=1, x=1, projection=None):
     pyplot.clf()
     return pyplot.subplots(y, x, figsize=(8 * x, 6 * y), projection=None)
-
-
-def plot_2d_dataset(figure, dataset, x=0, y=1, s=0.2, colors="#808080", title=None):
-    figure.scatter(dataset.X[:, x], dataset.X[:, y], c=colors,
-                   s=s, marker=',', edgecolors='none')
-    if title is not None:
-        figure.title.set_text(title)
 
 
 def legend_figure(figure, legend_list, loc=0):
@@ -49,8 +41,40 @@ ot_validation_legend = {
     'L': ["#984ea3", "between last and real"],
     'R': ["#ff7f00", "between random (no growth) and real"],
     'Rg': ["#ffff33", "between random (with growth) and real"],
-    'A': ["#bdbdbd", "between first and last"]
+    'A': ["#bdbdbd", "between first and last"],
+    'I1': ["#a6cee3", "between first and interpolated"],
+    'I2': ["#fb9a99", "between last and interpolated"]
 }
+
+
+def plot_ot_validation_ratio(df, filename):
+    # (interpolated - real) / (null - real)
+    df = df.reset_index()
+    df = df.sort_values('interval_mid')
+
+    interpolated_df = df[df['name'] == 'I']
+    null_growth = df[df['name'] == 'Rg']
+    null_no_growth = df[df['name'] == 'R']
+    if (interpolated_df['interval_mid'].values - null_growth['interval_mid'].values).sum() != 0:
+        raise ValueError('Timepoints are not aligned')
+    if (interpolated_df['interval_mid'].values - null_no_growth['interval_mid'].values).sum() != 0:
+        raise ValueError('Timepoints are not aligned')
+
+    pyplot.figure(figsize=(10, 10))
+    with_growth_score = (interpolated_df['mean'].values / null_growth['mean'].values).sum()
+    no_growth_score = (interpolated_df['mean'].values / null_no_growth['mean'].values).sum()
+    pyplot.title(
+        "OT Validation: \u03A3(interpolated - real)/(null - real), with growth={:.2f}, no growth={:.2f}".format(
+            with_growth_score, no_growth_score))
+    pyplot.xlabel("time")
+    pyplot.ylabel("ratio")
+
+    pyplot.plot(interpolated_df['interval_mid'], interpolated_df['mean'].values / null_growth['mean'].values,
+                label='with growth')
+    pyplot.plot(interpolated_df['interval_mid'], interpolated_df['mean'].values / null_no_growth['mean'].values,
+                label='no growth')
+    pyplot.legend()
+    pyplot.savefig(filename)
 
 
 def plot_ot_validation_summary(df, filename, bandwidth=None):

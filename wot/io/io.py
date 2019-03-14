@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import glob
 import os
+import sys
 
 import anndata
 import h5py
@@ -8,8 +9,6 @@ import numpy as np
 import pandas as pd
 import scipy.io
 import scipy.sparse
-import sys
-
 import wot
 
 if os.getenv('wot_verbose', False) == False:
@@ -656,7 +655,6 @@ def get_filename_and_extension(name):
 def write_parquet(ds, path,
                   view_whitelist=['X_pca', 'X_rpca', 'X_tsne', 'X_umap', 'X_fle', 'X_diffmap', 'X_diffmap_sym',
                                   'X_diffmap_pca']):
-    import pyarrow.pandas_compat
     import pyarrow
     import json
     import pyarrow.parquet as pq
@@ -844,6 +842,8 @@ def add_row_metadata_to_dataset(dataset, days_path, growth_rates_path=None, samp
     if growth_rates_path is not None:
         dataset.obs = dataset.obs.join(
             pd.read_csv(growth_rates_path, index_col='id', engine='python', sep=None))
+        if 'cell_growth_rate' not in dataset.obs:
+            raise ValueError('Cell growth rates must that the column headers id and cell_growth_rate')
     else:
         dataset.obs['cell_growth_rate'] = 1.0
     if sampling_bias_path is not None:
