@@ -560,36 +560,12 @@ def read_dataset(path):
             os.remove(tmp_path)
         return ds
     else:  # txt
-        with open(path) as fp:
-            row_ids = []
-            header = fp.readline()
-            sep = None
-            for s in ['\t', ',', ' ']:
-                test_tokens = header.split(s)
-                if len(test_tokens) > 1:
-                    sep = s
-                    column_ids = test_tokens
-                    break
-            if sep is None:
-                sep = '\t'
-            column_ids = column_ids[1:]
-            column_ids[len(column_ids) - 1] = column_ids[
-                len(column_ids) - 1].rstrip()
-
-            i = 0
-            np_arrays = []
-            for line in fp:
-                line = line.rstrip()
-                if line != '':
-                    tokens = line.split(sep)
-                    row_ids.append(tokens[0])
-                    np_arrays.append(np.array(tokens[1:], dtype=np.float64))
-                    i += 1
-            if tmp_path is not None:
-                os.remove(tmp_path)
-            return anndata.AnnData(X=np.array(np_arrays),
-                                   obs=pd.DataFrame(index=row_ids),
-                                   var=pd.DataFrame(index=column_ids))
+        df = pd.read_csv(path, engine='python', header=0, sep=None, index_col=0)
+        if tmp_path is not None:
+            os.remove(tmp_path)
+        return anndata.AnnData(X=df.values,
+                               obs=pd.DataFrame(index=df.index),
+                               var=pd.DataFrame(index=df.columns))
 
 
 def download_gs_url(gs_url):
