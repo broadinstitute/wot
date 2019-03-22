@@ -7,8 +7,6 @@ import os
 import numpy as np
 import pandas as pd
 import scanpy.api as sc
-import sys
-
 import wot.io
 
 
@@ -18,32 +16,25 @@ def main(argv):
     parser.add_argument('--gene_filter',
                         help='File with one gene id per line to include from the matrix')
     parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
-    parser.add_argument('--comps_diff', help='Number of diffusion components. Set to 0 to disable', type=int,
-                        default=100)
-    parser.add_argument('--neighbors_diff', help='Number of nearest neighbors to use in diffusion component space',
-                        type=int, default=20)
-    parser.add_argument('--comps_pca', help='Number of PCA components. Set to 0 to disable', type=int, default=50)
-    parser.add_argument('--neighbors_pca', help='Number of nearest neighbors to use in PCA space', type=int,
-                        default=15)
-    parser.add_argument('--neighbors',
-                        help='Number of nearest neighbors to use to construct the nearest neighbor graph using the input matrix directly. ',
-                        type=int)
+    parser.add_argument('--pca_comps',
+                        help='Number of PCA components.',
+                        type=int, default=50)
+    parser.add_argument('--diff_comps',
+                        help='Number of diffusion components.',
+                        type=int, default=15)
+    parser.add_argument('--neighbors', help='Number of nearest neighbors',
+                        type=int, default=15)
+    parser.add_argument('--space', help='Space to compute the neighborhood graph in', choices=['dmap', 'pca', 'input'])
     parser.add_argument('--out',
                         help='Output file name. The file is saved in gexf format (https://gephi.org/gexf/format/)')
 
     args = parser.parse_args(argv)
     if args.out is None:
-        args.out = 'wot'
-    comps_diff = args.comps_diff
-    neighbors_diff = args.neighbors_diff
-    neighbors_pca = args.neighbors_pca
-    comps_pca = args.comps_pca
-    do_neighbors = args.neighbors is not None and args.neighbors > 0
-    do_pca = neighbors_pca > 0 and comps_pca > 0
-    do_dmap = comps_diff > 0 and neighbors_diff > 0
-    if (do_pca or do_dmap) and do_neighbors:
-        print('neighbors flag is mutually exclusive with diffusion map and PCA')
-        sys.exit(1)
+        args.out = 'wot-neighborhood-graph'
+    space = args.space
+    neighbors = args.neighbors
+    pca_comps = args.pca_comps
+    diff_comps = args.diff_comps
     adata = wot.io.read_dataset(args.matrix)
     if args.transpose:
         adata = adata.T
@@ -58,16 +49,17 @@ def main(argv):
         col_indices = adata.var.index.isin(gene_ids)
         if np.sum(col_indices) == 0:
             raise ValueError('No genes passed the gene filter')
-        adata = adata[:, col_indices]
-
-    if do_pca:
-        sc.tl.pca(adata)
-        sc.pp.neighbors(adata, use_rep='X_pca', n_neighbors=neighbors_pca, n_pcs=comps_pca)
-    if do_dmap:
-        sc.tl.diffmap(adata, n_comps=comps_diff)
-        sc.pp.neighbors(adata, use_rep='X_diffmap', n_neighbors=neighbors_diff)
-    if do_neighbors:
-        sc.pp.neighbors(adata, use_rep='X', n_neighbors=args.neighbors)
+        adata = adata[:, col_indices].copy()
+    if space == 'pca':
+        sc.tl.pca(adata, n_comps=pca_comps)
+        sc.pp.neighbors(adata, use_rep='X_pca', n_neighbors=neighbors)
+    elif space == 'dmap':
+        sc.tl.pca(adata, n_comps=pca_comps)
+        sc.pp.neighbors(adata, use_rep='X_pca', n_neighbors=neighbors)
+        sc.tl.diffmap(adata, n_comps=diff_comps)
+        sc.pp.neighbors(adata, use_rep='X_diffmap', n_neighbors=neighbors)
+    else:
+        sc.pp.neighbors(adata, use_rep='X', n_neighbors=neighbors)
 
     W = adata.uns['neighbors']['connectivities']
     n_obs = W.shape[0]
