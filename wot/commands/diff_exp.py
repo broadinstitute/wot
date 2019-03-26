@@ -6,8 +6,138 @@ import argparse
 import numpy as np
 import pandas as pd
 import scipy.sparse
+import statsmodels.stats.multitest
 import wot.io
-from statsmodels.stats.multitest import multipletests
+
+
+class DiffExp:
+
+    def __init__(self, expression_matrix, delta_days, trajectory_names,
+                 between, nperm, min_fold_change):
+        self.expression_matrix = expression_matrix
+        self.delta_days = delta_days
+        self.trajectory_names = trajectory_names
+        self.between = between
+        self.nperm = nperm
+        self.min_fold_change = min_fold_change
+        self.features = expression_matrix.var.index
+        days = np.array(sorted(expression_matrix.obs['day'].unique().astype(float)))
+        self.days = days[np.isnan(days) == False]
+
+    def add_stats(self, expression_values, weights, df, suffix):
+        # expression_values = np.expm1(expression_values)
+        mean = np.average(expression_values, weights=weights, axis=0)
+        fraction_expressed = weights.dot(expression_values > 0)
+        # variance = np.average((expression_values - mean) ** 2, weights=weights, axis=0)
+        # variance = np.log1p(variance)
+        # mean = np.log1p(mean)
+        if 'mean{}'.format(suffix) not in df:
+            return df.join(pd.DataFrame(index=self.features,
+                                        data={
+                                            'mean{}'.format(suffix): mean,
+                                            'fraction_expressed{}'.format(suffix): fraction_expressed
+                                        }))
+        return df
+
+    def get_expression_and_weights(self, day, trajectory_name):
+        ds = self.expression_matrix[
+            (self.expression_matrix.obs['day'] == day) & (False == self.expression_matrix.obs[trajectory_name].isna())]
+        weights = ds.obs[trajectory_name].values
+        expression_values = ds.X
+        if scipy.sparse.isspmatrix(expression_values):
+            expression_values = expression_values.toarray()
+        weights = weights / weights.sum()
+        return expression_values, weights
+
+    def do_comparison(self, expression_values1, weights1, day1, expression_values2, weights2, day2):
+        # expression_values1 = np.expm1(expression_values1)
+        # expression_values2 = np.expm1(expression_values2)
+        mean1 = np.average(expression_values1, weights=weights1, axis=0)
+        mean2 = np.average(expression_values2, weights=weights2, axis=0)
+        # variance1 = np.average((expression_values1 - mean1) ** 2, weights=weights1, axis=0)
+        # variance2 = np.average((expression_values2 - mean2) ** 2, weights=weights2, axis=0)
+        # fold_change = np.log1p(mean1) - np.log1p(mean2)
+        observed = (mean1 - mean2)
+        suffix = "_{}_{}".format(day1, day2) if day1 != day2 else '_{}'.format(day1)
+        results = pd.DataFrame(index=self.features, data={'fold_change' + suffix: observed})
+
+        if self.nperm is not None and self.nperm > 0:
+            genes_use = np.abs(observed) >= self.min_fold_change
+            if genes_use.sum() > 0:
+                expression_values1 = expression_values1[:, genes_use]
+                expression_values2 = expression_values2[:, genes_use]
+                observed_use = observed[genes_use]
+                weights1 = weights1.copy()
+                weights2 = weights2.copy()
+                p = np.zeros(expression_values2.shape[1])
+
+                for i in range(self.nperm):
+                    np.random.shuffle(weights1)
+                    np.random.shuffle(weights2)
+                    mean1 = np.average(expression_values1, weights=weights1, axis=0)
+                    mean2 = np.average(expression_values2, weights=weights2, axis=0)
+
+                    # permuted_fold_change = np.log1p(mean1) - np.log1p(mean2)
+                    permuted = (mean1 - mean2)
+                    p[(permuted >= observed_use)] += 1
+                # 2-sided p-value
+                k = p
+                p = (p + 1) / (self.nperm + 2)
+                one_minus_p = 1.0 - p;
+                expr = one_minus_p < p
+                p[expr] = 1 - p[expr]
+                p *= 2
+                fdr = statsmodels.stats.multitest.multipletests(p)[1]
+                results = results.join(
+                    pd.DataFrame(index=self.features[genes_use], data={'p_value' + suffix: p,
+                                                                       'fdr' + suffix: fdr,
+                                                                       'k' + suffix: k}))
+        return results
+
+    def execute(self):
+
+        if self.between and len(self.trajectory_names) > 1:
+            for i in range(len(self.trajectory_names)):
+
+                for j in range(i):
+                    df = pd.DataFrame(index=self.features)
+
+                    for day_index in range(len(self.days)):
+                        day = self.days[day_index]
+                        values1, weights1 = self.get_expression_and_weights(day, self.trajectory_names[j])
+                        values2, weights2 = self.get_expression_and_weights(day, self.trajectory_names[i])
+
+                        df = self.add_stats(values1, weights1, df, '_{}_{}'.format(self.trajectory_names[j], day))
+                        df = self.add_stats(values2, weights2, df, '_{}_{}'.format(self.trajectory_names[i], day))
+                        df = df.join(self.do_comparison(values1, weights1, day, values2, weights2, day))
+
+                        print('{} vs {}, day {}'.format(self.trajectory_names[j],
+                                                        self.trajectory_names[i], day))
+                    df.to_csv('{}_{}.tsv'.format(self.trajectory_names[j], self.trajectory_names[i]),
+                              sep='\t', header=True)
+
+
+        else:
+            # within
+            for name in self.trajectory_names:
+
+                for day_index in range(1, len(self.days)):
+                    day2 = self.days[day_index]
+                    if self.delta_days > 0:
+                        requested_day = day2 - self.delta_days
+                        day1 = self.days[np.abs(self.days - requested_day).argmin()]
+                        if day1 == day2 or np.abs(
+                                day1 - day2 - self.delta_days) > 0.1:  # too big or small a gap
+                            continue
+                        values1, weights1 = self.get_expression_and_weights(day1, name)
+                        values2, weights2 = self.get_expression_and_weights(day2, name)
+                        print('{}, day {} vs day {}'.format(name, day1, day2))
+
+                        df = df.join(self.do_comparison(values1, weights1, day1, values2, weights2, day2))
+                        df = self.add_stats(values1, weights1, df, '_{}'.format(day1))
+                        df = self.add_stats(values2, weights2, df, '_{}'.format(day2))
+
+                df.to_csv(name + '.tsv', sep='\t', header=True)
 
 
 def main(argv):
@@ -18,20 +148,25 @@ def main(argv):
                         action='append')
     parser.add_argument('--out', help='Prefix for output file names', default='enrichment')
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
-    parser.add_argument('--ncells', help='Number of cells to sample at each day', type=int, default=4000)
+
     parser.add_argument('--between', help='Compare across trajectories when more than one trajectory is supplied',
                         action='store_true')
     parser.add_argument('--delta',
                         help='Delta days to compare sampled expression matrix against within a trajectory. If not specified all comparison are done against the first day.',
                         type=float)
+    parser.add_argument('--nperm',
+                        help='Number of permutations', type=int)
+    parser.add_argument('--fold_change', type=float, default=0.25,
+                        help='Limit permutations to genes which show at least X-fold difference (log-scale) between the two groups of cells.')
 
     args = parser.parse_args(argv)
-    ncells = args.ncells
+    between = args.between
     trajectory_files = args.trajectory
     expression_file = args.matrix
     delta_days = args.delta
     cell_days_file = args.cell_days
-
+    nperm = args.nperm
+    min_fold_change = args.fold_change
     expression_matrix = wot.io.read_dataset(expression_file)
 
     if delta_days is None:
@@ -46,119 +181,6 @@ def main(argv):
         expression_matrix.obs = expression_matrix.obs.join(
             pd.DataFrame(index=trajectory_ds.obs.index, data=trajectory_ds.X, columns=trajectory_ds.var.index))
         trajectory_names += list(trajectory_ds.var.index)
-
-    def get_sampled_expression(day, trajectory_name, invert=False):
-        ds = expression_matrix[
-            (expression_matrix.obs['day'] == day) & (False == expression_matrix.obs[trajectory_name].isna())]
-        weights = ds.obs[trajectory_name].values
-        expression_values = ds.X
-        if scipy.sparse.isspmatrix(expression_values):
-            expression_values = expression_values.toarray()
-        if invert:
-            weights = 1 - weights
-        weights = weights / weights.sum()
-        sampled_indices = np.random.choice(np.arange(ds.shape[0]), size=ncells, replace=True, p=weights)
-        sampled_expression = expression_values[sampled_indices]
-        return sampled_expression
-
-    def add_stats(values, df, suffix):
-        if 'fraction_expressed{}'.format(suffix) not in df:
-            return df.join(pd.DataFrame(index=features,
-                                        data={'fraction_expressed{}'.format(suffix): (
-                                                (values > 0).sum(axis=0) / values.shape[0]),
-                                            'mean{}'.format(suffix): values.mean(axis=0),
-                                            # 'min{}'.format(suffix): values.min(axis=0),
-                                            # 'max{}'.format(suffix): values.max(axis=0)
-                                        }))
-        return df
-
-    def do_comparison(values, compare_to_values, day, compare_to_day):
-
-        # adata = anndata.AnnData(X=values1, var=pd.DataFrame(index=features)).concatenate(
-        #     anndata.AnnData(X=values2, var=pd.DataFrame(index=features)))
-        # # method 'logreg', 't-test', 'wilcoxon', 't-test_overestim_var'
-        # # sc.tl.rank_genes_groups(adata, 'batch', method='t-test_overestim_var', n_genes=len(features), groups=['0'],
-        # #                         reference='1')
-        # sc.tl.rank_genes_groups(adata, 'batch', method='logreg')
-        # sorted_names = adata.uns['rank_genes_groups']['names']
-        # scores = adata.uns['rank_genes_groups']['scores']
-        # logfoldchanges = adata.uns['rank_genes_groups']['logfoldchanges']
-        # pvals = adata.uns['rank_genes_groups']['pvals']
-        # pvals_adj = adata.uns['rank_genes_groups']['pvals_adj']
-        # sc.pl.rank_genes_groups_violin(adata, n_genes=10, save='{}_{}'.format(day, compare_to_day), show=False)
-        # # sc.pl.rank_genes_groups_violin(adata, groups='0', n_genes=10, save=True)
-
-        # scores_wilcoxon = np.zeros(expression_matrix.shape[1])
-        # pvals_ks = np.zeros(values.shape[1])
-        # scores_ks = np.zeros(values.shape[1])
-        scores_t, pvals_t = scipy.stats.ttest_ind(values, compare_to_values, equal_var=False, axis=0)
-        # pvals_t[np.isnan(pvals_t)] = 1
-        # for i in range(values.shape[1]):  # each gene
-        #     # Wilcoxon rank-sum statistic
-        #     # scores_wilcoxon[i], pvals_wilcoxon[i] = scipy.stats.ranksums(values[:, i], y=compare_to_values[:, i])
-        #     scores_ks[i], pvals_ks[i] = scipy.stats.ks_2samp(values[:, i], compare_to_values[:, i])
-
-        mean1 = values.mean(axis=0)
-        mean2 = compare_to_values.mean(axis=0)
-        mean1[mean1 == 0] = 1e-9  # set 0s to small value
-        mean2[mean2 == 0] = 1e-9  # set 0s to small value
-        foldchanges = mean1 / mean2
-        mean_difference = mean1 - mean2
-        fraction_expressed_difference = ((values > 0).sum(axis=0) / values.shape[0]) - (
-                (compare_to_values > 0).sum(axis=0) / compare_to_values.shape[0])
-        return pd.DataFrame(index=features,
-                            data={
-                                'p_value_ttest_day_{}_vs_day_{}'.format(day, compare_to_day): pvals_t,
-                                'fdr_ttest_day_{}_vs_day_{}'.format(day, compare_to_day):
-                                    multipletests(pvals_t, alpha=0.1, method='fdr_bh')[1],
-                                'ttest_{}_vs_day_{}'.format(day, compare_to_day): scores_t,
-                                'fold_change_{}_vs_day_{}'.format(day, compare_to_day): foldchanges,
-                                'mean_difference_{}_vs_day_{}'.format(day, compare_to_day): mean_difference,
-                                'fraction_expressed_difference_{}_vs_day_{}'.format(day,
-                                                                                    compare_to_day): fraction_expressed_difference
-                            })
-
-    features = expression_matrix.var.index
-    days = np.array(sorted(expression_matrix.obs['day'].unique().astype(float)))
-    days = days[np.isnan(days) == False]
-
-    if args.between and len(trajectory_names) > 1:
-        for trajectory_index1 in range(len(trajectory_names)):
-            for trajectory_index2 in range(trajectory_index1):
-                df = pd.DataFrame(index=features)
-                for day_index in range(len(days)):
-                    day = days[day_index]
-                    values1 = get_sampled_expression(day, trajectory_names[trajectory_index1])
-                    values2 = get_sampled_expression(day, trajectory_names[trajectory_index2])
-                    df = add_stats(values1, df, '_{}_day_{}'.format(trajectory_names[trajectory_index1], day))
-                    df = add_stats(values2, df, '_{}_day_{}'.format(trajectory_names[trajectory_index2], day))
-                    df = df.join(do_comparison(values2, values1, day, day))
-
-                    print('{} vs {}, day {}'.format(trajectory_names[trajectory_index2],
-                                                    trajectory_names[trajectory_index1], day))
-                df.to_csv('{}_{}.tsv'.format(trajectory_names[trajectory_index2], trajectory_names[trajectory_index1]),
-                          sep='\t', header=True)
-
-    else:
-        # within
-        for name in trajectory_names:
-            day_zero_values = get_sampled_expression(days[0], name)  # (cells, genes)
-            df = pd.DataFrame(index=features)
-
-            for day_index in range(1, len(days)):
-                day = days[day_index]
-                compare_to_day = days[0]
-                compare_to_values = day_zero_values
-                if delta_days > 0:
-                    requested_day = day - delta_days
-                    compare_to_day = days[np.abs(days - requested_day).argmin()]
-                    if compare_to_day == day or np.abs(
-                            compare_to_day - day - delta_days) > 0.1:  # too big or small a gap
-                        continue
-                    compare_to_values = get_sampled_expression(compare_to_day, name)
-                print('{}, day {} vs day {}'.format(name, day, compare_to_day))
-                sampled_values = get_sampled_expression(day, name)
-                df = df.join(do_comparison(sampled_values, compare_to_values, day, compare_to_day))
-                df = add_stats(sampled_values, df, '_day_{}'.format(day))
-                df = add_stats(compare_to_values, df, '_day_{}'.format(compare_to_day))
-            df.to_csv(name + '.tsv', sep='\t', header=True)
+    d = DiffExp(expression_matrix=expression_matrix, delta_days=delta_days, trajectory_names=trajectory_names,
+                between=between, nperm=nperm, min_fold_change=min_fold_change)
+    d.execute()
