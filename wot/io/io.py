@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
-import glob
 import os
-import sys
 
 import anndata
+import glob
 import h5py
 import numpy as np
 import pandas as pd
 import scipy.io
 import scipy.sparse
+import sys
 import wot
+import scanpy as sc
 
 if os.getenv('wot_verbose', False) == False:
     def verbose(*args):
@@ -441,6 +442,7 @@ def convert_binary_dataset_to_dict(ds):
     return cell_sets
 
 
+
 def read_dataset(path):
     path = str(path)
     tmp_path = None
@@ -489,6 +491,8 @@ def read_dataset(path):
                              .format(gene_count, len(var)))
 
         return anndata.AnnData(X=x, obs=obs, var=var)
+    elif ext=='h5':
+        return sc.read_10x_h5(path, genome=None, gex_only=True)
     elif ext == 'npz':
         obj = np.load(path)
         if tmp_path is not None:
