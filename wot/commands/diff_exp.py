@@ -95,26 +95,39 @@ class DiffExp:
         return results
 
     def execute(self):
+        if self.between is not None and len(self.trajectory_names) > 1:
+            if self.between == 'all':
+                base_trajectory_names_to_trajectory_names = {'': self.trajectory_names}
+            elif self.between == 'match':
+                base_trajectory_names_to_trajectory_names = {}
+                for i in range(len(self.trajectory_names)):
+                    full_trajectory_name = self.trajectory_names[i]
+                    base_trajectory_name = full_trajectory_name[0:full_trajectory_name.rindex('/')]
+                    names = base_trajectory_names_to_trajectory_names.get(base_trajectory_name)
+                    if names is None:
+                        names = []
+                        base_trajectory_names_to_trajectory_names[base_trajectory_name] = names
+                    names.append(full_trajectory_name)
 
-        if self.between and len(self.trajectory_names) > 1:
-            for i in range(len(self.trajectory_names)):
+            for base_trajectory_name in base_trajectory_names_to_trajectory_names:
+                trajectory_names = base_trajectory_names_to_trajectory_names[base_trajectory_name]
+                for i in range(len(trajectory_names)):
+                    for j in range(i):
+                        df = pd.DataFrame(index=self.features)
 
-                for j in range(i):
-                    df = pd.DataFrame(index=self.features)
+                        for day_index in range(len(self.days)):
+                            day = self.days[day_index]
+                            print('{} vs {}, day {}'.format(trajectory_names[j], trajectory_names[i], day))
+                            values1, weights1 = self.get_expression_and_weights(day, trajectory_names[j])
+                            values2, weights2 = self.get_expression_and_weights(day, trajectory_names[i])
 
-                    for day_index in range(len(self.days)):
-                        day = self.days[day_index]
-                        values1, weights1 = self.get_expression_and_weights(day, self.trajectory_names[j])
-                        values2, weights2 = self.get_expression_and_weights(day, self.trajectory_names[i])
+                            df = self.add_stats(values1, weights1, df, '_{}_{}'.format(trajectory_names[j], day))
+                            df = self.add_stats(values2, weights2, df, '_{}_{}'.format(trajectory_names[i], day))
+                            df = df.join(self.do_comparison(values1, weights1, day, values2, weights2, day))
 
-                        df = self.add_stats(values1, weights1, df, '_{}_{}'.format(self.trajectory_names[j], day))
-                        df = self.add_stats(values2, weights2, df, '_{}_{}'.format(self.trajectory_names[i], day))
-                        df = df.join(self.do_comparison(values1, weights1, day, values2, weights2, day))
+                        df.to_csv('{}_{}.tsv'.format(trajectory_names[j], trajectory_names[i]).replace('/', '-'),
+                                  sep='\t', header=True)
 
-                        print('{} vs {}, day {}'.format(self.trajectory_names[j],
-                                                        self.trajectory_names[i], day))
-                    df.to_csv('{}_{}.tsv'.format(self.trajectory_names[j], self.trajectory_names[i]),
-                              sep='\t', header=True)
 
 
         else:
@@ -129,13 +142,15 @@ class DiffExp:
                         if day1 == day2 or np.abs(
                                 day1 - day2 - self.delta_days) > 0.1:  # too big or small a gap
                             continue
-                        values1, weights1 = self.get_expression_and_weights(day1, name)
-                        values2, weights2 = self.get_expression_and_weights(day2, name)
-                        print('{}, day {} vs day {}'.format(name, day1, day2))
+                    else:
+                        day1 = self.days[0]
+                    print('{}, day {} vs day {}'.format(name, day1, day2))
+                    values1, weights1 = self.get_expression_and_weights(day1, name)
+                    values2, weights2 = self.get_expression_and_weights(day2, name)
 
-                        df = df.join(self.do_comparison(values1, weights1, day1, values2, weights2, day2))
-                        df = self.add_stats(values1, weights1, df, '_{}'.format(day1))
-                        df = self.add_stats(values2, weights2, df, '_{}'.format(day2))
+                    df = df.join(self.do_comparison(values1, weights1, day1, values2, weights2, day2))
+                    df = self.add_stats(values1, weights1, df, '_{}'.format(day1))
+                    df = self.add_stats(values2, weights2, df, '_{}'.format(day2))
 
                 df.to_csv(name + '.tsv', sep='\t', header=True)
 
@@ -146,11 +161,12 @@ def main(argv):
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--trajectory', help='One or more trajectory datasets as produced by the trajectory tool',
                         action='append')
-    parser.add_argument('--out', help='Prefix for output file names', default='enrichment')
+    parser.add_argument('--out', help='Prefix for output file names', default='diff_exp')
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
 
-    parser.add_argument('--between', help='Compare across trajectories when more than one trajectory is supplied',
-                        action='store_true')
+    parser.add_argument('--between',
+                        help='Compare across trajectories when more than one trajectory is supplied. If value is "match" only compare trajectories with the same name. If "all", compare all pairs',
+                        choices=['match', 'all'])
     parser.add_argument('--delta',
                         help='Delta days to compare sampled expression matrix against within a trajectory. If not specified all comparison are done against the first day.',
                         type=float)
@@ -177,7 +193,7 @@ def main(argv):
     for f in trajectory_files:
         trajectory_ds = wot.io.read_dataset(f)
         if len(trajectory_files) > 1:
-            trajectory_ds.var.index = trajectory_ds.var.index + wot.io.get_filename_and_extension(f)[0]
+            trajectory_ds.var.index = trajectory_ds.var.index + '/' + wot.io.get_filename_and_extension(f)[0]
         expression_matrix.obs = expression_matrix.obs.join(
             pd.DataFrame(index=trajectory_ds.obs.index, data=trajectory_ds.X, columns=trajectory_ds.var.index))
         trajectory_names += list(trajectory_ds.var.index)
