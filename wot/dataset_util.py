@@ -25,20 +25,6 @@ def cell_indices_by_day(dataset):
     return day_to_indices
 
 
-def get_cells_in_gene_sets(gene_sets, dataset, quantile=.99):
-    cell_sets = {}
-
-    for gene_set_index in range(gene_sets.shape[1]):
-        gene_indices = list(np.where(gene_sets[:, gene_set_index].X == 1)[0])
-        extracted = dataset[:, gene_indices]
-
-        thresholds = np.percentile(extracted.X, axis=0, q=quantile * 100)
-        selected = extracted.X > thresholds
-        cell_sets[gene_sets.var.index[gene_set_index]] = \
-            dataset.obs.index[selected]
-    return cell_sets
-
-
 def split_anndata(dataset, metadata):
     """
     Split AnnData into sub-datasets according to a metadata
