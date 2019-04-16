@@ -6,11 +6,11 @@ import glob
 import h5py
 import numpy as np
 import pandas as pd
+import scanpy as sc
 import scipy.io
 import scipy.sparse
 import sys
 import wot
-import scanpy as sc
 
 if os.getenv('wot_verbose', False) == False:
     def verbose(*args):
@@ -407,7 +407,7 @@ def read_gmx(path, feature_ids=None):
         return anndata.AnnData(x, obs=obs, var=var)
 
 
-def write_gene_sets(gene_sets, path, format=None):
+def write_gene_sets(gene_sets, path, format='gmt'):
     path = str(path)
     basename, ext = get_filename_and_extension(path)
 
@@ -420,8 +420,6 @@ def write_gene_sets(gene_sets, path, format=None):
 
     if format == 'gmt':
         write_gmt(gene_sets, f)
-    elif format == 'gmx' or format == 'txt' or format == 'grp':
-        raise ValueError("Filetype not supported for writing")
     else:
         raise ValueError("Unkown file format for gene sets")
 
@@ -440,7 +438,6 @@ def convert_binary_dataset_to_dict(ds):
         selected = np.where(ds[:, i].X == 1)
         cell_sets[ds.var.index[i]] = list(ds.obs.index[selected])
     return cell_sets
-
 
 
 def read_dataset(path):
@@ -491,7 +488,7 @@ def read_dataset(path):
                              .format(gene_count, len(var)))
 
         return anndata.AnnData(X=x, obs=obs, var=var)
-    elif ext=='h5':
+    elif ext == 'h5':
         return sc.read_10x_h5(path, genome=None, gex_only=True)
     elif ext == 'npz':
         obj = np.load(path)
