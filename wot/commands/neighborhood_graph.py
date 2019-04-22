@@ -2,10 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import os
-
-import numpy as np
-import pandas as pd
 import scanpy.api as sc
 import wot.io
 
@@ -15,6 +11,8 @@ def main(argv):
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--gene_filter',
                         help='File with one gene id per line to include from the matrix')
+    parser.add_argument('--cell_filter',
+                        help='File with one cell id per line to include from the matrix')
     parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
     parser.add_argument('--pca_comps',
                         help='Number of PCA components.',
@@ -38,18 +36,11 @@ def main(argv):
     adata = wot.io.read_dataset(args.matrix)
     if args.transpose:
         adata = adata.T
+    if args.cell_filter is not None:
+        adata = adata[adata.obs.index.isin(wot.io.read_sets(args.cell_filter).obs.index)].copy()
     if args.gene_filter is not None:
-        if os.path.isfile(args.gene_filter):
-            gene_ids = pd.read_csv(args.gene_filter, index_col=0, header=None) \
-                .index.values
-        else:
-            import re
-            expr = re.compile(args.gene_filter)
-            gene_ids = [e for e in adata.var.index.values if expr.match(e)]
-        col_indices = adata.var.index.isin(gene_ids)
-        if np.sum(col_indices) == 0:
-            raise ValueError('No genes passed the gene filter')
-        adata = adata[:, col_indices].copy()
+        adata = adata[:, adata.var.index.isin(wot.io.read_sets(args.gene_filter).obs.index)].copy()
+
     if space == 'pca':
         sc.tl.pca(adata, n_comps=pca_comps)
         sc.pp.neighbors(adata, use_rep='X_pca', n_neighbors=neighbors)
