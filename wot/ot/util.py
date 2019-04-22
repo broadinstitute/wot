@@ -32,23 +32,6 @@ def __logistic(x, L=1, k=1, x0=0):
     return f
 
 
-def point_cloud_distance(c1, c2, a=None, b=None, eigenvals=None):
-    if eigenvals is not None:
-        c1 = c1.dot(eigenvals)
-        c2 = c2.dot(eigenvals)
-    cloud_distances = sklearn.metrics.pairwise.pairwise_distances(c1, Y=c2, metric='sqeuclidean')
-
-    if a is None:
-        a = np.ones((cloud_distances.shape[0]), dtype=np.float64) / cloud_distances.shape[0]
-    else:
-        a = a / a.sum()
-    if b is None:
-        b = np.ones((cloud_distances.shape[1]), dtype=np.float64) / cloud_distances.shape[1]
-    else:
-        b = b / b.sum()
-    return np.sqrt(pot.emd2(a, b, cloud_distances, numItermax=10000000))
-
-
 def sample_randomly(exp1, exp2, tm, g, npairs):
     # if args.npairs is None or args.npairs <= 0:
     #     l = tm / tm.sum(axis=0)
@@ -231,7 +214,7 @@ def interpolate_randomly_with_growth(p0, p1, t, size, g):
     return np.asarray([p0[i // J] * (1 - t) + p1[i % J] * t for i in choices], dtype=np.float64)
 
 
-def earth_mover_distance(cloud1, cloud2, eigenvals):
+def earth_mover_distance(cloud1, cloud2, eigenvals=None, weights1=None, weights2=None):
     """
     Returns the earth mover's distance between two point clouds
 
@@ -252,8 +235,16 @@ def earth_mover_distance(cloud1, cloud2, eigenvals):
     if eigenvals is not None:
         cloud1 = cloud1.dot(eigenvals)
         cloud2 = cloud2.dot(eigenvals)
-    p = np.ones(len(cloud1)) / len(cloud1)
-    q = np.ones(len(cloud2)) / len(cloud2)
+    if weights1 is None:
+        p = np.ones(len(cloud1)) / len(cloud1)
+    else:
+        p = weights1 / weights1.sum()
+
+    if weights2 is None:
+        q = np.ones(len(cloud2)) / len(cloud2)
+    else:
+        q = weights2 / weights2.sum()
+
     pairwise_dist = sklearn.metrics.pairwise.pairwise_distances(
         cloud1, Y=cloud2, metric='sqeuclidean')
     return np.sqrt(pot.emd2(p, q, pairwise_dist, numItermax=1e7))
