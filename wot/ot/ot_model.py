@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import sklearn
+
 import wot.io
 import wot.ot
 
@@ -50,37 +51,16 @@ class OTModel:
         self.force = kwargs.pop('force', False)
         self.output_file_format = kwargs.pop('format', 'loom')
         if gene_filter is not None:
-            if os.path.isfile(gene_filter):
-                gene_ids = pd.read_csv(gene_filter, index_col=0, header=None) \
-                    .index.values
-            else:
-                import re
-                expr = re.compile(gene_filter)
-                gene_ids = [e for e in self.matrix.var.index.values if expr.match(e)]
-            col_indices = self.matrix.var.index.isin(gene_ids)
-            if np.sum(col_indices) is 0:
-                raise ValueError('No genes passed the gene filter')
-            self.matrix = self.matrix[:, col_indices]
+            self.matrix = self.matrix[:,
+                          self.matrix.var.index.isin(wot.io.read_sets(gene_filter).obs.index.values)].copy()
             wot.io.verbose('Successfuly applied gene_filter: "{}"'.format(gene_filter))
         if cell_filter is not None:
-            if os.path.isfile(cell_filter):
-                cell_ids = pd.read_csv(cell_filter, index_col=0, header=None) \
-                    .index.values
-            else:
-                import re
-                expr = re.compile(cell_filter)
-                cell_ids = [e for e in self.matrix.obs.index.values if expr.match(e)]
-            row_indices = self.matrix.obs.index.isin(cell_ids)
-            if np.sum(row_indices) is 0:
-                raise ValueError('No cells passed the cell filter')
-            self.matrix = self.matrix[row_indices].copy()
-
+            self.matrix = self.matrix[self.matrix.obs.index.isin(wot.io.read_sets(cell_filter).obs.index.values)].copy()
             wot.io.verbose('Successfuly applied cell_filter: "{}"'.format(cell_filter))
         if day_filter is not None:
             days = day_filter.split(',')
             row_indices = self.matrix.obs['day'].isin(days)
-            self.matrix = self.matrix[row_indices]
-
+            self.matrix = self.matrix[row_indices].copy()
             wot.io.verbose('Successfuly applied day_filter: "{}"'.format(day_filter))
 
         cvs = set(self.matrix.obs['covariate']) if 'covariate' in self.matrix.obs else [None]
