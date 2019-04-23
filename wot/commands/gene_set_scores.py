@@ -16,7 +16,8 @@ def main(argv):
     parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
     parser.add_argument('--gene_sets',
                         help='Gene sets in gmx, gmt, or grp format', required=True)
-    parser.add_argument('--cell_filter', help='Cells to include')
+    parser.add_argument('--cell_filter',
+                        help='File with one cell id per line to include')
     parser.add_argument('--gene_set_filter', help='Gene sets to include')
     parser.add_argument('--nperm', help='Number of permutations to perform', type=int)
     parser.add_argument('--out', help='Output file name prefix', default='')
