@@ -9,7 +9,7 @@ from wot.commands import *
 def main():
     command_list = [convert_matrix, cells_by_gene_set, census,
                     gene_set_scores, diff_exp, neighborhood_graph, optimal_transport,
-                    optimal_transport_validation, trajectory,
+                    optimal_transport_validation, trajectory, trajectory_divergence,
                     trajectory_trends, transition_table]
     parser = argparse.ArgumentParser(description='Run a wot command')
     command_list_strings = list(map(lambda x: x.__name__[len('wot.commands.'):], command_list))
