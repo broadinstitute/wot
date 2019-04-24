@@ -7,17 +7,18 @@ import numpy as np
 import pandas as pd
 import scipy.sparse
 import statsmodels.stats.multitest
+
 import wot.io
 
 
 class DiffExp:
 
     def __init__(self, expression_matrix, delta_days, trajectory_names,
-                 between, nperm, min_fold_change):
+                 compare, nperm, min_fold_change):
         self.expression_matrix = expression_matrix
         self.delta_days = delta_days
         self.trajectory_names = trajectory_names
-        self.between = between
+        self.compare = compare
         self.nperm = nperm
         self.min_fold_change = min_fold_change
         self.features = expression_matrix.var.index
@@ -95,10 +96,10 @@ class DiffExp:
         return results
 
     def execute(self):
-        if self.between is not None and len(self.trajectory_names) > 1:
-            if self.between == 'all':
+        if self.compare != 'within' and len(self.trajectory_names) > 1:
+            if self.compare == 'all':
                 base_trajectory_names_to_trajectory_names = {'': self.trajectory_names}
-            elif self.between == 'match':
+            elif self.compare == 'match':
                 base_trajectory_names_to_trajectory_names = {}
                 for i in range(len(self.trajectory_names)):
                     full_trajectory_name = self.trajectory_names[i]
@@ -161,12 +162,10 @@ def main(argv):
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--trajectory', help='One or more trajectory datasets as produced by the trajectory tool',
                         action='append')
-    parser.add_argument('--out', help='Prefix for output file names', default='diff_exp')
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
-
-    parser.add_argument('--between',
-                        help='Compare across trajectories when more than one trajectory is supplied. If value is "match" only compare trajectories with the same name. If "all", compare all pairs',
-                        choices=['match', 'all'])
+    parser.add_argument('--compare',
+                        help='Compare across trajectories when more than one trajectory is supplied. If "match" compare trajectories with the same name. If "all", compare all pairs. If "within" compare within a trajectory.',
+                        choices=['within', 'match', 'all'], default='within')
     parser.add_argument('--delta',
                         help='Delta days to compare sampled expression matrix against within a trajectory. If not specified all comparison are done against the first day.',
                         type=float)
@@ -176,7 +175,7 @@ def main(argv):
                         help='Limit permutations to genes which show at least X-fold difference (log-scale) between the two groups of cells.')
 
     args = parser.parse_args(argv)
-    between = args.between
+    compare = args.compare
     trajectory_files = args.trajectory
     expression_file = args.matrix
     delta_days = args.delta
@@ -198,5 +197,5 @@ def main(argv):
             pd.DataFrame(index=trajectory_ds.obs.index, data=trajectory_ds.X, columns=trajectory_ds.var.index))
         trajectory_names += list(trajectory_ds.var.index)
     d = DiffExp(expression_matrix=expression_matrix, delta_days=delta_days, trajectory_names=trajectory_names,
-                between=between, nperm=nperm, min_fold_change=min_fold_change)
+                compare=compare, nperm=nperm, min_fold_change=min_fold_change)
     d.execute()
