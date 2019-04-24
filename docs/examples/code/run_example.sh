@@ -17,7 +17,7 @@ wot optimal_transport --matrix matrix.txt --cell_days days.txt
 wot trajectory --tmap tmaps --cell_set cell_sets.gmt --day 7 --embedding embedding.csv
 
 # compute trajectory divergence
-wot trajectory_divergence --trajectory wot_trajectory.txt --cell_days days.txt --matrix matrix.txt --compare all --plot
+wot trajectory_divergence --trajectory wot_trajectory.txt --cell_days days.txt --matrix matrix.txt --compare all --covariate covariate.txt --plot
 
 # compute and plot trajectory trends
 wot trajectory_trends --trajectory wot_trajectory.txt --cell_days days.txt --matrix matrix.txt --plot
