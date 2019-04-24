@@ -18,6 +18,8 @@ class DiffExp:
         self.expression_matrix = expression_matrix
         self.delta_days = delta_days
         self.trajectory_names = trajectory_names
+        if len(trajectory_names) == 1:
+            compare = 'within'
         self.compare = compare
         self.nperm = nperm
         self.min_fold_change = min_fold_change
@@ -96,7 +98,7 @@ class DiffExp:
         return results
 
     def execute(self):
-        if self.compare != 'within' and len(self.trajectory_names) > 1:
+        if self.compare != 'within':
             if self.compare == 'all':
                 base_trajectory_names_to_trajectory_names = {'': self.trajectory_names}
             elif self.compare == 'match':
@@ -133,8 +135,9 @@ class DiffExp:
 
         else:
             # within
-            for name in self.trajectory_names:
 
+            for name in self.trajectory_names:
+                df = pd.DataFrame(index=self.features)
                 for day_index in range(1, len(self.days)):
                     day2 = self.days[day_index]
                     if self.delta_days > 0:
@@ -148,10 +151,9 @@ class DiffExp:
                     print('{}, day {} vs day {}'.format(name, day1, day2))
                     values1, weights1 = self.get_expression_and_weights(day1, name)
                     values2, weights2 = self.get_expression_and_weights(day2, name)
-
-                    df = df.join(self.do_comparison(values1, weights1, day1, values2, weights2, day2))
                     df = self.add_stats(values1, weights1, df, '_{}'.format(day1))
                     df = self.add_stats(values2, weights2, df, '_{}'.format(day2))
+                    df = df.join(self.do_comparison(values1, weights1, day1, values2, weights2, day2))
 
                 df.to_csv(name + '.tsv', sep='\t', header=True)
 

@@ -15,7 +15,7 @@ def main(argv):
     parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
     parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True)
     parser.add_argument('--day', help='Day to consider', required=True, type=float)
-    parser.add_argument('--out', help='Prefix for output file names', default='wot-trajectory')
+    parser.add_argument('--out', help='Prefix for output file names', default='wot')
     parser.add_argument('--format', help='Output trajectory matrix file format', default='txt')
     parser.add_argument('--embedding', help='Optional file with id, x, y used to plot trajectory probabilities')
 

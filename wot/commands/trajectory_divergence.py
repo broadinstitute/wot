@@ -24,7 +24,7 @@ def main(argv):
                         action='append')
     parser.add_argument('--compare',
                         help='Compare across trajectories when more than one trajectory is supplied. If value is "match" only compare trajectories with the same name. If "all", compare all pairs',
-                        choices=['match', 'all'])
+                        choices=['match', 'all'], required=True)
     parser.add_argument('--local_pca', type=int, default=30,
                         help='Convert day matrix to local PCA coordinates.'
                              'Set to 0 to disable')
@@ -37,7 +37,7 @@ def main(argv):
     parser.add_argument('--covariate',
                         help='Covariate (batch) values for each cell. Used to compute batch to batch distance within a timepoint.')
     args = parser.parse_args(argv)
-    between = args.compare
+    compare = args.compare
     local_pca = args.local_pca
     expression_matrix = wot.io.read_dataset(args.matrix)
     trajectory_files = args.trajectory
@@ -74,9 +74,9 @@ def main(argv):
         batch_output = open(args.out + '_batch.txt', 'wt')
         batch_output.write('covariate_1' + '\t' + 'covariate_2' + '\t' + 'day' + '\t' + 'distance' + '\n')
 
-    if between == 'all':  # all pairs
+    if compare == 'all':  # all pairs
         base_trajectory_names_to_trajectory_names = {'': trajectory_names}
-    elif between == 'match':  # all matching names
+    elif compare == 'match':  # all matching names
         base_trajectory_names_to_trajectory_names = {}
         for i in range(len(trajectory_names)):
             full_trajectory_name = trajectory_names[i]
@@ -95,7 +95,7 @@ def main(argv):
             x = x.toarray()
 
         eigenvals = None
-        if local_pca > 0:
+        if local_pca > 0 and local_pca < x.shape[1]:
             mean_shift = x.mean(axis=0)
             x = x - mean_shift
             n_components = min(local_pca, x.shape[0])  # n_components must be <= ncells
