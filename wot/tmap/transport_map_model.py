@@ -78,9 +78,9 @@ class TransportMapModel:
         return anndata.AnnData(X=np.concatenate(trajectories), obs=self.meta.copy(),
                                var=pd.DataFrame(index=population_names))
 
-    def get_transport_map(self, t0, t1, covariate=None):
+    def get_coupling(self, t0, t1, covariate=None):
         """
-        Loads a transport map for a given pair of timepoints.
+        Loads a coupling for a given pair of timepoints.
 
         Parameters
         ----------
@@ -222,7 +222,7 @@ class TransportMapModel:
         while i < j:
             t0 = self.timepoints[i]
             t1 = self.timepoints[i + 1]
-            tmap = self.get_transport_map(t0, t1)
+            tmap = self.get_coupling(t0, t1)
             p = p @ tmap.X
             if normalize:
                 p = (p.T / np.sum(p, axis=1)).T
@@ -288,7 +288,7 @@ class TransportMapModel:
         while i > j:
             t1 = self.timepoints[i]
             t0 = self.timepoints[i - 1]
-            tmap = self.get_transport_map(t0, t1)
+            tmap = self.get_coupling(t0, t1)
             p = (tmap.X @ p.T).T
             if normalize:
                 p = (p.T / np.sum(p, axis=1)).T

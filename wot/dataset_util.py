@@ -1,28 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import anndata
 import math
+
+import anndata
 import numpy as np
 import pandas as pd
 import scipy.sparse
 import scipy.sparse
-
-
-def list_of_days_in_dataset(dataset):
-    if 'day' not in dataset.obs.columns:
-        raise ValueError("No day information available for this dataset")
-    return sorted(list(set(dataset.obs['day'].values)))
-
-
-def cell_indices_by_day(dataset):
-    """Returns a dictionary mapping each day with the list of indices of cells from that day"""
-    day_to_indices = {}
-    unique_days = list_of_days_in_dataset(dataset)
-    for day in unique_days:
-        day_query = dataset.obs['day'] == day
-        indices = np.where(day_query)[0]
-        day_to_indices[day] = indices
-    return day_to_indices
 
 
 def split_anndata(dataset, metadata):
@@ -45,6 +29,7 @@ def split_anndata(dataset, metadata):
     ValueError
         If the metadata is not present
     """
+
     if metadata not in dataset.obs.columns:
         raise ValueError("Cannot split on '{}' : column not present".format(metadata))
 

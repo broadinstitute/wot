@@ -5,6 +5,7 @@ import anndata
 import numpy as np
 import pandas as pd
 import scipy.sparse
+
 import wot.tmap
 
 
@@ -47,7 +48,7 @@ def trajectory_similarities(trajectory_ds):
     return distances
 
 
-def compute_trajectory_trends_from_trajectory(trajectory_ds, expression_ds):
+def compute_trajectory_trends_from_trajectory(trajectory_ds, expression_ds, day_field='day'):
     """
     Computes the mean and variance of each gene over time for the given trajectories
 
@@ -55,7 +56,7 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, expression_ds):
     ----------
     trajectory_ds : anndata.AnnData
        anndata.AnnData returned by wot.tmap.TransportModel.compute_trajectories
-    ds : anndata.AnnData
+    expression_ds : anndata.AnnData
         Dataset used to compute mean and variance
 
     Returns
@@ -78,7 +79,7 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, expression_ds):
         mean_list.append(None)
         variance_list.append(None)
 
-    for day, group in trajectory_ds.obs.groupby('day'):
+    for day, group in trajectory_ds.obs.groupby(day_field):
         timepoints.append(day)
         cell_indices_at_day = trajectory_ds.obs.index.get_indexer_for(group.index)
         trajectory_weights = trajectory_ds[cell_indices_at_day].X

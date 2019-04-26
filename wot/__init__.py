@@ -4,4 +4,5 @@ import wot.simulate
 import wot.tmap
 from .dataset_util import *
 from .gene_set_scores import *
+from .neighborhood_graph import *
 from .population import *

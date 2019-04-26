@@ -41,14 +41,10 @@ def main(argv):
     local_pca = args.local_pca
     expression_matrix = wot.io.read_dataset(args.matrix)
     trajectory_files = args.trajectory
-    days_df = wot.io.read_days_data_frame(args.cell_days)
-    distance_metric = args.distance_metric
 
-    batch_df = pd.read_csv(args.covariate, index_col='id', engine='python',
-                           sep=None) if args.covariate is not None else None
-    expression_matrix.obs = expression_matrix.obs.join(days_df)
-    if batch_df is not None:
-        expression_matrix.obs = expression_matrix.obs.join(batch_df)
+    field_mapping = wot.io.add_row_metadata_to_dataset(expression_matrix, days=args.cell_days, covariate=args.covariate)
+
+    distance_metric = args.distance_metric
 
     trajectory_names = []
 
@@ -70,7 +66,8 @@ def main(argv):
 
     output = open(args.out + '.txt', 'wt')
     output.write('trajectory_1' + '\t' + 'trajectory_2' + '\t' + 'day' + '\t' + 'distance\n')
-    if batch_df is not None:
+    batch_field_name = field_mapping.get('covariate')
+    if batch_field_name is not None:
         batch_output = open(args.out + '_batch.txt', 'wt')
         batch_output.write('covariate_1' + '\t' + 'covariate_2' + '\t' + 'day' + '\t' + 'distance' + '\n')
 
@@ -86,9 +83,8 @@ def main(argv):
                 names = []
                 base_trajectory_names_to_trajectory_names[base_trajectory_name] = names
             names.append(full_trajectory_name)
-
-    batch_column_name = batch_df.columns[0] if batch_df is not None else None
-    for day, group in expression_matrix.obs.groupby('day'):
+    day_field_name = field_mapping.get('day')
+    for day, group in expression_matrix.obs.groupby(day_field_name):
         expression_matrix_day = expression_matrix[group.index]
         x = expression_matrix_day.X
         if scipy.sparse.isspmatrix(x):
@@ -103,14 +99,14 @@ def main(argv):
             pca.fit(x.T)
             x = pca.components_.T
             eigenvals = np.diag(pca.singular_values_)
-        if batch_df is not None:
+        if batch_field_name is not None:
             # compute distances between all pairs of batches
             adata_day = expression_matrix[group.index]
-            batches = adata_day.obs[batch_column_name].unique()
+            batches = adata_day.obs[batch_field_name].unique()
             for batch_index1 in range(len(batches)):
-                batch1_indices = np.where(adata_day.obs[batch_column_name] == batches[batch_index1])
+                batch1_indices = np.where(adata_day.obs[batch_field_name] == batches[batch_index1])
                 for batch_index2 in range(batch_index1):
-                    batch2_indices = np.where(adata_day.obs[batch_column_name] == batches[batch_index2])
+                    batch2_indices = np.where(adata_day.obs[batch_field_name] == batches[batch_index2])
                     print('{} vs. {}, day {}'.format(batches[batch_index1], batches[batch_index2], day))
                     d = wot.ot.earth_mover_distance(x[batch1_indices], x[batch2_indices], eigenvals=eigenvals)
                     batch_output.write('{}\t{}\t{}\t{}\n'.format(batches[batch_index1], batches[batch_index2], day, d))
@@ -139,7 +135,7 @@ def main(argv):
                     output.flush()
 
     output.close()
-    if batch_df is not None:
+    if batch_field_name is not None:
         batch_output.close()
 
     if args.plot:
@@ -154,7 +150,7 @@ def main(argv):
         for p, d in df.groupby('name'):
             plt.plot(d['day'], d['distance'], '-o', label=p)
 
-        if batch_df is not None:
+        if batch_field_name is not None:
             df = pd.read_csv(args.out + '_batch.txt', sep='\t')
             df = df.groupby('day', as_index=False).mean()
             plt.plot(df['day'], df['distance'], '-o', label='covariate')

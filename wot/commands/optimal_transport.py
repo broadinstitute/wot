@@ -10,6 +10,7 @@ import wot.ot
 
 def main(argv):
     parser = argparse.ArgumentParser('Compute transport maps between pairs of time points')
+
     wot.commands.add_model_arguments(parser)
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--out', default='./tmaps',

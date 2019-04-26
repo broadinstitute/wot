@@ -14,7 +14,7 @@ import wot.io
 class DiffExp:
 
     def __init__(self, expression_matrix, delta_days, trajectory_names,
-                 compare, nperm, min_fold_change):
+                 compare, nperm, min_fold_change, day_field):
         self.expression_matrix = expression_matrix
         self.delta_days = delta_days
         self.trajectory_names = trajectory_names
@@ -24,7 +24,8 @@ class DiffExp:
         self.nperm = nperm
         self.min_fold_change = min_fold_change
         self.features = expression_matrix.var.index
-        days = np.array(sorted(expression_matrix.obs['day'].unique().astype(float)))
+        self.day_field = day_field
+        days = np.array(sorted(expression_matrix.obs[day_field].unique().astype(float)))
         self.days = days[np.isnan(days) == False]
 
     def add_stats(self, expression_values, weights, df, suffix):
@@ -44,7 +45,8 @@ class DiffExp:
 
     def get_expression_and_weights(self, day, trajectory_name):
         ds = self.expression_matrix[
-            (self.expression_matrix.obs['day'] == day) & (False == self.expression_matrix.obs[trajectory_name].isna())]
+            (self.expression_matrix.obs[self.day_field] == day) & (
+                        False == self.expression_matrix.obs[trajectory_name].isna())]
         weights = ds.obs[trajectory_name].values
         expression_values = ds.X
         if scipy.sparse.isspmatrix(expression_values):
@@ -189,7 +191,7 @@ def main(argv):
     if delta_days is None:
         delta_days = 0
     delta_days = abs(delta_days)
-    wot.io.add_row_metadata_to_dataset(dataset=expression_matrix, days_path=cell_days_file)
+    field_names = wot.io.add_row_metadata_to_dataset(dataset=expression_matrix, days=cell_days_file)
     trajectory_names = []
     for f in trajectory_files:
         trajectory_ds = wot.io.read_dataset(f)
@@ -199,5 +201,5 @@ def main(argv):
             pd.DataFrame(index=trajectory_ds.obs.index, data=trajectory_ds.X, columns=trajectory_ds.var.index))
         trajectory_names += list(trajectory_ds.var.index)
     d = DiffExp(expression_matrix=expression_matrix, delta_days=delta_days, trajectory_names=trajectory_names,
-                compare=compare, nperm=nperm, min_fold_change=min_fold_change)
+                compare=compare, nperm=nperm, min_fold_change=min_fold_change, day_field=field_names['day'])
     d.execute()

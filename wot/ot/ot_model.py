@@ -20,7 +20,7 @@ class OTModel:
     Parameters
     ----------
     matrix : anndata.AnnData
-        The gene expression matrix for this OTModel. Matrix must have the row meta data field 'day'.
+        The gene expression matrix for this OTModel. Matrix must have the row meta data field day_field.
     transport_maps_directory : str
         Path to the transport map directory, where transport maps are written.
     transport_maps_prefix : str, optional
@@ -33,46 +33,44 @@ class OTModel:
     max_threads : int, optional
         Maximum number of threads to use when computing transport maps
     **kwargs : dict
-        Dictionnary of parameters. Will be inserted as is into OT configuration.
+        Dictionary of parameters. Will be inserted as is into OT configuration.
     """
 
-    def __init__(self, matrix, tmap_out, max_threads=None, **kwargs):
+    def __init__(self, matrix, tmap_out='tmaps', day_field='day', covariate_field=None,
+                 cell_growth_rate_field=None,
+                 max_threads=1, **kwargs):
         tmap_dir, tmap_prefix = os.path.split(tmap_out) if tmap_out is not None else (None, None)
         self.matrix = matrix
         self.tmap_dir = tmap_dir or '.'
+        self.day_field = day_field
+        self.covariate_field = covariate_field
+        self.cell_growth_rate_field = cell_growth_rate_field
         self.tmap_prefix = tmap_prefix or "tmaps"
         self.day_pairs = wot.ot.parse_configuration(kwargs.pop('config', None))
-
         cell_filter = kwargs.pop('cell_filter', None)
         gene_filter = kwargs.pop('gene_filter', None)
         day_filter = kwargs.pop('cell_day_filter', None)
         ncounts = kwargs.pop('ncounts', None)
         ncells = kwargs.pop('ncells', None)
-        self.force = kwargs.pop('force', False)
+        self.no_overwrite = kwargs.pop('no_overwrite', False)
         self.output_file_format = kwargs.pop('format', 'loom')
-        if gene_filter is not None:
-            self.matrix = self.matrix[:,
-                          self.matrix.var.index.isin(wot.io.read_sets(gene_filter).obs.index.values)].copy()
-            wot.io.verbose('Successfuly applied gene_filter: "{}"'.format(gene_filter))
-        if cell_filter is not None:
-            self.matrix = self.matrix[self.matrix.obs.index.isin(wot.io.read_sets(cell_filter).obs.index.values)].copy()
-            wot.io.verbose('Successfuly applied cell_filter: "{}"'.format(cell_filter))
+        self.matrix = wot.io.filter_adata(self.matrix, obs_filter=cell_filter, var_filter=gene_filter)
         if day_filter is not None:
-            days = day_filter.split(',')
-            row_indices = self.matrix.obs['day'].isin(days)
+            days = day_filter.split(',') if type(day_filter) == str else day_filter
+            row_indices = self.matrix.obs[self.day_field].isin(days)
             self.matrix = self.matrix[row_indices].copy()
             wot.io.verbose('Successfuly applied day_filter: "{}"'.format(day_filter))
 
-        cvs = set(self.matrix.obs['covariate']) if 'covariate' in self.matrix.obs else [None]
+        cvs = set(self.matrix.obs[self.covariate_field]) if self.covariate_field in self.matrix.obs else [None]
         if ncells is not None:
             index_list = []
             for day in self.timepoints:
-                day_query = self.matrix.obs['day'] == day
+                day_query = self.matrix.obs[self.day_field] == day
                 for cv in cvs:
                     if cv is None:
                         indices = np.where(day_query)[0]
                     else:
-                        indices = np.where(day_query & (self.matrix.obs['covariate'] == cv))[0]
+                        indices = np.where(day_query & (self.matrix.obs[self.covariate_field] == cv))[0]
                     if len(indices) > ncells:
                         np.random.shuffle(indices)
                         indices = indices[0:ncells]
@@ -109,11 +107,15 @@ class OTModel:
         else:
             self.max_threads = max_threads
         wot.io.verbose("Using", self.max_threads, "thread(s) at most")
-        if self.max_threads > 1:
-            wot.io.verbose("Warning : Multiple threads are being used. Time estimates will be inaccurate")
 
-        self.ot_config = {'local_pca': 30, 'growth_iters': 3, 'scaling_iter': 3000, 'inner_iter_max': 50,
-                          'epsilon': 0.05, 'lambda1': 1, 'lambda2': 50, 'epsilon0': 1, 'tau': 10000}
+        self.ot_config = {'local_pca': 30, 'growth_iters': 1, 'epsilon': 0.05, 'lambda1': 1, 'lambda2': 50,
+                          'epsilon0': 1, 'tau': 10000, 'scaling_iter': 3000, 'inner_iter_max': 50, 'tolerance': 1e-8,
+                          'max_iter': 1e7, 'batch_size': 5, 'extra_iter': 1000}
+        solver = kwargs.pop('solver', 'normal')
+        if solver == 'normal':
+            self.solver = wot.ot.transport_stablev2
+        elif solver == 'duality_gap':
+            self.solver = wot.ot.optimal_transport_duality_gap
 
         parameters_from_file = kwargs.pop('parameters', None)
         for k in kwargs.keys():
@@ -129,20 +131,20 @@ class OTModel:
             print("Warning : local_pca set to {}, above gene count of {}. Disabling PCA" \
                   .format(local_pca, self.matrix.X.shape[1]))
             self.ot_config['local_pca'] = 0
-        if 'day' not in self.matrix.obs.columns:
+        if self.day_field not in self.matrix.obs.columns:
             raise ValueError("Days information not available for matrix")
-        if any(self.matrix.obs['day'].isnull()):
-            print("Days information missing for {} cells".format(self.matrix.obs['day'].isnull().sum()))
-            self.matrix = self.matrix[self.matrix.obs['day'].isnull() == False]
-        self.timepoints = sorted(set(self.matrix.obs['day']))
+        if any(self.matrix.obs[self.day_field].isnull()):
+            print("Days information missing for {} cells".format(self.matrix.obs[self.day_field].isnull().sum()))
+            self.matrix = self.matrix[self.matrix.obs[self.day_field].isnull() == False]
+        self.timepoints = sorted(set(self.matrix.obs[self.day_field]))
         wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
 
     def get_covariate_pairs(self):
         """Get all covariate pairs in the dataset"""
-        if 'covariate' not in self.matrix.obs.columns:
+        if self.covariate_field not in self.matrix.obs.columns:
             raise ValueError("Covariate value not available in dataset")
         from itertools import product
-        covariate = set(self.matrix.obs['covariate'])
+        covariate = set(self.matrix.obs[self.covariate_field])
         return product(covariate, covariate)
 
     def compute_all_transport_maps(self, with_covariates=False, save_learned_growth=False):
@@ -151,8 +153,6 @@ class OTModel:
 
         Parameters
         ----------
-        force : bool, optional, default : False
-            Force recomputation of each transport map, after config update for instance.
         with_covariates : bool, optional, default : False
             Compute all covariate-restricted transport maps as well
 
@@ -242,12 +242,11 @@ class OTModel:
             path += "_{}_{}_cv{}_cv{}".format(t0, t1, *covariate)
         output_file = os.path.join(self.tmap_dir, path)
         output_file = wot.io.check_file_extension(output_file, self.output_file_format)
-        if os.path.exists(output_file) and not self.force:
+        if os.path.exists(output_file) and not self.no_overwrite:
             wot.io.verbose('Found existing tmap at ' + output_file + '. Use --force to overwrite.')
             return wot.io.read_dataset(output_file)
-
         config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
-        tmap, learned_growth = OTModel.compute_single_transport_map(self.matrix, config)
+        tmap, learned_growth = self.compute_single_transport_map(config)
         if tmap is not None:
             wot.io.write_dataset(tmap, output_file, output_format=self.output_file_format)
             wot.io.verbose("Created tmap ({}, {}) : {}".format(t0, t1, path))
@@ -266,34 +265,36 @@ class OTModel:
         cost_matrix = cost_matrix / np.median(cost_matrix)
         return cost_matrix
 
-    @staticmethod
-    def compute_single_transport_map(ds, config):
+    def compute_single_transport_map(self, config):
         """
         Computes a single transport map.
         Note that None is returned if no data is available at the specified timepoints or covariates.
 
         Parameters
         ----------
-        ds : anndata.AnnData
-            The gene expression matrix to consider.
-            It is assumed to have a valid day column for each cell.
         config : dict
             Configuration to use for all parameters for the couplings :
             - t0, t1
             - lambda1, lambda2, epsilon, g
         """
+        import psutil
+        import gc
+        gc.collect()
+        process = psutil.Process(os.getpid())
+        print(process.memory_info().rss)
         t0 = config.pop('t0', None)
         t1 = config.pop('t1', None)
         if t0 is None or t1 is None:
             raise ValueError("config must have both t0 and t1, indicating target timepoints")
 
+        ds = self.matrix
         covariate = config.pop('covariate', None)
         if covariate is None:
-            p0_indices = ds.obs['day'] == float(t0)
-            p1_indices = ds.obs['day'] == float(t1)
+            p0_indices = ds.obs[self.day_field] == float(t0)
+            p1_indices = ds.obs[self.day_field] == float(t1)
         else:
-            p0_indices = (ds.obs['day'] == float(t0)) & (ds.obs['covariate'] == covariate[0])
-            p1_indices = (ds.obs['day'] == float(t1)) & (ds.obs['covariate'] == covariate[1])
+            p0_indices = (ds.obs[self.day_field] == float(t0)) & (ds.obs[self.covariate_field] == covariate[0])
+            p1_indices = (ds.obs[self.day_field] == float(t1)) & (ds.obs[self.covariate_field] == covariate[1])
 
         if p0_indices.sum() == 0 or p1_indices.sum() == 0:
             return None, None
@@ -301,8 +302,8 @@ class OTModel:
         p0 = ds[p0_indices, :]
         p1 = ds[p1_indices, :]
 
-        if 'cell_growth_rate' in p0.obs.columns:
-            config['g'] = np.asarray(p0.obs['cell_growth_rate'].values)
+        if self.cell_growth_rate_field in p0.obs.columns:
+            config['g'] = np.asarray(p0.obs[self.cell_growth_rate_field].values)
         if 'pp' in p0.obs.columns:
             config['pp'] = np.asarray(p0.obs['pp'].values)
         if 'pp' in p1.obs.columns:
@@ -321,11 +322,12 @@ class OTModel:
             p1_x = p1.X
 
         C = OTModel.compute_default_cost_matrix(p0_x, p1_x, eigenvals)
+        config['C'] = C
         if config.get('g') is None:
             config['g'] = np.ones(C.shape[0])
         delta_days = t1 - t0
         config['g'] = config['g'] ** delta_days
-        tmap, learned_growth = wot.ot.transport_stable_learn_growth(C, **config)
+        tmap, learned_growth = wot.ot.compute_transport_matrix(solver=self.solver, **config)
         learned_growth = np.power(learned_growth, 1.0 / delta_days)
         return anndata.AnnData(tmap, p0.obs.copy(), p1.obs.copy()), pd.DataFrame(index=p0.obs.index,
                                                                                  data={

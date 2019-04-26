@@ -38,11 +38,13 @@ def initialize_ot_model(matrix, days, tmap_out=None, **kwargs):
     ds = wot.io.read_dataset(matrix)
     if kwargs.pop('transpose', False):
         ds = ds.T
-    wot.io.add_row_metadata_to_dataset(dataset=ds, days_path=days,
-                                       growth_rates_path=kwargs.pop('cell_growth_rates', None),
-                                       sampling_bias_path=kwargs.pop('sampling_bias', None),
-                                       covariate_path=kwargs.pop('covariate', None))
-    ot_model = OTModel(ds, tmap_out, **kwargs)
+
+    field_mapping = wot.io.add_row_metadata_to_dataset(dataset=ds, days=days,
+                                                       growth_rates=kwargs.pop('cell_growth_rates', None),
+                                                       covariate=kwargs.pop('covariate', None))
+    ot_model = OTModel(ds, tmap_out, day_field=field_mapping['day'],
+                       covariate_field=field_mapping.get('covariate'),
+                       cell_growth_rate_field=field_mapping.get('cell_growth_rate'), **kwargs)
     return ot_model
 
 

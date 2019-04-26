@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
+import glob
 import os
+import sys
 
 import anndata
-import glob
 import h5py
 import numpy as np
 import pandas as pd
 import scanpy as sc
 import scipy.io
 import scipy.sparse
-import sys
+
 import wot
 
 if os.getenv('wot_verbose', False) == False:
@@ -808,27 +809,53 @@ def save_loom_attrs(f, is_columns, metadata, length):
         save_metadata_array(attrs_path + '/id', np.array(range(1, length + 1)).astype('S'))
 
 
+def filter_adata(adata, obs_filter=None, var_filter=None):
+    if obs_filter is not None:
+        if os.path.exists(obs_filter):
+            adata = adata[adata.obs.index.isin(wot.io.read_sets(obs_filter).obs.index)].copy()
+        else:
+            adata = adata[adata.obs[obs_filter] == True].copy()
+    if var_filter is not None:
+        if os.path.exists(var_filter):
+            adata = adata[:, adata.var.index.isin(wot.io.read_sets(var_filter).obs.index)].copy()
+        else:
+            adata = adata[:, adata.var[var_filter] == True].copy()
+    return adata
+
+
 def read_days_data_frame(path):
     return pd.read_csv(path, index_col='id',
                        engine='python', sep=None, dtype={'day': np.float64})
 
 
-def add_row_metadata_to_dataset(dataset, days_path, growth_rates_path=None, sampling_bias_path=None,
-                                covariate_path=None):
-    dataset.obs = dataset.obs.join(read_days_data_frame(days_path))
-    if growth_rates_path is not None:
-        dataset.obs = dataset.obs.join(
-            pd.read_csv(growth_rates_path, index_col='id', engine='python', sep=None))
-        if 'cell_growth_rate' not in dataset.obs:
-            raise ValueError('Cell growth rates must that the column headers id and cell_growth_rate')
+def add_row_metadata_to_dataset(dataset, days, growth_rates=None, covariate=None):
+    result = {'day': days}
+    if os.path.exists(days):
+        df = read_days_data_frame(days)
+        dataset.obs = dataset.obs.join(df)
+        result['day'] = df.columns[0]
+    if growth_rates is not None:
+        if os.path.exists(growth_rates):
+            df = pd.read_csv(growth_rates, index_col='id', engine='python', sep=None)
+            dataset.obs = dataset.obs.join(df)
+            result['cell_growth_rate'] = df.columns[0]
+        else:
+            result['cell_growth_rate'] = growth_rates
+        # if 'cell_growth_rate' not in dataset.obs:
+        #     raise ValueError('Cell growth rates must that the column headers id and cell_growth_rate')
     else:
         dataset.obs['cell_growth_rate'] = 1.0
-    if sampling_bias_path is not None:
-        dataset.obs = dataset.obs.join(
-            pd.read_csv(sampling_bias_path, index_col='id', engine='python', sep=None))
-    if covariate_path is not None:
-        dataset.obs = dataset.obs.join(
-            pd.read_csv(covariate_path, index_col='id', engine='python', sep=None))
+    # if sampling_bias_path is not None:
+    #     dataset.obs = dataset.obs.join(
+    #         pd.read_csv(sampling_bias_path, index_col='id', engine='python', sep=None))
+    if covariate is not None:
+        if os.path.exists(covariate):
+            df = pd.read_csv(covariate, index_col='id', engine='python', sep=None)
+            dataset.obs = dataset.obs.join(df)
+            result['covariate'] = df.columns[0]
+        else:
+            result['covariate'] = covariate
+    return result
 
 
 def read_day_pairs(day_pairs):

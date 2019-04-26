@@ -34,7 +34,7 @@ def main(argv):
     # dataset has cells on rows and cell sets (trajectories) on columns
     wot.io.write_dataset(trajectory_ds, args.out + '_trajectory', args.format)
     if args.embedding:
-        from matplotlib import pyplot
+        from matplotlib import pyplot as plt
         nbins = 500
         full_embedding_df = pd.read_csv(args.embedding, sep=None, engine='python', index_col='id')
         xrange = full_embedding_df['x'].min(), full_embedding_df['x'].max()
@@ -47,19 +47,19 @@ def main(argv):
         for j in range(trajectory_ds.shape[1]):
             color_df = pd.DataFrame(index=trajectory_ds.obs.index, data={'color': trajectory_ds[:, j].X})
             embedding_df = color_df.join(full_embedding_df)
-            figure = pyplot.figure(figsize=(10, 10))
-            pyplot.axis('off')
-            pyplot.tight_layout()
+            figure = plt.figure(figsize=(10, 10))
+            plt.axis('off')
+            plt.tight_layout()
 
-            pyplot.scatter(full_embedding_df['x'], full_embedding_df['y'], c='#f0f0f0',
+            plt.scatter(full_embedding_df['x'], full_embedding_df['y'], c='#f0f0f0',
                            s=4, marker=',', edgecolors='none', alpha=0.8)
             summed_df = embedding_df.groupby(['x', 'y'], as_index=False).agg('sum')
 
-            pyplot.scatter(summed_df['x'], summed_df['y'], c=summed_df['color'],
+            plt.scatter(summed_df['x'], summed_df['y'], c=summed_df['color'],
                            s=6, marker=',', edgecolors='none', cmap='viridis_r', alpha=1)
-            pyplot.colorbar()
+            plt.colorbar()
             ncells = (population_list[j].p > 0).sum()
-            pyplot.title('{}, day {}, {}/{} cells'.format(trajectory_ds.var.index[j], args.day, ncells,
+            plt.title('{}, day {}, {}/{} cells'.format(trajectory_ds.var.index[j], args.day, ncells,
                                                           len(population_list[j].p)))
             figure.savefig(args.out + '_' + str(trajectory_ds.var.index[j]) + '_trajectory.png')
         # plot probabilties on embedding

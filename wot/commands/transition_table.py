@@ -168,10 +168,10 @@ def main(argv):
 
     args = parser.parse_args(argv)
 
-    time_to_cell_sets = wot.io.group_cell_sets(args.cell_set,
-                                               pd.read_csv(args.cell_days, index_col='id',
-                                                           engine='python', sep=None,
-                                                           dtype={'day': np.float64}))
+    cell_days_df = pd.read_csv(args.cell_days, index_col='id',
+                               engine='python', sep=None,
+                               dtype={'day': np.float64})
+    time_to_cell_sets = wot.io.group_cell_sets(args.cell_set, cell_days_df)
     nsets = 0
     for t in time_to_cell_sets:
         nsets += len(time_to_cell_sets[t])

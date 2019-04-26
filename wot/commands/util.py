@@ -26,6 +26,7 @@ def add_model_arguments(parser):
 def initialize_ot_model_from_args(args):
     return wot.ot.initialize_ot_model(args.matrix,
                                       args.cell_days,
+                                      solver=args.solver,
                                       tmap_out=args.out,
                                       local_pca=args.local_pca,
                                       growth_iters=args.growth_iters,
@@ -44,11 +45,14 @@ def initialize_ot_model_from_args(args):
                                       # sampling_bias=args.sampling_bias,
                                       scaling_iter=args.scaling_iter,
                                       inner_iter_max=args.inner_iter_max,
-                                      force=args.force,
+                                      no_overwrite=args.no_overwrite,
                                       ncells=args.ncells,
                                       ncounts=args.ncounts,
                                       transpose=args.transpose,
                                       format=args.format,
+                                      max_iter=args.max_iter,
+                                      batch_size=args.batch_size,
+                                      tolerance=args.tolerance,
                                       covariate=args.covariate if hasattr(args, 'covariate') else None
                                       )
 
@@ -91,13 +95,15 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--tau', type=float, default=10000)
     parser.add_argument('--ncells', type=int, help='Number of cells to downsample from each timepoint and covariate')
     parser.add_argument('--ncounts', help='Sample ncounts from each cell', type=int)
-    parser.add_argument('--force', help='Overwrite existing transport maps if they exist', action='store_true')
+    parser.add_argument('--no_overwrite', help='Do not overwrite existing transport maps if they exist',
+                        action='store_true')
     # parser.add_argument('--sampling_bias', help='File with "id" and "pp" to correct sampling bias.')
     parser.add_argument('--format', help='Output file format', default='loom', choices=['h5ad', 'loom'])
-
-    # parser.add_argument('--max_iter', type=int, default=1e7,
-    #                     help='Maximum number of scaling iterations. Abort if convergence was not reached')
-    # parser.add_argument('--batch_size', type=int, default=50,
-    #                     help='Number of scaling iterations to perform between duality gap check')
-    # parser.add_argument('--tolerance', type=int, default=1e-2,
-    #                     help='Maximal acceptable ratio between the duality gap and the primal objective value')
+    parser.add_argument('--solver', default='normal', choices=['duality_gap', 'normal'],
+                        help='The solver to use to compute transport matrices')
+    parser.add_argument('--max_iter', type=int, default=1e7,
+                        help='Maximum number of scaling iterations. Abort if convergence was not reached')
+    parser.add_argument('--batch_size', type=int, default=5,
+                        help='Number of scaling iterations to perform between duality gap check')
+    parser.add_argument('--tolerance', type=int, default=1e-8,
+                        help='Maximal acceptable ratio between the duality gap and the primal objective value')

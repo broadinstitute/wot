@@ -2,13 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import os
 
 import numpy as np
-import pandas as pd
+from matplotlib import pyplot
+
 import wot.io
 import wot.tmap
-from matplotlib import pyplot
 
 
 def main(argv):
@@ -25,24 +24,10 @@ def main(argv):
     args = parser.parse_args(argv)
 
     trajectory_ds = wot.io.read_dataset(args.trajectory)
-    wot.io.add_row_metadata_to_dataset(dataset=trajectory_ds, days_path=args.cell_days)
+    field_names = wot.io.add_row_metadata_to_dataset(dataset=trajectory_ds, days=args.cell_days)
     matrix = wot.io.read_dataset(args.matrix)
-    if args.gene_filter is not None:
-        if os.path.isfile(args.gene_filter):
-            gene_ids = pd.read_csv(args.gene_filter, index_col=0, header=None) \
-                .index.values
-        else:
-            specified_list = args.gene_filter.split(',')
-            s = set()
-            for f in specified_list:
-                s.add(f.strip())
-            gene_ids = matrix.var.index.intersection(s)
-        col_indices = matrix.var.index.isin(gene_ids)
-        if np.sum(col_indices) is 0:
-            raise ValueError('No genes passed the gene filter')
-        matrix = matrix[:, col_indices].copy()
-
-    results = wot.tmap.compute_trajectory_trends_from_trajectory(trajectory_ds, matrix)
+    matrix = wot.io.filter_adata(matrix, var_filter=args.gene_filter)
+    results = wot.tmap.compute_trajectory_trends_from_trajectory(trajectory_ds, matrix, day_field=field_names['day'])
     # output genes on columns, time on rows, one file per trajectory
 
     genes = matrix.var.index

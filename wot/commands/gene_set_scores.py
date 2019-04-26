@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import argparse
 import os
 
 import anndata
-import argparse
 import numpy as np
 import pandas as pd
+
 import wot.io
 
 
@@ -37,8 +38,7 @@ def main(argv):
         ds = ds.T
     if args.progress:
         print('Read ' + args.matrix)
-    if args.cell_filter is not None:
-        ds = ds[ds.obs.index.isin(wot.io.read_sets(args.cell_filter).obs.index.values)].copy()
+    ds = wot.io.filter_adata(ds, obs_filter=args.cell_filter)
 
     # background_ds = None
     # if background_cell_set is not None:

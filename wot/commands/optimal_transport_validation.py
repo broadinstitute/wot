@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import argparse
+import itertools
 import os
 
 import anndata
-import argparse
-import itertools
 import numpy as np
 import pandas as pd
 import scipy.sparse
@@ -48,7 +48,7 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
     for triplet in day_pairs_triplets:
         day_pairs[(triplet[0], triplet[2])] = {}
     ot_model.day_pairs = day_pairs
-    has_covariate = 'covariate' in ot_model.matrix.obs.columns
+    has_covariate = ot_model.covariate_field is not None
     if not has_covariate and not compute_full_distances:
         print('No covariate specified. Please provide a covariate or compute full distances')
         exit(1)
@@ -76,9 +76,9 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
         t0, t05, t1 = triplet
         interp_frac = (t05 - t0) / (t1 - t0)
 
-        p0_ds = ot_model.matrix[ot_model.matrix.obs['day'] == float(t0), :]
-        p05_ds = ot_model.matrix[ot_model.matrix.obs['day'] == float(t05), :]
-        p1_ds = ot_model.matrix[ot_model.matrix.obs['day'] == float(t1), :]
+        p0_ds = ot_model.matrix[ot_model.matrix.obs[ot_model.day_field] == float(t0), :]
+        p05_ds = ot_model.matrix[ot_model.matrix.obs[ot_model.day_field] == float(t05), :]
+        p1_ds = ot_model.matrix[ot_model.matrix.obs[ot_model.day_field] == float(t1), :]
 
         if local_pca > 0:
             matrices = list()
@@ -98,7 +98,7 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
                                      var=pd.DataFrame(index=pd.RangeIndex(start=0, stop=local_pca, step=1)))
 
         if compute_full_distances:
-            tmap_full = tmap_model_full.get_transport_map(t0, t1)
+            tmap_full = tmap_model_full.get_coupling(t0, t1)
 
             def update_full_summary(pop, t, name, pop2=p05_ds.X):
                 dist = wot.ot.earth_mover_distance(pop, pop2, eigenvals if local_pca > 0 else None)
@@ -136,9 +136,9 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
 
         if not has_covariate:
             continue
-        p0 = wot.split_anndata(p0_ds, 'covariate')
-        p05 = wot.split_anndata(p05_ds, 'covariate')
-        p1 = wot.split_anndata(p1_ds, 'covariate')
+        p0 = wot.split_anndata(p0_ds, ot_model.covariate_field)
+        p05 = wot.split_anndata(p05_ds, ot_model.covariate_field)
+        p1 = wot.split_anndata(p1_ds, ot_model.covariate_field)
         for cv05 in p05.keys():
             p05_x = p05[cv05].X
             seen_first = set()
@@ -165,7 +165,7 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
                     distance_to_p05(p05[cv05_2].X, t05, 'P', cv05_2)
 
             for cv0, cv1 in itertools.product(p0.keys(), p1.keys()):
-                tmap = tmap_model.get_transport_map(t0, t1, covariate=(cv0, cv1))
+                tmap = tmap_model.get_coupling(t0, t1, covariate=(cv0, cv1))
                 if tmap is None:
                     # no data for combination of day and covariate
                     continue
@@ -240,6 +240,7 @@ def main(argv):
 
             day_pairs_triplets.append((t0, t05, t1))
     if args.covariate is None:
+        ot_model.covariate_field = 'covariate'
         ot_model.matrix.obs['covariate'] = 1
 
     summary = compute_validation_summary(ot_model,

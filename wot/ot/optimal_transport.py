@@ -7,74 +7,31 @@ import ot as pot
 import scipy.sparse
 import scipy.stats
 import sklearn.decomposition
+
 import wot
 
 
-def transport_stable_learn_growth(C, lambda1, lambda2, epsilon, scaling_iter, g, pp=None, qq=None, tau=None,
-                                  epsilon0=None, growth_iters=3, inner_iter_max=None):
+def compute_transport_matrix(solver, **params):
     """
     Compute the optimal transport with stabilized numerics.
     Args:
+    g: Growth
+    solver: transport_stablev2 or optimal_transport_duality_gap
+    growth_iters:
+  """
 
-        C: cost matrix to transport cell i to cell j
-        lambda1: regularization parameter for marginal constraint for p.
-        lambda2: regularization parameter for marginal constraint for q.
-        epsilon: entropy parameter
-        scaling_iter: number of scaling iterations
-        g: growth value for input cells
-    """
+    import gc
+    g = params['g']
+    growth_iters = params['growth_iters']
     for i in range(growth_iters):
         if i == 0:
-            rowSums = g
+            row_sums = g
         else:
-            rowSums = Tmap.sum(axis=1) / Tmap.shape[1]
-
-        Tmap = transport_stablev2(C=C, lambda1=lambda1, lambda2=lambda2, epsilon=epsilon,
-                                  scaling_iter=scaling_iter, g=rowSums, tau=tau,
-                                  epsilon0=epsilon0, pp=pp, qq=qq, numInnerItermax=inner_iter_max,
-                                  extra_iter=1000)
-    return Tmap, rowSums
-
-
-def transport_stablev_learn_growth_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau, epsilon0,
-                                               growth_iters, max_iter, pp=None, qq=None):
-    """
-    Compute the optimal transport with stabilized numerics and duality gap guarantee.
-
-    Parameters
-    ----------
-    C : 2D array
-    g : 1D array
-    pp : 1D array
-    qq : 1D array
-    lambda1 : float
-    lambda2 : float
-    epsilon : float
-    batch_size : int
-    tolerance : float
-    tau : float
-    epsilon0 : float
-    growth_iters : int
-    max_iter : int
-
-    Returns
-    -------
-    tmap : 2D array
-        Transport map
-
-    Notes
-    -----
-    It is guaranteed that the duality gap for the result is under the given threshold, or that max_iter have been performed.
-    """
-    if batch_size <= 0:
-        raise ValueError("Batch size must be positive")
-
-    row_sums = g
-    for i in range(growth_iters):
-        tmap = transport_stablev1(C, row_sums, pp, qq, lambda1, lambda2, epsilon,
-                                  batch_size, tolerance, tau, epsilon0, max_iter)
-        row_sums = tmap.sum(axis=1) / tmap.shape[1]
-    return tmap
+            row_sums = tmap.sum(axis=1) / tmap.shape[1]
+        params['g'] = row_sums
+        tmap = solver(**params)
+        gc.collect()
+    return tmap, row_sums
 
 
 # @ Lénaïc Chizat 2015 - optimal transport
@@ -108,8 +65,8 @@ def dual(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
 
 # end @ Lénaïc Chizat
 
-def transport_stablev1(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tolerance, tau=10e100, epsilon0=1.,
-                       max_iter=1e7):
+def optimal_transport_duality_gap(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tolerance, tau=10e100,
+                                  epsilon0=1., max_iter=1e7, *_):
     """
     Compute the optimal transport with stabilized numerics, with the guarantee that the duality gap is at most `tolerance`
 
@@ -223,8 +180,8 @@ def transport_stablev1(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tole
     return R
 
 
-def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, pp, qq, numInnerItermax, tau,
-                       epsilon0, extra_iter):
+def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsilon0, extra_iter, numInnerItermax=None,
+                       **ignored):
     """
     Compute the optimal transport with stabilized numerics.
     Args:
@@ -337,46 +294,6 @@ def transport_stable(p, q, C, lambda1, lambda2, epsilon, scaling_iter, g):
             a = np.ones(len(p))
             b = np.ones(len(q))
     return (K.T * a).T * b
-
-
-def optimal_transport(cost_matrix, g=None, pp=None, qq=None, p=None, q=None, solver=None,
-                      delta_days=1, epsilon=0.1, lambda1=1.,
-                      lambda2=1., min_transport_fraction=0.05,
-                      max_transport_fraction=0.4, min_growth_fit=0.9,
-                      l0_max=100, scaling_iter=250, epsilon_adjust=1.1,
-                      lambda_adjust=1.5, numItermax=100, epsilon0=100.0, numInnerItermax=10, tau=1000.0, stopThr=1e-06,
-                      growth_iters=3):
-    if g is None:
-        growth_rate = np.ones(len(cost_matrix))
-    else:
-        growth_rate = g
-
-    if solver == 'unbalanced':
-
-        g = growth_rate ** delta_days
-        transport = transport_stable_learnGrowth(C=cost_matrix, lambda1=lambda1, lambda2=lambda2, epsilon=epsilon,
-                                                 scaling_iter=scaling_iter, g=g, numInnerItermax=numInnerItermax,
-                                                 tau=tau, epsilon0=epsilon0, growth_iters=growth_iters)
-        return {'transport': transport}
-    elif solver == 'floating_epsilon':
-        return optimal_transport_with_entropy(cost_matrix, growth_rate, p=p, q=q,
-                                              delta_days=delta_days, epsilon=epsilon, lambda1=lambda1,
-                                              lambda2=lambda2, min_transport_fraction=min_transport_fraction,
-                                              max_transport_fraction=max_transport_fraction,
-                                              min_growth_fit=min_growth_fit,
-                                              l0_max=l0_max, scaling_iter=scaling_iter,
-                                              epsilon_adjust=epsilon_adjust,
-                                              lambda_adjust=lambda_adjust)
-    elif solver == 'sinkhorn_epsilon':
-        return sinkhorn_epsilon(cost_matrix, growth_rate, p=p, q=q,
-                                delta_days=delta_days, epsilon=epsilon, numItermax=numItermax,
-                                epsilon0=epsilon0,
-                                numInnerItermax=numInnerItermax, tau=tau, stopThr=stopThr)
-    elif solver == 'unregularized':
-        return unregularized(cost_matrix, growth_rate, p=p, q=q,
-                             delta_days=delta_days)
-    else:
-        raise ValueError('Unknown solver: ' + solver)
 
 
 def sinkhorn_epsilon(cost_matrix, growth_rate, p=None, q=None,
