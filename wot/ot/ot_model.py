@@ -277,11 +277,9 @@ class OTModel:
             - t0, t1
             - lambda1, lambda2, epsilon, g
         """
-        import psutil
+
         import gc
         gc.collect()
-        process = psutil.Process(os.getpid())
-        print(process.memory_info().rss)
         t0 = config.pop('t0', None)
         t1 = config.pop('t1', None)
         if t0 is None or t1 is None:
