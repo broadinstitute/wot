@@ -31,7 +31,7 @@ def compute_transport_matrix(solver, **params):
         params['g'] = row_sums
         tmap = solver(**params)
         gc.collect()
-    return tmap, row_sums
+    return tmap
 
 
 # @ Lénaïc Chizat 2015 - optimal transport
@@ -65,8 +65,8 @@ def dual(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
 
 # end @ Lénaïc Chizat
 
-def optimal_transport_duality_gap(C, g, pp, qq, lambda1, lambda2, epsilon, batch_size, tolerance, tau=10e100,
-                                  epsilon0=1., max_iter=1e7, *_):
+def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau=10e100,
+                                  epsilon0=1., max_iter=1e7, **ignored):
     """
     Compute the optimal transport with stabilized numerics, with the guarantee that the duality gap is at most `tolerance`
 
@@ -104,16 +104,10 @@ def optimal_transport_duality_gap(C, g, pp, qq, lambda1, lambda2, epsilon, batch
 
     I, J = C.shape
     dx, dy = np.ones(I) / I, np.ones(J) / J
-    p = g
-    if pp is not None:
-        pp = pp / np.average(pp)
-        p *= pp
 
-    if qq is not None:
-        qq = qq / np.average(qq)
-        q = qq * np.sum(g * pp) / I
-    else:
-        q = np.ones(J) * np.average(g)
+    p = g
+    q = np.ones(C.shape[1]) * np.average(g)
+
     u, v = np.zeros(I), np.zeros(J)
     a, b = np.ones(I), np.ones(J)
 

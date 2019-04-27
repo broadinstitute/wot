@@ -242,15 +242,15 @@ class OTModel:
             path += "_{}_{}_cv{}_cv{}".format(t0, t1, *covariate)
         output_file = os.path.join(self.tmap_dir, path)
         output_file = wot.io.check_file_extension(output_file, self.output_file_format)
-        if os.path.exists(output_file) and not self.no_overwrite:
-            wot.io.verbose('Found existing tmap at ' + output_file + '. Use --force to overwrite.')
+        if os.path.exists(output_file) and self.no_overwrite:
+            wot.io.verbose('Found existing tmap at ' + output_file + '. Use --no_overwrite = F to overwrite.')
             return wot.io.read_dataset(output_file)
         config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
-        tmap, learned_growth = self.compute_single_transport_map(config)
+        tmap = self.compute_single_transport_map(config)
         if tmap is not None:
             wot.io.write_dataset(tmap, output_file, output_format=self.output_file_format)
             wot.io.verbose("Created tmap ({}, {}) : {}".format(t0, t1, path))
-        return tmap, learned_growth
+        return tmap
 
     @staticmethod
     def compute_default_cost_matrix(a, b, eigenvals=None):
@@ -302,10 +302,10 @@ class OTModel:
 
         if self.cell_growth_rate_field in p0.obs.columns:
             config['g'] = np.asarray(p0.obs[self.cell_growth_rate_field].values)
-        if 'pp' in p0.obs.columns:
-            config['pp'] = np.asarray(p0.obs['pp'].values)
-        if 'pp' in p1.obs.columns:
-            config['qq'] = np.asarray(p1.obs['pp'].values)
+#        if 'pp' in p0.obs.columns:
+#            config['pp'] = np.asarray(p0.obs['pp'].values)
+#        if 'pp' in p1.obs.columns:
+#            config['qq'] = np.asarray(p1.obs['pp'].values)
 
         local_pca = config.pop('local_pca', None)
         eigenvals = None
@@ -325,8 +325,8 @@ class OTModel:
             config['g'] = np.ones(C.shape[0])
         delta_days = t1 - t0
         config['g'] = config['g'] ** delta_days
-        tmap, learned_growth = wot.ot.compute_transport_matrix(solver=self.solver, **config)
-        learned_growth = np.power(learned_growth, 1.0 / delta_days)
-        return anndata.AnnData(tmap, p0.obs.copy(), p1.obs.copy()), pd.DataFrame(index=p0.obs.index,
-                                                                                 data={
-                                                                                     'cell_growth_rate': learned_growth})
+        tmap = wot.ot.compute_transport_matrix(solver=self.solver, **config)
+#        learned_growth = np.power(learned_growth, 1.0 / delta_days)
+        return anndata.AnnData(tmap, p0.obs.copy(), p1.obs.copy())#, pd.DataFrame(index=p0.obs.index#,
+                                                                                 #data={
+                                                                                #     'cell_growth_rate': learned_growth})
