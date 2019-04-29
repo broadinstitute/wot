@@ -441,7 +441,7 @@ def convert_binary_dataset_to_dict(ds):
     return cell_sets
 
 
-def read_dataset(path):
+def read_anndata(path):
     path = str(path)
     tmp_path = None
     if path.startswith('gs://'):
@@ -568,6 +568,34 @@ def read_dataset(path):
         return anndata.AnnData(X=df.values,
                                obs=pd.DataFrame(index=df.index),
                                var=pd.DataFrame(index=df.columns))
+
+
+def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None):
+    adata = read_anndata(path)
+
+    def get_df(meta):
+        if not isinstance(meta, pd.DataFrame):
+            tmp_path = None
+            if meta.startswith('gs://'):
+                tmp_path = download_gs_url(meta)
+                meta = tmp_path
+            meta = pd.read_csv(meta, sep=None, index_col='id', engine='python')
+            if tmp_path is not None:
+                os.remove(tmp_path)
+        return meta
+
+    if obs is not None:
+        if not isinstance(obs, list) and not isinstance(obs, tuple):
+            obs = [obs]
+        for item in obs:
+            adata.obs = adata.obs.join(get_df(item))
+    if var is not None:
+        if not isinstance(var, list) and not isinstance(var, tuple):
+            var = [var]
+        for item in var:
+            adata.var = adata.var.join(get_df(item))
+
+    return filter_adata(adata, obs_filter=obs_filter, var_filter=var_filter)
 
 
 def download_gs_url(gs_url):
