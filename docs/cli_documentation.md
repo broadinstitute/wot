@@ -408,16 +408,15 @@ wot neighborhood_graph --matrix matrix.txt
       <td>Number of nearest neighbors<br/>default : 15</td>
     </tr>
       <tr>
-          <td>--space</td>
-          <td>Space to compute the neighborhood graph in', choices=['dmap', 'pca', 'input']</td>
+		<td>--space</td>
+        <td>Space to compute the neighborhood graph in', choices=['dmap', 'pca', 'input']</td>
         </tr>
     <tr>
       <td>--out</td>
-      <td>Output file name. The file is saved in gexf format (https://gephi.org/gexf/format/)/td>
+      <td>Output file name. The file is saved in gexf format (https://gephi.org/gexf/format/)</td>
     </tr>
   </tbody>
 </table>
-
 
 
 ## Supported file formats ##
