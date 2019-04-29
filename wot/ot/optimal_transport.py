@@ -28,6 +28,7 @@ def compute_transport_matrix(solver, **params):
             row_sums = g
         else:
             row_sums = tmap.sum(axis=1) / tmap.shape[1]
+            print(max(row_sums))
         params['g'] = row_sums
         tmap = solver(**params)
         gc.collect()
@@ -160,7 +161,7 @@ def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, t
                 dua = dual(C, _K, R, dx, dy, p, q, _a, _b, epsilon_i, lambda1, lambda2)
                 duality_gap = (pri - dua) / abs(pri)
                 duality_time += time.time() - duality_tmp_time
-                # wot.io.verbose("Current (gap, primal, dual) : {:020.18f} {:020.18f} {:020.18f}".format(duality_gap, pri, dua))
+                print("Current (gap, primal, dual) : {:020.18f} {:020.18f} {:020.18f}".format(duality_gap, pri, dua))
             else:
                 duality_gap = max(
                     np.linalg.norm(_a - old_a * np.exp(u / epsilon_i)) / (1 + np.linalg.norm(_a)),
@@ -174,7 +175,7 @@ def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, t
     return R
 
 
-def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsilon0, extra_iter, numInnerItermax=None,
+def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsilon0, extra_iter, inner_iter_max,
                        **ignored):
     """
     Compute the optimal transport with stabilized numerics.
@@ -235,7 +236,7 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsil
             a = np.ones(len(p))
             b = np.ones(len(q))
 
-        if (warm_start and iterations_since_epsilon_adjusted == numInnerItermax):
+        if (warm_start and iterations_since_epsilon_adjusted == inner_iter_max):
             epsilon_index += 1
             iterations_since_epsilon_adjusted = 0
             u = u + epsilon_i * np.log(a)
@@ -247,11 +248,16 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsil
             a = np.ones(len(p))
             b = np.ones(len(q))
 
+    print(epsilon_i)
+
     for i in range(extra_iter):
         a = (p / (K.dot(np.multiply(b, dy)))) ** alpha1 * np.exp(-u / (lambda1 + epsilon_i))
         b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
 
-    return (K.T * a).T * b
+    R = (K.T * a).T * b
+
+    print(primal(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2))
+    return R
 
 
 def compute_pca(m1, m2, n_components):
