@@ -3,7 +3,6 @@
 import time
 
 import numpy as np
-import ot as pot
 import scipy.sparse
 import scipy.stats
 import sklearn.decomposition
@@ -28,7 +27,6 @@ def compute_transport_matrix(solver, **params):
             row_sums = g
         else:
             row_sums = tmap.sum(axis=1) / tmap.shape[1]
-            print(max(row_sums))
         params['g'] = row_sums
         tmap = solver(**params)
         gc.collect()
@@ -66,8 +64,8 @@ def dual(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
 
 # end @ Lénaïc Chizat
 
-def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau=10e100,
-                                  epsilon0=1., max_iter=1e7, **ignored):
+def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau,
+                                  epsilon0, max_iter, **ignored):
     """
     Compute the optimal transport with stabilized numerics, with the guarantee that the duality gap is at most `tolerance`
 
@@ -161,7 +159,6 @@ def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, t
                 dua = dual(C, _K, R, dx, dy, p, q, _a, _b, epsilon_i, lambda1, lambda2)
                 duality_gap = (pri - dua) / abs(pri)
                 duality_time += time.time() - duality_tmp_time
-                print("Current (gap, primal, dual) : {:020.18f} {:020.18f} {:020.18f}".format(duality_gap, pri, dua))
             else:
                 duality_gap = max(
                     np.linalg.norm(_a - old_a * np.exp(u / epsilon_i)) / (1 + np.linalg.norm(_a)),
@@ -248,15 +245,12 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsil
             a = np.ones(len(p))
             b = np.ones(len(q))
 
-    print(epsilon_i)
-
     for i in range(extra_iter):
         a = (p / (K.dot(np.multiply(b, dy)))) ** alpha1 * np.exp(-u / (lambda1 + epsilon_i))
         b = (q / (K.T.dot(np.multiply(a, dx)))) ** alpha2 * np.exp(-v / (lambda2 + epsilon_i))
 
     R = (K.T * a).T * b
 
-    print(primal(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2))
     return R
 
 
