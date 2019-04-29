@@ -144,7 +144,7 @@ def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, t
                     a, b = np.ones(I), np.ones(J)
 
                 if current_iter >= max_iter:
-                    print("Warning : Reached max_iter with duality gap still above threshold. Returning")
+                    wot.io.verbose("Warning : Reached max_iter with duality gap still above threshold. Returning")
                     return (K.T * a).T * b
 
             # The real dual variables. a and b are only the stabilized variables
@@ -196,16 +196,6 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsil
     dx = np.ones(C.shape[0]) / C.shape[0]
     dy = np.ones(C.shape[1]) / C.shape[1]
 
-    # if pp is not None:
-    #     pp = pp / np.average(pp)
-    #     dx = dx * pp
-    #
-    # if qq is not None:
-    #     qq = qq / np.average(qq)
-    #     dy = dy * qq
-
-    # p = g / np.average(g, weights=dx)
-    # q = np.ones(C.shape[1])
     p = g
     q = np.ones(C.shape[1]) * np.average(g)
 
