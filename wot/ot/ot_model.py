@@ -116,7 +116,6 @@ class OTModel:
         if self.day_field not in self.matrix.obs.columns:
             raise ValueError("Days information not available for matrix")
         if any(self.matrix.obs[self.day_field].isnull()):
-            print("Days information missing for {} cells".format(self.matrix.obs[self.day_field].isnull().sum()))
             self.matrix = self.matrix[self.matrix.obs[self.day_field].isnull() == False]
         self.timepoints = sorted(set(self.matrix.obs[self.day_field]))
         wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
