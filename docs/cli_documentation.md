@@ -364,8 +364,8 @@ when covariates are used, to indicate which batch they were extracted from.
 One method of visualizing data in two or three dimensions is
 [Force-directed Layout Embedding (FLE)](https://en.wikipedia.org/wiki/Force-directed_graph_drawing).
 We compute this nearest neighbor graph in diffusion component space.
-We recommend using [forceatlas2-3d](https://github.com/klarman-cell-observatory/forceatlas2-3d) to run the force directed layout.
-You can generate a graph to use as input to force directed layout using the command neighborhood_graph
+We recommend using [forceatlas2](https://github.com/klarman-cell-observatory/forceatlas2) to run the force directed layout.
+You can generate a graph to use as input to the force directed layout using the command neighborhood_graph
 
 ```sh
 wot neighborhood_graph --matrix matrix.txt
@@ -384,36 +384,40 @@ wot neighborhood_graph --matrix matrix.txt
       <td>Normalized gene expression matrix. See <a href="#matrix_file">formats</a></td>
     </tr>
     <tr>
-      <td>--neighbors</td>
-      <td>Number of nearest neighbors to consider<br/>default : 100</td>
-    </tr>
-    <tr>
-      <td>--neighbors_diff</td>
-      <td>Number of nearest neighbors to use in diffusion component space<br/>default : 20</td>
-    </tr>
-    <tr>
-      <td>--n_comps</td>
-      <td>Number of diffusion components<br/>default : 20</td>
-    </tr>
-     <tr>
-        <td>--gene_filter</td>
+		<td>--gene_filter</td>
         <td>File with one gene id per line to use (e.g. variable genes)</td>
-	</tr>
+    </tr>
+    <tr>
+		<td>--cell_filter</td>
+		<td>File with one cell id per line to include from the matrix</td>
+    </tr>
+    <tr>
+      <td>--transpose</td>
+      <td>Transpose the matrix</td>
+    </tr>
+	<tr>
+  		<td>--pca_comps</td>
+        <td>Number of PCA components<br/>default : 50</td>
+     </tr>
+    <tr>
+      <td>--diff_comps</td>
+      <td>Number of diffusion components<br/>default : 15</td>
+    </tr>
+    <tr>
+      <td>--neighbors</td>
+      <td>Number of nearest neighbors<br/>default : 15</td>
+    </tr>
+      <tr>
+          <td>--space</td>
+          <td>Space to compute the neighborhood graph in', choices=['dmap', 'pca', 'input']</td>
+        </tr>
     <tr>
       <td>--out</td>
-      <td>Output filename</td>
+      <td>Output file name. The file is saved in gexf format (https://gephi.org/gexf/format/)/td>
     </tr>
   </tbody>
 </table>
 
-##### Output #####
-
-This command will create two files containing the projection of the data
-in two dimensions: `<prefix>.csv` and `<prefix>.h5ad`
-
-The **h5ad** is just a regular 2D matrix that can be converted to any other
-format with the *convert_matrix* tool. The **csv** is provided for convenience
-and can be given directly to the *wot_server* interactive tool.
 
 
 ## Supported file formats ##
