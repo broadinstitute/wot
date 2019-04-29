@@ -31,7 +31,7 @@ def compute_transport_matrix(solver, **params):
         params['g'] = row_sums
         tmap = solver(**params)
         gc.collect()
-    return tmap
+    return tmap, row_sums
 
 
 # @ Lénaïc Chizat 2015 - optimal transport

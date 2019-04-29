@@ -17,4 +17,4 @@ def main(argv):
                         help='Prefix for output file names')
     args = parser.parse_args(argv)
     ot_model = wot.commands.initialize_ot_model_from_args(args)
-    ot_model.compute_all_transport_maps(save_learned_growth=True)
+    ot_model.compute_all_transport_maps()
