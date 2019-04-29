@@ -38,6 +38,8 @@ class OTModel:
         tmap_dir, tmap_prefix = os.path.split(tmap_out) if tmap_out is not None else (None, None)
         self.matrix = matrix
         self.tmap_dir = tmap_dir or '.'
+        if not os.path.exists(self.tmap_dir):
+            os.makedirs(self.tmap_dir)
         self.day_field = day_field
         self.covariate_field = covariate_field
         self.cell_growth_rate_field = cell_growth_rate_field
