@@ -54,22 +54,27 @@ class TransportMapModel:
         fates : anndata.AnnData
             Rows : all cells, Columns : populations index. At point (i, j) : the probability that cell i belongs to population j
         """
-        wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
+        day = wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
         results = []
+        initial_p_sum = np.array([pop.p for pop in populations]).T.sum(axis=1)
+        missing_cells = np.where(initial_p_sum == 0)[0]
+        if len(missing_cells) > 0:
+            missing_cells_p = np.zeros_like(populations[0].p)
+            missing_cells_p[missing_cells] = 1.0
+            populations.append(Population(day, missing_cells_p, 'Other'))
+        # add "other" population for missing cells
         population_names = [p.name for p in populations]
 
-        def update(head, populations):
-            idx = 0 if head else len(results)
-            results.insert(idx, np.array([pop.p for pop in populations]).T)
+        def update(populations):
+            results.insert(0, np.array([pop.p for pop in populations]).T)
 
-        update(True, populations)
+        update(populations)
         while self.can_pull_back(*populations):
             populations = self.pull_back(*populations, as_list=True, normalize=False)
-            update(True, populations)
+            update(populations)
 
         X = np.concatenate(results)
-        row_sums = X.sum(axis=1, keepdims=1)
-        X = np.divide(X, row_sums, out=np.zeros_like(X), where=row_sums != 0)
+        X /= X.sum(axis=1, keepdims=1)
         return anndata.AnnData(X=X, obs=self.meta.copy(), var=pd.DataFrame(index=population_names))
 
     def compute_trajectories(self, populations):
