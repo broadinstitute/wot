@@ -38,7 +38,41 @@ class TransportMapModel:
             day_pairs = [(timepoints[i], timepoints[i + 1]) for i in range(len(timepoints) - 1)]
         self.day_pairs = day_pairs
 
-    def compute_trajectories(self, population_dict):
+    def compute_fates(self, populations):
+        """
+        Computes fates for each population
+
+        Parameters
+        ----------
+        self : wot.TransportMapModel
+            The TransportMapModel used to find fates
+        populations : list of wot.Population
+            The target populations such as ones from self.population_from_cell_sets. The populations must be from the same time.
+
+        Returns
+        -------
+        fates : anndata.AnnData
+            Rows : all cells, Columns : populations index. At point (i, j) : the probability that cell i belongs to population j
+        """
+        wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
+        results = []
+        population_names = [p.name for p in populations]
+
+        def update(head, populations):
+            idx = 0 if head else len(results)
+            results.insert(idx, np.array([pop.p for pop in populations]).T)
+
+        update(True, populations)
+        while self.can_pull_back(*populations):
+            populations = self.pull_back(*populations, as_list=True, normalize=False)
+            update(True, populations)
+
+        X = np.concatenate(results)
+        row_sums = X.sum(axis=1, keepdims=1)
+        X = np.divide(X, row_sums, out=np.zeros_like(X), where=row_sums != 0)
+        return anndata.AnnData(X=X, obs=self.meta.copy(), var=pd.DataFrame(index=population_names))
+
+    def compute_trajectories(self, populations):
         """
         Computes a trajectory for each population
 
@@ -46,7 +80,7 @@ class TransportMapModel:
         ----------
         self : wot.TransportMapModel
             The TransportMapModel used to find ancestors and descendants of the population
-        *population_dict : dict of str: wot.Population
+        populations : list of wot.Population
             The target populations such as ones from self.population_from_cell_sets. THe populations must be from the same time.
 
         Returns
@@ -55,12 +89,10 @@ class TransportMapModel:
             Rows : all cells, Columns : populations index. At point (i, j) : the probability that cell i is an
             ancestor/descendant of population j
         """
+        wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
         trajectories = []
-        populations = population_dict.values()
-        population_names = list(population_dict.keys())
+        population_names = [p.name for p in populations]
         initial_populations = populations
-
-        day = wot.tmap.unique_timepoint(*populations)
 
         def update(head, populations):
             idx = 0 if head else len(trajectories)
@@ -437,7 +469,7 @@ class TransportMapModel:
             p = np.zeros(len(df), dtype=np.float64)
             p[cell_indices] = 1.0
 
-            return Population(day, p / np.sum(p))
+            return Population(day, p)
 
         result = [get_population(ids_el) for ids_el in ids]
         return result
@@ -449,18 +481,24 @@ class TransportMapModel:
         Parameters
         ----------
         cell_sets : dict of str: list of str
-            The dictionnary of ids
+            The dictionary of ids
         at_time : float, optional
             The timepoint to consider
 
         Returns
         -------
-        populations : dict of str: wot.Population
+        populations : list of wot.Population
             The resulting populations
         """
         keys = list(cell_sets.keys())
         populations = self.population_from_ids(*[cell_sets[name] for name in keys], at_time=at_time)
-        return {keys[i]: populations[i] for i in range(len(keys)) if populations[i] is not None}
+        filtered_populations = []
+        for i in range(len(keys)):
+            if populations[i] is not None:
+                populations[i].name = keys[i]
+                filtered_populations.append(populations[i])
+
+        return filtered_populations
 
     def cell_ids(self, population):
         day = population.time
