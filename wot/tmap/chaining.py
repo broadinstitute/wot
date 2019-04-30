@@ -35,9 +35,9 @@ def chain_transport_maps(ot_model, pairs_list):
         if a >= b:
             raise ValueError("({}, {}) is not a valid transport map : it goes backwards in time".format(a, b))
 
-    tmap_0 = wot.tmap.load_transport_map(ot_model, *pairs_list.pop(0))
+    tmap_0 = ot_model.get_coupling(*pairs_list.pop(0))
     while len(pairs_list) > 0:
-        tmap_1 = wot.tmap.load_transport_map(ot_model, *pairs_list.pop(0))
+        tmap_1 = ot_model.get_coupling(*pairs_list.pop(0))
         tmap_0 = wot.tmap.glue_transport_maps(tmap_0, tmap_1)
     return tmap_0
 
