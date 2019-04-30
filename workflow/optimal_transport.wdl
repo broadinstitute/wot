@@ -1,6 +1,9 @@
 workflow optimal_transport {
+	Boolean run_validation = false
+	Boolean run_ot = false
     File matrix
     File cell_days
+	File? parameters
     Boolean? transpose = false
    	Int? local_pca
    	Int? growth_iters
@@ -19,15 +22,15 @@ workflow optimal_transport {
    	Int? ncounts
    	String? format
    	String? out = "wot"
+   	Int? max_iter
+   	Int? batch_size
+   	Int? tolerance
 	Int? num_cpu = 8
 	String? memory = "52GB"
 	Int? preemptible = 2
-	Boolean run_validation = false
-	Boolean run_ot = false
 	File? covariate
    	Boolean? full_distances = true
     Int? interp_size
-    File? parameters
 	String? zones = "us-east1-d us-west1-a us-west1-b"
 	Int? ot_validation_disk_space = 150
 	Int? ot_disk_space = 150
@@ -59,6 +62,9 @@ workflow optimal_transport {
 				tau=tau,
 				scaling_iter=scaling_iter,
 				inner_iter_max=inner_iter_max,
+				max_iter=max_iter,
+				batch_size=batch_size,
+				tolerance=tolerance,
 				out=out,
 				num_cpu=num_cpu,
 				memory=memory,
@@ -89,6 +95,9 @@ workflow optimal_transport {
 				tau=tau,
 				scaling_iter=scaling_iter,
 				inner_iter_max=inner_iter_max,
+				max_iter=max_iter,
+				batch_size=batch_size,
+				tolerance=tolerance,
 				out=out,
 				num_cpu=num_cpu,
 				memory=memory,
@@ -217,14 +226,17 @@ task ot {
 	Float? lambda2
 	Float? epsilon0
 	Float? tau
+	Int? max_iter
+	Int? batch_size
+	Int? tolerance
 	
 	Int? ncells
 	Int? ncounts
 	String? format
 	String? out
-	Int num_cpu = 1
-	String memory = "4GB"
-	Int preemptible = 2
+	Int num_cpu
+	String memory
+	Int preemptible
 	File? parameters
 	String zones
 	Int disk_space
@@ -249,6 +261,9 @@ task ot {
 		${"--lambda2 " + lambda2} \
 		${"--epsilon0 " + epsilon0} \
 		${"--tau " + tau} \
+		${"--max_iter " + max_iter} \
+		${"--batch_size " + batch_size} \
+		${"--tolerance " + tolerance} \
 		${"--ncells " + ncells} \
 		${"--ncounts " + ncounts} \
 		${"--format " + format} \
@@ -288,7 +303,9 @@ task ot_validation {
 	Float? lambda2
 	Float? epsilon0
 	Float? tau
-	
+	Int? max_iter
+	Int? batch_size
+	Int? tolerance
 	Int? ncells
 	Int? ncounts
 	String? format
@@ -296,9 +313,9 @@ task ot_validation {
 	File? covariate
     Boolean? full_distances
     Int? interp_size
-	Int num_cpu = 1
+	Int num_cpu
 	String memory
-	Int preemptible = 2
+	Int preemptible
 	File? parameters
 	String zones
 	Int disk_space
@@ -324,6 +341,9 @@ task ot_validation {
 		${"--lambda2 " + lambda2} \
 		${"--epsilon0 " + epsilon0} \
 		${"--tau " + tau} \
+		${"--max_iter " + max_iter} \
+		${"--batch_size " + batch_size} \
+		${"--tolerance " + tolerance} \
 		${"--ncells " + ncells} \
 		${"--ncounts " + ncounts} \
 		${"--format " + format} \
