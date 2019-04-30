@@ -82,41 +82,6 @@ def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
     return group_to_cell_sets
 
 
-def filter_ds_from_command_line(ds, args):
-    params = vars(args)
-    if params.get('gene_filter') is not None:
-        prior = ds.X.shape[1]
-        gene_ids = pd.read_csv(args.gene_filter, index_col=0, header=None).index.values
-        column_indices = ds.var.index.isin(gene_ids)
-        nkeep = np.sum(column_indices)
-        if params.get('verbose') and len(gene_ids) > nkeep:
-            print(str(len(gene_ids) - nkeep) + ' are in gene filter, but not in matrix')
-
-        ds = ds[:, column_indices]
-        if params.get('verbose'):
-            print('Keeping ' + str(ds.X.shape[1]) + '/' + str(prior) + ' genes')
-
-    if params.get('cell_filter') is not None:
-        prior = ds.X.shape[0]
-        if not os.path.isfile(args.cell_filter):
-            import re
-            expr = re.compile(args.cell_filter)
-            cell_ids = [elem for elem in ds.obs.index.values if expr.match(elem)]
-        else:
-            cell_ids = pd.read_csv(args.cell_filter, index_col=0, header=None).index.values
-
-        # row_indices = np.isin(ds.obs.index.values, cell_ids, assume_unique=True)
-        row_indices = ds.obs.index.isin(cell_ids)
-        nkeep = np.sum(row_indices)
-        if params.get('verbose') and len(cell_ids) > nkeep:
-            print(str(len(cell_ids) - nkeep) + ' are in cell filter, but not in matrix')
-
-        ds = ds[row_indices]
-        if params.get('verbose'):
-            print('Keeping ' + str(ds.X.shape[0]) + '/' + str(prior) + ' cells')
-    return ds
-
-
 def list_transport_maps(input_dir):
     transport_maps_inputs = []  # file, start, end
     is_pattern = not os.path.isdir(input_dir)
