@@ -33,7 +33,6 @@ def initialize_ot_model_from_args(args):
                                       epsilon=args.epsilon,
                                       lambda1=args.lambda1,
                                       lambda2=args.lambda2,
-                                      max_threads=args.max_threads,
                                       epsilon0=args.epsilon0,
                                       tau=args.tau,
                                       config=args.config,
@@ -88,8 +87,12 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--lambda2', type=float, default=50,
                         help='Regularization parameter that controls the '
                              'fidelity of the constraints on q')
-    parser.add_argument('--max_threads', type=int, default=1,
-                        help='Maximal number of threads to use when parallelizing tmap computation')
+    parser.add_argument('--max_iter', type=int, default=1e7,
+                        help='Maximum number of scaling iterations. Abort if convergence was not reached')
+    parser.add_argument('--batch_size', type=int, default=5,
+                        help='Number of scaling iterations to perform between duality gap check')
+    parser.add_argument('--tolerance', type=int, default=1e-8,
+                        help='Maximal acceptable ratio between the duality gap and the primal objective value')
     parser.add_argument('--epsilon0', type=float, default=1,
                         help='Warm starting value for epsilon')
     parser.add_argument('--tau', type=float, default=10000)
@@ -101,9 +104,3 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--format', help='Output file format', default='loom', choices=['h5ad', 'loom'])
     parser.add_argument('--solver', choices=['duality_gap', 'fixed_iters'],
                         help='The solver to use to compute transport matrices', default='duality_gap')
-    parser.add_argument('--max_iter', type=int, default=1e7,
-                        help='Maximum number of scaling iterations. Abort if convergence was not reached')
-    parser.add_argument('--batch_size', type=int, default=5,
-                        help='Number of scaling iterations to perform between duality gap check')
-    parser.add_argument('--tolerance', type=int, default=1e-8,
-                        help='Maximal acceptable ratio between the duality gap and the primal objective value')
