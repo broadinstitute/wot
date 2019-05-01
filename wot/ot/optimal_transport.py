@@ -26,10 +26,11 @@ def compute_transport_matrix(solver, **params):
         if i == 0:
             row_sums = g
         else:
-            row_sums = tmap.sum(axis=1) / tmap.shape[1]
+            row_sums = tmap.sum(axis=1) #/ tmap.shape[1]
         params['g'] = row_sums
         tmap = solver(**params)
         gc.collect()
+
     return tmap, row_sums
 
 
@@ -169,7 +170,7 @@ def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, t
     total_time = time.time() - start_time
     wot.io.verbose("Computed tmap in {:.3f}s. Duality gap: {:.3E} ({:.2f}% of computing time)" \
                    .format(total_time, duality_gap, 100 * duality_time / total_time))
-    return R
+    return R / C.shape[1]
 
 
 def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsilon0, extra_iter, inner_iter_max,
@@ -241,7 +242,7 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsil
 
     R = (K.T * a).T * b
 
-    return R
+    return R / C.shape[1]
 
 
 def compute_pca(m1, m2, n_components):

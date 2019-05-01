@@ -306,6 +306,6 @@ class OTModel:
         tmap, learned_growth = wot.ot.compute_transport_matrix(solver=self.solver, **config)
         learned_growth = np.power(learned_growth, 1.0 / delta_days)
         return anndata.AnnData(tmap, pd.DataFrame(index=p0.obs.index, data=learned_growth,
-                                                  columns=['learned_growth_initial_estimate']) if self.ot_config.get(
+                                                  columns=['g']) if self.ot_config.get(
             'growth_iters', 1) > 1 else pd.DataFrame(index=p0.obs.index),
                                pd.DataFrame(index=p1.obs.index))
