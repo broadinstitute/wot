@@ -56,13 +56,14 @@ class TransportMapModel:
         """
         day = wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
         results = []
+        # add "other" population if any cells are missing across all populations
         initial_p_sum = np.array([pop.p for pop in populations]).T.sum(axis=1)
         missing_cells = np.where(initial_p_sum == 0)[0]
         if len(missing_cells) > 0:
             missing_cells_p = np.zeros_like(populations[0].p)
             missing_cells_p[missing_cells] = 1.0
             populations = populations + [Population(day, missing_cells_p, 'Other')]
-        # add "other" population for missing cells
+
         population_names = [p.name for p in populations]
 
         results.insert(0, np.array([pop.p for pop in populations]).T)

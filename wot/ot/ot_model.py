@@ -272,9 +272,11 @@ class OTModel:
         p1 = ds[p1_indices, :]
 
         if p0.shape[0] == 0:
-            raise ValueError('No cells at {}'.format(t0))
+            print('No cells at {}'.format(t0))
+            return None
         if p1.shape[0] == 0:
-            raise ValueError('No cells at {}'.format(t1))
+            print('No cells at {}'.format(t1))
+            return None
 
         local_pca = config.pop('local_pca', None)
         eigenvals = None

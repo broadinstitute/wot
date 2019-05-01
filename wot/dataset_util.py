@@ -52,40 +52,6 @@ def mean_and_variance(x):
         return x.mean(axis=0), x.var(axis=0)
 
 
-def extract_cells_at_indices(ds, indices):
-    return ds[indices]
-
-
-def add_cell_metadata(dataset, name, data):
-    dataset.obs[name] = data
-
-
-def set_cell_metadata(dataset, name, data, indices=None):
-    if indices is None:
-        dataset.obs[name] = data
-    else:
-        if isinstance(indices, set) or isinstance(indices[0], str):
-            dataset.obs.loc[indices, name] = data
-        else:
-            dataset.obs.loc[dataset.obs.index[indices], name] = data
-
-
-def merge_datasets(*args):
-    datasets = list(args)
-    merged_x = np.concatenate([d.X for d in datasets])
-    row_columns = set(datasets[0].obs.columns)
-    if not all([set(d.obs.columns) == row_columns for d in datasets]):
-        raise ValueError("Unable to merge: incompatible metadata between datasets")
-    merged_row_meta = pd.concat([d.obs for d in datasets], sort=True)
-    if merged_row_meta.index.duplicated().any():
-        raise ValueError("Unable to merge: duplicate rows between datasets, cannot lose information")
-    col_index = datasets[0].var.index
-    if not all([d.var.index.equals(col_index) for d in datasets]):
-        raise ValueError("Unable to merge: incompatible genes between datasets")
-    merged_col_meta = datasets[0].var
-    return anndata.AnnData(merged_x, merged_row_meta, merged_col_meta)
-
-
 def dataset_from_x(x, rows=None, columns=None,
                    row_prefix="cell_", column_prefix="gene_"):
     x = np.asarray(x, dtype=np.float64)

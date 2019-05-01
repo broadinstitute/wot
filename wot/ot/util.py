@@ -3,7 +3,9 @@ import numpy as np
 import ot as pot
 import scipy.sparse
 import sklearn.metrics
-
+import scipy.sparse
+import scipy.stats
+import sklearn.decomposition
 
 def compute_growth_scores(proliferation, apoptosis, beta_max=1.7, beta_center=0.25, delta_max=1.7, delta_min=0.3,
                           beta_min=0.3):
@@ -63,16 +65,6 @@ def sample_randomly(exp1, exp2, tm, g, npairs):
             'weights': weights}
 
 
-def get_ids(expr):
-    import os.path
-    if not os.path.isfile(expr):
-        set_ids = expr.split(',')
-        return list(map(lambda x: x.strip(), set_ids))
-    else:
-        import pd
-        return list(pd.read_csv(expr, index_col=0, header=None).index.values)
-
-
 def sample_uniformly(exp1, exp2, tm, npairs):
     # if args.npairs is None or args.npairs <= 0:
     #     l = tm / tm.sum(axis=0)
@@ -112,13 +104,6 @@ def sample_from_transport_map(exp1, exp2, tm, npairs, t_interpolate):
             'indices1': pairs[1],
             'weights': weights}
 
-
-def split_in_two(n):
-    indices = np.random.choice(n, int(n * 0.5))
-    indices_c = np.zeros(n, dtype=bool)
-    indices_c[indices] = True
-    indices_c = np.invert(indices_c)
-    return indices, indices_c
 
 
 def interpolate_with_ot(p0, p1, tmap, interp_frac, size):
@@ -248,3 +233,74 @@ def earth_mover_distance(cloud1, cloud2, eigenvals=None, weights1=None, weights2
     pairwise_dist = sklearn.metrics.pairwise.pairwise_distances(
         cloud1, Y=cloud2, metric='sqeuclidean')
     return np.sqrt(pot.emd2(p, q, pairwise_dist, numItermax=1e7))
+
+
+def compute_pca(m1, m2, n_components):
+    matrices = list()
+    matrices.append(m1 if not scipy.sparse.isspmatrix(m1) else m1.toarray())
+    matrices.append(m2 if not scipy.sparse.isspmatrix(m2) else m2.toarray())
+    x = np.vstack(matrices)
+    mean_shift = x.mean(axis=0)
+    x = x - mean_shift
+    n_components = min(n_components, x.shape[0])  # n_components must be <= ncells
+    pca = sklearn.decomposition.PCA(n_components=n_components, random_state=58951)
+    pca.fit(x.T)
+    comp = pca.components_.T
+    m1_len = m1.shape[0]
+    m2_len = m2.shape[0]
+    pca_1 = comp[0:m1_len]
+    pca_2 = comp[m1_len:(m1_len + m2_len)]
+    return pca_1, pca_2, pca, mean_shift
+
+
+def get_pca(dim, *args):
+    """
+    Get a PCA projector for the arguments.
+
+    Parameters
+    ----------
+    dim : int
+        The number of components to use for PCA, i.e. number of dimensions of the resulting space.
+    *args : ndarray
+        The points to compute dimensionality reduction for. Can be several sets of points.
+
+    Returns
+    -------
+    pca : sklearn.decomposition.PCA
+        A PCA projector. Use `pca.transform(x)` to get the PCA-space projection of x.
+
+    Example
+    -------
+    >>> pca = get_pca(30, p0_x)
+    >>> pca.transform(p0_x)
+    >>> # -> project p0_x to PCA space
+    >>> pca = get_pca(30, p0_x, p1_x)
+    >>> p0, p05, p1 = [ pca.transform(x) for x in [p0_x, p05_x, p1_x] ]
+    >>> # -> project all three sets of points to PCA space computed from p0_x and p1_x
+    """
+    args = [a.toarray() if scipy.sparse.isspmatrix(a) else a for a in args]
+    x = np.vstack(args)
+    mean = x.mean(axis=0)
+    x = x - mean
+    pca = sklearn.decomposition.PCA(n_components=dim)
+    return pca.fit(x), mean
+
+
+def pca_transform(pca, mean, arr):
+    """
+    Apply a PCA transformation to argument
+
+    Parameters
+    ----------
+    pca : sklearn.decomposition.PCA
+        A PCA projector. See wot.ot.get_pca
+    arr : numpy ndarray or scipy.sparse matrix
+        The array to project.
+
+    Returns
+    -------
+    result : ndarray
+    """
+    ndarr = arr.toarray() if scipy.sparse.isspmatrix(arr) else arr
+    ndarr = ndarr - mean
+    return pca.transform(ndarr)
