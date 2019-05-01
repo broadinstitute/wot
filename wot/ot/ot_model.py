@@ -186,7 +186,7 @@ class OTModel:
                 continue
 
             tmap = self.compute_transport_map(*day_pair)
-            wot.io.write_dataset(tmap, output_file, output_file_format=output_file_format)
+            wot.io.write_dataset(tmap, output_file, output_format=output_file_format)
             if save_learned_growth:
                 learned_growth_df = tmap.obs
                 full_learned_growth_df = learned_growth_df if full_learned_growth_df is None else pd.concat(
