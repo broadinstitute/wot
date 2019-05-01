@@ -93,12 +93,19 @@ class TransportMapModel:
         """
         wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
         trajectories = []
-        population_names = [p.name for p in populations]
+        _populations = []
+        population_names = []
+        for pop in populations:
+            pop_copy = Population(pop.time, pop.p, pop.name)
+            pop_copy.normalize()
+            _populations.append(pop_copy)
+            population_names.append(pop_copy.name)
+        populations = _populations
         initial_populations = populations
 
-        def update(head, populations):
+        def update(head, populations_to_update):
             idx = 0 if head else len(trajectories)
-            trajectories.insert(idx, np.array([pop.p for pop in populations]).T)
+            trajectories.insert(idx, np.array([pop.p for pop in populations_to_update]).T)
 
         update(True, populations)
         while self.can_pull_back(*populations):
