@@ -61,17 +61,14 @@ class TransportMapModel:
         if len(missing_cells) > 0:
             missing_cells_p = np.zeros_like(populations[0].p)
             missing_cells_p[missing_cells] = 1.0
-            populations.append(Population(day, missing_cells_p, 'Other'))
+            populations = populations + [Population(day, missing_cells_p, 'Other')]
         # add "other" population for missing cells
         population_names = [p.name for p in populations]
 
-        def update(populations):
-            results.insert(0, np.array([pop.p for pop in populations]).T)
-
-        update(populations)
+        results.insert(0, np.array([pop.p for pop in populations]).T)
         while self.can_pull_back(*populations):
             populations = self.pull_back(*populations, as_list=True, normalize=False)
-            update(populations)
+            results.insert(0, np.array([pop.p for pop in populations]).T)
 
         X = np.concatenate(results)
         X /= X.sum(axis=1, keepdims=1)
