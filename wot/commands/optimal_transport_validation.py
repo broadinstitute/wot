@@ -31,9 +31,9 @@ def main(argv):
     tmap_prefix = tmap_prefix or "tmaps"
     tmap_dir = tmap_dir or '.'
 
-    day_pairs_triplets = None
+    day_triplets = None
     if args.day_triplets is not None:
-        day_pairs_triplets = []
+        day_triplets = []
         if os.path.isfile(args.day_triplets):
             day_triplets_df = pd.read_csv(args.day_triplets, engine='python', sep=None)
         else:
@@ -51,7 +51,7 @@ def main(argv):
             t05 = unique_times[np.abs(unique_times - day_triplets_df.iloc[i, 1]).argmin()]
             t1 = unique_times[np.abs(unique_times - day_triplets_df.iloc[i, 2]).argmin()]
 
-            day_pairs_triplets.append((t0, t05, t1))
+            day_triplets.append((t0, t05, t1))
     if args.covariate is None:
         ot_model.covariate_field = 'covariate'
         ot_model.matrix.obs['covariate'] = 1
@@ -59,7 +59,7 @@ def main(argv):
     # tmap_dir=tmap_dir, tmap_prefix=tmap_prefix,
     # no_overwrite=args.no_overwrite, output_file_format=args.format,
     summary = wot.ot.compute_validation_summary(ot_model,
-                                                day_pairs_triplets=day_pairs_triplets,
+                                                day_triplets=day_triplets,
                                                 interp_size=args.interp_size,
                                                 compute_full_distances=args.full_distances)
 

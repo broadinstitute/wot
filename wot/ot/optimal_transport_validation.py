@@ -12,7 +12,7 @@ import wot
 import wot.graphics
 
 
-def compute_validation_summary(ot_model, day_pairs_triplets=None, interp_size=10000, compute_full_distances=False):
+def compute_validation_summary(ot_model, day_triplets=None, interp_size=10000, compute_full_distances=False):
     """
     Compute the validation summary for the given OTModel
 
@@ -30,17 +30,17 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, interp_size=10
     validation_summary : pandas.DataFrame
         The validation summary
     """
-    if day_pairs_triplets is None:
-        day_pairs_triplets = []
+    if day_triplets is None:
+        day_triplets = []
         unique_times = np.array(ot_model.timepoints)
         for i in range(len(unique_times) - 2):
             t0 = unique_times[i]
             t05 = unique_times[i + 1]
             t1 = unique_times[i + 2]
-            day_pairs_triplets.append((t0, t05, t1))
+            day_triplets.append((t0, t05, t1))
 
     day_pairs = {}
-    for triplet in day_pairs_triplets:
+    for triplet in day_triplets:
         day_pairs[(triplet[0], triplet[2])] = {}
     ot_model.day_pairs = day_pairs
     has_covariate = ot_model.covariate_field is not None
@@ -58,7 +58,7 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, interp_size=10
 
     local_pca = ot_model.ot_config['local_pca']
 
-    for triplet in day_pairs_triplets:
+    for triplet in day_triplets:
         t0, t05, t1 = triplet
         print('Computing transport map from {} to {}, interpolating at {}'.format(t0, t1, t05))
         interp_frac = (t05 - t0) / (t1 - t0)
