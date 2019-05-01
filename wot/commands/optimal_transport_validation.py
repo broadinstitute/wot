@@ -16,7 +16,8 @@ import wot.io
 import wot.ot
 
 
-def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpolated=False,
+def compute_validation_summary(ot_model, tmap_dir, tmap_prefix, no_overwrite, output_file_format,
+                               day_pairs_triplets=None, save_interpolated=False,
                                interp_size=10000, compute_full_distances=False):
     """
     Compute the validation summary for the given OTModel
@@ -54,9 +55,12 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
         exit(1)
 
     if has_covariate:
-        ot_model.compute_all_transport_maps(with_covariates=True)
+        ot_model.compute_all_transport_maps(with_covariates=True, no_overwrite=no_overwrite,
+                                            output_file_format=output_file_format,
+                                            tmap_out=tmap_out)
     if compute_full_distances:
-        ot_model.compute_all_transport_maps()
+        ot_model.compute_all_transport_maps(no_overwrite=no_overwrite, output_file_format=output_file_format,
+                                            tmap_out=tmap_out)
     # Now validate
     summary_list = []
     # 'P': ["#e41a1c", "between real batches"],
@@ -67,10 +71,10 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
     # 'Rg': ["#ffff33", "between random (with growth) and real"]
 
     local_pca = ot_model.ot_config['local_pca']
-    tmap_model = wot.tmap.TransportMapModel.from_directory(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix), True)
+    tmap_model = wot.tmap.TransportMapModel.from_directory(os.path.join(tmap_dir, tmap_prefix), True)
     if compute_full_distances:
         tmap_model_full = wot.tmap.TransportMapModel.from_directory(
-            os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix))
+            os.path.join(tmap_dir, tmap_prefix))
 
     for triplet in day_pairs_triplets:
         t0, t05, t1 = triplet
@@ -192,7 +196,7 @@ def compute_validation_summary(ot_model, day_pairs_triplets=None, save_interpola
                     distance_to_p05(p1_x, t1, 'L', cv1)
 
                 if save_interpolated:
-                    prefix = os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix)
+                    prefix = os.path.join(tmap_dir, tmap_prefix)
                     prefix += '_{}_{}_cv{}_cv{}'.format(t0, t1, cv0, cv1)
                     wot.io.write_dataset(wot.dataset_from_x(i05),
                                          prefix + '_interp.txt')
@@ -218,6 +222,10 @@ def main(argv):
     parser.add_argument('--interp_size', default=10000, type=int)
     args = parser.parse_args(argv)
     ot_model = wot.commands.initialize_ot_model_from_args(args)
+    tmap_dir, tmap_prefix = os.path.split(args.out) if args.out is not None else (None, None)
+    tmap_prefix = tmap_prefix or "tmaps"
+    tmap_dir = tmap_dir or '.'
+
     day_pairs_triplets = None
     if args.day_triplets is not None:
         day_pairs_triplets = []
@@ -243,29 +251,30 @@ def main(argv):
         ot_model.covariate_field = 'covariate'
         ot_model.matrix.obs['covariate'] = 1
 
-    summary = compute_validation_summary(ot_model,
+    summary = compute_validation_summary(ot_model, tmap_dir=tmap_dir, tmap_prefix=tmap_prefix,
+                                         no_overwrite=args.no_overwrite, output_file_format=args.format,
                                          day_pairs_triplets=day_pairs_triplets,
                                          save_interpolated=args.save_interpolated,
                                          interp_size=args.interp_size,
                                          compute_full_distances=args.full_distances)
 
-    summary.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_validation_summary.txt'), sep='\t',
+    summary.to_csv(os.path.join(tmap_dir, tmap_prefix + '_validation_summary.txt'), sep='\t',
                    index=False)
 
     summary_stats = summary[summary['full'] == False]
     summary_stats = summary_stats.groupby(['interval_mid', 'name'])['distance'].agg([np.mean, np.std])
-    summary_stats.to_csv(os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_cv_validation_summary_stats.txt'),
+    summary_stats.to_csv(os.path.join(tmap_dir, tmap_prefix + '_cv_validation_summary_stats.txt'),
                          sep="\t", )
-    wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(ot_model.tmap_dir,
-                                                                        ot_model.tmap_prefix + '_cv_validation_summary.png'))
+    wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(tmap_dir,
+                                                                        tmap_prefix + '_cv_validation_summary.png'))
 
-    wot.graphics.plot.plot_ot_validation_ratio(summary_stats, os.path.join(ot_model.tmap_dir,
-                                                                           ot_model.tmap_prefix + '_cv_validation_summary_ratio.png'))
+    wot.graphics.plot.plot_ot_validation_ratio(summary_stats, os.path.join(tmap_dir,
+                                                                           tmap_prefix + '_cv_validation_summary_ratio.png'))
     if args.full_distances:
         summary_stats = summary[summary['full']]
         summary_stats = summary_stats.groupby(['interval_mid', 'name'])['distance'].agg([np.mean, np.std])
         summary_stats.to_csv(
-            os.path.join(ot_model.tmap_dir, ot_model.tmap_prefix + '_full_validation_summary_stats.txt'),
+            os.path.join(tmap_dir, tmap_prefix + '_full_validation_summary_stats.txt'),
             sep="\t", )
-        wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(ot_model.tmap_dir,
-                                                                            ot_model.tmap_prefix + '_full_validation_summary.png'))
+        wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(tmap_dir,
+                                                                            tmap_prefix + '_full_validation_summary.png'))

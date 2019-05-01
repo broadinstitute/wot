@@ -10,11 +10,11 @@ import wot.ot
 
 def main(argv):
     parser = argparse.ArgumentParser('Compute transport maps between pairs of time points')
-
     wot.commands.add_model_arguments(parser)
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--out', default='./tmaps',
                         help='Prefix for output file names')
     args = parser.parse_args(argv)
     ot_model = wot.commands.initialize_ot_model_from_args(args)
-    ot_model.compute_all_transport_maps()
+    ot_model.compute_all_transport_maps(no_overwrite=args.no_overwrite, output_file_format=args.format,
+                                        tmap_out=args.out)

@@ -21,8 +21,6 @@ class OTModel:
     ----------
     matrix : anndata.AnnData
         The gene expression matrix for this OTModel.
-    tmap_out : str, optional
-        Path and prefix for output transport maps
     day_field : str, optional
         Cell day obs name
     covariate_field : str, optional
@@ -33,25 +31,19 @@ class OTModel:
         Dictionary of parameters. Will be inserted as is into OT configuration.
     """
 
-    def __init__(self, matrix, tmap_out='tmaps', day_field='day', covariate_field=None,
+    def __init__(self, matrix, day_field='day', covariate_field=None,
                  cell_growth_rate_field=None, **kwargs):
-        tmap_dir, tmap_prefix = os.path.split(tmap_out) if tmap_out is not None else (None, None)
+
         self.matrix = matrix
-        self.tmap_dir = tmap_dir or '.'
-        if not os.path.exists(self.tmap_dir):
-            os.makedirs(self.tmap_dir)
         self.day_field = day_field
         self.covariate_field = covariate_field
         self.cell_growth_rate_field = cell_growth_rate_field
-        self.tmap_prefix = tmap_prefix or "tmaps"
         self.day_pairs = wot.ot.parse_configuration(kwargs.pop('config', None))
         cell_filter = kwargs.pop('cell_filter', None)
         gene_filter = kwargs.pop('gene_filter', None)
         day_filter = kwargs.pop('cell_day_filter', None)
         ncounts = kwargs.pop('ncounts', None)
         ncells = kwargs.pop('ncells', None)
-        self.no_overwrite = kwargs.pop('no_overwrite', False)
-        self.output_file_format = kwargs.pop('format', 'loom')
         self.matrix = wot.io.filter_adata(self.matrix, obs_filter=cell_filter, var_filter=gene_filter)
         if day_filter is not None:
             days = day_filter.split(',') if type(day_filter) == str else day_filter
@@ -130,12 +122,19 @@ class OTModel:
         covariate = set(self.matrix.obs[self.covariate_field])
         return product(covariate, covariate)
 
-    def compute_all_transport_maps(self, with_covariates=False):
+    def compute_all_transport_maps(self, tmap_out='tmaps', no_overwrite=False, output_file_format='loom',
+                                   with_covariates=False):
         """
         Computes all required transport maps.
 
         Parameters
         ----------
+        tmap_out : str, optional
+            Path and prefix for output transport maps
+        no_overwrite : bool, optional
+            Do not overwrite existing transport maps
+        output_file_format: str, optional
+            Transport map file format
         with_covariates : bool, optional, default : False
             Compute all covariate-restricted transport maps as well
 
@@ -144,6 +143,11 @@ class OTModel:
         None
             Only computes and saves all transport maps, does not return them.
         """
+        tmap_dir, tmap_prefix = os.path.split(tmap_out) if tmap_out is not None else (None, None)
+        tmap_prefix = tmap_prefix or "tmaps"
+        tmap_dir = tmap_dir or '.'
+        if not os.path.exists(tmap_dir):
+            os.makedirs(tmap_dir)
         t = self.timepoints
         day_pairs = self.day_pairs
 
@@ -170,15 +174,24 @@ class OTModel:
         full_learned_growth_df = None
         save_learned_growth = self.ot_config.get('growth_iters', 1) > 1
         for day_pair in day_pairs:
+            path = tmap_prefix
+            if not with_covariates:
+                path += "_{}_{}".format(*day_pair)
+            else:
+                path += "_{}_{}_cv{}_cv{}".format(*day_pair)
+            output_file = os.path.join(tmap_dir, path)
+            output_file = wot.io.check_file_extension(output_file, output_file_format)
+            if os.path.exists(output_file) and no_overwrite:
+                wot.io.verbose('Found existing tmap at ' + output_file + '. ')
+                continue
+
             tmap = self.compute_transport_map(*day_pair)
             if save_learned_growth:
                 learned_growth_df = tmap.obs
                 full_learned_growth_df = learned_growth_df if full_learned_growth_df is None else pd.concat(
                     (full_learned_growth_df, learned_growth_df), copy=False)
         if full_learned_growth_df is not None:
-            learned_growth_df.to_csv(
-                os.path.join(self.tmap_dir, self.tmap_prefix + '_learned_growth_initial_estimate.txt'), sep='\t',
-                index_label='id')
+            learned_growth_df.to_csv(os.path.join(tmap_dir, tmap_prefix + '_g.txt'), sep='\t', index_label='id')
 
     def compute_transport_map(self, t0, t1, covariate=None):
         """
@@ -203,9 +216,6 @@ class OTModel:
         ValueError
             If the OTModel was initialized with day_pairs and the given pair is not present.
         """
-        path = self.tmap_prefix
-        wot.io.verbose("Computing tmap ({},{})".format(t0, t1))
-        # If day_pairs is not None, its configuration takes precedence
         if self.day_pairs is not None:
             if (t0, t1) not in self.day_pairs:
                 raise ValueError("Transport map ({},{}) is not present in day_pairs".format(t0, t1))
@@ -213,21 +223,8 @@ class OTModel:
         else:
             local_config = {}
 
-        if covariate is None:
-            path += "_{}_{}".format(t0, t1)
-        else:
-            path += "_{}_{}_cv{}_cv{}".format(t0, t1, *covariate)
-        output_file = os.path.join(self.tmap_dir, path)
-        output_file = wot.io.check_file_extension(output_file, self.output_file_format)
-        if os.path.exists(output_file) and self.no_overwrite:
-            wot.io.verbose('Found existing tmap at ' + output_file + '. ')
-            return wot.io.read_dataset(output_file)
         config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
-        tmap = self.compute_single_transport_map(config)
-        if tmap is not None:
-            wot.io.write_dataset(tmap, output_file, output_format=self.output_file_format)
-            wot.io.verbose("Created tmap ({}, {}) : {}".format(t0, t1, path))
-        return tmap
+        return self.compute_single_transport_map(config)
 
     @staticmethod
     def compute_default_cost_matrix(a, b, eigenvals=None):
@@ -278,13 +275,6 @@ class OTModel:
         if p1.shape[0] == 0:
             raise ValueError('No cells at {}'.format(t1))
 
-        if self.cell_growth_rate_field in p0.obs.columns:
-            config['g'] = np.asarray(p0.obs[self.cell_growth_rate_field].values)
-        #        if 'pp' in p0.obs.columns:
-        #            config['pp'] = np.asarray(p0.obs['pp'].values)
-        #        if 'pp' in p1.obs.columns:
-        #            config['qq'] = np.asarray(p1.obs['pp'].values)
-
         local_pca = config.pop('local_pca', None)
         eigenvals = None
         if local_pca is not None and local_pca > 0:
@@ -299,13 +289,17 @@ class OTModel:
 
         C = OTModel.compute_default_cost_matrix(p0_x, p1_x, eigenvals)
         config['C'] = C
-        if config.get('g') is None:
-            config['g'] = np.ones(C.shape[0])
         delta_days = t1 - t0
-        config['g'] = config['g'] ** delta_days
+        if self.cell_growth_rate_field in p0.obs.columns:
+            config['G'] = np.asarray(p0.obs[self.cell_growth_rate_field].values) ** delta_days
+        else:
+            config['G'] = np.ones(C.shape[0])
+
         tmap, learned_growth = wot.ot.compute_transport_matrix(solver=self.solver, **config)
-        learned_growth = np.power(learned_growth, 1.0 / delta_days)
-        return anndata.AnnData(tmap, pd.DataFrame(index=p0.obs.index, data=learned_growth,
-                                                  columns=['g']) if self.ot_config.get(
-            'growth_iters', 1) > 1 else pd.DataFrame(index=p0.obs.index),
-                               pd.DataFrame(index=p1.obs.index))
+        obs_growth = {}
+        for i in range(len(learned_growth)):
+            g = learned_growth[i]
+            g = np.power(g, 1.0 / delta_days)
+            obs_growth['g' + str(i)] = g
+        obs = pd.DataFrame(index=p0.obs.index, data=obs_growth)
+        return anndata.AnnData(tmap, obs, pd.DataFrame(index=p1.obs.index))

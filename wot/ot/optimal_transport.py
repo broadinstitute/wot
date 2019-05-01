@@ -14,24 +14,26 @@ def compute_transport_matrix(solver, **params):
     """
     Compute the optimal transport with stabilized numerics.
     Args:
-    g: Growth
+    G: Growth (absolute)
     solver: transport_stablev2 or optimal_transport_duality_gap
     growth_iters:
   """
 
     import gc
-    g = params['g']
+    G = params['G']
     growth_iters = params['growth_iters']
+    learned_growth = []
     for i in range(growth_iters):
         if i == 0:
-            row_sums = g
+            row_sums = G
         else:
-            row_sums = tmap.sum(axis=1) #/ tmap.shape[1]
-        params['g'] = row_sums
+            row_sums = tmap.sum(axis=1)  # / tmap.shape[1]
+        params['G'] = row_sums
+        learned_growth.append(row_sums)
         tmap = solver(**params)
         gc.collect()
 
-    return tmap, row_sums
+    return tmap, learned_growth
 
 
 # @ Lénaïc Chizat 2015 - optimal transport
@@ -65,7 +67,7 @@ def dual(C, K, R, dx, dy, p, q, a, b, epsilon, lambda1, lambda2):
 
 # end @ Lénaïc Chizat
 
-def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, tolerance, tau,
+def optimal_transport_duality_gap(C, G, lambda1, lambda2, epsilon, batch_size, tolerance, tau,
                                   epsilon0, max_iter, **ignored):
     """
     Compute the optimal transport with stabilized numerics, with the guarantee that the duality gap is at most `tolerance`
@@ -74,7 +76,7 @@ def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, t
     ----------
     C : 2-D ndarray
         The cost matrix. C[i][j] is the cost to transport cell i to cell j
-    g : 1-D array_like
+    G : 1-D array_like
         Growth value for input cells.
     lambda1 : float, optional
         Regularization parameter for the marginal constraint on p
@@ -105,8 +107,8 @@ def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, t
     I, J = C.shape
     dx, dy = np.ones(I) / I, np.ones(J) / J
 
-    p = g
-    q = np.ones(C.shape[1]) * np.average(g)
+    p = G
+    q = np.ones(C.shape[1]) * np.average(G)
 
     u, v = np.zeros(I), np.zeros(J)
     a, b = np.ones(I), np.ones(J)
@@ -173,7 +175,7 @@ def optimal_transport_duality_gap(C, g, lambda1, lambda2, epsilon, batch_size, t
     return R / C.shape[1]
 
 
-def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsilon0, extra_iter, inner_iter_max,
+def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, G, tau, epsilon0, extra_iter, inner_iter_max,
                        **ignored):
     """
     Compute the optimal transport with stabilized numerics.
@@ -184,7 +186,7 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsil
         lambda2: regularization parameter for marginal constraint for q.
         epsilon: entropy parameter
         scaling_iter: number of scaling iterations
-        g: growth value for input cells
+        G: growth value for input cells
     """
 
     warm_start = tau is not None
@@ -197,8 +199,8 @@ def transport_stablev2(C, lambda1, lambda2, epsilon, scaling_iter, g, tau, epsil
     dx = np.ones(C.shape[0]) / C.shape[0]
     dy = np.ones(C.shape[1]) / C.shape[1]
 
-    p = g
-    q = np.ones(C.shape[1]) * np.average(g)
+    p = G
+    q = np.ones(C.shape[1]) * np.average(G)
 
     u = np.zeros(len(p))
     v = np.zeros(len(q))

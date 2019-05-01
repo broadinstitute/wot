@@ -5,7 +5,7 @@ import wot
 from .ot_model import *
 
 
-def initialize_ot_model(matrix, days, tmap_out=None, **kwargs):
+def initialize_ot_model(matrix, days, **kwargs):
     """
     Initializes an OTModel from a list of files.
 
@@ -15,10 +15,6 @@ def initialize_ot_model(matrix, days, tmap_out=None, **kwargs):
         Path to a gene expression matrix file.
     days : str
         Path to a days file for the matrix.
-    tmap_dir : str, optional
-        Path to the transport maps directory for the OTModel.
-    tmap_prefix : str, optional
-        Prefix for transport maps cached by the OTModel.
     **kwargs : dict
         Other keywords arguments, will be passed to OT configuration.
 
@@ -42,10 +38,9 @@ def initialize_ot_model(matrix, days, tmap_out=None, **kwargs):
     field_mapping = wot.io.add_row_metadata_to_dataset(dataset=ds, days=days,
                                                        growth_rates=kwargs.pop('cell_growth_rates', None),
                                                        covariate=kwargs.pop('covariate', None))
-    ot_model = OTModel(ds, tmap_out, day_field=field_mapping['day'],
-                       covariate_field=field_mapping.get('covariate'),
-                       cell_growth_rate_field=field_mapping.get('cell_growth_rate'), **kwargs)
-    return ot_model
+    return OTModel(ds, day_field=field_mapping['day'],
+                   covariate_field=field_mapping.get('covariate'),
+                   cell_growth_rate_field=field_mapping.get('cell_growth_rate'), **kwargs)
 
 
 def parse_configuration(config):
