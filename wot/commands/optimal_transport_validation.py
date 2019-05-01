@@ -54,6 +54,7 @@ def compute_validation_summary(ot_model, tmap_dir, tmap_prefix, no_overwrite, ou
         print('No covariate specified. Please provide a covariate or compute full distances')
         exit(1)
 
+    tmap_out = os.path.join(tmap_dir, tmap_prefix)
     if has_covariate:
         ot_model.compute_all_transport_maps(with_covariates=True, no_overwrite=no_overwrite,
                                             output_file_format=output_file_format,
