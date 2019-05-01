@@ -296,6 +296,7 @@ class OTModel:
             config['G'] = np.ones(C.shape[0])
 
         tmap, learned_growth = wot.ot.compute_transport_matrix(solver=self.solver, **config)
+        learned_growth.append(tmap.sum(axis=1))
         obs_growth = {}
         for i in range(len(learned_growth)):
             g = learned_growth[i]
