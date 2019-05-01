@@ -31,8 +31,8 @@ class OTModel:
         Dictionary of parameters. Will be inserted as is into OT configuration.
     """
 
-    def __init__(self, matrix, day_field='day', covariate_field=None,
-                 cell_growth_rate_field=None, **kwargs):
+    def __init__(self, matrix, day_field='day', covariate_field='covariate',
+                 cell_growth_rate_field='cell_growth_rate', **kwargs):
 
         self.matrix = matrix
         self.day_field = day_field
