@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import wot.graphics
 import wot.io
 import wot.ot
 import wot.simulate

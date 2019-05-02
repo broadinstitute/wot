@@ -28,8 +28,6 @@ def chain_transport_maps(ot_model, pairs_list):
     """
     for i in range(len(pairs_list) - 1):
         if pairs_list[i][1] != pairs_list[i + 1][0]:
-            wot.io.verbose("Unable to glue ({} != {}) for path {}" \
-                           .format(pairs_list[i][1], pairs_list[i + 1][0], pairs_list))
             raise ValueError("Transport maps cannot be glued together : invalid path")
     for a, b in pairs_list:
         if a >= b:
@@ -77,7 +75,6 @@ def find_path(t0, t1, available_pairs, timepoints):
     0 -> 2 -> 1 -> 3 is not an acceptable path, because 2 -> 1 goes backwards in time.
     """
     if t0 not in timepoints or t1 not in timepoints:
-        wot.io.verbose("Required path from {} to {} but timepoints are {}".format(t0, t1, timepoints))
         raise ValueError("Unable to build path : t0 and t1 must be present in timepoints list")
 
     if available_pairs is None:
@@ -101,7 +98,6 @@ def find_path(t0, t1, available_pairs, timepoints):
                 dist_prev[u] = (d + 1, t)
 
     if dist_prev[t1][0] == 0:
-        wot.io.verbose("Reach with current day_pairs :", reach)
         raise ValueError("{} is not reachable from {} with the chosen day_pairs".format(t1, t0))
 
     path = []

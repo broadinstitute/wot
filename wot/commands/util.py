@@ -101,3 +101,5 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--format', help='Output file format', default='loom', choices=['h5ad', 'loom'])
     parser.add_argument('--solver', choices=['duality_gap', 'fixed_iters'],
                         help='The solver to use to compute transport matrices', default='duality_gap')
+    parser.add_argument('--verbose', help='Print progress information',
+                        action='store_true')

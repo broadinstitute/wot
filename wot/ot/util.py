@@ -2,10 +2,11 @@
 import numpy as np
 import ot as pot
 import scipy.sparse
-import sklearn.metrics
 import scipy.sparse
 import scipy.stats
 import sklearn.decomposition
+import sklearn.metrics
+
 
 def compute_growth_scores(proliferation, apoptosis, beta_max=1.7, beta_center=0.25, delta_max=1.7, delta_min=0.3,
                           beta_min=0.3):
@@ -103,7 +104,6 @@ def sample_from_transport_map(exp1, exp2, tm, npairs, t_interpolate):
             'indices0': pairs[0],
             'indices1': pairs[1],
             'weights': weights}
-
 
 
 def interpolate_with_ot(p0, p1, tmap, interp_frac, size):

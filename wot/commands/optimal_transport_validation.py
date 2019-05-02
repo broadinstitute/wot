@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import logging
 import os
 
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 import wot
-import wot.graphics
 
 
 def main(argv):
@@ -26,6 +27,10 @@ def main(argv):
                         help='Prefix for output file names')
     parser.add_argument('--interp_size', default=10000, type=int)
     args = parser.parse_args(argv)
+    if args.verbose:
+        logger = logging.getLogger('wot')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(logging.StreamHandler())
     ot_model = wot.commands.initialize_ot_model_from_args(args)
     tmap_dir, tmap_prefix = os.path.split(args.out) if args.out is not None else (None, None)
     tmap_prefix = tmap_prefix or "tmaps"
@@ -67,8 +72,8 @@ def main(argv):
     summary_stats = summary_stats.groupby(['interval_mid', 'name'])['distance'].agg([np.mean, np.std])
     summary_stats.to_csv(os.path.join(tmap_dir, tmap_prefix + '_cv_validation_summary_stats.txt'),
                          sep="\t", )
-    wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(tmap_dir,
-                                                                        tmap_prefix + '_cv_validation_summary.png'))
+    wot.graphics.plot_ot_validation_summary_stats(summary_stats)
+    plt.savefig(os.path.join(tmap_dir, tmap_prefix + '_cv_validation_summary.png'))
 
     wot.graphics.plot.plot_ot_validation_ratio(summary_stats, os.path.join(tmap_dir,
                                                                            tmap_prefix + '_cv_validation_summary_ratio.png'))
@@ -78,5 +83,5 @@ def main(argv):
         summary_stats.to_csv(
             os.path.join(tmap_dir, tmap_prefix + '_full_validation_summary_stats.txt'),
             sep="\t", )
-        wot.graphics.plot_ot_validation_summary(summary_stats, os.path.join(tmap_dir,
-                                                                            tmap_prefix + '_full_validation_summary.png'))
+        wot.graphics.plot_ot_validation_summary_stats(summary_stats)
+        plt.savefig(os.path.join(tmap_dir, tmap_prefix + '_full_validation_summary.png'))

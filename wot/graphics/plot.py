@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import wot.graphics
 from matplotlib import patches
-from matplotlib import pyplot
+from matplotlib import pyplot as plt
+
+import wot.graphics
 
 
 def __make_figure(y=1, x=1, projection=None):
-    pyplot.clf()
-    return pyplot.subplots(y, x, figsize=(8 * x, 6 * y), projection=None)
+    plt.clf()
+    return plt.subplots(y, x, figsize=(8 * x, 6 * y), projection=None)
 
 
 def legend_figure(figure, legend_list, loc=0):
@@ -60,29 +61,29 @@ def plot_ot_validation_ratio(df, filename):
     if (interpolated_df['interval_mid'].values - null_no_growth['interval_mid'].values).sum() != 0:
         raise ValueError('Timepoints are not aligned')
 
-    pyplot.figure(figsize=(10, 10))
+    plt.figure(figsize=(10, 10))
     with_growth_score = (interpolated_df['mean'].values / null_growth['mean'].values).sum()
     no_growth_score = (interpolated_df['mean'].values / null_no_growth['mean'].values).sum()
-    pyplot.title(
+    plt.title(
         "OT Validation: \u03A3(interpolated - real)/(null - real), with growth={:.2f}, no growth={:.2f}".format(
             with_growth_score, no_growth_score))
-    pyplot.xlabel("time")
-    pyplot.ylabel("ratio")
+    plt.xlabel("time")
+    plt.ylabel("ratio")
 
-    pyplot.plot(interpolated_df['interval_mid'], interpolated_df['mean'].values / null_growth['mean'].values,
-                label='with growth')
-    pyplot.plot(interpolated_df['interval_mid'], interpolated_df['mean'].values / null_no_growth['mean'].values,
-                label='no growth')
-    pyplot.legend()
-    pyplot.savefig(filename)
+    plt.plot(interpolated_df['interval_mid'], interpolated_df['mean'].values / null_growth['mean'].values,
+             label='with growth')
+    plt.plot(interpolated_df['interval_mid'], interpolated_df['mean'].values / null_no_growth['mean'].values,
+             label='no growth')
+    plt.legend()
+    plt.savefig(filename)
 
 
-def plot_ot_validation_summary(df, filename, bandwidth=None):
+def plot_ot_validation_summary(df, bandwidth=None):
     df = df.reset_index()
-    pyplot.figure(figsize=(10, 10))
-    pyplot.title("OT Validation")
-    pyplot.xlabel("time")
-    pyplot.ylabel("distance")
+    plt.figure(figsize=(10, 10))
+    plt.title("OT Validation")
+    plt.xlabel("time")
+    plt.ylabel("distance")
     legend = {}
 
     for p, d in df.groupby('name'):
@@ -96,7 +97,6 @@ def plot_ot_validation_summary(df, filename, bandwidth=None):
             x, m = kernel_smooth(t, m, 0, t[len(t) - 1], 1000, bandwidth)
             x, s = kernel_smooth(t, s, 0, t[len(t) - 1], 1000, bandwidth)
             t = x
-        pyplot.plot(t, m, '-o', color=ot_validation_legend[p][0])
-        pyplot.fill_between(t, m - s, m + s, color=ot_validation_legend[p][0], alpha=0.2)
-    wot.graphics.legend_figure(pyplot, legend.values())
-    pyplot.savefig(filename)
+        plt.plot(t, m, '-o', color=ot_validation_legend[p][0])
+        plt.fill_between(t, m - s, m + s, color=ot_validation_legend[p][0], alpha=0.2)
+    wot.graphics.legend_figure(plt, legend.values())

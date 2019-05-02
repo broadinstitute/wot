@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import time
+import logging
 
 import numpy as np
 
-import wot
+logger = logging.getLogger('wot')
 
 
 def compute_transport_matrix(solver, **params):
@@ -110,8 +110,6 @@ def optimal_transport_duality_gap(C, G, lambda1, lambda2, epsilon, batch_size, t
     u, v = np.zeros(I), np.zeros(J)
     a, b = np.ones(I), np.ones(J)
 
-    start_time = time.time()
-    duality_time = 0
     epsilon_i = epsilon0 * scale_factor
     current_iter = 0
 
@@ -137,14 +135,13 @@ def optimal_transport_duality_gap(C, G, lambda1, lambda2, epsilon, batch_size, t
 
                 # stabilization
                 if (max(max(abs(a)), max(abs(b))) > tau):
-                    wot.io.verbose("Stabilizing...")
                     u = u + epsilon_i * np.log(a)
                     v = v + epsilon_i * np.log(b)  # absorb
                     K = np.exp((np.array([u]).T - C + np.array([v])) / epsilon_i)
                     a, b = np.ones(I), np.ones(J)
 
                 if current_iter >= max_iter:
-                    wot.io.verbose("Warning : Reached max_iter with duality gap still above threshold. Returning")
+                    logger.warning("Reached max_iter with duality gap still above threshold. Returning")
                     return (K.T * a).T * b
 
             # The real dual variables. a and b are only the stabilized variables
@@ -153,12 +150,10 @@ def optimal_transport_duality_gap(C, G, lambda1, lambda2, epsilon, batch_size, t
 
             # Skip duality gap computation for the first epsilon scalings, use dual variables evolution instead
             if e == epsilon_scalings:
-                duality_tmp_time = time.time()
                 R = (K.T * a).T * b
                 pri = primal(C, _K, R, dx, dy, p, q, _a, _b, epsilon_i, lambda1, lambda2)
                 dua = dual(C, _K, R, dx, dy, p, q, _a, _b, epsilon_i, lambda1, lambda2)
                 duality_gap = (pri - dua) / abs(pri)
-                duality_time += time.time() - duality_tmp_time
             else:
                 duality_gap = max(
                     np.linalg.norm(_a - old_a * np.exp(u / epsilon_i)) / (1 + np.linalg.norm(_a)),
@@ -166,9 +161,6 @@ def optimal_transport_duality_gap(C, G, lambda1, lambda2, epsilon, batch_size, t
 
     if np.isnan(duality_gap):
         raise RuntimeError("Overflow encountered in duality gap computation, please report this incident")
-    total_time = time.time() - start_time
-    wot.io.verbose("Computed tmap in {:.3f}s. Duality gap: {:.3E} ({:.2f}% of computing time)" \
-                   .format(total_time, duality_gap, 100 * duality_time / total_time))
     return R / C.shape[1]
 
 

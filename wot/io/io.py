@@ -13,21 +13,6 @@ import scipy.sparse
 
 import wot
 
-if os.getenv('wot_verbose', False) == False:
-    def verbose(*args):
-        pass
-else:
-    from datetime import datetime
-
-    pid = os.getpid()
-    uid = os.getuid()
-
-
-    def verbose(*args):
-        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
-              "{}-{}".format(pid, uid),
-              "V/wot:", *args, flush=True)
-
 
 def group_cell_sets(cell_set_paths, group_by_df, group_by_key='day'):
     """

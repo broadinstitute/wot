@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import itertools
+import logging
 import os
 
 import anndata
@@ -11,6 +12,8 @@ import sklearn
 
 import wot.io
 import wot.ot
+
+logger = logging.getLogger('wot')
 
 
 class OTModel:
@@ -33,7 +36,6 @@ class OTModel:
 
     def __init__(self, matrix, day_field='day', covariate_field='covariate',
                  cell_growth_rate_field='cell_growth_rate', **kwargs):
-
         self.matrix = matrix
         self.day_field = day_field
         self.covariate_field = covariate_field
@@ -49,7 +51,6 @@ class OTModel:
             days = day_filter.split(',') if type(day_filter) == str else day_filter
             row_indices = self.matrix.obs[self.day_field].isin(days)
             self.matrix = self.matrix[row_indices].copy()
-            wot.io.verbose('Successfuly applied day_filter: "{}"'.format(day_filter))
 
         cvs = set(self.matrix.obs[self.covariate_field]) if self.covariate_field in self.matrix.obs else [None]
         if ncells is not None:
@@ -79,8 +80,7 @@ class OTModel:
                     self.matrix.X[i] = np.random.multinomial(ncounts, p, size=1)[0]
 
         if self.matrix.X.shape[0] is 0:
-            print('No cells in matrix')
-            exit(1)
+            raise ValueError('No cells in matrix')
 
         self.ot_config = {'local_pca': 30, 'growth_iters': 1, 'epsilon': 0.05, 'lambda1': 1, 'lambda2': 50,
                           'epsilon0': 1, 'tau': 10000, 'scaling_iter': 3000, 'inner_iter_max': 50, 'tolerance': 1e-8,
@@ -104,15 +104,14 @@ class OTModel:
 
         local_pca = self.ot_config['local_pca']
         if local_pca > self.matrix.X.shape[1]:
-            print("Warning : local_pca set to {}, above gene count of {}. Disabling PCA" \
-                  .format(local_pca, self.matrix.X.shape[1]))
+            logger.warning("local_pca set to {}, above gene count of {}. Disabling PCA" \
+                           .format(local_pca, self.matrix.X.shape[1]))
             self.ot_config['local_pca'] = 0
         if self.day_field not in self.matrix.obs.columns:
             raise ValueError("Days information not available for matrix")
         if any(self.matrix.obs[self.day_field].isnull()):
             self.matrix = self.matrix[self.matrix.obs[self.day_field].isnull() == False]
         self.timepoints = sorted(set(self.matrix.obs[self.day_field]))
-        wot.io.verbose(len(self.timepoints), "timepoints loaded :", self.timepoints)
 
     def get_covariate_pairs(self):
         """Get all covariate pairs in the dataset"""
@@ -143,6 +142,7 @@ class OTModel:
         None
             Only computes and saves all transport maps, does not return them.
         """
+
         tmap_dir, tmap_prefix = os.path.split(tmap_out) if tmap_out is not None else (None, None)
         tmap_prefix = tmap_prefix or "tmaps"
         tmap_dir = tmap_dir or '.'
@@ -168,7 +168,7 @@ class OTModel:
         #         day_pairs = [x for x in day_pairs if self.tmaps.get(x, None) is None]
 
         if not day_pairs:
-            print('No day pairs')
+            logger.info('No day pairs')
             return
 
         full_learned_growth_df = None
@@ -182,7 +182,7 @@ class OTModel:
             output_file = os.path.join(tmap_dir, path)
             output_file = wot.io.check_file_extension(output_file, output_file_format)
             if os.path.exists(output_file) and no_overwrite:
-                wot.io.verbose('Found existing tmap at ' + output_file + '. ')
+                logger.info('Found existing tmap at ' + output_file + '. ')
                 continue
 
             tmap = self.compute_transport_map(*day_pair)
@@ -204,7 +204,7 @@ class OTModel:
             Source timepoint for the transport map
         t1 : float
             Destination timepoint for the transport map
-        covariate : None or (int, int)
+        covariate : None or (str, str)
             The covariate restriction on cells from t0 and t1. None to skip
 
         Returns
@@ -223,7 +223,10 @@ class OTModel:
             local_config = self.day_pairs[(t0, t1)]
         else:
             local_config = {}
-
+        if covariate is None:
+            logger.info('Computing transport map from {} to {}'.format(t0, t1))
+        else:
+            logger.info('Computing transport map from {} {} to {} {}'.format(t0, covariate[0], t1, covariate[1]))
         config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
         return self.compute_single_transport_map(config)
 
@@ -254,11 +257,11 @@ class OTModel:
 
         import gc
         gc.collect()
+
         t0 = config.pop('t0', None)
         t1 = config.pop('t1', None)
         if t0 is None or t1 is None:
             raise ValueError("config must have both t0 and t1, indicating target timepoints")
-
         ds = self.matrix
         covariate = config.pop('covariate', None)
         if covariate is None:
@@ -272,10 +275,10 @@ class OTModel:
         p1 = ds[p1_indices, :]
 
         if p0.shape[0] == 0:
-            print('No cells at {}'.format(t0))
+            logger.info('No cells at {}'.format(t0))
             return None
         if p1.shape[0] == 0:
-            print('No cells at {}'.format(t1))
+            logger.info('No cells at {}'.format(t1))
             return None
 
         local_pca = config.pop('local_pca', None)
