@@ -78,7 +78,7 @@ def plot_ot_validation_ratio(df, filename):
     plt.savefig(filename)
 
 
-def plot_ot_validation_summary(df, bandwidth=None):
+def plot_ot_validation_summary_stats(df, bandwidth=None):
     df = df.reset_index()
     plt.figure(figsize=(10, 10))
     plt.title("OT Validation")

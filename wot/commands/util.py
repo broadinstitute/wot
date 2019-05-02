@@ -15,19 +15,15 @@ except:
     pass
 
 
-def add_model_arguments(parser):
-    parser.add_argument('--matrix', help=MATRIX_HELP, required=True)
-    parser.add_argument('--cell_days', help=CELL_DAYS_HELP, required=True)
-    parser.add_argument('--parameters', help='Optional two column parameter file containing parameter name and value')
-    parser.add_argument('--config', help='Configuration per timepoint or pair of timepoints')
-    parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
-
-
 def initialize_ot_model_from_args(args):
     return wot.ot.initialize_ot_model(args.matrix,
-                                      args.cell_days,
+                                      cell_days=args.cell_days,
                                       solver=args.solver,
                                       local_pca=args.local_pca,
+                                      growth_rate_field=args.growth_rate_field,
+                                      day_field=args.day_field,
+                                      covariate_field=args.covariate_field if hasattr(args,
+                                                                                      'covariate_field') else None,
                                       growth_iters=args.growth_iters,
                                       epsilon=args.epsilon,
                                       lambda1=args.lambda1,
@@ -40,7 +36,6 @@ def initialize_ot_model_from_args(args):
                                       cell_growth_rates=args.cell_growth_rates,
                                       gene_filter=args.gene_filter,
                                       cell_filter=args.cell_filter,
-                                      # sampling_bias=args.sampling_bias,
                                       scaling_iter=args.scaling_iter,
                                       inner_iter_max=args.inner_iter_max,
                                       ncells=args.ncells,
@@ -54,14 +49,20 @@ def initialize_ot_model_from_args(args):
 
 
 def add_ot_parameters_arguments(parser):
+    parser.add_argument('--matrix', help=MATRIX_HELP, required=True)
+    parser.add_argument('--cell_days', help=CELL_DAYS_HELP, required=True)
+    parser.add_argument('--cell_growth_rates',
+                        help='File with "id" and "cell_growth_rate"'
+                             'headers corresponding to cell id and growth rate per day.')
+    parser.add_argument('--parameters', help='Optional two column parameter file containing parameter name and value')
+    parser.add_argument('--config', help='Configuration per timepoint or pair of timepoints')
+    parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
     parser.add_argument('--local_pca', type=int, default=30,
                         help='Convert day pairs matrix to local PCA coordinates.'
                              'Set to 0 to disable')
     parser.add_argument('--growth_iters', type=int, default=1,
                         help='Number of growth iterations for learning the growth rate.')
-    parser.add_argument('--cell_growth_rates',
-                        help='File with "id" and "cell_growth_rate"'
-                             'headers corresponding to cell id and growth rate per day.')
+
     parser.add_argument('--gene_filter',
                         help='File with one gene id per line to use for computing'
                              'cost matrices (e.g. variable genes)')
@@ -98,8 +99,13 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--no_overwrite', help='Do not overwrite existing transport maps if they exist',
                         action='store_true')
     # parser.add_argument('--sampling_bias', help='File with "id" and "pp" to correct sampling bias.')
-    parser.add_argument('--format', help='Output file format', default='loom', choices=['h5ad', 'loom'])
+
     parser.add_argument('--solver', choices=['duality_gap', 'fixed_iters'],
                         help='The solver to use to compute transport matrices', default='duality_gap')
+    parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
+                        default='day', dest='day_field')
+    parser.add_argument('--cell_growth_rates_field',
+                        help='Field name in cell_growth_rates file that contains growth rates',
+                        default='day', dest='growth_rate_field')
     parser.add_argument('--verbose', help='Print progress information',
                         action='store_true')

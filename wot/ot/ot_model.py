@@ -35,11 +35,11 @@ class OTModel:
     """
 
     def __init__(self, matrix, day_field='day', covariate_field='covariate',
-                 cell_growth_rate_field='cell_growth_rate', **kwargs):
+                 growth_rate_field='cell_growth_rate', **kwargs):
         self.matrix = matrix
         self.day_field = day_field
         self.covariate_field = covariate_field
-        self.cell_growth_rate_field = cell_growth_rate_field
+        self.cell_growth_rate_field = growth_rate_field
         self.day_pairs = wot.ot.parse_configuration(kwargs.pop('config', None))
         cell_filter = kwargs.pop('cell_filter', None)
         gene_filter = kwargs.pop('gene_filter', None)

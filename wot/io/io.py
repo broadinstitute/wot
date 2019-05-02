@@ -806,19 +806,17 @@ def read_days_data_frame(path):
                        engine='python', sep=None, dtype={'day': np.float64})
 
 
-def add_row_metadata_to_dataset(dataset, days, growth_rates=None, covariate=None):
-    result = {'day': days}
-    if os.path.exists(days):
+def add_row_metadata_to_dataset(dataset, days=None, growth_rates=None, covariate=None):
+    if days is not None:
+        if not os.path.exists(days):
+            raise ValueError(days + ' not found')
         df = read_days_data_frame(days)
         dataset.obs = dataset.obs.join(df)
-        result['day'] = df.columns[0]
     if growth_rates is not None:
-        if os.path.exists(growth_rates):
-            df = pd.read_csv(growth_rates, index_col='id', engine='python', sep=None)
-            dataset.obs = dataset.obs.join(df)
-            result['cell_growth_rate'] = df.columns[0]
-        else:
-            result['cell_growth_rate'] = growth_rates
+        if not os.path.exists(growth_rates):
+            raise ValueError(growth_rates + ' not found')
+        df = pd.read_csv(growth_rates, index_col='id', engine='python', sep=None)
+        dataset.obs = dataset.obs.join(df)
         # if 'cell_growth_rate' not in dataset.obs:
         #     raise ValueError('Cell growth rates must that the column headers id and cell_growth_rate')
     else:
@@ -827,13 +825,10 @@ def add_row_metadata_to_dataset(dataset, days, growth_rates=None, covariate=None
     #     dataset.obs = dataset.obs.join(
     #         pd.read_csv(sampling_bias_path, index_col='id', engine='python', sep=None))
     if covariate is not None:
-        if os.path.exists(covariate):
-            df = pd.read_csv(covariate, index_col='id', engine='python', sep=None)
-            dataset.obs = dataset.obs.join(df)
-            result['covariate'] = df.columns[0]
-        else:
-            result['covariate'] = covariate
-    return result
+        if not os.path.exists(covariate):
+            raise ValueError(covariate + ' not found')
+        df = pd.read_csv(covariate, index_col='id', engine='python', sep=None)
+        dataset.obs = dataset.obs.join(df)
 
 
 def read_day_pairs(day_pairs):

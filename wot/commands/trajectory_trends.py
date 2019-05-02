@@ -21,13 +21,15 @@ def main(argv):
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, choices=wot.commands.FORMAT_CHOICES, default='txt')
     parser.add_argument('--gene_filter',
                         help='File with one gene id per line or comma separated string of list of genes to include from the matrix')
+    parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
+                        default='day')
     args = parser.parse_args(argv)
-
+    cell_days_field = args.cell_days_field
     trajectory_ds = wot.io.read_dataset(args.trajectory)
-    field_names = wot.io.add_row_metadata_to_dataset(dataset=trajectory_ds, days=args.cell_days)
+    wot.io.add_row_metadata_to_dataset(dataset=trajectory_ds, days=args.cell_days)
     matrix = wot.io.read_dataset(args.matrix)
     matrix = wot.io.filter_adata(matrix, var_filter=args.gene_filter)
-    results = wot.tmap.compute_trajectory_trends_from_trajectory(trajectory_ds, matrix, day_field=field_names['day'])
+    results = wot.tmap.compute_trajectory_trends_from_trajectory(trajectory_ds, matrix, day_field=cell_days_field)
     # output genes on columns, time on rows, one file per trajectory
 
     genes = matrix.var.index

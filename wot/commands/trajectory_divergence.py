@@ -36,13 +36,19 @@ def main(argv):
                              'cost matrices (e.g. variable genes)')
     parser.add_argument('--covariate',
                         help='Covariate (batch) values for each cell. Used to compute batch to batch distance within a timepoint.')
+    parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
+                        default='day', dest='')
+    parser.add_argument('--covariate_field',
+                        help='Field name in covariate file that contains covariate',
+                        default='covariate')
     args = parser.parse_args(argv)
     compare = args.compare
+    cell_days_field = args.cell_days_field
     local_pca = args.local_pca
     expression_matrix = wot.io.read_dataset(args.matrix)
     trajectory_files = args.trajectory
-
-    field_mapping = wot.io.add_row_metadata_to_dataset(expression_matrix, days=args.cell_days, covariate=args.covariate)
+    batch_field_name = args.covariate
+    wot.io.add_row_metadata_to_dataset(expression_matrix, days=args.cell_days, covariate=args.covariate)
 
     distance_metric = args.distance_metric
 
@@ -66,7 +72,7 @@ def main(argv):
 
     output = open(args.out + '.txt', 'wt')
     output.write('trajectory_1' + '\t' + 'trajectory_2' + '\t' + 'day' + '\t' + 'distance\n')
-    batch_field_name = field_mapping.get('covariate')
+
     if batch_field_name is not None:
         batch_output = open(args.out + '_batch.txt', 'wt')
         batch_output.write('covariate_1' + '\t' + 'covariate_2' + '\t' + 'day' + '\t' + 'distance' + '\n')
@@ -83,8 +89,7 @@ def main(argv):
                 names = []
                 base_trajectory_names_to_trajectory_names[base_trajectory_name] = names
             names.append(full_trajectory_name)
-    day_field_name = field_mapping.get('day')
-    for day, group in expression_matrix.obs.groupby(day_field_name):
+    for day, group in expression_matrix.obs.groupby(cell_days_field):
         expression_matrix_day = expression_matrix[group.index]
         x = expression_matrix_day.X
         if scipy.sparse.isspmatrix(x):

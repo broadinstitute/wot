@@ -14,7 +14,6 @@ import wot
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Compute a validation summary')
-    wot.commands.add_model_arguments(parser)
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--covariate', help='Covariate values for each cell')
     # parser.add_argument('--save_interpolated', type=bool, default=False,
@@ -26,6 +25,9 @@ def main(argv):
     parser.add_argument('--out', default='tmaps_val',
                         help='Prefix for output file names')
     parser.add_argument('--interp_size', default=10000, type=int)
+    parser.add_argument('--covariate_field',
+                        help='Field name in covariate file that contains covariate',
+                        default='covariate')
     args = parser.parse_args(argv)
     if args.verbose:
         logger = logging.getLogger('wot')

@@ -46,7 +46,7 @@ class DiffExp:
     def get_expression_and_weights(self, day, trajectory_name):
         ds = self.expression_matrix[
             (self.expression_matrix.obs[self.day_field] == day) & (
-                        False == self.expression_matrix.obs[trajectory_name].isna())]
+                    False == self.expression_matrix.obs[trajectory_name].isna())]
         weights = ds.obs[trajectory_name].values
         expression_values = ds.X
         if scipy.sparse.isspmatrix(expression_values):
@@ -177,7 +177,8 @@ def main(argv):
                         help='Number of permutations', type=int)
     parser.add_argument('--fold_change', type=float, default=0.25,
                         help='Limit permutations to genes which show at least X-fold difference (log-scale) between the two groups of cells.')
-
+    parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
+                        default='day')
     args = parser.parse_args(argv)
     compare = args.compare
     trajectory_files = args.trajectory
@@ -186,12 +187,13 @@ def main(argv):
     cell_days_file = args.cell_days
     nperm = args.nperm
     min_fold_change = args.fold_change
+    cell_days_field = args.cell_days_field
     expression_matrix = wot.io.read_dataset(expression_file)
 
     if delta_days is None:
         delta_days = 0
     delta_days = abs(delta_days)
-    field_names = wot.io.add_row_metadata_to_dataset(dataset=expression_matrix, days=cell_days_file)
+    wot.io.add_row_metadata_to_dataset(dataset=expression_matrix, days=cell_days_file)
     trajectory_names = []
     for f in trajectory_files:
         trajectory_ds = wot.io.read_dataset(f)
@@ -201,5 +203,5 @@ def main(argv):
             pd.DataFrame(index=trajectory_ds.obs.index, data=trajectory_ds.X, columns=trajectory_ds.var.index))
         trajectory_names += list(trajectory_ds.var.index)
     d = DiffExp(expression_matrix=expression_matrix, delta_days=delta_days, trajectory_names=trajectory_names,
-                compare=compare, nperm=nperm, min_fold_change=min_fold_change, day_field=field_names['day'])
+                compare=compare, nperm=nperm, min_fold_change=min_fold_change, day_field=cell_days_field)
     d.execute()

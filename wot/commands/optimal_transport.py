@@ -2,16 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import logging
 
 import wot.commands
 import wot.io
 import wot.ot
-import logging
+
 
 def main(argv):
     parser = argparse.ArgumentParser('Compute transport maps between pairs of time points')
-    wot.commands.add_model_arguments(parser)
     wot.commands.add_ot_parameters_arguments(parser)
+    parser.add_argument('--format', help='Output file format', default='loom', choices=['h5ad', 'loom'])
     parser.add_argument('--out', default='./tmaps',
                         help='Prefix for output file names')
     args = parser.parse_args(argv)

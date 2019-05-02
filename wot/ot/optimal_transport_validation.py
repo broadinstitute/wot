@@ -103,12 +103,14 @@ def compute_validation_summary(ot_model, day_triplets=None, interp_size=10000, c
                      'distance': dist,
                      'full': True})
 
-            r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_ds.X, p1_ds.X, interp_frac, interp_size,
-                                                                      p0_ds.obs[
-                                                                          ot_model.cell_growth_rate_field].values ** (
-                                                                          interp_frac))
-
+            if ot_model.cell_growth_rate_field in ot_model.matrix.obs:
+                r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_ds.X, p1_ds.X, interp_frac, interp_size,
+                                                                          p0_ds.obs[
+                                                                              ot_model.cell_growth_rate_field].values ** (
+                                                                              interp_frac))
+                update_full_summary(r05_with_growth, t05, 'Rg')
             r05_no_growth = wot.ot.interpolate_randomly(p0_ds.X, p1_ds.X, interp_frac, interp_size)
+            update_full_summary(r05_no_growth, t05, 'R')
             try:
                 i05 = wot.ot.interpolate_with_ot(p0_ds.X, p1_ds.X, tmap_full.X, interp_frac,
                                                  interp_size)  # TODO handle downsampling cells case
@@ -118,8 +120,6 @@ def compute_validation_summary(ot_model, day_triplets=None, interp_size=10000, c
             except ValueError:
                 pass
 
-            update_full_summary(r05_with_growth, t05, 'Rg')
-            update_full_summary(r05_no_growth, t05, 'R')
             update_full_summary(p0_ds.X, t0, 'F')
             update_full_summary(p1_ds.X, t1, 'L')
             update_full_summary(p0_ds.X, t1, 'A', p1_ds.X)
@@ -166,13 +166,16 @@ def compute_validation_summary(ot_model, day_triplets=None, interp_size=10000, c
                 p0_x = p0[cv0].X
                 p1_x = p1[cv1].X
                 i05 = wot.ot.interpolate_with_ot(p0_x, p1_x, tmap.X, interp_frac, interp_size)
-                r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_x, p1_x, interp_frac, interp_size,
-                                                                          p0[cv0].obs[
-                                                                              ot_model.cell_growth_rate_field].values ** (
-                                                                              interp_frac))
+                if ot_model.cell_growth_rate_field in ot_model.matrix.obs:
+                    r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_x, p1_x, interp_frac, interp_size,
+                                                                              p0[cv0].obs[
+                                                                                  ot_model.cell_growth_rate_field].values ** (
+                                                                                  interp_frac))
+                    distance_to_p05(r05_with_growth, t05, 'Rg', (cv0, cv1))
+
                 r05_no_growth = wot.ot.interpolate_randomly(p0_x, p1_x, interp_frac, interp_size)
                 distance_to_p05(i05, t05, 'I', (cv0, cv1))
-                distance_to_p05(r05_with_growth, t05, 'Rg', (cv0, cv1))
+
                 distance_to_p05(r05_no_growth, t05, 'R', (cv0, cv1))
 
                 if cv0 == cv05 and cv0 not in seen_first:
