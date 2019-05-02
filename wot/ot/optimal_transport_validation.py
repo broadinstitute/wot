@@ -20,16 +20,20 @@ def compute_validation_summary(ot_model, day_triplets=None, interp_size=10000, c
     ----------
     ot_model : wot.OTModel
         The OTModel to validate
-    interp_pattern : (float, float), optional, default: (0.5,1)
-        The interpolation pattern : (x, y) will compute transport maps from t to t+y and interpolate at t+x
-    save_interpolated : bool, optional, default: False
-        Wether to save or discard the interpolated and random point clouds
+    day_triplets : list of (float, float, float)
+        List of day triplets (t0, t0.5, t1) or None to use all consecutive triplets
+    interp_size : int, optional
+        The number of cells in the interpolated population
+    compute_full_distances : bool
+        Whether to compute full distances
 
     Returns
     -------
     validation_summary : pandas.DataFrame
         The validation summary
     """
+    if ot_model.covariate_field not in ot_model.matrix.obs:
+        ot_model.matrix.obs['covariate'] = 1
     if day_triplets is None:
         day_triplets = []
         unique_times = np.array(ot_model.timepoints)
@@ -45,8 +49,7 @@ def compute_validation_summary(ot_model, day_triplets=None, interp_size=10000, c
     ot_model.day_pairs = day_pairs
     has_covariate = ot_model.covariate_field is not None
     if not has_covariate and not compute_full_distances:
-        print('No covariate specified. Please provide a covariate or compute full distances')
-        exit(1)
+        raise ValueError('No covariate specified. Please provide a covariate or compute full distances')
 
     summary_list = []
     # 'P': ["#e41a1c", "between real batches"],
@@ -60,7 +63,6 @@ def compute_validation_summary(ot_model, day_triplets=None, interp_size=10000, c
 
     for triplet in day_triplets:
         t0, t05, t1 = triplet
-        print('Computing transport map from {} to {}, interpolating at {}'.format(t0, t1, t05))
         interp_frac = (t05 - t0) / (t1 - t0)
 
         p0_ds = ot_model.matrix[ot_model.matrix.obs[ot_model.day_field] == float(t0), :]

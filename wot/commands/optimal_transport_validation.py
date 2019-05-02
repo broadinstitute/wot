@@ -52,9 +52,6 @@ def main(argv):
             t1 = unique_times[np.abs(unique_times - day_triplets_df.iloc[i, 2]).argmin()]
 
             day_triplets.append((t0, t05, t1))
-    if args.covariate is None:
-        ot_model.covariate_field = 'covariate'
-        ot_model.matrix.obs['covariate'] = 1
 
     # tmap_dir=tmap_dir, tmap_prefix=tmap_prefix,
     # no_overwrite=args.no_overwrite, output_file_format=args.format,
