@@ -104,7 +104,8 @@ def compute_validation_summary(ot_model, day_triplets=None, interp_size=10000, c
                      'full': True})
 
             r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_ds.X, p1_ds.X, interp_frac, interp_size,
-                                                                      p0_ds.obs['cell_growth_rate'].values ** (
+                                                                      p0_ds.obs[
+                                                                          ot_model.cell_growth_rate_field].values ** (
                                                                           interp_frac))
 
             r05_no_growth = wot.ot.interpolate_randomly(p0_ds.X, p1_ds.X, interp_frac, interp_size)
@@ -166,7 +167,8 @@ def compute_validation_summary(ot_model, day_triplets=None, interp_size=10000, c
                 p1_x = p1[cv1].X
                 i05 = wot.ot.interpolate_with_ot(p0_x, p1_x, tmap.X, interp_frac, interp_size)
                 r05_with_growth = wot.ot.interpolate_randomly_with_growth(p0_x, p1_x, interp_frac, interp_size,
-                                                                          p0[cv0].obs['cell_growth_rate'].values ** (
+                                                                          p0[cv0].obs[
+                                                                              ot_model.cell_growth_rate_field].values ** (
                                                                               interp_frac))
                 r05_no_growth = wot.ot.interpolate_randomly(p0_x, p1_x, interp_frac, interp_size)
                 distance_to_p05(i05, t05, 'I', (cv0, cv1))
