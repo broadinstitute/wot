@@ -192,7 +192,7 @@ class OTModel:
                 full_learned_growth_df = learned_growth_df if full_learned_growth_df is None else pd.concat(
                     (full_learned_growth_df, learned_growth_df), copy=False)
         if full_learned_growth_df is not None:
-            learned_growth_df.to_csv(os.path.join(tmap_dir, tmap_prefix + '_g.txt'), sep='\t', index_label='id')
+            full_learned_growth_df.to_csv(os.path.join(tmap_dir, tmap_prefix + '_g.txt'), sep='\t', index_label='id')
 
     def compute_transport_map(self, t0, t1, covariate=None):
         """
