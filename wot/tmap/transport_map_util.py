@@ -48,7 +48,7 @@ def trajectory_similarities(trajectory_ds):
     return distances
 
 
-def compute_trajectory_trends_from_trajectory(trajectory_ds, expression_ds, day_field='day'):
+def trajectory_trends_from_trajectory(trajectory_ds, expression_ds, day_field='day'):
     """
     Computes the mean and variance of each gene over time for the given trajectories
 
@@ -57,13 +57,14 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, expression_ds, day_
     trajectory_ds : anndata.AnnData
        anndata.AnnData returned by wot.tmap.TransportModel.trajectories
     expression_ds : anndata.AnnData
-        Dataset used to compute mean and variance
+        Dataset used to compute mean
+    day_field : str
+        The day field name in trajectory_ds.obs
 
     Returns
     -------
-    results : list
-        The list of mean and variance datasets, one dataset per trajectory
-        The dataset has time on the rows and genes on the columns
+    results : list of anndata.AnnData
+        One dataset per trajectory. Each dataset has time on the rows and genes on the columns
     """
 
     # align gene expression matrix with trajectory matrix
@@ -74,11 +75,10 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, expression_ds, day_
     expression_ds = expression_ds[ds_indices].copy()
     timepoints = []
     mean_list = []
-    variance_list = []
+
     for j in range(trajectory_ds.shape[1]):
         mean_list.append(None)
-        variance_list.append(None)
-
+        # variance_list.append(None)
     for day, group in trajectory_ds.obs.groupby(day_field):
         timepoints.append(day)
         cell_indices_at_day = trajectory_ds.obs.index.get_indexer_for(group.index)
@@ -91,75 +91,23 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, expression_ds, day_
 
         for j in range(trajectory_ds.shape[1]):  # each trajectory
             weights_per_cell = trajectory_weights[:, j] if len(trajectory_weights.shape) > 1 else trajectory_weights
-
             mean = np.average(expression_values, weights=weights_per_cell, axis=0)
-            var = np.average((expression_values - mean) ** 2, weights=weights_per_cell, axis=0)
+            # if inverse_log:
+            #     mean = np.log1p(mean)
+            # var = np.average((expression_values - mean) ** 2, weights=weights_per_cell, axis=0)
 
             if mean_list[j] is None:
                 mean_list[j] = mean.T
-                variance_list[j] = var.T
+                # variance_list[j] = var.T
             else:
                 mean_list[j] = np.vstack((mean_list[j], mean.T))
-                variance_list[j] = np.vstack((variance_list[j], var.T))
+                # variance_list[j] = np.vstack((variance_list[j], var.T))
 
     results = []
     for j in range(len(mean_list)):
         mean_ds = anndata.AnnData(mean_list[j], pd.DataFrame(index=timepoints), expression_ds.var.copy())
-        variance_ds = anndata.AnnData(variance_list[j], pd.DataFrame(index=timepoints), expression_ds.var.copy())
-        results.append((mean_ds, variance_ds))
+        # variance_ds = anndata.AnnData(variance_list[j], pd.DataFrame(index=timepoints), expression_ds.var.copy())
+        # results.append((mean_ds, variance_ds))
+        results.append(mean_ds)
 
     return results
-
-
-def compute_trajectory_trends(tmap_model, *populations):
-    """
-    Computes the mean and variance of each gene over time for the given populations
-
-    Parameters
-    ----------
-    tmap_model : wot.TransportMapModel
-        The TransportMapModel used to find ancestors and descendants of the population
-    *populations : wot.Population
-        The target populations
-
-    Returns
-    -------
-    timepoints : 1-D array
-        The list of timepoints indexing the other two return values
-    means : ndarray
-        The list of the means of each gene at each timepoint
-    variances : ndarray
-        The list of the variances of each gene at each timepoint
-
-    Notes
-    -----
-    If only one population is given, means and variances will have two dimensions, otherwise three
-    """
-    initial_populations = populations
-    timepoints = []
-    traj, variances = [], []
-
-    def update(head, populations):
-        x = 0 if head else len(traj)
-        m, v = tmap_model.population_mean_and_variance(*populations)
-        timepoints.insert(x, wot.tmap.unique_timepoint(*populations))
-        traj.insert(x, m)
-        variances.insert(x, v)
-
-    update(True, populations)
-    while tmap_model.can_pull_back(*populations):
-        populations = tmap_model.pull_back(*populations, as_list=True)
-        update(True, populations)
-    populations = initial_populations
-    while tmap_model.can_push_forward(*populations):
-        populations = tmap_model.push_forward(*populations, as_list=True)
-        update(False, populations)
-
-    def unpack(arr):
-        arr = np.asarray(arr)
-        if arr.ndim == 3:
-            # rearrange dimensions when more than one population is passed
-            arr = [arr[:, i, :] for i in range(arr.shape[1])]
-        return np.asarray(arr) if len(arr) > 1 else arr[0]
-
-    return timepoints, unpack(traj), unpack(variances)

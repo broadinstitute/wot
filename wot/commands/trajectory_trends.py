@@ -3,7 +3,6 @@
 
 import argparse
 
-import numpy as np
 from matplotlib import pyplot
 
 import wot.io
@@ -29,24 +28,24 @@ def main(argv):
     wot.io.add_row_metadata_to_dataset(dataset=trajectory_ds, days=args.cell_days)
     matrix = wot.io.read_dataset(args.matrix)
     matrix = wot.io.filter_adata(matrix, var_filter=args.gene_filter)
-    results = wot.tmap.compute_trajectory_trends_from_trajectory(trajectory_ds, matrix, day_field=cell_days_field)
+    results = wot.tmap.trajectory_trends_from_trajectory(trajectory_ds, matrix, day_field=cell_days_field)
     # output genes on columns, time on rows, one file per trajectory
 
     genes = matrix.var.index
     for j in range(len(results)):  # each trajectory
-        mean, variance = results[j]
+        mean = results[j]
 
         mean.obs.index = mean.obs.index.astype('category')
-        variance.obs.index = variance.obs.index.astype('category')
+        # variance.obs.index = variance.obs.index.astype('category')
         trajectory_name = trajectory_ds.var.index.values[j]
         basename = args.out + '_' + trajectory_name
         wot.io.write_dataset(mean, basename + '.mean', args.format)
-        wot.io.write_dataset(variance, basename + '.variance', args.format)
+        # wot.io.write_dataset(variance, basename + '.variance', args.format)
 
         if args.plot:
             pyplot.figure(figsize=(5, 5))
 
-            stds = np.sqrt(variance.X)
+            # stds = np.sqrt(variance.X)
             timepoints = mean.obs.index.values.astype(float)
 
             for i in range(mean.shape[1]):  # each gene
