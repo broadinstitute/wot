@@ -96,6 +96,7 @@ class TransportMapModel:
         end_p = np.vstack([pop.p for pop in populations])
         start_p = np.vstack([pop.p for pop in start_populations])
         p = (start_p @ end_p.T)
+        p = p / p.sum()
         return anndata.AnnData(X=p, obs=pd.DataFrame(index=[p.name for p in start_populations]),
                                var=pd.DataFrame(index=[p.name for p in end_populations]))
 
