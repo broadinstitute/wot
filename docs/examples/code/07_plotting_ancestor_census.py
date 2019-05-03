@@ -19,7 +19,7 @@ all_populations = tmap_model.population_from_cell_sets(cell_sets,
                                                        at_time=target_timepoint)
 population = all_populations[target_cell_set]
 
-timepoints, census = tmap_model.compute_ancestor_census(cs_matrix, population)
+timepoints, census = tmap_model.ancestor_census(cs_matrix, population)
 
 pyplot.figure(figsize=(5, 5))
 

@@ -38,7 +38,7 @@ class TransportMapModel:
             day_pairs = [(timepoints[i], timepoints[i + 1]) for i in range(len(timepoints) - 1)]
         self.day_pairs = day_pairs
 
-    def compute_fates(self, populations):
+    def fates(self, populations):
         """
         Computes fates for each population
 
@@ -48,24 +48,15 @@ class TransportMapModel:
             The TransportMapModel used to find fates
         populations : list of wot.Population
             The target populations such as ones from self.population_from_cell_sets. The populations must be from the same time.
-
         Returns
         -------
         fates : anndata.AnnData
             Rows : all cells, Columns : populations index. At point (i, j) : the probability that cell i belongs to population j
         """
-        day = wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
+        wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
+        populations = Population.copy(*populations, normalize=False, add_missing=True)
+        pop_names = [pop.name for pop in populations]
         results = []
-        # add "other" population if any cells are missing across all populations
-        initial_p_sum = np.array([pop.p for pop in populations]).T.sum(axis=1)
-        missing_cells = np.where(initial_p_sum == 0)[0]
-        if len(missing_cells) > 0:
-            missing_cells_p = np.zeros_like(populations[0].p)
-            missing_cells_p[missing_cells] = 1.0
-            populations = populations + [Population(day, missing_cells_p, 'Other')]
-
-        population_names = [p.name for p in populations]
-
         results.insert(0, np.array([pop.p for pop in populations]).T)
         while self.can_pull_back(*populations):
             populations = self.pull_back(*populations, as_list=True, normalize=False)
@@ -73,9 +64,42 @@ class TransportMapModel:
 
         X = np.concatenate(results)
         X /= X.sum(axis=1, keepdims=1)
-        return anndata.AnnData(X=X, obs=self.meta.copy(), var=pd.DataFrame(index=population_names))
+        return anndata.AnnData(X=X, obs=self.meta.copy(), var=pd.DataFrame(index=pop_names))
 
-    def compute_trajectories(self, populations):
+    def transition_table(self, start_populations, end_populations):
+        """
+       Computes a transition table from the starting populations to the ending populations
+
+       Parameters
+       ----------
+       self : wot.TransportMapModel
+           The TransportMapModel
+       start_populations : list of wot.Population
+           The target populations such as ones from self.population_from_cell_sets. THe populations must be from the same time.
+
+       Returns
+       -------
+       transition table : anndata.AnnData
+           Rows : starting populations, Columns : ending populations.
+       """
+        # add "other" population if any cells are missing across all populations
+        start_time = wot.tmap.unique_timepoint(*start_populations)
+        start_populations = Population.copy(*start_populations, normalize=False, add_missing=True)
+        end_populations = Population.copy(*end_populations, normalize=False, add_missing=True)
+        wot.tmap.unique_timepoint(*end_populations)  # check for unique timepoint
+        populations = end_populations
+        results = []
+        results.insert(0, np.array([pop.p for pop in populations]).T)
+        while self.can_pull_back(*populations) and wot.tmap.unique_timepoint(*populations) > start_time:
+            populations = self.pull_back(*populations, as_list=True, normalize=False)
+
+        end_p = np.vstack([pop.p for pop in populations])
+        start_p = np.vstack([pop.p for pop in start_populations])
+        p = (start_p @ end_p.T)
+        return anndata.AnnData(X=p, obs=pd.DataFrame(index=[p.name for p in start_populations]),
+                               var=pd.DataFrame(index=[p.name for p in end_populations]))
+
+    def trajectories(self, populations):
         """
         Computes a trajectory for each population
 
@@ -94,14 +118,7 @@ class TransportMapModel:
         """
         wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
         trajectories = []
-        _populations = []
-        population_names = []
-        for pop in populations:
-            pop_copy = Population(pop.time, pop.p, pop.name)
-            pop_copy.normalize()
-            _populations.append(pop_copy)
-            population_names.append(pop_copy.name)
-        populations = _populations
+        populations = Population.copy(*populations, normalize=True, add_missing=False)
         initial_populations = populations
 
         def update(head, populations_to_update):
@@ -118,7 +135,7 @@ class TransportMapModel:
             update(False, populations)
 
         return anndata.AnnData(X=np.concatenate(trajectories), obs=self.meta.copy(),
-                               var=pd.DataFrame(index=population_names))
+                               var=pd.DataFrame(index=[p.name for p in populations]))
 
     def get_coupling(self, t0, t1, covariate=None):
         """
@@ -515,7 +532,7 @@ class TransportMapModel:
         df = self.meta[self.meta['day'] == day]
         return df.index.values
 
-    def compute_ancestor_census(self, cset_matrix, *populations):
+    def ancestor_census(self, cset_matrix, *populations):
         """
         Computes the census for the populations (for both ancestors and descendants).
 

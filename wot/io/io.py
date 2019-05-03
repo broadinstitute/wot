@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import glob
 import os
-import sys
 
 import anndata
 import h5py
@@ -358,29 +357,18 @@ def read_gmx(path, feature_ids=None):
         return anndata.AnnData(x, obs=obs, var=var)
 
 
-def write_gene_sets(gene_sets, path, format='gmt'):
+def write_sets(sets, path):
+    """
+    Save gene sets as a gmt file
+    :param gene_sets: (str, list) A dict that maps set name to set ids
+    :param path: str
+        Output file path
+    """
     path = str(path)
-    basename, ext = get_filename_and_extension(path)
-
-    if path is None or path in ['STDOUT', 'stdout', '/dev/stdout']:
-        f = sys.stdout
-    else:
-        if format is not None and ext != format:
-            path = path + '.' + format
-        f = open(path, 'w')
-
-    if format == 'gmt':
-        write_gmt(gene_sets, f)
-    else:
-        raise ValueError("Unkown file format for gene sets")
-
-    if f is not sys.stdout:
-        f.close()
-
-
-def write_gmt(gene_sets, f):
-    for gset in gene_sets:
-        f.write('{}\t{}\t{}\n'.format(gset, '-', '\t'.join(gene_sets[gset])))
+    path = check_file_extension(path, 'gmt')
+    with open(path, 'w') as f:
+        for gset in sets:
+            f.write('{}\t{}\t{}\n'.format(gset, '-', '\t'.join(sets[gset])))
 
 
 def convert_binary_dataset_to_dict(ds):

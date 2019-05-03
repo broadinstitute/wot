@@ -20,7 +20,7 @@ def trajectory_similarities(trajectory_ds):
     Parameters
     ----------
     trajectory_ds : anndata.AnnData
-       anndata.AnnData returned by wot.tmap.TransportModel.compute_trajectories
+       anndata.AnnData returned by wot.tmap.TransportModel.trajectories
 
     Returns
     -------
@@ -55,7 +55,7 @@ def compute_trajectory_trends_from_trajectory(trajectory_ds, expression_ds, day_
     Parameters
     ----------
     trajectory_ds : anndata.AnnData
-       anndata.AnnData returned by wot.tmap.TransportModel.compute_trajectories
+       anndata.AnnData returned by wot.tmap.TransportModel.trajectories
     expression_ds : anndata.AnnData
         Dataset used to compute mean and variance
 

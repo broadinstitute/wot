@@ -22,7 +22,7 @@ cell_sets = wot.io.read_sets(cell_sets_file, as_dict=True)
 populations = tmap_model.population_from_cell_sets(cell_sets,
                                                    at_time=target_timepoint)
 
-trajectories = tmap_model.compute_trajectories(populations)
+trajectories = tmap_model.trajectories(populations)
 ds = wot.io.read_dataset(matrix_file)
 ds.obs = ds.obs.join(pd.read_csv(embedding_file, index_col='id'))
 

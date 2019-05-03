@@ -25,7 +25,7 @@ def main(argv):
     cell_sets = wot.io.convert_binary_dataset_to_dict(cell_sets_matrix)
     populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.day)
 
-    timepoints, census = tmap_model.compute_ancestor_census(cell_sets_matrix, *populations.values())
+    timepoints, census = tmap_model.ancestor_census(cell_sets_matrix, *populations.values())
 
     obs = pd.DataFrame(index=timepoints)
     populations_keys = list(populations.keys())

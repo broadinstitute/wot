@@ -1,14 +1,14 @@
 import wot.tmap
 
 
-def chain_transport_maps(ot_model, pairs_list):
+def chain_transport_maps(tmap_model, pairs_list):
     """
     Chains the transport maps corresponding to the list of pairs for the OTModel.
 
     Parameters
     ----------
-    ot_model : wot.OTModel
-        The OTModel whose transport maps are to be chained.
+    tmap_model : wot.tmap.TransportMapModel
+        The TransportMapModel whose transport maps are to be chained.
     pairs_list : list of (float, float)
         The list of day pairs correspondig to the transport maps to chain.
 
@@ -33,9 +33,9 @@ def chain_transport_maps(ot_model, pairs_list):
         if a >= b:
             raise ValueError("({}, {}) is not a valid transport map : it goes backwards in time".format(a, b))
 
-    tmap_0 = ot_model.get_coupling(*pairs_list.pop(0))
+    tmap_0 = tmap_model.get_coupling(*pairs_list.pop(0))
     while len(pairs_list) > 0:
-        tmap_1 = ot_model.get_coupling(*pairs_list.pop(0))
+        tmap_1 = tmap_model.get_coupling(*pairs_list.pop(0))
         tmap_0 = wot.tmap.glue_transport_maps(tmap_0, tmap_1)
     return tmap_0
 

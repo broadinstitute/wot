@@ -35,4 +35,4 @@ def main(argv):
     if len(cell_set_name_to_ids) == 0:
         sys.exit('No cells found')
 
-    wot.io.write_gene_sets(cell_set_name_to_ids, args.out)
+    wot.io.write_sets(cell_set_name_to_ids, args.out)
