@@ -33,9 +33,9 @@ def main(argv):
     populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.day)
 
     # print cell size sizes
-    for name in populations:
-        p = populations[name].p
-        logger.info('{}, {}/{}'.format(name, np.count_nonzero(p), len(p)))
+    if args.verbose:
+        for pop in populations:
+            logger.info('{}, {}/{}'.format(pop.name, np.count_nonzero(pop.p), len(pop.p)))
 
     trajectory_ds = tmap_model.trajectories(populations)
     # dataset has cells on rows and cell sets (trajectories) on columns
@@ -50,7 +50,6 @@ def main(argv):
             np.interp(full_embedding_df['x'], [xrange[0], xrange[1]], [0, nbins - 1])).astype(int)
         full_embedding_df['y'] = np.floor(
             np.interp(full_embedding_df['y'], [yrange[0], yrange[1]], [0, nbins - 1])).astype(int)
-        population_list = list(populations.values())
         for j in range(trajectory_ds.shape[1]):
             color_df = pd.DataFrame(index=trajectory_ds.obs.index, data={'color': trajectory_ds[:, j].X})
             embedding_df = color_df.join(full_embedding_df)
@@ -65,8 +64,8 @@ def main(argv):
             plt.scatter(summed_df['x'], summed_df['y'], c=summed_df['color'],
                         s=6, marker=',', edgecolors='none', cmap='viridis_r', alpha=1)
             plt.colorbar()
-            ncells = (population_list[j].p > 0).sum()
+            ncells = (populations[j].p > 0).sum()
             plt.title('{}, day {}, {}/{} cells'.format(trajectory_ds.var.index[j], args.day, ncells,
-                                                       len(population_list[j].p)))
+                                                       len(populations[j].p)))
             figure.savefig(args.out + '_' + str(trajectory_ds.var.index[j]) + '_trajectory.png')
         # plot probabilties on embedding

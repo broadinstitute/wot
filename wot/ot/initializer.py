@@ -33,7 +33,7 @@ def initialize_ot_model(matrix, **kwargs):
     if kwargs.pop('transpose', False):
         ds = ds.T
 
-    wot.io.add_row_metadata_to_dataset(dataset=ds, days=kwargs.pop('days', None),
+    wot.io.add_row_metadata_to_dataset(dataset=ds, days=kwargs.pop('cell_days', None),
                                        growth_rates=kwargs.pop('cell_growth_rates', None),
                                        covariate=kwargs.pop('covariate', None))
     return OTModel(ds, **kwargs)

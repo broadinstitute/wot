@@ -106,6 +106,6 @@ def add_ot_parameters_arguments(parser):
                         default='day', dest='day_field')
     parser.add_argument('--cell_growth_rates_field',
                         help='Field name in cell_growth_rates file that contains growth rates',
-                        default='day', dest='growth_rate_field')
+                        default='cell_growth_rate', dest='growth_rate_field')
     parser.add_argument('--verbose', help='Print progress information',
                         action='store_true')

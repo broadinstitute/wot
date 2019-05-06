@@ -296,11 +296,11 @@ class OTModel:
         C = OTModel.compute_default_cost_matrix(p0_x, p1_x, eigenvals)
         config['C'] = C
         delta_days = t1 - t0
+
         if self.cell_growth_rate_field in p0.obs.columns:
-            config['G'] = np.asarray(p0.obs[self.cell_growth_rate_field].values) ** delta_days
+            config['G'] = np.power(p0.obs[self.cell_growth_rate_field].values, delta_days)
         else:
             config['G'] = np.ones(C.shape[0])
-
         tmap, learned_growth = wot.ot.compute_transport_matrix(solver=self.solver, **config)
         learned_growth.append(tmap.sum(axis=1))
         obs_growth = {}

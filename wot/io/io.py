@@ -780,11 +780,14 @@ def filter_adata(adata, obs_filter=None, var_filter=None):
         if os.path.exists(obs_filter):
             adata = adata[adata.obs.index.isin(wot.io.read_sets(obs_filter).obs.index)].copy()
         else:
+            obs_filter = obs_filter.split(',')
+
             adata = adata[adata.obs[obs_filter] == True].copy()
     if var_filter is not None:
         if os.path.exists(var_filter):
             adata = adata[:, adata.var.index.isin(wot.io.read_sets(var_filter).obs.index)].copy()
         else:
+            var_filter = var_filter.split(',')
             adata = adata[:, adata.var[var_filter] == True].copy()
     return adata
 
@@ -798,13 +801,11 @@ def add_row_metadata_to_dataset(dataset, days=None, growth_rates=None, covariate
     if days is not None:
         if not os.path.exists(days):
             raise ValueError(days + ' not found')
-        df = read_days_data_frame(days)
-        dataset.obs = dataset.obs.join(df)
+        dataset.obs = dataset.obs.join(read_days_data_frame(days))
     if growth_rates is not None:
         if not os.path.exists(growth_rates):
             raise ValueError(growth_rates + ' not found')
-        df = pd.read_csv(growth_rates, index_col='id', engine='python', sep=None)
-        dataset.obs = dataset.obs.join(df)
+        dataset.obs = dataset.obs.join(pd.read_csv(growth_rates, index_col='id', engine='python', sep=None))
         # if 'cell_growth_rate' not in dataset.obs:
         #     raise ValueError('Cell growth rates must that the column headers id and cell_growth_rate')
     else:
@@ -815,8 +816,7 @@ def add_row_metadata_to_dataset(dataset, days=None, growth_rates=None, covariate
     if covariate is not None:
         if not os.path.exists(covariate):
             raise ValueError(covariate + ' not found')
-        df = pd.read_csv(covariate, index_col='id', engine='python', sep=None)
-        dataset.obs = dataset.obs.join(df)
+        dataset.obs = dataset.obs.join(pd.read_csv(covariate, index_col='id', engine='python', sep=None))
 
 
 def read_day_pairs(day_pairs):
