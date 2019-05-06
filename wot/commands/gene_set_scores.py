@@ -25,7 +25,7 @@ def main(argv):
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='txt', choices=wot.commands.FORMAT_CHOICES)
     parser.add_argument('--method', help='Method to compute gene set scores',
                         choices=['mean_z_score', 'mean', 'mean_rank'], required=True)
-    parser.add_argument('--progress', action='store_true', help='Print progress information')
+    parser.add_argument('--verbose', action='store_true', help='Print verbose information')
 
     args = parser.parse_args(argv)
     if args.out is None or args.out == '':
@@ -36,7 +36,7 @@ def main(argv):
     ds = wot.io.read_dataset(args.matrix)
     if args.transpose:
         ds = ds.T
-    if args.progress:
+    if args.verbose:
         print('Read ' + args.matrix)
     ds = wot.io.filter_adata(ds, obs_filter=args.cell_filter)
 
@@ -48,7 +48,7 @@ def main(argv):
     #     background_ds = anndata.AnnData(ds.X[cell_filter], ds.obs.iloc[cell_filter], ds.var)
 
     gs = wot.io.read_sets(gene_sets, ds.var.index.values)
-    if args.progress:
+    if args.verbose:
         print('Read ' + gene_sets)
 
     if gs.shape[1] == 0:
@@ -69,12 +69,12 @@ def main(argv):
     # scores contains cells on rows, gene sets on columns
     permutations = args.nperm
     for j in range(gs.shape[1]):
-        if args.progress and gs.shape[1] > 1:
+        if args.verbose and gs.shape[1] > 1:
             print(gs.var.index.values[j])
         result = wot.score_gene_sets(ds=ds,
                                      gs=gs[:, [j]],
                                      permutations=permutations, method=args.method,
-                                     progress=args.progress)
+                                     verbose=args.verbose)
         column_names = [str(gs.var.index.values[j]) + '_score']
         if permutations is not None and permutations > 0:
             column_names.append('p_value')

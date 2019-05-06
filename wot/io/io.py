@@ -781,14 +781,19 @@ def filter_adata(adata, obs_filter=None, var_filter=None):
             adata = adata[adata.obs.index.isin(wot.io.read_sets(obs_filter).obs.index)].copy()
         else:
             obs_filter = obs_filter.split(',')
-
-            adata = adata[adata.obs[obs_filter] == True].copy()
+            if len(obs_filter) == 1 and obs_filter[0] in adata.obs:  # boolean field in obs
+                adata = adata[adata.obs[obs_filter] == True].copy()
+            else:  # list of ids
+                adata = adata[adata.obs.index.isin(obs_filter)].copy()
     if var_filter is not None:
         if os.path.exists(var_filter):
             adata = adata[:, adata.var.index.isin(wot.io.read_sets(var_filter).obs.index)].copy()
         else:
             var_filter = var_filter.split(',')
-            adata = adata[:, adata.var[var_filter] == True].copy()
+            if len(var_filter) == 1 and var_filter[0] in adata.var:  # boolean field in var
+                adata = adata[:, adata.var[var_filter] == True].copy()
+            else:  # list of ids
+                adata = adata[:, adata.var.index.isin(var_filter)].copy()
     return adata
 
 

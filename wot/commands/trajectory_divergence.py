@@ -159,6 +159,6 @@ def main(argv):
             df = pd.read_csv(args.out + '_batch.txt', sep='\t')
             df = df.groupby('day', as_index=False).mean()
             plt.plot(df['day'], df['distance'], '-o', label='covariate')
-        plt.legend()
+        plt.legend(loc='best')
         plt.savefig(args.out + '.png')
         plt.close()

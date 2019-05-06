@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import logging
 
 import numpy as np
 import pandas as pd
@@ -9,6 +10,8 @@ import scipy.sparse
 import statsmodels.stats.multitest
 
 import wot.io
+
+logger = logging.getLogger('wot')
 
 
 class DiffExp:
@@ -122,7 +125,7 @@ class DiffExp:
 
                         for day_index in range(len(self.days)):
                             day = self.days[day_index]
-                            print('{} vs {}, day {}'.format(trajectory_names[j], trajectory_names[i], day))
+                            logger.info('{} vs {}, day {}'.format(trajectory_names[j], trajectory_names[i], day))
                             values1, weights1 = self.get_expression_and_weights(day, trajectory_names[j])
                             values2, weights2 = self.get_expression_and_weights(day, trajectory_names[i])
 
@@ -150,7 +153,7 @@ class DiffExp:
                             continue
                     else:
                         day1 = self.days[0]
-                    print('{}, day {} vs day {}'.format(name, day1, day2))
+                    logger.info('{}, day {} vs day {}'.format(name, day1, day2))
                     values1, weights1 = self.get_expression_and_weights(day1, name)
                     values2, weights2 = self.get_expression_and_weights(day2, name)
                     df = self.add_stats(values1, weights1, df, '_{}'.format(day1))
@@ -179,7 +182,12 @@ def main(argv):
                         help='Limit permutations to genes which show at least X-fold difference (log-scale) between the two groups of cells.')
     parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
                         default='day')
+    parser.add_argument('--verbose', help='Print progress', action='store_true')
     args = parser.parse_args(argv)
+    if args.verbose:
+        logger = logging.getLogger('wot')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(logging.StreamHandler())
     compare = args.compare
     trajectory_files = args.trajectory
     expression_file = args.matrix

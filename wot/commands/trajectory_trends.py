@@ -22,7 +22,9 @@ def main(argv):
                         help='File with one gene id per line or comma separated string of list of genes to include from the matrix')
     parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
                         default='day')
+
     args = parser.parse_args(argv)
+
     cell_days_field = args.cell_days_field
     trajectory_ds = wot.io.read_dataset(args.trajectory)
     wot.io.add_row_metadata_to_dataset(dataset=trajectory_ds, days=args.cell_days)
@@ -58,5 +60,5 @@ def main(argv):
 
             pyplot.xlabel("Day")
             pyplot.ylabel("Gene expression")
-            pyplot.legend()
+            pyplot.legend(loc='best')
             pyplot.savefig(basename + '.png')
