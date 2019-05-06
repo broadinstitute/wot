@@ -37,7 +37,7 @@ def main(argv):
     parser.add_argument('--covariate',
                         help='Covariate (batch) values for each cell. Used to compute batch to batch distance within a timepoint.')
     parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
-                        default='day', dest='')
+                        default='day')
     parser.add_argument('--covariate_field',
                         help='Field name in covariate file that contains covariate',
                         default='covariate')
@@ -47,7 +47,7 @@ def main(argv):
     local_pca = args.local_pca
     expression_matrix = wot.io.read_dataset(args.matrix)
     trajectory_files = args.trajectory
-    batch_field_name = args.covariate
+    batch_field_name = args.covariate_field
     wot.io.add_row_metadata_to_dataset(expression_matrix, days=args.cell_days, covariate=args.covariate)
 
     distance_metric = args.distance_metric
