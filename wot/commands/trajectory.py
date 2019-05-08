@@ -30,7 +30,8 @@ def main(argv):
     tmap_model = wot.tmap.TransportMapModel.from_directory(args.tmap)
 
     cell_sets = wot.io.read_sets(args.cell_set, as_dict=True)
-    populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.day)
+    day = args.day
+    populations = tmap_model.population_from_cell_sets(cell_sets, at_time=day)
 
     # print cell size sizes
     if args.verbose:
@@ -62,7 +63,8 @@ def main(argv):
             summed_df = embedding_df.groupby(['x', 'y'], as_index=False).agg('sum')
 
             plt.scatter(summed_df['x'], summed_df['y'], c=summed_df['color'],
-                        s=6, marker=',', edgecolors='none', cmap='viridis_r', alpha=1)
+                        s=6, marker=',', edgecolors='none', cmap='viridis_r', alpha=1,
+                        vmax=np.quantile(trajectory_ds[:, j].X, 0.975))
             plt.colorbar()
             ncells = (populations[j].p > 0).sum()
             plt.title('{}, day {}, {}/{} cells'.format(trajectory_ds.var.index[j], args.day, ncells,
