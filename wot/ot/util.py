@@ -223,11 +223,13 @@ def earth_mover_distance(cloud1, cloud2, eigenvals=None, weights1=None, weights2
     if weights1 is None:
         p = np.ones(len(cloud1)) / len(cloud1)
     else:
+        weights1 = weights1.astype('float64')
         p = weights1 / weights1.sum()
 
     if weights2 is None:
         q = np.ones(len(cloud2)) / len(cloud2)
     else:
+        weights2 = weights2.astype('float64')
         q = weights2 / weights2.sum()
 
     pairwise_dist = sklearn.metrics.pairwise.pairwise_distances(

@@ -17,7 +17,7 @@ logger = logging.getLogger('wot')
 class DiffExp:
 
     def __init__(self, expression_matrix, delta_days, trajectory_names,
-                 compare, nperm, min_fold_change, day_field):
+                 compare, nperm, min_fold_change, day_field, smooth_p_values):
         self.expression_matrix = expression_matrix
         self.delta_days = delta_days
         self.trajectory_names = trajectory_names
@@ -30,6 +30,7 @@ class DiffExp:
         self.day_field = day_field
         days = np.array(sorted(expression_matrix.obs[day_field].unique().astype(float)))
         self.days = days[np.isnan(days) == False]
+        self.smooth_p_values = smooth_p_values
 
     def add_stats(self, expression_values, weights, df, suffix):
         # expression_values = np.expm1(expression_values)
@@ -66,7 +67,7 @@ class DiffExp:
         # variance2 = np.average((expression_values2 - mean2) ** 2, weights=weights2, axis=0)
         # fold_change = np.log1p(mean1) - np.log1p(mean2)
         observed = (mean1 - mean2)
-        suffix = "_{}_{}".format(day1, day2) if day1 != day2 else '_{}'.format(day1)
+        suffix = "_{}_{}".format(day1, day2)
         results = pd.DataFrame(index=self.features, data={'fold_change' + suffix: observed})
 
         if self.nperm is not None and self.nperm > 0:
@@ -90,7 +91,10 @@ class DiffExp:
                     p[(permuted >= observed_use)] += 1
                 # 2-sided p-value
                 k = p
-                p = (p + 1) / (self.nperm + 2)
+                if self.smooth_p_values:
+                    p = (p + 1) / (self.nperm + 2)
+                else:
+                    p = p / self.nperm
                 one_minus_p = 1.0 - p;
                 expr = one_minus_p < p
                 p[expr] = 1 - p[expr]
@@ -103,64 +107,40 @@ class DiffExp:
         return results
 
     def execute(self):
-        if self.compare != 'within':
-            if self.compare == 'all':
-                base_trajectory_names_to_trajectory_names = {'': self.trajectory_names}
-            elif self.compare == 'match':
-                base_trajectory_names_to_trajectory_names = {}
-                for i in range(len(self.trajectory_names)):
-                    full_trajectory_name = self.trajectory_names[i]
-                    base_trajectory_name = full_trajectory_name[0:full_trajectory_name.rindex('/')]
-                    names = base_trajectory_names_to_trajectory_names.get(base_trajectory_name)
-                    if names is None:
-                        names = []
-                        base_trajectory_names_to_trajectory_names[base_trajectory_name] = names
-                    names.append(full_trajectory_name)
+        comparisons = wot.tmap.generate_comparisons(trajectory_names=self.trajectory_names, compare=self.compare,
+                                                    days=self.days,
+                                                    delta_days=self.delta_days, reference_day='start')
 
-            for base_trajectory_name in base_trajectory_names_to_trajectory_names:
-                trajectory_names = base_trajectory_names_to_trajectory_names[base_trajectory_name]
-                for i in range(len(trajectory_names)):
-                    for j in range(i):
-                        df = pd.DataFrame(index=self.features)
+        current_name1 = None
+        current_name2 = None
+        df = None
+        for comparison in comparisons:
 
-                        for day_index in range(len(self.days)):
-                            day = self.days[day_index]
-                            logger.info('{} vs {}, day {}'.format(trajectory_names[j], trajectory_names[i], day))
-                            values1, weights1 = self.get_expression_and_weights(day, trajectory_names[j])
-                            values2, weights2 = self.get_expression_and_weights(day, trajectory_names[i])
+            names = comparison[0]
+            days = comparison[1]
+            name1 = names[0]
+            name2 = names[1]
+            day1 = days[0]
+            day2 = days[1]
+            if current_name1 != name1 or current_name2 != name2:
+                if df is not None:
+                    df.to_csv('{}_{}.tsv'.format(current_name1, current_name2).replace('/', '-'),
+                              sep='\t', header=True)
 
-                            df = self.add_stats(values1, weights1, df, '_{}_{}'.format(trajectory_names[j], day))
-                            df = self.add_stats(values2, weights2, df, '_{}_{}'.format(trajectory_names[i], day))
-                            df = df.join(self.do_comparison(values1, weights1, day, values2, weights2, day))
-
-                        df.to_csv('{}_{}.tsv'.format(trajectory_names[j], trajectory_names[i]).replace('/', '-'),
-                                  sep='\t', header=True)
-
-
-
-        else:
-            # within
-
-            for name in self.trajectory_names:
                 df = pd.DataFrame(index=self.features)
-                for day_index in range(1, len(self.days)):
-                    day2 = self.days[day_index]
-                    if self.delta_days > 0:
-                        requested_day = day2 - self.delta_days
-                        day1 = self.days[np.abs(self.days - requested_day).argmin()]
-                        if day1 == day2 or np.abs(
-                                day1 - day2 - self.delta_days) > 0.1:  # too big or small a gap
-                            continue
-                    else:
-                        day1 = self.days[0]
-                    logger.info('{}, day {} vs day {}'.format(name, day1, day2))
-                    values1, weights1 = self.get_expression_and_weights(day1, name)
-                    values2, weights2 = self.get_expression_and_weights(day2, name)
-                    df = self.add_stats(values1, weights1, df, '_{}'.format(day1))
-                    df = self.add_stats(values2, weights2, df, '_{}'.format(day2))
-                    df = df.join(self.do_comparison(values1, weights1, day1, values2, weights2, day2))
+                current_name1 = name1
+                current_name2 = name2
 
-                df.to_csv(name + '.tsv', sep='\t', header=True)
+            logger.info('{} vs {}, day {}, day {}'.format(name1, name2, day1, day2))
+            values1, weights1 = self.get_expression_and_weights(day1, name1)
+            values2, weights2 = self.get_expression_and_weights(day2, name2)
+
+            df = self.add_stats(values1, weights1, df, '_{}_{}'.format(name1, day1))
+            df = self.add_stats(values2, weights2, df, '_{}_{}'.format(name2, day2))
+            df = df.join(self.do_comparison(values1, weights1, day1, values2, weights2, day2))
+        if df is not None:
+            df.to_csv('{}_{}.tsv'.format(current_name1, current_name2).replace('/', '-'),
+                      sep='\t', header=True)
 
 
 def main(argv):
@@ -171,13 +151,16 @@ def main(argv):
                         action='append')
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     parser.add_argument('--compare',
-                        help='Compare across trajectories when more than one trajectory is supplied. If "match" compare trajectories with the same name. If "all", compare all pairs. If "within" compare within a trajectory.',
-                        choices=['within', 'match', 'all'], default='within')
+                        help='If "match", compare trajectories with the same name. ' + 'If "all", compare all pairs. '
+                             + 'If "within" compare within a trajectory. If a trajectory name, compare to the specified trajectory',
+                        default='within')
     parser.add_argument('--delta',
                         help='Delta days to compare sampled expression matrix against within a trajectory. If not specified all comparison are done against the first day.',
                         type=float)
     parser.add_argument('--nperm',
                         help='Number of permutations', type=int)
+    parser.add_argument('--smooth_p_values',
+                        help='Smooth p-values', action='store_true')
     parser.add_argument('--fold_change', type=float, default=0.25,
                         help='Limit permutations to genes which show at least X-fold difference (log-scale) between the two groups of cells.')
     parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
@@ -185,7 +168,6 @@ def main(argv):
     parser.add_argument('--verbose', help='Print progress', action='store_true')
     args = parser.parse_args(argv)
     if args.verbose:
-        logger = logging.getLogger('wot')
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())
     compare = args.compare
@@ -211,5 +193,6 @@ def main(argv):
             pd.DataFrame(index=trajectory_ds.obs.index, data=trajectory_ds.X, columns=trajectory_ds.var.index))
         trajectory_names += list(trajectory_ds.var.index)
     d = DiffExp(expression_matrix=expression_matrix, delta_days=delta_days, trajectory_names=trajectory_names,
-                compare=compare, nperm=nperm, min_fold_change=min_fold_change, day_field=cell_days_field)
+                compare=compare, nperm=nperm, min_fold_change=min_fold_change, day_field=cell_days_field,
+                smooth_p_values=args.smooth_p_values)
     d.execute()

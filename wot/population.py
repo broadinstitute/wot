@@ -28,7 +28,7 @@ class Population:
         """
         self.p = self.p / self.p.sum()
 
-    def unnormalize(self):
+    def make_binary(self):
         """
         Set non-zero values to 1.
         """
@@ -63,5 +63,5 @@ class Population:
                 if normalize:
                     pop.normalize()
                 else:
-                    pop.unnormalize()
+                    pop.make_binary()
         return populations

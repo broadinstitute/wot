@@ -3,7 +3,7 @@
 
 import argparse
 
-from matplotlib import pyplot
+from matplotlib import pyplot as plt
 
 import wot.io
 import wot.tmap
@@ -26,10 +26,8 @@ def main(argv):
     args = parser.parse_args(argv)
 
     cell_days_field = args.cell_days_field
-    trajectory_ds = wot.io.read_dataset(args.trajectory)
-    wot.io.add_row_metadata_to_dataset(dataset=trajectory_ds, days=args.cell_days)
-    matrix = wot.io.read_dataset(args.matrix)
-    matrix = wot.io.filter_adata(matrix, var_filter=args.gene_filter)
+    trajectory_ds = wot.io.read_dataset(args.trajectory, obs=args.cell_days)
+    matrix = wot.io.read_dataset(args.matrix, var_filter=args.gene_filter)
     results = wot.tmap.trajectory_trends_from_trajectory(trajectory_ds, matrix, day_field=cell_days_field)
     # output genes on columns, time on rows, one file per trajectory
 
@@ -45,7 +43,7 @@ def main(argv):
         # wot.io.write_dataset(variance, basename + '.variance', args.format)
 
         if args.plot:
-            pyplot.figure(figsize=(5, 5))
+            plt.figure(figsize=(5, 5))
 
             # stds = np.sqrt(variance.X)
             timepoints = mean.obs.index.values.astype(float)
@@ -54,11 +52,11 @@ def main(argv):
 
                 mean_i = mean[:, i].X
                 # std_i = stds[:, i] if len(stds.shape) > 1 else stds[i]
-                pyplot.plot(timepoints, mean_i, label=genes[i])
+                plt.plot(timepoints, mean_i, label=genes[i])
                 # pyplot.fill_between(timepoints, mean_i - std_i,
                 #                     mean_i + std_i, alpha=.4)
 
-            pyplot.xlabel("Day")
-            pyplot.ylabel("Gene expression")
-            pyplot.legend(loc='best')
-            pyplot.savefig(basename + '.png')
+            plt.xlabel("Day")
+            plt.ylabel("Gene expression")
+            plt.legend(loc='best')
+            plt.savefig(basename + '.png')

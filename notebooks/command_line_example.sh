@@ -2,7 +2,7 @@
 
 # Compute gene set scores, see notebook for an example of converting gene set scores to growth rates
 wot gene_set_scores \
---matrix data/ExprMatrix.loom \
+--matrix data/ExprMatrix.h5ad \
 --method mean_z_score \
 --gene_sets data/gene_sets.gmx
 
@@ -29,21 +29,21 @@ wot trajectory_divergence \
 --trajectory wot_trajectory.txt \
 --cell_days data/cell_days.txt \
 --matrix data/ExprMatrix.var.genes.loom \
---compare all \
---covariate data/batches.txt \
+--compare within \
+--verbose \
 --plot
 
 # Compute and plot trajectory trends
 wot trajectory_trends \
 --trajectory wot_trajectory.txt \
 --cell_days data/cell_days.txt \
---matrix data/ExprMatrix.loom \
---gene_filter Nanog,Obox6,Shisa8,Zfp42 \
+--matrix data/ExprMatrix.h5ad \
+--gene_filter Nanog,Obox6,Zfp42 \
 --plot
 
 # Compute differentially expressed genes along trajectory
 wot diff_exp \
---matrix data/ExprMatrix.loom \
+--matrix data/ExprMatrix.h5ad \
 --cell_days data/cell_days.txt \
 --trajectory wot_trajectory.txt \
 --nperm 1000 \
