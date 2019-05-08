@@ -379,7 +379,7 @@ def convert_binary_dataset_to_dict(ds):
     return cell_sets
 
 
-def read_anndata(path):
+def read_anndata(path, backed=None):
     path = str(path)
     tmp_path = None
     if path.startswith('gs://'):
@@ -491,7 +491,7 @@ def read_anndata(path):
         f.close()
         return anndata.AnnData(X=x, obs=row_meta, var=col_meta)
     elif ext == 'h5ad':
-        return anndata.read_h5ad(path)
+        return anndata.read_h5ad(path, backed=backed)
     elif ext == 'hdf5' or ext == 'h5':
         return anndata.read_hdf(path)
     elif ext == 'gct':
@@ -508,8 +508,8 @@ def read_anndata(path):
                                var=pd.DataFrame(index=df.columns))
 
 
-def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None):
-    adata = read_anndata(path)
+def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None, backed=None):
+    adata = read_anndata(path, backed=backed)
 
     def get_df(meta):
         if not isinstance(meta, pd.DataFrame):
@@ -714,8 +714,6 @@ def write_dataset(ds, path, output_format='txt'):
                 xend += xchunk
                 dset[slice(xstart, xend)] = x[slice(xstart, xend)].compute()
                 xstart = xend
-
-
         elif is_sparse:
             dset.attrs['sparse'] = True
             # write in chunks of 1000
