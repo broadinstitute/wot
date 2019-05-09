@@ -8,7 +8,7 @@ wot gene_set_scores \
 
 # Compute transport maps
 wot optimal_transport \
---matrix data/ExprMatrix.var.genes.loom \
+--matrix data/ExprMatrix.var.genes.h5ad \
 --cell_days data/cell_days.txt \
 --cell_filter data/serum_cell_ids.txt \
 --growth_iters 3 \
@@ -28,7 +28,7 @@ wot trajectory \
 wot trajectory_divergence \
 --trajectory wot_trajectory.txt \
 --cell_days data/cell_days.txt \
---matrix data/ExprMatrix.var.genes.loom \
+--matrix data/ExprMatrix.var.genes.h5ad \
 --compare within \
 --verbose \
 --plot
@@ -51,7 +51,7 @@ wot diff_exp \
 
 # Compute and plot validation summary
 wot optimal_transport_validation \
---matrix data/ExprMatrix.var.genes.loom \
+--matrix data/ExprMatrix.var.genes.h5ad \
 --cell_days data/cell_days.txt \
 --cell_filter data/serum_cell_ids.txt \
 --covariate data/batches.txt \
