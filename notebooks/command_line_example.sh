@@ -41,12 +41,22 @@ wot trajectory_trends \
 --gene_filter Nanog,Obox6,Zfp42 \
 --plot
 
-# Compute differentially expressed genes along trajectory
+wot fates \
+--tmap tmaps/serum \
+--cell_set data/major_cell_sets.gmt \
+--day 18 \
+--cell_set_filter IPS \
+--out IPS \
+--verbose
+
+# Compute differentially expressed genes at day 14 that are predictive of IPS fate
 wot diff_exp \
 --matrix data/ExprMatrix.h5ad \
 --cell_days data/cell_days.txt \
---trajectory wot_trajectory.txt \
+--fates IPS_fates.txt \
 --nperm 1000 \
+--gene_filter data/TFs.txt \
+--cell_day_filter 14 \
 --verbose
 
 # Compute and plot validation summary
