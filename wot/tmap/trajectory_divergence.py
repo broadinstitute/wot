@@ -61,7 +61,6 @@ def trajectory_divergence(adata: anndata.AnnData, trajectory_datasets: [anndata.
     for trajectory_ds in trajectory_datasets:
         adata.obs = adata.obs.combine_first(trajectory_ds.obs[[cell_days_field]])
 
-    print(adata.obs_keys())
     unique_days = np.array(sorted(trajectory_ds.obs[cell_days_field].unique().astype(float)))
     unique_days = unique_days[np.isnan(unique_days) == False]
     logger.info('{} days'.format(len(unique_days)))
