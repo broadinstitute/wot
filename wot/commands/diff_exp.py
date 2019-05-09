@@ -4,6 +4,7 @@
 import argparse
 import logging
 
+import anndata
 import numpy as np
 import pandas as pd
 import scipy.sparse
@@ -165,6 +166,10 @@ def main(argv):
                         help='Limit permutations to genes which show at least X-fold difference (log-scale) between the two groups of cells.')
     parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
                         default='day')
+    parser.add_argument('--cell_day_filter',
+                        help='Comma separated list of days to include (e.g. 12,14,16)', type=str)
+    parser.add_argument('--gene_filter',
+                        help='File with one gene id per line')
     parser.add_argument('--verbose', help='Print progress', action='store_true')
     args = parser.parse_args(argv)
     if args.verbose:
@@ -178,12 +183,17 @@ def main(argv):
     nperm = args.nperm
     min_fold_change = args.fold_change
     cell_days_field = args.cell_days_field
-    expression_matrix = wot.io.read_dataset(expression_file)
+    expression_matrix = wot.io.read_dataset(expression_file, var_filter=args.gene_filter)
+    day_filter = args.cell_day_filter
 
     if delta_days is None:
         delta_days = 0
     delta_days = abs(delta_days)
     wot.io.add_row_metadata_to_dataset(dataset=expression_matrix, days=cell_days_file)
+    if day_filter is not None:
+        days = day_filter.split(',') if type(day_filter) == str else day_filter
+        expression_matrix = expression_matrix[expression_matrix.obs[cell_days_field].isin(days)]
+        expression_matrix = anndata.AnnData(expression_matrix.X, expression_matrix.obs.copy(), expression_matrix.var)
     trajectory_names = []
     for f in trajectory_files:
         trajectory_ds = wot.io.read_dataset(f)

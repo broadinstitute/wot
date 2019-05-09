@@ -25,10 +25,7 @@ def generate_comparisons(trajectory_names, compare, days, delta_days=0, referenc
                 names = base_name_to_full_names[base_name]
                 comparisons += list(itertools.combinations(names, 2))
         else:  # compare all to specified trajectory
-            c = trajectory_names.copy()
-            c.remove(compare)
-
-            comparisons = itertools.product([compare], c)
+            comparisons = itertools.product([compare], trajectory_names)
         day_pairs = [(day, day) for day in days]
         return itertools.product(comparisons, day_pairs)
     else:

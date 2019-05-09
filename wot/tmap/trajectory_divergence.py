@@ -16,7 +16,7 @@ logger = logging.getLogger('wot')
 
 
 def trajectory_divergence(adata: anndata.AnnData, trajectory_datasets: [anndata.AnnData], cell_days_field: str = 'day',
-                          local_pca: int = 30, distance_metric: str = 'emd', compare: str = 'within') -> pd.DataFrame:
+                          local_pca: int = 30, distance_metric: str = 'emd', compare: str = 'all') -> pd.DataFrame:
     """
     Multi-dimensional linear interpolation.
     Returns the N-dimensional piecewise linear interpolant to a function
@@ -43,7 +43,7 @@ def trajectory_divergence(adata: anndata.AnnData, trajectory_datasets: [anndata.
         A dataframe with the columns name1, name2, day1, day2, distance
     """
 
-    orig_obs = adata.obs
+    adata = anndata.AnnData(adata.X, adata.obs.copy(), adata.var)
     has_covariate = False
     batch_output = []  # name1, name2, covariate_1, covariate_2, day1, day2, distance
     # if covariate_field is not None and covariate_field in adata.obs:
@@ -76,10 +76,10 @@ def trajectory_divergence(adata: anndata.AnnData, trajectory_datasets: [anndata.
         name2 = names[1]
         day1 = days[0]
         day2 = days[1]
-        adata_day = adata[((adata.obs[cell_days_field] == day1) | (adata.obs[cell_days_field] == day2))
-                          & ((np.isnan(adata.obs[name1]) == False) | (
+        adata_both_days = adata[((adata.obs[cell_days_field] == day1) | (adata.obs[cell_days_field] == day2))
+                                & ((np.isnan(adata.obs[name1]) == False) | (
                 np.isnan(adata.obs[name2]) == False))]
-        x = adata_day.X
+        x = adata_both_days.X
         if scipy.sparse.isspmatrix(x):
             x = x.toarray()
 
@@ -92,7 +92,6 @@ def trajectory_divergence(adata: anndata.AnnData, trajectory_datasets: [anndata.
             pca.fit(x.T)
             x = pca.components_.T
             eigenvals = np.diag(pca.singular_values_)
-        logger.info('{} vs {}, day {}, day {}'.format(name1, name2, day1, day2))
 
         # if has_covariate:
         #     # compute distances between all pairs of batches
@@ -105,24 +104,24 @@ def trajectory_divergence(adata: anndata.AnnData, trajectory_datasets: [anndata.
         #             d = wot.ot.earth_mover_distance(x[batch1_indices], x[batch2_indices], eigenvals=eigenvals)
         #             batch_output.write('{}\t{}\t{}\t{}\n'.format(batches[batch_index1], batches[batch_index2], day, d))
 
-        trajectory1 = adata_day.obs[name1].values
-        trajectory2 = adata_day.obs[name2].values
+        trajectory1_filter = adata_both_days.obs[cell_days_field] == day1
+        trajectory2_filter = adata_both_days.obs[cell_days_field] == day2
+        trajectory1 = adata_both_days[trajectory1_filter].obs[name1].values
+        trajectory2 = adata_both_days[trajectory2_filter].obs[name2].values
 
         if distance_metric == 'total_variation':
             q = np.where((np.isnan(trajectory1) == False) & (np.isnan(trajectory2) == False))
             distance = 0.5 * np.sum(
                 np.abs(trajectory1[q] - trajectory2[q]))
         else:
-            trajectory1_filter = np.where(np.isnan(trajectory1) == False)
-            trajectory2_filter = np.where(np.isnan(trajectory2) == False)
             distance = wot.ot.earth_mover_distance(x[trajectory1_filter], x[trajectory2_filter],
                                                    eigenvals=eigenvals,
-                                                   weights1=trajectory1[trajectory1_filter],
-                                                   weights2=trajectory2[trajectory2_filter])
-
-        output.append([name1, name2, day1, day2, distance, True])
-        # output.append([name1, name2, day1, day2, unweighted_distance, False])
-    adata.obs = orig_obs
+                                                   weights1=trajectory1,
+                                                   weights2=trajectory2)
+        logger.info(
+            '{} vs {}, day {}, day {}, {} cells, distance {}'.format(name1, name2, day1, day2, adata_both_days.shape[0],
+                                                                     distance))
+        output.append([name1, name2, day1, day2, distance])
     return pd.DataFrame(data=output, columns=['name1', 'name2', 'day1', 'day2', 'distance'])
 
 

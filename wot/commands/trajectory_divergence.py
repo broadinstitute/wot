@@ -34,10 +34,13 @@ def main(argv):
     parser.add_argument('--gene_filter',
                         help='File with one gene id per line to use for computing'
                              'cost matrices (e.g. variable genes)')
+    parser.add_argument('--cell_day_filter',
+                        help='Comma separated list of days to include (e.g. 12,14,16)', type=str)
     # parser.add_argument('--covariate',
     #                     help='Covariate (batch) values for each cell. Used to compute batch to batch distance within a timepoint.')
     parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
                         default='day')
+
     # parser.add_argument('--covariate_field',
     #                     help='Field name in covariate file that contains covariate',
     #                     default='covariate')
@@ -46,12 +49,18 @@ def main(argv):
     if args.verbose:
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())
+    day_filter = args.cell_day_filter
+
     compare = args.compare
     cell_days_field = args.cell_days_field
     local_pca = args.local_pca
     days_df = pd.read_csv(args.cell_days, sep=None, index_col='id', engine='python')
     adata = wot.io.read_dataset(args.matrix, obs_filter=args.cell_filter,
                                 var_filter=args.gene_filter)
+    days = None
+    if day_filter is not None:
+        days = day_filter.split(',') if type(day_filter) == str else day_filter
+
     trajectory_files = args.trajectory
     # batch_field_name = args.covariate_field
 
@@ -63,6 +72,8 @@ def main(argv):
         if len(trajectory_files) > 1:
             trajectory_ds.var.index = trajectory_ds.var.index + '/' + wot.io.get_filename_and_extension(f)[0]
         trajectory_ds.obs = trajectory_ds.obs.join(days_df)
+        if days is not None:
+            trajectory_ds = trajectory_ds[trajectory_ds.obs[cell_days_field].isin(days)]
         trajectory_datasets.append(trajectory_ds)
 
     df = wot.tmap.trajectory_divergence(adata, trajectory_datasets, cell_days_field=cell_days_field,

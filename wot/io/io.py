@@ -399,8 +399,7 @@ def read_anndata(path, backed=None):
             for prefix in ['', basename_and_extension[0] + sep_ext[0]]:
                 f = os.path.join(sp[0], prefix + 'barcodes.' + sep_ext[1])
                 if os.path.isfile(f) or os.path.isfile(f + '.gz'):
-                    obs = pd.read_csv(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
-                                      header=None)
+                    obs = pd.read_csv(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t', header=None)
                     break
         var = None
         for sep_ext in itertools.product(['.', '_', '-'], ['tsv', 'txt']):

@@ -19,6 +19,8 @@ def main(argv):
                         help='Gene sets in gmx, gmt, or grp format', required=True)
     parser.add_argument('--cell_filter',
                         help='File with one cell id per line to include')
+    parser.add_argument('--day_filter',
+                        help='File with one cell id per line to include')
     parser.add_argument('--gene_set_filter', help='Gene sets to include')
     parser.add_argument('--nperm', help='Number of permutations to perform', type=int)
     parser.add_argument('--out', help='Output file name prefix', default='')
