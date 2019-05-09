@@ -9,13 +9,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 requirements = [
-    'numpy', 'pandas', 'h5py', 'Cython', 'anndata', 'scanpy', 'scikit-learn', 'scipy', 'matplotlib', 'POT'
+    'numpy', 'pandas', 'h5py', 'scanpy>=1.4.2', 'scikit-learn', 'scipy', 'matplotlib', 'POT'
 ]
 
 extras_require = {
 }
 
 setup_requirements = [
+    'Cython'
 ]
 
 test_requirements = [
@@ -24,7 +25,7 @@ test_requirements = [
 
 setuptools.setup(
     name='wot',
-    version='0.5.6',
+    version='1.0.0',
     description="Optimal transport for time-course single cell data",
     author="WOT Team",
     author_email='wot@broadinstitute.org',

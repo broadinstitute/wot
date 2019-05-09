@@ -53,10 +53,11 @@ class TransportMapModel:
         fates : anndata.AnnData
             Rows : all cells, Columns : populations index. At point (i, j) : the probability that cell i belongs to population j
         """
-        wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
+        start_day = wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
         populations = Population.copy(*populations, normalize=False, add_missing=True)
         pop_names = [pop.name for pop in populations]
         results = []
+
         results.insert(0, np.array([pop.p for pop in populations]).T)
         while self.can_pull_back(*populations):
             populations = self.pull_back(*populations, as_list=True, normalize=False)
@@ -64,7 +65,9 @@ class TransportMapModel:
 
         X = np.concatenate(results)
         X /= X.sum(axis=1, keepdims=1)
-        return anndata.AnnData(X=X, obs=self.meta.copy(), var=pd.DataFrame(index=pop_names))
+        obs = self.meta.copy()
+        obs = obs[obs['day'] <= start_day]
+        return anndata.AnnData(X=X, obs=obs, var=pd.DataFrame(index=pop_names))
 
     def transition_table(self, start_populations, end_populations):
         """
