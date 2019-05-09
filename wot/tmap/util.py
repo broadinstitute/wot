@@ -6,15 +6,15 @@ import pandas as pd
 import scipy.sparse
 
 
-def generate_comparisons(trajectory_names, compare, days, delta_days=0, reference_day='start'):
+def generate_comparisons(comparison_names, compare, days, delta_days=0, reference_day='start'):
     if compare != 'within':  # within, match, all, or trajectory name
         if compare == 'all':
-            comparisons = itertools.combinations(trajectory_names, 2)
+            comparisons = itertools.combinations(comparison_names, 2)
         elif compare == 'match':
             base_name_to_full_names = {}
             comparisons = []
-            for i in range(len(trajectory_names)):
-                full_trajectory_name = trajectory_names[i]
+            for i in range(len(comparison_names)):
+                full_trajectory_name = comparison_names[i]
                 base_trajectory_name = full_trajectory_name[0:full_trajectory_name.rindex('/')]
                 names = base_name_to_full_names.get(base_trajectory_name)
                 if names is None:
@@ -25,7 +25,7 @@ def generate_comparisons(trajectory_names, compare, days, delta_days=0, referenc
                 names = base_name_to_full_names[base_name]
                 comparisons += list(itertools.combinations(names, 2))
         else:  # compare all to specified trajectory
-            comparisons = itertools.product([compare], trajectory_names)
+            comparisons = itertools.product([compare], comparison_names)
         day_pairs = [(day, day) for day in days]
         return itertools.product(comparisons, day_pairs)
     else:
@@ -46,7 +46,7 @@ def generate_comparisons(trajectory_names, compare, days, delta_days=0, referenc
                 day1 = days[reference_index]
             filtered_day_pairs.append((day1, day2))
 
-    return itertools.product([(name, name) for name in trajectory_names], filtered_day_pairs)
+    return itertools.product([(name, name) for name in comparison_names], filtered_day_pairs)
 
 
 def unique_timepoint(*populations):

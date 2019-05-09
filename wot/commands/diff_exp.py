@@ -3,6 +3,7 @@
 
 import argparse
 import logging
+import sys
 
 import anndata
 import numpy as np
@@ -17,12 +18,12 @@ logger = logging.getLogger('wot')
 
 class DiffExp:
 
-    def __init__(self, expression_matrix, delta_days, trajectory_names,
+    def __init__(self, expression_matrix, delta_days, fate_names,
                  compare, nperm, min_fold_change, day_field, smooth_p_values):
         self.expression_matrix = expression_matrix
         self.delta_days = delta_days
-        self.trajectory_names = trajectory_names
-        if len(trajectory_names) == 1:
+        self.fate_names = fate_names
+        if len(fate_names) == 1:
             compare = 'within'
         self.compare = compare
         self.nperm = nperm
@@ -48,11 +49,11 @@ class DiffExp:
                                         }))
         return df
 
-    def get_expression_and_weights(self, day, trajectory_name):
+    def get_expression_and_weights(self, day, fate_name):
         ds = self.expression_matrix[
             (self.expression_matrix.obs[self.day_field] == day) & (
-                    False == self.expression_matrix.obs[trajectory_name].isna())]
-        weights = ds.obs[trajectory_name].values
+                    False == self.expression_matrix.obs[fate_name].isna())]
+        weights = ds.obs[fate_name].values
         expression_values = ds.X
         if scipy.sparse.isspmatrix(expression_values):
             expression_values = expression_values.toarray()
@@ -108,7 +109,7 @@ class DiffExp:
         return results
 
     def execute(self):
-        comparisons = wot.tmap.generate_comparisons(trajectory_names=self.trajectory_names, compare=self.compare,
+        comparisons = wot.tmap.generate_comparisons(comparison_names=self.fate_names, compare=self.compare,
                                                     days=self.days,
                                                     delta_days=self.delta_days, reference_day='start')
 
@@ -116,7 +117,6 @@ class DiffExp:
         current_name2 = None
         df = None
         for comparison in comparisons:
-
             names = comparison[0]
             days = comparison[1]
             name1 = names[0]
@@ -126,7 +126,7 @@ class DiffExp:
             if current_name1 != name1 or current_name2 != name2:
                 if df is not None:
                     df.to_csv('{}_{}.tsv'.format(current_name1, current_name2).replace('/', '-'),
-                              sep='\t', header=True)
+                              sep='\t', header=True, index_label='id')
 
                 df = pd.DataFrame(index=self.features)
                 current_name1 = name1
@@ -137,26 +137,29 @@ class DiffExp:
             values2, weights2 = self.get_expression_and_weights(day2, name2)
 
             df = self.add_stats(values1, weights1, df, '_{}_{}'.format(name1, day1))
+
             df = self.add_stats(values2, weights2, df, '_{}_{}'.format(name2, day2))
+
             df = df.join(self.do_comparison(values1, weights1, day1, values2, weights2, day2))
+
         if df is not None:
             df.to_csv('{}_{}.tsv'.format(current_name1, current_name2).replace('/', '-'),
-                      sep='\t', header=True)
+                      sep='\t', header=True, index_label='id')
 
 
 def main(argv):
     parser = argparse.ArgumentParser(
-        description='Compute differentially expressed genes from the output of the trajectory tool')
+        description='Compute differentially expressed genes from the output of the fate tool')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
-    parser.add_argument('--trajectory', help='One or more trajectory datasets as produced by the trajectory tool',
+    parser.add_argument('--fates', help='One or more fate datasets as produced by the fate tool',
                         action='append')
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     parser.add_argument('--compare',
-                        help='If "match", compare trajectories with the same name. ' + 'If "all", compare all pairs. '
-                             + 'If "within" compare within a trajectory. If a trajectory name, compare to the specified trajectory',
-                        default='within')
+                        help='If "match", compare fates with the same name. ' + 'If "all", compare all pairs. '
+                             + 'If "within" compare within a fate. If a fate name, compare to the specified fate',
+                        default='all')
     parser.add_argument('--delta',
-                        help='Delta days to compare sampled expression matrix against within a trajectory. If not specified all comparison are done against the first day.',
+                        help='Delta days to compare sampled expression matrix against within a fate. If not specified all comparison are done against the first day.',
                         type=float)
     parser.add_argument('--nperm',
                         help='Number of permutations', type=int)
@@ -176,7 +179,7 @@ def main(argv):
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())
     compare = args.compare
-    trajectory_files = args.trajectory
+    fate_files = args.fates
     expression_file = args.matrix
     delta_days = args.delta
     cell_days_file = args.cell_days
@@ -191,18 +194,20 @@ def main(argv):
     delta_days = abs(delta_days)
     wot.io.add_row_metadata_to_dataset(dataset=expression_matrix, days=cell_days_file)
     if day_filter is not None:
-        days = day_filter.split(',') if type(day_filter) == str else day_filter
+        days = [float(day) for day in day_filter.split(',')] if type(day_filter) == str else day_filter
         expression_matrix = expression_matrix[expression_matrix.obs[cell_days_field].isin(days)]
         expression_matrix = anndata.AnnData(expression_matrix.X, expression_matrix.obs.copy(), expression_matrix.var)
-    trajectory_names = []
-    for f in trajectory_files:
-        trajectory_ds = wot.io.read_dataset(f)
-        if len(trajectory_files) > 1:
-            trajectory_ds.var.index = trajectory_ds.var.index + '/' + wot.io.get_filename_and_extension(f)[0]
+    if expression_matrix.shape[1] is 0:
+        sys.exit('Expression matrix has 0 genes')
+    fate_names = []
+    for f in fate_files:
+        fate_ds = wot.io.read_dataset(f)
+        if len(fate_files) > 1:
+            fate_ds.var.index = fate_ds.var.index + '/' + wot.io.get_filename_and_extension(f)[0]
         expression_matrix.obs = expression_matrix.obs.join(
-            pd.DataFrame(index=trajectory_ds.obs.index, data=trajectory_ds.X, columns=trajectory_ds.var.index))
-        trajectory_names += list(trajectory_ds.var.index)
-    d = DiffExp(expression_matrix=expression_matrix, delta_days=delta_days, trajectory_names=trajectory_names,
+            pd.DataFrame(index=fate_ds.obs.index, data=fate_ds.X, columns=fate_ds.var.index))
+        fate_names += list(fate_ds.var.index)
+    d = DiffExp(expression_matrix=expression_matrix, delta_days=delta_days, fate_names=fate_names,
                 compare=compare, nperm=nperm, min_fold_change=min_fold_change, day_field=cell_days_field,
                 smooth_p_values=args.smooth_p_values)
     d.execute()

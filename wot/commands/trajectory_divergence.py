@@ -59,7 +59,7 @@ def main(argv):
                                 var_filter=args.gene_filter)
     days = None
     if day_filter is not None:
-        days = day_filter.split(',') if type(day_filter) == str else day_filter
+        days = [float(day) for day in day_filter.split(',')] if type(day_filter) == str else day_filter
 
     trajectory_files = args.trajectory
     # batch_field_name = args.covariate_field

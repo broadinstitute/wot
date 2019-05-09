@@ -48,7 +48,7 @@ class OTModel:
         ncells = kwargs.pop('ncells', None)
         self.matrix = wot.io.filter_adata(self.matrix, obs_filter=cell_filter, var_filter=gene_filter)
         if day_filter is not None:
-            days = day_filter.split(',') if type(day_filter) == str else day_filter
+            days = [float(day) for day in day_filter.split(',')] if type(day_filter) == str else day_filter
             row_indices = self.matrix.obs[self.day_field].isin(days)
             self.matrix = self.matrix[row_indices].copy()
 

@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
-
 from wot.commands import *
 
 
 def main():
-    command_list = [convert_matrix, cells_by_gene_set, census,
+    command_list = [convert_matrix, cells_by_gene_set, census, fates,
                     gene_set_scores, diff_exp, neighborhood_graph, optimal_transport,
                     optimal_transport_validation, trajectory, trajectory_divergence,
                     trajectory_trends, transition_table]
