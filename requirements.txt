@@ -1,0 +1,9 @@
+ cython
+ numpy
+ pandas
+ h5py
+ scanpy>=1.4.2
+ scikit-learn
+ scipy
+ matplotlib
+ POT
