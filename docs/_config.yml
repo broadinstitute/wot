@@ -1,7 +1,7 @@
 theme: jekyll-theme-cayman
 
-title: Waddington Optimal Transport
-description: Optimal-transport based software tools for single-cell RNA sequencing analysis
+title: wot
+description: A software package for analyzing snapshots of developmental processes
 
 repository: broadinstitute/wot
 
@@ -10,10 +10,10 @@ show_downloads: false
 navbar_items:
   - title: Home
     url: /
-  - title: Documentation
+  - title: Tutorial
+    url: /tutorial
+  - title: Command Line
     url: /cli_documentation
-  - title: Examples
-    url: /examples
   - title: Citing
     url: /citing_wot
   - title: Source Code

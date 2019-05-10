@@ -171,8 +171,6 @@ def add_ot_parameters_arguments(parser):
     parser.add_argument('--tau', type=float, default=10000)
     parser.add_argument('--ncells', type=int, help='Number of cells to downsample from each timepoint and covariate')
     parser.add_argument('--ncounts', help='Sample ncounts from each cell', type=int)
-    parser.add_argument('--no_overwrite', help='Do not overwrite existing transport maps if they exist',
-                        action='store_true')
     # parser.add_argument('--sampling_bias', help='File with "id" and "pp" to correct sampling bias.')
 
     parser.add_argument('--solver', choices=['duality_gap', 'fixed_iters'],

@@ -121,7 +121,7 @@ class OTModel:
         covariate = set(self.matrix.obs[self.covariate_field])
         return product(covariate, covariate)
 
-    def compute_all_transport_maps(self, tmap_out='tmaps', no_overwrite=False, output_file_format='loom',
+    def compute_all_transport_maps(self, tmap_out='tmaps', overwrite=True, output_file_format='h5ad',
                                    with_covariates=False):
         """
         Computes all required transport maps.
@@ -130,8 +130,8 @@ class OTModel:
         ----------
         tmap_out : str, optional
             Path and prefix for output transport maps
-        no_overwrite : bool, optional
-            Do not overwrite existing transport maps
+        overwrite : bool, optional
+            Overwrite existing transport maps
         output_file_format: str, optional
             Transport map file format
         with_covariates : bool, optional, default : False
@@ -181,7 +181,7 @@ class OTModel:
                 path += "_{}_{}_cv{}_cv{}".format(*day_pair)
             output_file = os.path.join(tmap_dir, path)
             output_file = wot.io.check_file_extension(output_file, output_file_format)
-            if os.path.exists(output_file) and no_overwrite:
+            if os.path.exists(output_file) and not overwrite:
                 logger.info('Found existing tmap at ' + output_file + '. ')
                 continue
 

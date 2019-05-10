@@ -1,16 +1,29 @@
 <!DOCTYPE html>
-<html lang="{{ site.lang | default: "en-US" }}">
-  {% include head.html %}
+<html lang="{{ site.lang | default: " en-US" }}">
+{% include head.html %}
+<script type="text/x-mathjax-config">
 
-  <body data-spy="scroll" data-target="#toc">
-    {% include navbar.html %}
+ MathJax.Hub.Config({
+    showProcessingMessages: false,
+    tex2jax: { inlineMath: [['$','$'],['\\(','\\)']] }
+  });
 
-    {% unless page.noheader %}
-      {% include header.html %}
-    {% endunless %}
 
-    {{ content }}
 
-    {% include analytics.html %}
-  </body>
+</script>
+
+<script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_HTMLorMML"
+        type="text/javascript"></script>
+
+<body data-spy="scroll" data-target="#toc">
+{% include navbar.html %}
+
+{% unless page.noheader %}
+{% include header.html %}
+{% endunless %}
+
+{{ content }}
+
+{% include analytics.html %}
+</body>
 </html>

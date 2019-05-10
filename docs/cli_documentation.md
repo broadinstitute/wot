@@ -1,38 +1,13 @@
 ---
 noheader: true
+title: Command Line
 permalink: cli_documentation/
 layout: documentation
 location: Documentation
 ---
 
-Waddington Optimal Transport (wot) uses time-course data to infer how the
-probability distribution of cells in gene-expression space evolves
-over time, by using the mathematical approach of optimal transport.
 
-
-
-## Installation ##
-------------------
-
-### Dependencies ###
-
-This packages depends on [Python 3](https://www.python.org/downloads/).
-
-Several other python packages are required, but they can be installed through [pip][pip-install] or [conda](https://www.anaconda.com/download/)
-
-Install dependencies:
-```sh
-conda install numpy pandas h5py cython scikit-learn scipy matplotlib
-conda install -c conda-forge pot
-```
-
-Install wot
-
-```sh
-pip install wot
-```
-
-## Usage ##
+## Command Line ##
 -----------
 
 **wot** consists of several tools. Each tool can be used with the syntax `wot <tool>`.
@@ -258,12 +233,12 @@ variance for each feature at each timepoint
 
 ### Differential expression ###
 
-The diff_exp command finds the genes that are differentially expressed between two sets of cells. You input one or more trajectories created using
-the trajectory tool, an expression matrix, and the tools outputs a table with statistics about differential expression along the cellular trajectory.
+The diff_exp command finds the genes that are differentially expressed between two sets of cells. You input one or more fates created using
+the fates tool, an expression matrix, and the tool outputs a table with statistics about differentially expressed genes.
 
 ### Validation ###
 
-You can easily validate the transport maps that have been computed above.
+You can validate the transport maps that have been computed above.
 
 Say, for instance, that you have data at time points 0, 1, and 2.
 You could compute the transport map from 0 to 2, and then interpolate with
@@ -679,5 +654,4 @@ Example:
 <tr><td>cell_2</td><td>1</td></tr>
 </table>
 
-[pip-install]: https://pip.pypa.io/en/stable/installing/
 
