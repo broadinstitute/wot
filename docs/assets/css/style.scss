@@ -2,7 +2,6 @@
 ---
 
 @import "{{ site.theme }}";
-@import url('https://fonts.googleapis.com/css?family=Inconsolata');
 
 nav[data-toggle='toc'] {
   margin-top: 3rem;
@@ -111,9 +110,6 @@ a.nostyle, a.nostyle:hover, a.nostyle:active, a.nostyle:focus {
 
 .terminal-body {
   color: #f0f0f0;
-  font-family: "Consolas", "Courier New", "Courier";
-  font-size: 1.45em;
-  line-height: 1.40em;
   font-weight: 500;
   text-align: left;
   overflow: hidden;
