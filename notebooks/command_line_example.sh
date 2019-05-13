@@ -44,17 +44,18 @@ wot trajectory_trends \
 wot fates \
 --tmap tmaps/serum \
 --cell_set data/major_cell_sets.gmt \
---day 18 \
+--day 17 \
 --cell_set_filter IPS \
---out IPS \
+--out IPS_d17 \
 --verbose
 
-# Compute differentially expressed genes at day 14 that are predictive of IPS fate
+# Compute differentially expressed genes at day 14 that are predictive of IPS fate at day 17
 wot diff_exp \
 --matrix data/ExprMatrix.h5ad \
 --cell_days data/cell_days.txt \
---fates IPS_fates.txt \
+--fates IPS_d17_fates.txt \
 --nperm 1000 \
+--fold_change 0 \
 --gene_filter data/TFs.txt \
 --cell_day_filter 14 \
 --verbose
