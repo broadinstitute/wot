@@ -436,6 +436,11 @@ also have a my_data.genes.txt file and a my_data.barcodes.txt file.
 A GCT file is a tab-delimited text file. Please see description [here](http://software.broadinstitute.org/cancer/software/genepattern/file-formats-guide#GCT)
 
 
+##### H5AD #####
+
+A HDF5 file that provides a scalable way of keeping track of data together with learned annotations.. Please see description at [https://anndata.readthedocs.io](https://anndata.readthedocs.io/en/latest/)
+
+
 ##### Loom #####
 
 A HDF5 file for efficient storage and access of large datases. Please see description at [http://loompy.org/](http://loompy.org/)
@@ -541,44 +546,44 @@ You can use as many parameter columns as you want, even none.
 All parameters not specified here can be specified as being constant as previously,
 with the command-line arguments `--epsilon`, `--lambda1`, `--tolerance`, etc. .
 
-### <a name="geneset_file">Gene sets</a> ###
+### <a name="geneset_file">Gene/Cell sets</a> ###
 
-Gene sets can be in **gmx** (Gene MatriX), **gmt** (Gene Matrix Transposed), or **grp** format.
+Gene or cell sets can be in **gmx** (Gene MatriX), **gmt** (Gene Matrix Transposed), or **grp** format.
 
-The **gmt** format is convenient to store large databases of gene sets.
+The **gmt** format is convenient to store large databases of sets.
 However, for a handful of sets, the **gmx** format might offer better
 excel-editablity.
 
-More information on the gene set formats can be found
+More information on these formats can be found
 in the [Broad Institute Software Documentation](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#Gene_Set_Database_Formats)
 
 ##### GMT #####
 
-The **gmt** format consists of one gene set per line. Each line is a
+The **gmt** format consists of one set per line. Each line is a
 tab-separated list composed as follows :
 
-- The gene set name (can contain spaces)
-- A commentary / description of the gene set (may be empty or contain spaces)
-- A tab-separated list of genes
+- The set name (can contain spaces)
+- A commentary / description of the set (may be empty or contain spaces)
+- A tab-separated list of set members
 
 Example:
 
 <table class="table" style="display: table">
-<tr><td>Tip1</td><td>The first tip</td><td>gene_2</td><td>gene_1</td></tr>
-<tr><td>Tip2</td><td>The second tip</td><td>gene_3</td></tr>
-<tr><td>Tip3</td><td>The third tip</td><td>gene_4</td><td>gene_1</td></tr>
+<tr><td>Set1</td><td>The first set</td><td>gene_2</td><td>gene_1</td></tr>
+<tr><td>Set2</td><td>The second set</td><td>gene_3</td></tr>
+<tr><td>Set3</td><td>The third set</td><td>gene_4</td><td>gene_1</td></tr>
 </table>
 
 ##### GMX #####
 
 The **gmx** format is the transposed of the **gmx** format.
-Each column represents a gene set. It is also tab-separated.
+Each column represents a set. It is also tab-separated.
 
 Example:
 
 <table class="table" style="display: table">
-<tr><td>Tip1</td><td>Tip2</td><td>Tip3</td></tr>
-<tr><td>The first tip</td><td>The second tip</td><td>The third tip</td></tr>
+<tr><td>Set1</td><td>Set2</td><td>Set3</td></tr>
+<tr><td>The first set</td><td>The second set</td><td>The third set</td></tr>
 <tr><td>gene_2</td><td>gene_3</td><td>gene_4</td></tr>
 <tr><td>gene_1</td><td></td><td>gene_1</td></tr>
 </table>
@@ -586,7 +591,7 @@ Example:
 
 ##### GRP #####
 
-The **grp** format contains a single gene set in a simple newline-delimited text format. 
+The **grp** format contains a single set in a simple newline-delimited text format. 
 
 Example:
 
@@ -596,11 +601,6 @@ Example:
 <tr><td>gene_3</td></tr>
 </table>
 
-### <a name="cellset_file">Cell sets</a> ###
-
-Cell sets can be described using the same formats as gene sets.
-Simply list the ids of the cell in a set where you would have listed
-the name of the genes in a gene set.
 
 ##### <a name="cells_by_gene_set">Cell selecting tool</a> #####
 
@@ -608,13 +608,13 @@ If you want to select a cell sets corresponding to a list of gene sets,
 you may use the **cells_by_gene_set** command-line tool provided byt **wot**.
 
 ```sh
-wot cells_by_gene_set --matrix matrix.txt --gene_sets gene_sets.gmt \
- --out cell_sets.gmt --format gmt --quantile 0.99
+wot cells_by_gene_set --score gene_set_scores.txt \
+ --out cell_sets.gmt --format gmt --quantile 99
 ```
 
 You can select which proportion of the cells having each gene to select
-with the `--quantile` option. The default value is 0.99, which would
-select the top 1% of each gene. Choosing 0.5 for instance would
+with the `--quantile` option. The default value is 99, which would
+select the top 1% of each gene. Choosing 50 for instance would
 select every cell that has all genes above the median in the population.
 
 ### <a name="census_file">Census file</a> ###
@@ -644,7 +644,7 @@ Example:
 ### <a name="covariate_file">Covariate file</a> ###
 
 The batch associated with each cell of the matrix file is specified in the *covariate* file.
-This file must be a tab-separated plain text file, with two header fields: "id" and "covariate".
+This file must be a tab or comma separated plain text file, with two header fields: "id" and "covariate".
 
 Example:
 
