@@ -23,5 +23,5 @@ def main(argv):
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())
     ot_model = wot.commands.initialize_ot_model_from_args(args)
-    ot_model.compute_all_transport_maps(no_overwrite=not args.no_overwrite, output_file_format=args.format,
+    ot_model.compute_all_transport_maps(overwrite=not args.no_overwrite, output_file_format=args.format,
                                         tmap_out=args.out)

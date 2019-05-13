@@ -689,7 +689,7 @@ def write_dataset(ds, path, output_format='txt'):
     elif output_format == 'npy':
         np.save(path, ds.X)
     elif output_format == 'h5ad':
-        ds.write(path)
+        ds.write(path, compression=None if scipy.sparse.isspmatrix(ds.X) else 'gzip')
     elif output_format == 'loom':
         f = h5py.File(path, 'w')
         x = ds.X
