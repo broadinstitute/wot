@@ -21,7 +21,7 @@ wot trajectory \
 --tmap tmaps/serum \
 --cell_set data/major_cell_sets.gmt \
 --day 18 \
---embedding data/FLE.txt \
+--embedding data/fle_coords.txt \
 --verbose
 
 # Compute trajectory divergence
