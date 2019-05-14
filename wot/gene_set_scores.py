@@ -1,6 +1,10 @@
+import logging
+
 import numpy as np
 import scipy.sparse
 import scipy.stats
+
+logger = logging.getLogger('wot')
 
 
 def _ecdf(x):
@@ -52,7 +56,7 @@ def get_p_value_ci(n, n_s, z):
 
 
 def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
-                    random_state=0, smooth_p_values=True, verbose=False):
+                    random_state=0, smooth_p_values=True):
     """Score gene sets.
 
     Note that datasets and gene sets must be aligned prior to invoking this method. No check is done.
@@ -118,9 +122,6 @@ def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
     if hasattr(observed_scores, 'toarray'):
         observed_scores = observed_scores.toarray()
 
-    if verbose:
-        print('# of genes in gene set ' + str(ngenes_in_set))
-
     # gene sets has genes on rows, sets on columns
     # ds has cells on rows, genes on columns
     # scores contains cells on rows, gene sets on columns
@@ -135,9 +136,7 @@ def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
                 np.random.shuffle(_x)
             # count number of times permuted score is >= than observed score
             p_values += permuted_X.mean(axis=0) >= observed_scores
-            if verbose:
-                print(
-                    'permutation ' + str(i) + '/' + str(permutations))
+            logger.info('permutation ' + str(i) + '/' + str(permutations))
 
         k = p_values
         if smooth_p_values:

@@ -2,13 +2,16 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import logging
 import os
 
 import anndata
 import numpy as np
 import pandas as pd
 
-import wot.io
+import wot
+
+logger = logging.getLogger('wot')
 
 
 def main(argv):
@@ -31,6 +34,9 @@ def main(argv):
     parser.add_argument('--verbose', action='store_true', help='Print verbose information')
 
     args = parser.parse_args(argv)
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(logging.StreamHandler())
     if args.out is None or args.out == '':
         args.out = wot.io.get_filename_and_extension(os.path.basename(args.matrix))[0] + '_gene_set_scores'
 
@@ -39,8 +45,7 @@ def main(argv):
     ds = wot.io.read_dataset(args.matrix)
     if args.transpose:
         ds = ds.T
-    if args.verbose:
-        print('Read ' + args.matrix)
+    logger.info('Read ' + args.matrix)
     ds = wot.io.filter_adata(ds, obs_filter=args.cell_filter)
 
     # background_ds = None
@@ -51,8 +56,7 @@ def main(argv):
     #     background_ds = anndata.AnnData(ds.X[cell_filter], ds.obs.iloc[cell_filter], ds.var)
 
     gs = wot.io.read_sets(gene_sets, ds.var.index.values)
-    if args.verbose:
-        print('Read ' + gene_sets)
+    logger.info('Read ' + gene_sets)
 
     if gs.shape[1] == 0:
         raise ValueError('No overlap of genes in gene sets and dataset')
@@ -72,12 +76,11 @@ def main(argv):
     # scores contains cells on rows, gene sets on columns
     permutations = args.nperm
     for j in range(gs.shape[1]):
-        if args.verbose and gs.shape[1] > 1:
-            print(gs.var.index.values[j])
+        if gs.shape[1] > 1:
+            logger.info(gs.var.index.values[j])
         result = wot.score_gene_sets(ds=ds,
                                      gs=gs[:, [j]],
-                                     permutations=permutations, method=args.method,
-                                     verbose=args.verbose)
+                                     permutations=permutations, method=args.method)
         column_names = [str(gs.var.index.values[j]) + '_score']
         if permutations is not None and permutations > 0:
             column_names.append('p_value')
