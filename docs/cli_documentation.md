@@ -34,7 +34,7 @@ of consecutive timepoints.
 
 The default transport cost uses Principal Component Analysis to reduce the
 dimension of the data before computing distances pairs of timepoints.
-By default, **wot** uses 30 dimensions.
+By default, optimal transport uses 30 dimensions.
 
 Dimensionality reduction can be disabled with `--local_pca 0`
 
@@ -49,7 +49,7 @@ Generate trajectories for cell sets generated at the given time.
 Generate mean expression profiles for ancestors and descendants of each
 trajectory. Please use the trajectory tool to compute trajectories.
 
-The command creates a file *trends_<trajectory name>.txt* with the mean expression
+The command creates a file trends_<trajectory name>.txt with the mean expression
 profile among ancestors/descendants.
 <hr />
 
@@ -65,8 +65,8 @@ Computes the distance between trajectories across time
 Computes the amount of mass of an
 ancestor distribution falls into each cell set.
 
-This command creates several census files named *<prefix>_<cellset>.txt*,
-for instance *census_tip1.txt*. See <a href="#census_file">formats</a>
+This command creates several census files named <prefix>_<cellset>.txt,
+for instance census_tip1.txt. See <a href="#census_file">formats</a>
 for more information.
 <hr />
 
@@ -136,7 +136,7 @@ when covariates are used, to indicate which batch they were extracted from.
 One method of visualizing data in two or three dimensions is
 [Force-directed Layout Embedding (FLE)](https://en.wikipedia.org/wiki/Force-directed_graph_drawing).
 We compute this nearest neighbor graph in diffusion component space.
-We recommend using [forceatlas2](https://github.com/klarman-cell-observatory/forceatlas2) to run the force directed layout.
+We recommend using [forceatlas2](https://github.com/klarman-cell-observatory/forceatlas2) or [Gephi](https://gephi.org/) to run the force directed layout.
 You can generate a graph to use as input to the force directed layout using the command neighborhood_graph
 <hr/>
 
