@@ -6,39 +6,37 @@ title: Home
 
 <div class="container-fluid">
 
-
-    <div class="row">
-        <div class="col-md-8 offset-md-2 col-sm-10 offset-sm-1">
-            <p></p>
-            <p></p>
-            <p> Single cell RNA-sequencing allows us to profile the diversity of cells along a developmental time-course
-                by
-                recording static snapshots at different time points $t_1, t_2, \ldots, t_T$.
-                However, we cannot directly observe the progression of any individual cell over time because the
-                measurement
-                process
-                is destructive.
-            </p>
-            <p>
-                Waddington-OT is designed to infer the <em>temporal couplings</em> of a developmental stochastic process
-                $\mathbb{P}_t$
-                from samples collected independently at various time-points.
-                We represent a developing population of cells with a time-varying distribution $\mathbb{P}_t$ on gene
-                expression
-                space.
-                The temporal couplings describe the flow of mass as the population develops and grows.
-                For a pair of time-points $(t_i,t_j)$, the coupling $\gamma_{t_i,t_j}$ tells us:
-                <strong>What descendants does cell $x$ from time $t_i$ give rise to at time $t_j$?</strong>
-            </p>
-            <p></p>
-            <p></p>
-        </div>
-
-    </div>
     <div class="list-group">
+
+        <a target="_blank" href="https://www.youtube.com/watch?v=aio1lAE-h_I"
+           class="list-group-item list-group-item-action home-list-item">
+            <div class="row">
+                <div class="col-sm-12 col-sm-12 col-md-5 offset-md-2">
+                    <h2>Introduction</h2>
+                    <p class="lead">Single cell RNA-seq allows us to profile the diversity of cells along a
+                        developmental time-course.
+                        However, we cannot directly observe cellular trajectories because the measurement process is
+                        destructive. Waddington-OT is designed to infer the <strong>temporal couplings</strong> of a
+                        developmental
+                        stochastic
+                        process from samples collected independently at various time-points. The temporal couplings tell
+                        us what
+                        descendants cell $x$ from time $t_i$ would give rise to at time $t_j$</p>
+
+                </div>
+                <div class="col-sm-7 col-md-3 col-lg-2">
+                    <iframe width="560" height="315" src="https://www.youtube.com/embed/aio1lAE-h_I" frameborder="0"
+                            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen></iframe>
+                </div>
+
+            </div>
+        </a>
+
+
         <a href="{{site.baseurl}}/tutorial" class="list-group-item list-group-item-action home-list-item">
             <div class="row">
-                <div class="col-md-5 offset-md-2">
+                <div class="col-sm-12 col-md-5 offset-md-2">
                     <h2>Tutorial</h2>
                     <p class="lead">A practical, hands-on introduction to inferring trajectories with wot.</p>
 
@@ -49,7 +47,7 @@ title: Home
 
         <a href="{{site.baseurl}}/cli_documentation" class="list-group-item list-group-item-action home-list-item">
             <div class="row">
-                <div class="col-md-5 offset-md-2">
+                <div class="col-sm-12 col-md-5 offset-md-2">
                     <h2>Command Line</h2>
                     <p class="lead">A command line interface that offers fine-grained control over
                         all calculations.</p>
@@ -64,7 +62,7 @@ title: Home
 
         <a href="{{site.baseurl}}/cli_documentation" class="list-group-item list-group-item-action home-list-item">
             <div class="row">
-                <div class="col-md-5 offset-md-2">
+                <div class="col-sm-12 col-md-5 offset-md-2">
                     <h2>Installation</h2>
                     <p class="lead">Type <code>pip install wot</code> in your terminal to install wot and all required
                         dependencies. Please note that Python 3 is required.</p>
@@ -73,9 +71,10 @@ title: Home
         </a>
 
 
-        <a href="{{ site.github.repository_url }}" class="list-group-item list-group-item-action home-list-item">
+        <a target="_blank" href="{{ site.github.repository_url }}"
+           class="list-group-item list-group-item-action home-list-item">
             <div class="row">
-                <div class="col-md-5 offset-md-2">
+                <div class="col-sm-12 col-md-5 offset-md-2">
                     <h2>Source Code</h2>
                     <p class="lead">The full source code is available on Github.</p>
                 </div>
