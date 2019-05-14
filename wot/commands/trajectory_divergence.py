@@ -14,7 +14,7 @@ logger = logging.getLogger('wot')
 
 def main(argv):
     parser = argparse.ArgumentParser(
-        'Computes distance between trajectories across time')
+        'Computes the distance between trajectories across time')
     parser.add_argument('--out', help='Prefix for output file names', default='wot-trajectory')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--distance_metric', help='Distance metric (earth mover\'s distance or total variation)',

@@ -12,7 +12,8 @@ import wot.io
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(description='Compute cell gene set scores')
+    parser = argparse.ArgumentParser(
+        description='Score each cell according to its expression of input gene signatures')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
     parser.add_argument('--gene_sets',
