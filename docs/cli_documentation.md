@@ -96,7 +96,7 @@ Each subsequent line must consist of a cell name, a tab, and a covariate value.
 
 ##### Null hypothesises #####
 
-**wot** tests the results of the Optimal Transport predictions
+wot tests the results of the Optimal Transport predictions
 against three different null hypothesises.
 
 - **First point** :
@@ -151,7 +151,7 @@ Convert matrix data formats
 
 The *matrix* file specifies the gene expression matrix to use.
 
-The following formats are accepted by all tools: *mtx*, *txt*, *h5ad*, *loom*, and *gct*. Please note that *wot* expects 
+The following formats are accepted by all tools: *mtx*, *txt*, *h5ad*, *loom*, and *gct*. Please note that wot expects 
 cells on the rows and genes on the columns, except for the *mtx* format.
 
 ##### Text #####
@@ -217,8 +217,7 @@ The **gmt** format is convenient to store large databases of sets.
 However, for a handful of sets, the **gmx** format might offer better
 excel-editablity.
 
-More information on these formats can be found
-in the [Broad Institute Software Documentation](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#Gene_Set_Database_Formats)
+More information on these formats can be found [here](https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#Gene_Set_Database_Formats)
 
 ##### GMT #####
 
@@ -280,14 +279,14 @@ Example:
 
 ### OT Configuration file ###
 
-There are several options to specify Optimal Transport parameters in **wot**.
+There are several options to specify Optimal Transport parameters in wot.
 
 The easiest is to just use constant parameters and specify them when
 computing transport maps with the `--epsilon` or `--lambda1` options.
 
 If you want more control over what parameters are used, you can use a
 detailed configuration file. There are two kinds of configuration files
-accepted by **wot**.
+accepted by wot.
 
 #### Configuration per timepoint ####
 
