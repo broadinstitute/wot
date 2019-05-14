@@ -63,26 +63,10 @@ a.nostyle, a.nostyle:hover, a.nostyle:active, a.nostyle:focus {
   }
 }
 
-.main-content pre > code {
-  font-family: 'Inconsolata', monospace;
-  font-size: 1.2rem;
-  line-height: 1.45rem;
-}
 
-.main-content {
-  padding: 2rem 1rem;
+#content {
+  margin-top: 14px;
 
-  h1::after, h2::after, h3::after {
-    content: "";
-    clear: both;
-    display: table;
-  }
-
-  img {
-
-    margin-left: auto;
-    margin-right: auto;
-  }
 }
 
 .main-content .btn-example {
