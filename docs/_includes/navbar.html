@@ -9,7 +9,7 @@
             <div class="navbar-nav">
                 {% for item in site.navbar_items %}
                 <a class="nav-item nav-link
-           {% if page.location == item[" title"] %} active {% endif %}"
+           {% if page.title == item.title %} active {% endif %}"
                 href="{{ site.baseurl | append: item["url"] }}">
                 {{ item["title"] }}
                 </a>

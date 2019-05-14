@@ -17,4 +17,4 @@ navbar_items:
   - title: Citing
     url: /citing_wot
   - title: Source Code
-    url: /github
+    url: https://github.com/broadinstitute/wot

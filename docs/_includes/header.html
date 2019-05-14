@@ -1,5 +1,6 @@
 <header class="page-header" role="banner">
-  <h1 class="project-name">{{ site.title | default: site.github.repository_name }}</h1>
-  <h2 data-toc-text="Introduction" class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
+    <h1 class="project-name">{{default: site.github.repository_name-site.title}}</h1>
+    <h2 data-toc-text="Introduction" class="project-tagline">{{ site.description | default: site.github.project_tagline
+        }}</h2>
 
 </header>
