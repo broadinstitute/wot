@@ -52,7 +52,7 @@ def get_p_value_ci(n, n_s, z):
 
 
 def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
-                    random_state=0, smooth_p_values=True, progress=False):
+                    random_state=0, smooth_p_values=True, verbose=False):
     """Score gene sets.
 
     Note that datasets and gene sets must be aligned prior to invoking this method. No check is done.
@@ -118,7 +118,7 @@ def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
     if hasattr(observed_scores, 'toarray'):
         observed_scores = observed_scores.toarray()
 
-    if progress:
+    if verbose:
         print('# of genes in gene set ' + str(ngenes_in_set))
 
     # gene sets has genes on rows, sets on columns
@@ -135,7 +135,7 @@ def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
                 np.random.shuffle(_x)
             # count number of times permuted score is >= than observed score
             p_values += permuted_X.mean(axis=0) >= observed_scores
-            if progress:
+            if verbose:
                 print(
                     'permutation ' + str(i) + '/' + str(permutations))
 
