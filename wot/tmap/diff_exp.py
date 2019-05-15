@@ -129,17 +129,22 @@ def __get_expression_and_weights(adata, cell_days_field, day, fate_name):
 
 
 def __do_comparison(expression_values1, weights1, day1, expression_values2, weights2, day2, nperm, min_fold_change,
-                    smooth_p_values, features):
+                    smooth_p_values, features, fraction_expressed_ratio_add=0.0001):
     # expression_values1 = np.expm1(expression_values1)
     # expression_values2 = np.expm1(expression_values2)
     mean1 = np.average(expression_values1, weights=weights1, axis=0)
     mean2 = np.average(expression_values2, weights=weights2, axis=0)
-    # variance1 = np.average((expression_values1 - mean1) ** 2, weights=weights1, axis=0)
-    # variance2 = np.average((expression_values2 - mean2) ** 2, weights=weights2, axis=0)
+    fraction_expressed1 = weights1.dot(expression_values1 > 0)
+    fraction_expressed2 = weights2.dot(expression_values2 > 0)
+    fraction_expressed_diff = (fraction_expressed1 + fraction_expressed_ratio_add) / (
+            fraction_expressed2 + fraction_expressed_ratio_add)
+
     # fold_change = np.log1p(mean1) - np.log1p(mean2)
     observed = (mean1 - mean2)
     suffix = "_{}_{}".format(day1, day2)
-    results = pd.DataFrame(index=features, data={'fold_change' + suffix: observed})
+    results = pd.DataFrame(index=features,
+                           data={'fold_change' + suffix: observed,
+                                 'fraction_expressed_ratio' + suffix: fraction_expressed_diff})
 
     if nperm is not None and nperm > 0:
         genes_use = np.abs(observed) >= min_fold_change
@@ -156,8 +161,6 @@ def __do_comparison(expression_values1, weights1, day1, expression_values2, weig
                 np.random.shuffle(weights2)
                 mean1 = np.average(expression_values1, weights=weights1, axis=0)
                 mean2 = np.average(expression_values2, weights=weights2, axis=0)
-
-                # permuted_fold_change = np.log1p(mean1) - np.log1p(mean2)
                 permuted = (mean1 - mean2)
                 p[(permuted >= observed_use)] += 1
             # 2-sided p-value
