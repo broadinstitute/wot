@@ -86,11 +86,11 @@ location: Documentation
             to these
             cell sets.
         </p>
-        <p>
-            <a target="_blank"
-               href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-1-FLE-cell_sets-gene_sets.ipynb">View
-                notebook 1</a>
-        </p>
+        <ul>
+            <li><a target="_blank"
+                   href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-1-FLE-cell_sets-gene_sets.ipynb">View
+                notebook 1</a></li>
+        </ul>
     </div>
     <div class="col-sm-3">
         <img src="{{site.baseurl}}/images/Nbk1_fig.png" class="img-fluid"/></div>
@@ -207,11 +207,11 @@ location: Documentation
             are
             usually sufficient.
         </p>
-        <p>
-            <a target="_blank"
-               href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-2-compute-transport-maps.ipynb">View
-                notebook 2</a>
-        </p>
+        <ul>
+            <li><a target="_blank"
+                   href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-2-compute-transport-maps.ipynb">View
+                notebook 2</a></li>
+        </ul>
     </div>
 
 </div>
@@ -238,11 +238,11 @@ location: Documentation
             means that cell $x$ will have on average $1.2$ descendants with expression profile similar to $y$ at time
             $t_j$.
             The sum of the row shows the total number of descendants that a cell will have at time $t_j$.</p>
-        <p>
-            <a target="_blank"
-               href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-3-long-range-couplings.ipynb">View
-                notebook 3</a>
-        </p>
+        <ul>
+            <li><a target="_blank"
+                   href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-3-long-range-couplings.ipynb">View
+                notebook 3</a></li>
+        </ul>
     </div>
     <div class="col-sm-12">
         <img src="{{site.baseurl}}/images/Nbk3_fig.png" class="img-fluid"/>
@@ -301,11 +301,11 @@ location: Documentation
             trajectory in terms of an <strong>ancestor census</strong>. This census computes the amount of ancestor mass
             contained in each of a number of descriptive cell sets.
         </p>
-        <p>
-            <a target="_blank"
-               href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-4-ancestors-descendants-trajectories.ipynb">View
-                notebook 4</a>
-        </p>
+        <ul>
+            <li><a target="_blank"
+                   href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-4-ancestors-descendants-trajectories.ipynb">View
+                notebook 4</a></li>
+        </ul>
     </div>
     <div class="col-sm-3">
         <img src="{{site.baseurl}}/images/Nbk4_fig.png" class="img-fluid"/>
@@ -338,11 +338,11 @@ location: Documentation
             We then normalize each row to sum to $1$:
             $$F_{t_i,t_j}(x,\ell) = \frac{\tilde F_{t_i,t_j}(x,\ell)}{\sum_{\ell = 1}^k \tilde F_{t_i,t_j}(x,\ell)}.$$
         </p>
-        <p>
-            <a target="_blank"
-               href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-5-fate-matrices.ipynb">View
-                notebook 5</a>
-        </p>
+        <ul>
+            <li><a target="_blank"
+                   href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-5-fate-matrices.ipynb">View
+                notebook 5</a></li>
+        </ul>
     </div>
     <div class="col-sm-3">
         <img src="{{site.baseurl}}/images/Nbk5_fig.png" class="img-fluid"/>
@@ -367,11 +367,12 @@ location: Documentation
             $$ \text{mass transported from $A_i$ to $B_j$} \quad = \sum_{x \in A_i} \sum_{y \in B_j} \gamma_{t_1,t_5}
             (x,y).$$
         </p>
-        <p>
-            <a target="_blank"
-               href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-6-transition_table.ipynb">View
-                notebook 6</a>
-        </p>
+        <ul>
+            <li>
+                <a target="_blank"
+                   href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-6-transition_table.ipynb">View
+                    notebook 6</a></li>
+        </ul>
     </div>
     <div class="col-sm-3">
         <img src="{{site.baseurl}}/images/Nbk6_fig.png" class="img-fluid"/>
@@ -413,7 +414,7 @@ location: Documentation
             checks
             the
             quality of interpolation at each triplet of consecutive time-points $(t_i,t_{i+1},t_{i+2})$:
-        <ul>
+        <ol>
             <li> We hold out the data from time $t_{i+1}$,</li>
             <li> estimate the coupling $\gamma_{t_i,t_{i+2}}$ connecting time $t_{i}$ to $t_{i+2}$,</li>
             <li> compute an interpolating distribution at time $t_{i+1}$,</li>
@@ -422,7 +423,7 @@ location: Documentation
                 $\hat{\mathbb{P}}_{t_{i+1}}^{(2)}$), then we compare those to eachother to estimate the baseline noise
                 level.
             </li>
-        </ul>
+        </ol>
         We can also test the quality of interpolation over arbitrary intervals by explicitly providing triplets
         $(t_i,t_j,t_k)$ as input.
         When we test longer temporal intervals, we see that the quality of interpolation decreases as expected.
@@ -435,11 +436,11 @@ location: Documentation
         analyses
         described in the other notebooks, even if we aren't able to prove that we achieve the baseline noise level.
         </p>
-        <p>
-            <a target="_blank"
-               href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-7-ot-validation.ipynb">View
-                notebook 7</a>
-        </p>
+        <ul>
+            <li><a target="_blank"
+                   href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-7-ot-validation.ipynb">View
+                notebook 7</a></li>
+        </ul>
     </div>
     <div class="col-sm-3">
         <img src="{{site.baseurl}}/images/Nbk7_fig.png" class="img-fluid"/>
