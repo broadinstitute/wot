@@ -54,7 +54,6 @@ wot diff_exp \
 --matrix data/ExprMatrix.h5ad \
 --cell_days data/cell_days.txt \
 --fates IPS_d17_fates.txt \
---nperm 1000 \
 --fold_change 0 \
 --gene_filter data/TFs.txt \
 --cell_day_filter 14 \
