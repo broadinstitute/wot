@@ -1,26 +1,54 @@
-import "https://api.firecloud.org/ga4gh/v1/tools/regev:optimal_transport/versions/12/plain-WDL/descriptor" as wot
+import "https://api.firecloud.org/ga4gh/v1/tools/wot:optimal_transport/versions/1/plain-WDL/descriptor" as wot
 
 
 workflow optimal_transport_validation_parameter_sweep {
-    File matrix
-    File cell_days
-    Boolean? transpose = false
-    File? cell_growth_rates
-    File? gene_filter
-    File? cell_filter
-    String? cell_day_filter
-    String? format = "loom"
-    String? out = "wot"
-   	Int? num_cpu = 8
-   	String? memory = "52GB"
-    Int? preemptible = 2
-    File? covariate
-
-    Int? ot_validation_disk_space = 150
-    Boolean? full_distances = true
     # first column contains parameter name, 2nd column contains comma separated list of values
     File parameter_file
-	String? zones = "us-east1-d us-west1-a us-west1-b"
+
+	File matrix
+	File cell_days
+	File? cell_growth_rates
+	File? parameters
+	#	File? config
+	Boolean? transpose
+	Int? local_pca
+	Int? growth_iters
+	File? gene_filter
+	File? cell_filter
+	String? cell_day_filter
+	Int? scaling_iter
+	Int? inner_iter_max
+	Float? epsilon
+	Float? lambda1
+	Float? lambda2
+	Int? max_iter
+	Int? batch_size
+	Int? tolerance
+	Float? epsilon0
+	Float? tau
+	Int? ncells
+	Int? ncounts
+	String? solver
+	String? cell_days_field
+	String? cell_growth_rates_field
+	Boolean? verbose
+	String? format = "h5ad"
+	#   	Boolean? no_overwrite
+	String? out = "wot"
+
+    # validation parameters
+   	File? day_triplets
+   	Int? interp_size
+   	File? covariate
+   	String? covariate_field
+   	Boolean? full_distances
+
+   	Int? num_cpu = 2
+   	String? memory = "52GB"
+   	Int? preemptible = 2
+   	String? zones = "us-east1-d us-west1-a us-west1-b"
+   	Int? ot_validation_disk_space = 150
+
 
     call create_inputs {
         input:
@@ -32,25 +60,50 @@ workflow optimal_transport_validation_parameter_sweep {
     scatter (p in create_inputs.parameters) {
         call wot.optimal_transport {
             input:
-                matrix=matrix,
-                cell_days=cell_days,
-                transpose=transpose,
-                cell_growth_rates=cell_growth_rates,
-                gene_filter=gene_filter,
-                cell_filter=cell_filter,
-                cell_day_filter=cell_day_filter,
-                format = format,
-                out = out,
-                num_cpu = num_cpu,
-                memory = memory,
-                preemptible = preemptible,
-                covariate=covariate,
-                full_distances=full_distances,
-                run_validation=true,
-                run_ot=false,
-                parameters=p,
-                zones=zones,
-                ot_validation_disk_space=ot_validation_disk_space
+            	parameters=p,
+               	matrix=matrix,
+				cell_days=cell_days,
+				cell_growth_rates=cell_growth_rates,
+				parameters=parameters,
+				#	 config
+				transpose=transpose,
+				local_pca=local_pca,
+				growth_iters=growth_iters,
+				gene_filter=gene_filter,
+				cell_filter=cell_filter,
+				cell_day_filter=cell_day_filter,
+				scaling_iter=scaling_iter,
+				inner_iter_max=inner_iter_max,
+				epsilon=epsilon,
+				lambda1=lambda1,
+				lambda2=lambda2,
+				max_iter=max_iter,
+				batch_size=batch_size,
+				tolerance=tolerance,
+				epsilon0=epsilon0,
+				tau=tau,
+				ncells=ncells,
+				ncounts=ncounts,
+				solver=solver,
+				cell_days_field=cell_days_field,
+				cell_growth_rates_field=cell_growth_rates_field,
+				verbose=verbose,
+				format=format,
+				out=out,
+
+				day_triplets=day_triplets,
+				interp_size=interp_size,
+				covariate=covariate,
+				covariate_field=covariate_field,
+				full_distances=full_distances,
+
+				num_cpu=num_cpu,
+				memory=memory,
+				preemptible=preemptible,
+				zones=zones,
+				disk_space=ot_validation_disk_space
+
+
         }
     }
  }

@@ -1,13 +1,15 @@
 workflow optimal_transport {
 	Boolean run_validation = false
-	Boolean run_ot = false
+    Boolean run_ot = true
+
     File matrix
     File cell_days
+	File? cell_growth_rates
 	File? parameters
-    Boolean? transpose = false
+#	File? config
+    Boolean? transpose
    	Int? local_pca
    	Int? growth_iters
-    File? cell_growth_rates
     File? gene_filter
     File? cell_filter
    	String? cell_day_filter
@@ -16,61 +18,74 @@ workflow optimal_transport {
    	Float? epsilon
    	Float? lambda1
     Float? lambda2
+    Int? max_iter
+    Int? batch_size
+    Int? tolerance
    	Float? epsilon0
    	Float? tau
    	Int? ncells
    	Int? ncounts
-   	String? format
+   	String? solver
+   	String? cell_days_field
+   	String? cell_growth_rates_field
+   	Boolean? verbose
+   	String? format = "h5ad"
+#   	Boolean? no_overwrite
    	String? out = "wot"
-   	Int? max_iter
-   	Int? batch_size
-   	Int? tolerance
-	Int? num_cpu = 8
+
+    # validation parameters
+	File? day_triplets
+	Int? interp_size
+	File? covariate
+	String? covariate_field
+	Boolean? full_distances
+
+	Int? num_cpu = 2
 	String? memory = "52GB"
 	Int? preemptible = 2
-	File? covariate
-   	Boolean? full_distances = true
-    Int? interp_size
 	String? zones = "us-east1-d us-west1-a us-west1-b"
 	Int? ot_validation_disk_space = 150
 	Int? ot_disk_space = 150
 
-	if(run_ot) {
-#		call create_day_pairs {
-#			input:
-#				cell_days=cell_days,
-#				cell_filter=cell_filter,
-#				preemptible=preemptible
-#		}
 
+	if(run_ot) {
 
 		call ot {
 			input:
 				matrix=matrix,
-				transpose=transpose,
 				cell_days=cell_days,
-				cell_filter=cell_filter,
-				gene_filter=gene_filter,
 				cell_growth_rates=cell_growth_rates,
-				cell_day_filter=cell_day_filter,
-				growth_iters=growth_iters,
+				parameters=parameters,
+				#	 config
+				transpose=transpose,
 				local_pca=local_pca,
+				growth_iters=growth_iters,
+				gene_filter=gene_filter,
+				cell_filter=cell_filter,
+				cell_day_filter=cell_day_filter,
+				scaling_iter=scaling_iter,
+				inner_iter_max=inner_iter_max,
 				epsilon=epsilon,
 				lambda1=lambda1,
 				lambda2=lambda2,
-				epsilon0=epsilon0,
-				tau=tau,
-				scaling_iter=scaling_iter,
-				inner_iter_max=inner_iter_max,
 				max_iter=max_iter,
 				batch_size=batch_size,
 				tolerance=tolerance,
+				epsilon0=epsilon0,
+				tau=tau,
+				ncells=ncells,
+				ncounts=ncounts,
+				solver=solver,
+				cell_days_field=cell_days_field,
+				cell_growth_rates_field=cell_growth_rates_field,
+				verbose=verbose,
+				format=format,
+				#   	 no_overwrite
 				out=out,
+
 				num_cpu=num_cpu,
 				memory=memory,
 				preemptible=preemptible,
-				out=out,
-				parameters=parameters,
 				zones=zones,
 				disk_space=ot_disk_space
 		}
@@ -81,31 +96,44 @@ workflow optimal_transport {
 		call ot_validation {
 			input:
 				matrix=matrix,
-				transpose=transpose,
 				cell_days=cell_days,
-				cell_filter=cell_filter,
-				gene_filter=gene_filter,
 				cell_growth_rates=cell_growth_rates,
-				growth_iters=growth_iters,
+				parameters=parameters,
+				#	 config
+				transpose=transpose,
 				local_pca=local_pca,
+				growth_iters=growth_iters,
+				gene_filter=gene_filter,
+				cell_filter=cell_filter,
+				cell_day_filter=cell_day_filter,
+				scaling_iter=scaling_iter,
+				inner_iter_max=inner_iter_max,
 				epsilon=epsilon,
 				lambda1=lambda1,
 				lambda2=lambda2,
-				epsilon0=epsilon0,
-				tau=tau,
-				scaling_iter=scaling_iter,
-				inner_iter_max=inner_iter_max,
 				max_iter=max_iter,
 				batch_size=batch_size,
 				tolerance=tolerance,
+				epsilon0=epsilon0,
+				tau=tau,
+				ncells=ncells,
+				ncounts=ncounts,
+				solver=solver,
+				cell_days_field=cell_days_field,
+				cell_growth_rates_field=cell_growth_rates_field,
+				verbose=verbose,
+				format=format,
 				out=out,
+
+				day_triplets=day_triplets,
+                interp_size=interp_size,
+                covariate=covariate,
+                covariate_field=covariate_field,
+                full_distances=full_distances,
+
 				num_cpu=num_cpu,
 				memory=memory,
 				preemptible=preemptible,
-				out=out,
-				parameters=parameters,
-				covariate=covariate,
-				full_distances=full_distances,
 				zones=zones,
 				disk_space=ot_validation_disk_space
 		}
@@ -212,10 +240,12 @@ task create_day_triplets {
 task ot {
 	File matrix
 	File cell_days
+	File? cell_growth_rates
+	File? parameters
+	#	File? config
 	Boolean? transpose
 	Int? local_pca
 	Int? growth_iters
-	File? cell_growth_rates
 	File? gene_filter
 	File? cell_filter
 	String? cell_day_filter
@@ -224,20 +254,25 @@ task ot {
 	Float? epsilon
 	Float? lambda1
 	Float? lambda2
-	Float? epsilon0
-	Float? tau
 	Int? max_iter
 	Int? batch_size
 	Int? tolerance
-	
+	Float? epsilon0
+	Float? tau
 	Int? ncells
 	Int? ncounts
+	String? solver
+	String? cell_days_field
+	String? cell_growth_rates_field
+	Boolean? verbose
 	String? format
+	#   	Boolean? no_overwrite
 	String? out
+
+
 	Int num_cpu
 	String memory
 	Int preemptible
-	File? parameters
 	String zones
 	Int disk_space
 
@@ -246,11 +281,11 @@ task ot {
         wot optimal_transport \
         --matrix ${matrix} \
         --cell_days ${cell_days} \
-		${true="--transpose" false="" transpose} \
+		${"--cell_growth_rates " + cell_growth_rates} \
 		${"--parameters " + parameters} \
+		${true="--transpose" false="" transpose} \
 		${"--local_pca " + local_pca} \
 		${"--growth_iters " + growth_iters} \
-		${"--cell_growth_rates " + cell_growth_rates} \
 		${"--gene_filter " + gene_filter} \
 		${"--cell_filter " + cell_filter} \
 		${"--cell_day_filter " + cell_day_filter} \
@@ -259,13 +294,16 @@ task ot {
 		${"--epsilon " + epsilon} \
 		${"--lambda1 " + lambda1} \
 		${"--lambda2 " + lambda2} \
-		${"--epsilon0 " + epsilon0} \
-		${"--tau " + tau} \
 		${"--max_iter " + max_iter} \
 		${"--batch_size " + batch_size} \
 		${"--tolerance " + tolerance} \
+		${"--epsilon0 " + epsilon0} \
+		${"--tau " + tau} \
 		${"--ncells " + ncells} \
 		${"--ncounts " + ncounts} \
+		${"--cell_days_field " + cell_days_field} \
+		${"--cell_growth_rates_field " + cell_growth_rates_field} \
+		${true="--verbose" false="" verbose} \
 		${"--format " + format} \
 		${"--out " + out}
     }
@@ -289,10 +327,12 @@ task ot {
 task ot_validation {
 	File matrix
 	File cell_days
+	File? cell_growth_rates
+	File? parameters
+#	File? config
 	Boolean? transpose
 	Int? local_pca
 	Int? growth_iters
-	File? cell_growth_rates
 	File? gene_filter
 	File? cell_filter
 	String? cell_day_filter
@@ -301,22 +341,32 @@ task ot_validation {
 	Float? epsilon
 	Float? lambda1
 	Float? lambda2
-	Float? epsilon0
-	Float? tau
 	Int? max_iter
 	Int? batch_size
 	Int? tolerance
+	Float? epsilon0
+	Float? tau
 	Int? ncells
 	Int? ncounts
+	String? solver
+	String? cell_days_field
+	String? cell_growth_rates_field
+	Boolean? verbose
 	String? format
+#   	Boolean? no_overwrite
 	String? out
+
+	# validation specific parameters
+	File? day_triplets
+	Int? interp_size
 	File? covariate
-    Boolean? full_distances
-    Int? interp_size
+	String? covariate_field
+	Boolean? full_distances
+
+
 	Int num_cpu
 	String memory
 	Int preemptible
-	File? parameters
 	String zones
 	Int disk_space
 
@@ -324,13 +374,13 @@ task ot_validation {
         set -e
 
         wot optimal_transport_validation \
-        --matrix ${matrix} \
-        --cell_days ${cell_days} \
-        ${true="--transpose" false="" transpose} \
-        ${"--parameters " + parameters} \
+		--matrix ${matrix} \
+		--cell_days ${cell_days} \
+		${"--cell_growth_rates " + cell_growth_rates} \
+		${"--parameters " + parameters} \
+		${true="--transpose" false="" transpose} \
 		${"--local_pca " + local_pca} \
 		${"--growth_iters " + growth_iters} \
-		${"--cell_growth_rates " + cell_growth_rates} \
 		${"--gene_filter " + gene_filter} \
 		${"--cell_filter " + cell_filter} \
 		${"--cell_day_filter " + cell_day_filter} \
@@ -339,17 +389,23 @@ task ot_validation {
 		${"--epsilon " + epsilon} \
 		${"--lambda1 " + lambda1} \
 		${"--lambda2 " + lambda2} \
-		${"--epsilon0 " + epsilon0} \
-		${"--tau " + tau} \
 		${"--max_iter " + max_iter} \
 		${"--batch_size " + batch_size} \
 		${"--tolerance " + tolerance} \
+		${"--epsilon0 " + epsilon0} \
+		${"--tau " + tau} \
 		${"--ncells " + ncells} \
 		${"--ncounts " + ncounts} \
+		${"--cell_days_field " + cell_days_field} \
+		${"--cell_growth_rates_field " + cell_growth_rates_field} \
+		${true="--verbose" false="" verbose} \
 		${"--format " + format} \
-		${"--out " + out} \
-		${"--covariate " + covariate} \
+		${"--out " + out}
+
+		${"--day_triplets " + day_triplets} \
 		${"--interp_size " + interp_size} \
+		${"--covariate " + covariate} \
+		${"--covariate_field " + covariate_field} \
 		${true="--full_distances" false="" full_distances}
     }
 
@@ -357,7 +413,6 @@ task ot_validation {
     	File summary =  "${out}_validation_summary.txt"
     	Array[File] cv_outputs =  glob("${out}_cv_validation_summary*")
     	Array[File] full_outputs =  glob("${out}_full_validation_summary*")
-    	Array[File] transport_maps = glob("*.${format}")
     }
 
     runtime {
