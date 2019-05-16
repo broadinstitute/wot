@@ -16,16 +16,15 @@ def main(argv):
     parser = argparse.ArgumentParser(
         description='Compute differentially expressed genes from the output of the fate tool')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
-    parser.add_argument('--fates', help='One or more fate datasets as produced by the fate tool',
-                        action='append')
+    parser.add_argument('--fate', help='Fate dataset produced by the fate tool')
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
-    parser.add_argument('--compare',
-                        help='If "match", compare fates with the same name. ' + 'If "all", compare all pairs. '
-                             + 'If "within" compare within a fate. If a fate name, compare to the specified fate',
-                        default='all')
-    parser.add_argument('--delta',
-                        help='Delta days to compare sampled expression matrix against within a fate. If not specified all comparison are done against the first day.',
-                        type=float)
+    # parser.add_argument('--compare',
+    #                     help='If "match", compare fates with the same name. ' + 'If "all", compare all pairs. '
+    #                          + 'If "within" compare within a fate. If a fate name, compare to the specified fate',
+    #                     default='all')
+    # parser.add_argument('--delta',
+    #                     help='Delta days to compare sampled expression matrix against within a fate. If not specified all comparison are done against the first day.',
+    #                     type=float)
     parser.add_argument('--nperm',
                         help='Number of permutations', type=int)
     parser.add_argument('--smooth_p_values',
@@ -43,11 +42,12 @@ def main(argv):
     if args.verbose:
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())
-    compare = args.compare
-    fate_files = args.fates
+    compare = 'all'  # all pairs args.compare
+    fate_files = [args.fate]
+    delta_days = 0  # args.delta
     smooth_p_values = args.smooth_p_values
     expression_file = args.matrix
-    delta_days = args.delta
+
     cell_days_file = args.cell_days
     nperm = args.nperm
     min_fold_change = args.fold_change
