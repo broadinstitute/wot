@@ -40,13 +40,14 @@ workflow optimal_transport {
 	String? covariate_field
 	Boolean? full_distances
 
+
 	Int? num_cpu = 2
 	String? memory = "52GB"
 	Int? preemptible = 2
 	String? zones = "us-east1-d us-west1-a us-west1-b"
 	Int? ot_validation_disk_space = 150
 	Int? ot_disk_space = 150
-
+	String wot_version = "1.0.2"
 
 	if(run_ot) {
 
@@ -87,7 +88,8 @@ workflow optimal_transport {
 				memory=memory,
 				preemptible=preemptible,
 				zones=zones,
-				disk_space=ot_disk_space
+				disk_space=ot_disk_space,
+				wot_version=wot_version
 		}
 
     }
@@ -135,7 +137,8 @@ workflow optimal_transport {
 				memory=memory,
 				preemptible=preemptible,
 				zones=zones,
-				disk_space=ot_validation_disk_space
+				disk_space=ot_validation_disk_space,
+				wot_version=wot_version
 		}
 
 	}
@@ -275,6 +278,7 @@ task ot {
 	Int preemptible
 	String zones
 	Int disk_space
+	String wot_version
 
     command {
         set -e
@@ -313,7 +317,7 @@ task ot {
     }
 
     runtime {
-		docker: "regevlab/wot"
+		docker: "regevlab/wot-${wot_version}"
        	memory: "${memory}"
        	zones: "${zones}"
 		bootDiskSizeGb: 10
@@ -369,6 +373,7 @@ task ot_validation {
 	Int preemptible
 	String zones
 	Int disk_space
+	String wot_version
 
     command {
         set -e
@@ -416,7 +421,7 @@ task ot_validation {
     }
 
     runtime {
-		docker: "regevlab/wot"
+		docker: "regevlab/wot-${wot_version}"
 		zones: "${zones}"
        	memory: "${memory}"
 		bootDiskSizeGb: 10

@@ -48,7 +48,7 @@ workflow optimal_transport_validation_parameter_sweep {
    	Int? preemptible = 2
    	String? zones = "us-east1-d us-west1-a us-west1-b"
    	Int? ot_validation_disk_space = 150
-
+	String wot_version = "1.0.2"
 
     call create_inputs {
         input:
@@ -101,7 +101,8 @@ workflow optimal_transport_validation_parameter_sweep {
 				memory=memory,
 				preemptible=preemptible,
 				zones=zones,
-				disk_space=ot_validation_disk_space
+				disk_space=ot_validation_disk_space,
+				wot_version=wot_version
 
 
         }
