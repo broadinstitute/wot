@@ -12,11 +12,12 @@ import wot.ot
 logger = logging.getLogger('wot')
 
 
-def main(argv):
+def create_parser():
     parser = argparse.ArgumentParser(
-        'Computes the distance between trajectories across time')
-    parser.add_argument('--out', help='Prefix for output file names', default='wot-trajectory')
+        description='Computes the distance between trajectories across time')
+
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
+    parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     parser.add_argument('--distance_metric', help='Distance metric (earth mover\'s distance or total variation)',
                         choices=['emd', 'total_variation'], default='emd')
     parser.add_argument('--trajectory', help='One or more trajectory datasets as produced by the trajectory tool',
@@ -28,7 +29,7 @@ def main(argv):
     parser.add_argument('--local_pca', type=int, default=30,
                         help='Convert day matrix to local PCA coordinates.'
                              'Set to 0 to disable')
-    parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
+
     parser.add_argument('--plot', help='Plot results', action='store_true')
     parser.add_argument('--cell_filter', help='File with one cell id per line to include')
     parser.add_argument('--gene_filter',
@@ -40,12 +41,15 @@ def main(argv):
     #                     help='Covariate (batch) values for each cell. Used to compute batch to batch distance within a timepoint.')
     parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
                         default='day')
-
+    parser.add_argument('--out', help='Prefix for output file names', default='wot-trajectory')
     # parser.add_argument('--covariate_field',
     #                     help='Field name in covariate file that contains covariate',
     #                     default='covariate')
     parser.add_argument('--verbose', help='Print progress', action='store_true')
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(args):
     if args.verbose:
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())

@@ -9,7 +9,7 @@ import wot.io
 import wot.tmap
 
 
-def main(argv):
+def create_parser():
     parser = argparse.ArgumentParser(description='Generate mean expression profiles for ' \
                                                  'ancestors and descendants of each trajectory')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
@@ -22,9 +22,10 @@ def main(argv):
                         help='File with one gene id per line or comma separated string of list of genes to include from the matrix')
     parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
                         default='day')
+    return parser
 
-    args = parser.parse_args(argv)
 
+def main(args):
     cell_days_field = args.cell_days_field
     trajectory_ds = wot.io.read_dataset(args.trajectory, obs=args.cell_days)
     matrix = wot.io.read_dataset(args.matrix, var_filter=args.gene_filter)

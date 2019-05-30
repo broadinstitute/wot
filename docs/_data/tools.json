@@ -1,0 +1,1164 @@
+[
+  {
+    "desc": "Convert matrix data formats",
+    "name": "convert_matrix",
+    "epilog": null,
+    "example": {
+      "text": "Convert my_matrix.h5ad to txt format",
+      "code": "my_matrix.h5ad --format txt"
+    },
+    "params": [
+      {
+        "name": "matrix",
+        "help": "File(s) to convert",
+        "required": true
+      },
+      {
+        "name": "format",
+        "default": null,
+        "choices": [
+          "gct",
+          "h5ad",
+          "loom",
+          "txt"
+        ],
+        "help": "Output file format",
+        "required": true
+      },
+      {
+        "name": "obs",
+        "default": null,
+        "choices": null,
+        "help": "Row metadata to join with ids in matrix",
+        "required": false
+      },
+      {
+        "name": "var",
+        "default": null,
+        "choices": null,
+        "help": "Column metadata to join with ids in matrix",
+        "required": false
+      },
+      {
+        "name": "transpose",
+        "default": false,
+        "choices": null,
+        "help": "Transpose the matrix before saving",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Generate cell sets from gene set scores",
+    "name": "cells_by_gene_set",
+    "epilog": null,
+    "params": [
+      {
+        "name": "score",
+        "default": null,
+        "choices": null,
+        "help": "Gene sets scores generated from the gene_set_scores command",
+        "required": true
+      },
+      {
+        "name": "quantile",
+        "default": 99,
+        "choices": null,
+        "help": "Quantile for cells to be considered a member of a cell set",
+        "required": false
+      },
+      {
+        "name": "out",
+        "default": "wot",
+        "choices": null,
+        "help": "Output file name prefix",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Generate ancestor census for each time point given an initial cell set",
+    "name": "census",
+    "epilog": null,
+    "params": [
+      {
+        "name": "tmap",
+        "default": null,
+        "choices": null,
+        "help": "Directory of transport maps as produced by optimal transport",
+        "required": true
+      },
+      {
+        "name": "cell_set",
+        "default": null,
+        "choices": null,
+        "help": "gmt, gmx, or grp file of cell sets.",
+        "required": true
+      },
+      {
+        "name": "day",
+        "default": null,
+        "choices": null,
+        "help": "The starting timepoint at which to consider the cell sets",
+        "required": true
+      },
+      {
+        "name": "out",
+        "default": "census",
+        "choices": null,
+        "help": "Output files prefix",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Compute differentially expressed genes from the output of the fate tool",
+    "name": "diff_exp",
+    "epilog": null,
+    "params": [
+      {
+        "name": "matrix",
+        "default": null,
+        "choices": null,
+        "help": "A matrix with cells on rows and features, such as genes or pathways on columns",
+        "required": true
+      },
+      {
+        "name": "fate",
+        "default": null,
+        "choices": null,
+        "help": "Fate dataset produced by the fate tool",
+        "required": true
+      },
+      {
+        "name": "cell_days",
+        "default": null,
+        "choices": null,
+        "help": "File with headers \"id\" and \"day\" corresponding to cell id and days",
+        "required": true
+      },
+      {
+        "name": "nperm",
+        "default": null,
+        "choices": null,
+        "help": "Number of permutations",
+        "required": false
+      },
+      {
+        "name": "smooth_p_values",
+        "default": false,
+        "choices": null,
+        "help": "Smooth p-values",
+        "required": false
+      },
+      {
+        "name": "fold_change",
+        "default": 0.25,
+        "choices": null,
+        "help": "Limit permutations to genes which show at least X-fold difference (log-scale) between the two groups of cells",
+        "required": false
+      },
+      {
+        "name": "cell_days_field",
+        "default": "day",
+        "choices": null,
+        "help": "Field name in cell_days file that contains cell days",
+        "required": false
+      },
+      {
+        "name": "cell_day_filter",
+        "default": null,
+        "choices": null,
+        "help": "Comma separated list of days to include (e.g. 12,14,16)",
+        "required": false
+      },
+      {
+        "name": "gene_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one gene id per line",
+        "required": false
+      },
+      {
+        "name": "verbose",
+        "default": false,
+        "choices": null,
+        "help": "Print progress",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Generate fates for cell sets generated at the given time.",
+    "name": "fates",
+    "epilog": null,
+    "params": [
+      {
+        "name": "tmap",
+        "default": null,
+        "choices": null,
+        "help": "Directory of transport maps as produced by optimal transport",
+        "required": true
+      },
+      {
+        "name": "cell_set",
+        "default": null,
+        "choices": null,
+        "help": "gmt, gmx, or grp file of cell sets.",
+        "required": true
+      },
+      {
+        "name": "day",
+        "default": null,
+        "choices": null,
+        "help": "Day to consider for cell sets",
+        "required": true
+      },
+      {
+        "name": "cell_set_filter",
+        "default": null,
+        "choices": null,
+        "help": "Comma separated list of cell sets to include (e.g. IPS,Stromal)",
+        "required": false
+      },
+      {
+        "name": "format",
+        "default": "txt",
+        "choices": null,
+        "help": "Output matrix file format",
+        "required": false
+      },
+      {
+        "name": "embedding",
+        "default": null,
+        "choices": null,
+        "help": "Optional file with id, x, y used for plotting",
+        "required": false
+      },
+      {
+        "name": "out",
+        "default": "wot",
+        "choices": null,
+        "help": "Prefix for output file names",
+        "required": false
+      },
+      {
+        "name": "verbose",
+        "default": false,
+        "choices": null,
+        "help": "Print cell set information",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Score each cell according to its expression of input gene signatures",
+    "name": "gene_set_scores",
+    "epilog": null,
+    "params": [
+      {
+        "name": "matrix",
+        "default": null,
+        "choices": null,
+        "help": "A matrix with cells on rows and genes on columns",
+        "required": true
+      },
+      {
+        "name": "gene_sets",
+        "default": null,
+        "choices": null,
+        "help": "Gene sets in gmx, gmt, or grp format",
+        "required": true
+      },
+      {
+        "name": "method",
+        "default": null,
+        "choices": [
+          "mean_z_score",
+          "mean",
+          "mean_rank"
+        ],
+        "help": "Method to compute gene set scores",
+        "required": true
+      },
+      {
+        "name": "cell_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one cell id per line to include",
+        "required": false
+      },
+      {
+        "name": "gene_set_filter",
+        "default": null,
+        "choices": null,
+        "help": "Gene sets to include",
+        "required": false
+      },
+      {
+        "name": "nperm",
+        "default": null,
+        "choices": null,
+        "help": "Number of permutations to perform",
+        "required": false
+      },
+      {
+        "name": "out",
+        "default": "",
+        "choices": null,
+        "help": "Output file name prefix",
+        "required": false
+      },
+      {
+        "name": "transpose",
+        "default": false,
+        "choices": null,
+        "help": "Transpose the matrix",
+        "required": false
+      },
+      {
+        "name": "format",
+        "default": "txt",
+        "choices": [
+          "gct",
+          "h5ad",
+          "loom",
+          "txt"
+        ],
+        "help": "Output file format",
+        "required": false
+      },
+      {
+        "name": "verbose",
+        "default": false,
+        "choices": null,
+        "help": "Print verbose information",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Compute neighborhood graph",
+    "name": "neighborhood_graph",
+    "epilog": null,
+    "params": [
+      {
+        "name": "matrix",
+        "default": null,
+        "choices": null,
+        "help": "A matrix with cells on rows and features, such as genes or pathways on columns",
+        "required": true
+      },
+      {
+        "name": "gene_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one gene id per line to include from the matrix",
+        "required": false
+      },
+      {
+        "name": "cell_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one cell id per line to include from the matrix",
+        "required": false
+      },
+      {
+        "name": "transpose",
+        "default": false,
+        "choices": null,
+        "help": "Transpose the matrix",
+        "required": false
+      },
+      {
+        "name": "pca_comps",
+        "default": 50,
+        "choices": null,
+        "help": "Number of PCA components.",
+        "required": false
+      },
+      {
+        "name": "diff_comps",
+        "default": 15,
+        "choices": null,
+        "help": "Number of diffusion components.",
+        "required": false
+      },
+      {
+        "name": "neighbors",
+        "default": 15,
+        "choices": null,
+        "help": "Number of nearest neighbors",
+        "required": false
+      },
+      {
+        "name": "space",
+        "default": null,
+        "choices": [
+          "dmap",
+          "pca",
+          "input"
+        ],
+        "help": "Space to compute the neighborhood graph in",
+        "required": false
+      },
+      {
+        "name": "out",
+        "default": null,
+        "choices": null,
+        "help": "Output file name. The file is saved in gexf format (https://gephi.org/gexf/format/)",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Compute transport maps between pairs of time points",
+    "name": "optimal_transport",
+    "epilog": null,
+    "params": [
+      {
+        "name": "matrix",
+        "default": null,
+        "choices": null,
+        "help": "A matrix with cells on rows and features, such as genes or pathways on columns",
+        "required": true
+      },
+      {
+        "name": "cell_days",
+        "default": null,
+        "choices": null,
+        "help": "File with headers \"id\" and \"day\" corresponding to cell id and days",
+        "required": true
+      },
+      {
+        "name": "cell_growth_rates",
+        "default": null,
+        "choices": null,
+        "help": "File with \"id\" and \"cell_growth_rate\"headers corresponding to cell id and growth rate per day.",
+        "required": false
+      },
+      {
+        "name": "parameters",
+        "default": null,
+        "choices": null,
+        "help": "Optional two column parameter file containing parameter name and value",
+        "required": false
+      },
+      {
+        "name": "config",
+        "default": null,
+        "choices": null,
+        "help": "Configuration per timepoint or pair of timepoints",
+        "required": false
+      },
+      {
+        "name": "transpose",
+        "default": false,
+        "choices": null,
+        "help": "Transpose the matrix",
+        "required": false
+      },
+      {
+        "name": "local_pca",
+        "default": 30,
+        "choices": null,
+        "help": "Convert day pairs matrix to local PCA coordinates.Set to 0 to disable",
+        "required": false
+      },
+      {
+        "name": "growth_iters",
+        "default": 1,
+        "choices": null,
+        "help": "Number of growth iterations for learning the growth rate.",
+        "required": false
+      },
+      {
+        "name": "gene_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one gene id per line to use for computingcost matrices (e.g. variable genes)",
+        "required": false
+      },
+      {
+        "name": "cell_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one cell id per line to include",
+        "required": false
+      },
+      {
+        "name": "cell_day_filter",
+        "default": null,
+        "choices": null,
+        "help": "Comma separated list of days to include (e.g. 12,14,16)",
+        "required": false
+      },
+      {
+        "name": "scaling_iter",
+        "default": 3000,
+        "choices": null,
+        "help": "Number of scaling iterations for OT solver",
+        "required": false
+      },
+      {
+        "name": "inner_iter_max",
+        "default": 50,
+        "choices": null,
+        "help": "For OT solver",
+        "required": false
+      },
+      {
+        "name": "epsilon",
+        "default": 0.05,
+        "choices": null,
+        "help": "Controls the entropy of the transport map. An extremely large entropy parameter will give a maximally entropic transport map, and an extremely small entropy parameter will give a nearly deterministic transport map (but could also lead to numerical instability in the algorithm",
+        "required": false
+      },
+      {
+        "name": "lambda1",
+        "default": 1,
+        "choices": null,
+        "help": "Regularization parameter that controls the fidelity of the constraints on p",
+        "required": false
+      },
+      {
+        "name": "lambda2",
+        "default": 50,
+        "choices": null,
+        "help": "Regularization parameter that controls the fidelity of the constraints on q",
+        "required": false
+      },
+      {
+        "name": "max_iter",
+        "default": 10000000.0,
+        "choices": null,
+        "help": "Maximum number of scaling iterations. Abort if convergence was not reached",
+        "required": false
+      },
+      {
+        "name": "batch_size",
+        "default": 5,
+        "choices": null,
+        "help": "Number of scaling iterations to perform between duality gap check",
+        "required": false
+      },
+      {
+        "name": "tolerance",
+        "default": 1e-08,
+        "choices": null,
+        "help": "Maximal acceptable ratio between the duality gap and the primal objective value",
+        "required": false
+      },
+      {
+        "name": "epsilon0",
+        "default": 1,
+        "choices": null,
+        "help": "Warm starting value for epsilon",
+        "required": false
+      },
+      {
+        "name": "tau",
+        "default": 10000,
+        "choices": null,
+        "help": null,
+        "required": false
+      },
+      {
+        "name": "ncells",
+        "default": null,
+        "choices": null,
+        "help": "Number of cells to downsample from each timepoint and covariate",
+        "required": false
+      },
+      {
+        "name": "ncounts",
+        "default": null,
+        "choices": null,
+        "help": "Sample ncounts from each cell",
+        "required": false
+      },
+      {
+        "name": "solver",
+        "default": "duality_gap",
+        "choices": [
+          "duality_gap",
+          "fixed_iters"
+        ],
+        "help": "The solver to use to compute transport matrices",
+        "required": false
+      },
+      {
+        "name": "cell_days_field",
+        "default": "day",
+        "choices": null,
+        "help": "Field name in cell_days file that contains cell days",
+        "required": false
+      },
+      {
+        "name": "cell_growth_rates_field",
+        "default": "cell_growth_rate",
+        "choices": null,
+        "help": "Field name in cell_growth_rates file that contains growth rates",
+        "required": false
+      },
+      {
+        "name": "verbose",
+        "default": false,
+        "choices": null,
+        "help": "Print progress information",
+        "required": false
+      },
+      {
+        "name": "format",
+        "default": "h5ad",
+        "choices": [
+          "h5ad",
+          "loom"
+        ],
+        "help": "Output file format",
+        "required": false
+      },
+      {
+        "name": "no_overwrite",
+        "default": false,
+        "choices": null,
+        "help": "Do not overwrite existing transport maps if they exist",
+        "required": false
+      },
+      {
+        "name": "out",
+        "default": "./tmaps",
+        "choices": null,
+        "help": "Prefix for output file names",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Compute a validation summary",
+    "name": "optimal_transport_validation",
+    "epilog": null,
+    "params": [
+      {
+        "name": "matrix",
+        "default": null,
+        "choices": null,
+        "help": "A matrix with cells on rows and features, such as genes or pathways on columns",
+        "required": true
+      },
+      {
+        "name": "cell_days",
+        "default": null,
+        "choices": null,
+        "help": "File with headers \"id\" and \"day\" corresponding to cell id and days",
+        "required": true
+      },
+      {
+        "name": "cell_growth_rates",
+        "default": null,
+        "choices": null,
+        "help": "File with \"id\" and \"cell_growth_rate\"headers corresponding to cell id and growth rate per day.",
+        "required": false
+      },
+      {
+        "name": "parameters",
+        "default": null,
+        "choices": null,
+        "help": "Optional two column parameter file containing parameter name and value",
+        "required": false
+      },
+      {
+        "name": "config",
+        "default": null,
+        "choices": null,
+        "help": "Configuration per timepoint or pair of timepoints",
+        "required": false
+      },
+      {
+        "name": "transpose",
+        "default": false,
+        "choices": null,
+        "help": "Transpose the matrix",
+        "required": false
+      },
+      {
+        "name": "local_pca",
+        "default": 30,
+        "choices": null,
+        "help": "Convert day pairs matrix to local PCA coordinates.Set to 0 to disable",
+        "required": false
+      },
+      {
+        "name": "growth_iters",
+        "default": 1,
+        "choices": null,
+        "help": "Number of growth iterations for learning the growth rate.",
+        "required": false
+      },
+      {
+        "name": "gene_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one gene id per line to use for computingcost matrices (e.g. variable genes)",
+        "required": false
+      },
+      {
+        "name": "cell_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one cell id per line to include",
+        "required": false
+      },
+      {
+        "name": "cell_day_filter",
+        "default": null,
+        "choices": null,
+        "help": "Comma separated list of days to include (e.g. 12,14,16)",
+        "required": false
+      },
+      {
+        "name": "scaling_iter",
+        "default": 3000,
+        "choices": null,
+        "help": "Number of scaling iterations for OT solver",
+        "required": false
+      },
+      {
+        "name": "inner_iter_max",
+        "default": 50,
+        "choices": null,
+        "help": "For OT solver",
+        "required": false
+      },
+      {
+        "name": "epsilon",
+        "default": 0.05,
+        "choices": null,
+        "help": "Controls the entropy of the transport map. An extremely large entropy parameter will give a maximally entropic transport map, and an extremely small entropy parameter will give a nearly deterministic transport map (but could also lead to numerical instability in the algorithm",
+        "required": false
+      },
+      {
+        "name": "lambda1",
+        "default": 1,
+        "choices": null,
+        "help": "Regularization parameter that controls the fidelity of the constraints on p",
+        "required": false
+      },
+      {
+        "name": "lambda2",
+        "default": 50,
+        "choices": null,
+        "help": "Regularization parameter that controls the fidelity of the constraints on q",
+        "required": false
+      },
+      {
+        "name": "max_iter",
+        "default": 10000000.0,
+        "choices": null,
+        "help": "Maximum number of scaling iterations. Abort if convergence was not reached",
+        "required": false
+      },
+      {
+        "name": "batch_size",
+        "default": 5,
+        "choices": null,
+        "help": "Number of scaling iterations to perform between duality gap check",
+        "required": false
+      },
+      {
+        "name": "tolerance",
+        "default": 1e-08,
+        "choices": null,
+        "help": "Maximal acceptable ratio between the duality gap and the primal objective value",
+        "required": false
+      },
+      {
+        "name": "epsilon0",
+        "default": 1,
+        "choices": null,
+        "help": "Warm starting value for epsilon",
+        "required": false
+      },
+      {
+        "name": "tau",
+        "default": 10000,
+        "choices": null,
+        "help": null,
+        "required": false
+      },
+      {
+        "name": "ncells",
+        "default": null,
+        "choices": null,
+        "help": "Number of cells to downsample from each timepoint and covariate",
+        "required": false
+      },
+      {
+        "name": "ncounts",
+        "default": null,
+        "choices": null,
+        "help": "Sample ncounts from each cell",
+        "required": false
+      },
+      {
+        "name": "solver",
+        "default": "duality_gap",
+        "choices": [
+          "duality_gap",
+          "fixed_iters"
+        ],
+        "help": "The solver to use to compute transport matrices",
+        "required": false
+      },
+      {
+        "name": "cell_days_field",
+        "default": "day",
+        "choices": null,
+        "help": "Field name in cell_days file that contains cell days",
+        "required": false
+      },
+      {
+        "name": "cell_growth_rates_field",
+        "default": "cell_growth_rate",
+        "choices": null,
+        "help": "Field name in cell_growth_rates file that contains growth rates",
+        "required": false
+      },
+      {
+        "name": "verbose",
+        "default": false,
+        "choices": null,
+        "help": "Print progress information",
+        "required": false
+      },
+      {
+        "name": "covariate",
+        "default": null,
+        "choices": null,
+        "help": "Covariate values for each cell",
+        "required": false
+      },
+      {
+        "name": "full_distances",
+        "default": false,
+        "choices": null,
+        "help": "Compute full distances",
+        "required": false
+      },
+      {
+        "name": "day_triplets",
+        "default": null,
+        "choices": null,
+        "help": "Three column file without a header containing start time, interpolation time, and end time",
+        "required": false
+      },
+      {
+        "name": "out",
+        "default": "tmaps_val",
+        "choices": null,
+        "help": "Prefix for output file names",
+        "required": false
+      },
+      {
+        "name": "interp_size",
+        "default": 10000,
+        "choices": null,
+        "help": null,
+        "required": false
+      },
+      {
+        "name": "covariate_field",
+        "default": "covariate",
+        "choices": null,
+        "help": "Field name in covariate file that contains covariate",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Generate trajectories for cell sets generated at the given time.",
+    "name": "trajectory",
+    "epilog": null,
+    "params": [
+      {
+        "name": "tmap",
+        "default": null,
+        "choices": null,
+        "help": "Directory of transport maps as produced by optimal transport",
+        "required": true
+      },
+      {
+        "name": "cell_set",
+        "default": null,
+        "choices": null,
+        "help": "gmt, gmx, or grp file of cell sets.",
+        "required": true
+      },
+      {
+        "name": "day",
+        "default": null,
+        "choices": null,
+        "help": "Day to consider for cell sets",
+        "required": true
+      },
+      {
+        "name": "cell_set_filter",
+        "default": null,
+        "choices": null,
+        "help": "Comma separated list of cell sets to include (e.g. IPS,Stromal)",
+        "required": false
+      },
+      {
+        "name": "format",
+        "default": "txt",
+        "choices": null,
+        "help": "Output matrix file format",
+        "required": false
+      },
+      {
+        "name": "embedding",
+        "default": null,
+        "choices": null,
+        "help": "Optional file with id, x, y used for plotting",
+        "required": false
+      },
+      {
+        "name": "out",
+        "default": "wot",
+        "choices": null,
+        "help": "Prefix for output file names",
+        "required": false
+      },
+      {
+        "name": "verbose",
+        "default": false,
+        "choices": null,
+        "help": "Print cell set information",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Computes the distance between trajectories across time",
+    "name": "trajectory_divergence",
+    "epilog": null,
+    "params": [
+      {
+        "name": "matrix",
+        "default": null,
+        "choices": null,
+        "help": "A matrix with cells on rows and features, such as genes or pathways on columns",
+        "required": true
+      },
+      {
+        "name": "cell_days",
+        "default": null,
+        "choices": null,
+        "help": "File with headers \"id\" and \"day\" corresponding to cell id and days",
+        "required": true
+      },
+      {
+        "name": "distance_metric",
+        "default": "emd",
+        "choices": [
+          "emd",
+          "total_variation"
+        ],
+        "help": "Distance metric (earth mover's distance or total variation)",
+        "required": false
+      },
+      {
+        "name": "trajectory",
+        "default": null,
+        "choices": null,
+        "help": "One or more trajectory datasets as produced by the trajectory tool",
+        "required": false
+      },
+      {
+        "name": "compare",
+        "default": "within",
+        "choices": null,
+        "help": "If \"match\", compare trajectories with the same name. If \"all\", compare all pairs. If \"within\" compare within a trajectory. If a trajectory name, compare to the specified trajectory",
+        "required": false
+      },
+      {
+        "name": "local_pca",
+        "default": 30,
+        "choices": null,
+        "help": "Convert day matrix to local PCA coordinates.Set to 0 to disable",
+        "required": false
+      },
+      {
+        "name": "plot",
+        "default": false,
+        "choices": null,
+        "help": "Plot results",
+        "required": false
+      },
+      {
+        "name": "cell_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one cell id per line to include",
+        "required": false
+      },
+      {
+        "name": "gene_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one gene id per line to use for computingcost matrices (e.g. variable genes)",
+        "required": false
+      },
+      {
+        "name": "cell_day_filter",
+        "default": null,
+        "choices": null,
+        "help": "Comma separated list of days to include (e.g. 12,14,16)",
+        "required": false
+      },
+      {
+        "name": "cell_days_field",
+        "default": "day",
+        "choices": null,
+        "help": "Field name in cell_days file that contains cell days",
+        "required": false
+      },
+      {
+        "name": "out",
+        "default": "wot-trajectory",
+        "choices": null,
+        "help": "Prefix for output file names",
+        "required": false
+      },
+      {
+        "name": "verbose",
+        "default": false,
+        "choices": null,
+        "help": "Print progress",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Generate mean expression profiles for ancestors and descendants of each trajectory",
+    "name": "trajectory_trends",
+    "epilog": null,
+    "params": [
+      {
+        "name": "matrix",
+        "default": null,
+        "choices": null,
+        "help": "A matrix with cells on rows and features, such as genes or pathways on columns",
+        "required": true
+      },
+      {
+        "name": "trajectory",
+        "default": null,
+        "choices": null,
+        "help": "Trajectory dataset as produced by the trajectory tool",
+        "required": true
+      },
+      {
+        "name": "out",
+        "default": "trends",
+        "choices": null,
+        "help": "Prefix for output file names",
+        "required": false
+      },
+      {
+        "name": "plot",
+        "default": false,
+        "choices": null,
+        "help": "Generate plots for each trajectory",
+        "required": false
+      },
+      {
+        "name": "cell_days",
+        "default": null,
+        "choices": null,
+        "help": "File with headers \"id\" and \"day\" corresponding to cell id and days",
+        "required": true
+      },
+      {
+        "name": "format",
+        "default": "txt",
+        "choices": [
+          "gct",
+          "h5ad",
+          "loom",
+          "txt"
+        ],
+        "help": "Output file format",
+        "required": false
+      },
+      {
+        "name": "gene_filter",
+        "default": null,
+        "choices": null,
+        "help": "File with one gene id per line or comma separated string of list of genes to include from the matrix",
+        "required": false
+      },
+      {
+        "name": "cell_days_field",
+        "default": "day",
+        "choices": null,
+        "help": "Field name in cell_days file that contains cell days",
+        "required": false
+      }
+    ]
+  },
+  {
+    "desc": "Generate a transition table from one cell set to another cell set",
+    "name": "transition_table",
+    "epilog": null,
+    "params": [
+      {
+        "name": "tmap",
+        "default": null,
+        "choices": null,
+        "help": "Directory of transport maps as produced by optimal transport",
+        "required": true
+      },
+      {
+        "name": "cell_set",
+        "default": null,
+        "choices": null,
+        "help": "gmt, gmx, or grp file of cell sets.",
+        "required": true
+      },
+      {
+        "name": "start_time",
+        "default": null,
+        "choices": null,
+        "help": "The start time for the cell sets to compute the transitions to cell sets at end_time",
+        "required": true
+      },
+      {
+        "name": "end_time",
+        "default": null,
+        "choices": null,
+        "help": "The end time",
+        "required": true
+      },
+      {
+        "name": "out",
+        "default": null,
+        "choices": null,
+        "help": "Prefix for ouput file.",
+        "required": false
+      },
+      {
+        "name": "format",
+        "default": "h5ad",
+        "choices": [
+          "gct",
+          "h5ad",
+          "loom",
+          "txt"
+        ],
+        "help": "Output file format",
+        "required": false
+      }
+    ]
+  }
+]

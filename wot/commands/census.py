@@ -10,16 +10,17 @@ import wot
 import wot.io
 
 
-def main(argv):
+def create_parser():
     parser = argparse.ArgumentParser(
         description='Generate ancestor census for each time point given an initial cell set')
     parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
     parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True)
     parser.add_argument('--day', help='The starting timepoint at which to consider the cell sets', required=True)
     parser.add_argument('--out', help='Output files prefix', default='census')
+    return parser
 
-    args = parser.parse_args(argv)
 
+def main(args):
     tmap_model = wot.tmap.TransportMapModel.from_directory(args.tmap)
     cell_sets_matrix = wot.io.read_sets(args.cell_set)
     cell_sets = wot.io.convert_binary_dataset_to_dict(cell_sets_matrix)

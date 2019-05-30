@@ -6,16 +6,14 @@ noheader: true
 
 <div class="container-fluid">
     <div class="row">
-
-        <!-- sidebar, which will move to the top on a small screen -->
-        <div class="col-sm-3 col-md-3 col-lg-2">
-            <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
+        <div class="col-sm-5 col-md-4 col-lg-3">
+            <nav id="toc" data-toggle="toc" class="sticky-top" style="overflow: hidden;"></nav>
         </div>
 
-        <div class="col-sm-9 col-md-9 col-lg-10">
-            <main id="content" role="main">
+        <div class="col-sm-8 col-md-8 col-lg-9">
+            <div id="content" role="main">
                 {{ content }}
-            </main>
+            </div>
         </div>
     </div>
 </div>

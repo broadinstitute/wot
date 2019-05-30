@@ -1,3 +1,4 @@
+import argparse
 import logging
 
 import numpy as np
@@ -20,17 +21,21 @@ except:
     pass
 
 
-def run_trajectory_or_fates(parser, argv, fates):
+def get_trajectory_or_fates_parser(fates):
+    parser = argparse.ArgumentParser(
+        description='Generate fates for cell sets generated at the given time.' if fates else 'Generate trajectories for cell sets generated at the given time.')
     parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
     parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True)
-    parser.add_argument('--cell_set_filter', help='Comma separated list of cell sets to include (e.g. IPS,Stromal)')
     parser.add_argument('--day', help='Day to consider for cell sets', required=True, type=float)
-    parser.add_argument('--out', help='Prefix for output file names', default='wot')
+    parser.add_argument('--cell_set_filter', help='Comma separated list of cell sets to include (e.g. IPS,Stromal)')
     parser.add_argument('--format', help='Output matrix file format', default='txt')
     parser.add_argument('--embedding', help='Optional file with id, x, y used for plotting')
+    parser.add_argument('--out', help='Prefix for output file names', default='wot')
     parser.add_argument('--verbose', help='Print cell set information', action='store_true')
+    return parser
 
-    args = parser.parse_args(argv)
+
+def run_trajectory_or_fates(args, fates):
     if args.verbose:
         logger = logging.getLogger('wot')
         logger.setLevel(logging.DEBUG)

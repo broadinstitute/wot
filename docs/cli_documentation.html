@@ -1,0 +1,51 @@
+---
+title: Command Line
+noheader: true
+permalink: cli_documentation/
+layout: documentation
+location: cli_documentation
+
+---
+
+
+<p>wot provides a command line interface that offers fine-grained control over calculations.
+    <br>
+    Help is available for each tool using the syntax <span class="text-monospace">wot tool -h</span>. For example, <span
+            class="text-monospace">wot optimal_transport -h</span>.
+</p>
+
+<hr/>
+{% for tool in site.data.tools %}
+<div style="border-bottom: 1px solid rgba(0,0,0,.125);padding-bottom: 14px;">
+    <h2>{{ tool.name }}</h2>
+
+    <a data-toggle="collapse" href="#{{ tool.name }}_details" role="button"
+       aria-expanded="false" aria-controls="{{ tool.name }}_details">
+        {{ tool.desc }}
+    </a>
+    <div style="margin-left: 14px;" id="{{ tool.name }}_details" class="collapse">
+        <table class="table table-sm">
+            <tr>
+                <th>Parameter</th>
+                <th>Description</th>
+            </tr>
+            {% for param in tool.params %}
+            <tr>
+
+                <td>{% if param.required %} <b> {% endif %} {{param.name}} {% if param.required %} </b> {% endif %}
+                </td>
+                <td>{{param.help}}{% if param.choices %}, ({{param.choices | join: ", "}}) {% endif %}{% if param.default %}, (default {{param.default}}) {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% if site.data.examples[tool.name] %}
+        {{ site.data.examples[tool.name].text }}: <br><span class="text-monospace">wot {{tool.name }} {{ site.data.examples[tool.name].code }}</span>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+
+
+

@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 import wot
 
 
-def main(argv):
+def create_parser():
     parser = argparse.ArgumentParser(description='Compute a validation summary')
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--covariate', help='Covariate values for each cell')
@@ -28,7 +28,10 @@ def main(argv):
     parser.add_argument('--covariate_field',
                         help='Field name in covariate file that contains covariate',
                         default='covariate')
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(args):
     if args.verbose:
         logger = logging.getLogger('wot')
         logger.setLevel(logging.DEBUG)

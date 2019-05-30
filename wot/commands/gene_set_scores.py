@@ -14,26 +14,26 @@ import wot
 logger = logging.getLogger('wot')
 
 
-def main(argv):
+def create_parser():
     parser = argparse.ArgumentParser(
         description='Score each cell according to its expression of input gene signatures')
-    parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
-    parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
+    parser.add_argument('--matrix', help='A matrix with cells on rows and genes on columns', required=True)
     parser.add_argument('--gene_sets',
                         help='Gene sets in gmx, gmt, or grp format', required=True)
+    parser.add_argument('--method', help='Method to compute gene set scores',
+                        choices=['mean_z_score', 'mean', 'mean_rank'], required=True)
     parser.add_argument('--cell_filter',
-                        help='File with one cell id per line to include')
-    parser.add_argument('--day_filter',
                         help='File with one cell id per line to include')
     parser.add_argument('--gene_set_filter', help='Gene sets to include')
     parser.add_argument('--nperm', help='Number of permutations to perform', type=int)
     parser.add_argument('--out', help='Output file name prefix', default='')
+    parser.add_argument('--transpose', help='Transpose the matrix', action='store_true')
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='txt', choices=wot.commands.FORMAT_CHOICES)
-    parser.add_argument('--method', help='Method to compute gene set scores',
-                        choices=['mean_z_score', 'mean', 'mean_rank'], required=True)
     parser.add_argument('--verbose', action='store_true', help='Print verbose information')
+    return parser
 
-    args = parser.parse_args(argv)
+
+def main(args):
     if args.verbose:
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())

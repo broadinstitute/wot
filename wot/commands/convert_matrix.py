@@ -8,15 +8,17 @@ import pandas as pd
 import wot.io
 
 
-def main(argv):
+def create_parser():
     parser = argparse.ArgumentParser(description='Convert matrix data formats')
-
-    parser.add_argument('--format', help=wot.commands.FORMAT_HELP, choices=wot.commands.FORMAT_CHOICES)
+    parser.add_argument('--format', help=wot.commands.FORMAT_HELP, choices=wot.commands.FORMAT_CHOICES, required=True)
     parser.add_argument('matrix', help='File(s) to convert', nargs='+')
     parser.add_argument('--obs', help='Row metadata to join with ids in matrix', action='append')
     parser.add_argument('--var', help='Column metadata to join with ids in matrix', action='append')
     parser.add_argument('--transpose', help='Transpose the matrix before saving', action='store_true')
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(args):
     files = args.matrix
     obs = []
     if args.obs is not None:

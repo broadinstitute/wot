@@ -6,7 +6,7 @@ import argparse
 import wot.io
 
 
-def main(argv):
+def create_parser():
     parser = argparse.ArgumentParser(
         description='Generate a transition table from one cell set to another cell set')
     parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
@@ -17,9 +17,10 @@ def main(argv):
     parser.add_argument('--end_time', help='The end time', required=True, type=float)
     parser.add_argument('--out', help='Prefix for ouput file.')
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='h5ad', choices=wot.commands.FORMAT_CHOICES)
+    return parser
 
-    args = parser.parse_args(argv)
 
+def main(args):
     tmap_model = wot.tmap.TransportMapModel.from_directory(args.tmap)
     cell_sets = wot.io.read_sets(args.cell_set, as_dict=True)
     start_populations = tmap_model.population_from_cell_sets(cell_sets, at_time=args.start_time)

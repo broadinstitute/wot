@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import argparse
-
 import wot
 
 
-def main(argv):
-    parser = argparse.ArgumentParser(
-        'Generate trajectories for cell sets generated at the given time.')
-    wot.commands.run_trajectory_or_fates(parser, argv, False)
+def create_parser():
+    return wot.commands.get_trajectory_or_fates_parser(False)
+
+
+def main(args):
+    wot.commands.run_trajectory_or_fates(args, False)

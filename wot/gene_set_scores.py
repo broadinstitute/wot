@@ -102,6 +102,7 @@ def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
         mean = x.mean(axis=0)
         var = x.var(axis=0)
         std = np.sqrt(var)
+        # std[std == 0] = 1e-12 # avoid divide by zero
         x = (x - mean) / std
         x[np.isnan(x)] = 0
         x[x < -5] = -5

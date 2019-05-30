@@ -2,21 +2,25 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import numpy as np
 import sys
+
+import numpy as np
+
 import wot.io
 
 
-def main(argv):
+def create_parser():
     parser = argparse.ArgumentParser(description='Generate cell sets from gene set scores')
     parser.add_argument('--score',
                         help='Gene sets scores generated from the gene_set_scores command', required=True,
                         action='append')
-    parser.add_argument('--out', help='Output file name prefix', required=True)
     parser.add_argument('--quantile', default=99,
                         help='Quantile for cells to be considered a member of a cell set', type=float)
+    parser.add_argument('--out', help='Output file name prefix', default="wot")
+    return parser
 
-    args = parser.parse_args(argv)
+
+def main(args):
     quantile = args.quantile
     cell_set_name_to_ids = {}
     for path in args.score:

@@ -9,15 +9,18 @@ import wot.io
 import wot.ot
 
 
-def main(argv):
-    parser = argparse.ArgumentParser('Compute transport maps between pairs of time points')
+def create_parser():
+    parser = argparse.ArgumentParser(description='Compute transport maps between pairs of time points')
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--format', help='Output file format', default='h5ad', choices=['h5ad', 'loom'])
     parser.add_argument('--no_overwrite', help='Do not overwrite existing transport maps if they exist',
                         action='store_true')
     parser.add_argument('--out', default='./tmaps',
                         help='Prefix for output file names')
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(args):
     if args.verbose:
         logger = logging.getLogger('wot')
         logger.setLevel(logging.DEBUG)

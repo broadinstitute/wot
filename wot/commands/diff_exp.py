@@ -12,11 +12,11 @@ import wot.io
 logger = logging.getLogger('wot')
 
 
-def main(argv):
+def create_parser():
     parser = argparse.ArgumentParser(
         description='Compute differentially expressed genes from the output of the fate tool')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
-    parser.add_argument('--fate', help='Fate dataset produced by the fate tool')
+    parser.add_argument('--fate', help='Fate dataset produced by the fate tool', required=True)
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
     # parser.add_argument('--compare',
     #                     help='If "match", compare fates with the same name. ' + 'If "all", compare all pairs. '
@@ -30,7 +30,7 @@ def main(argv):
     parser.add_argument('--smooth_p_values',
                         help='Smooth p-values', action='store_true')
     parser.add_argument('--fold_change', type=float, default=0.25,
-                        help='Limit permutations to genes which show at least X-fold difference (log-scale) between the two groups of cells.')
+                        help='Limit permutations to genes which show at least X-fold difference (log-scale) between the two groups of cells')
     parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
                         default='day')
     parser.add_argument('--cell_day_filter',
@@ -38,7 +38,10 @@ def main(argv):
     parser.add_argument('--gene_filter',
                         help='File with one gene id per line')
     parser.add_argument('--verbose', help='Print progress', action='store_true')
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(args):
     if args.verbose:
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())

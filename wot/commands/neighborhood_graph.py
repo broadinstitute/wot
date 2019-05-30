@@ -6,7 +6,7 @@ import argparse
 import wot.io
 
 
-def main(argv):
+def create_parser():
     parser = argparse.ArgumentParser(description='Compute neighborhood graph')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--gene_filter',
@@ -25,8 +25,10 @@ def main(argv):
     parser.add_argument('--space', help='Space to compute the neighborhood graph in', choices=['dmap', 'pca', 'input'])
     parser.add_argument('--out',
                         help='Output file name. The file is saved in gexf format (https://gephi.org/gexf/format/)')
+    return parser
 
-    args = parser.parse_args(argv)
+
+def main(args):
     if args.out is None:
         args.out = 'wot-neighborhood-graph'
     space = args.space
