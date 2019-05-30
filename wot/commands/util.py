@@ -173,7 +173,7 @@ def add_ot_parameters_arguments(parser):
                         help='Maximal acceptable ratio between the duality gap and the primal objective value')
     parser.add_argument('--epsilon0', type=float, default=1,
                         help='Warm starting value for epsilon')
-    parser.add_argument('--tau', type=float, default=10000)
+    parser.add_argument('--tau', type=float, default=10000, help='For OT solver')
     parser.add_argument('--ncells', type=int, help='Number of cells to downsample from each timepoint and covariate')
     parser.add_argument('--ncounts', help='Sample ncounts from each cell', type=int)
     # parser.add_argument('--sampling_bias', help='File with "id" and "pp" to correct sampling bias.')

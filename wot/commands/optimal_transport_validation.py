@@ -24,7 +24,8 @@ def create_parser():
                         help='Three column file without a header containing start time, interpolation time, and end time')
     parser.add_argument('--out', default='tmaps_val',
                         help='Prefix for output file names')
-    parser.add_argument('--interp_size', default=10000, type=int)
+    parser.add_argument('--interp_size', default=10000, type=int,
+                        help='The number of cells in the interpolated population')
     parser.add_argument('--covariate_field',
                         help='Field name in covariate file that contains covariate',
                         default='covariate')

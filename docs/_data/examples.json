@@ -1,38 +1,38 @@
 {
   "convert_matrix": {
-    "text": "Convert my_matrix.h5ad to txt format",
+    "text": "This command converts my_matrix.h5ad to txt format.",
     "code": "my_matrix.h5ad --format txt"
   },
   "gene_set_scores": {
-    "text": "Compute gene set scores, see notebook for an example of converting gene set scores to growth rates",
+    "text": "This command computes gene set scores. See notebooks for an example of converting gene set scores to growth rates.",
     "code": "--matrix data/ExprMatrix.h5ad --method mean_z_score --gene_sets data/gene_sets.gmx"
   },
   "optimal_transport": {
-    "text": "Compute transport maps",
+    "text": "This command computes transport maps for all consecutive time points.",
     "code": "--matrix data/ExprMatrix.var.genes.h5ad --cell_days data/cell_days.txt --cell_filter data/serum_cell_ids.txt --growth_iters 3 --cell_growth_rates data/growth_gs_init.txt --out tmaps/serum --verbose"
   },
   "trajectory": {
-    "text": "Compute and plot trajectories",
+    "text": "This command computes and plots trajectories using the serum transport maps and major cell sets.",
     "code": "--tmap tmaps/serum --cell_set data/major_cell_sets.gmt --day 18 --embedding data/fle_coords.txt --verbose"
   },
   "trajectory_divergence": {
-    "text": "Compute trajectory divergence",
+    "text": "This command computes the trajectory divergence.",
     "code": "--trajectory wot_trajectory.txt --cell_days data/cell_days.txt --matrix data/ExprMatrix.var.genes.h5ad --compare within --verbose --plot"
   },
   "trajectory_trends": {
-    "text": "Compute and plot trajectory trends",
+    "text": "This command computes and plots trajectory trends for the genes Nanog, Obox6, and Zfp42.",
     "code": "--trajectory wot_trajectory.txt --cell_days data/cell_days.txt --matrix data/ExprMatrix.h5ad --gene_filter Nanog,Obox6, Zfp42 --plot"
   },
   "fates": {
-    "text": "Compute cell fates",
+    "text": "This command computes IPS cell fates.",
     "code": "--tmap tmaps/serum --cell_set data/major_cell_sets.gmt --day 17 --cell_set_filter IPS --out IPS_d17 --verbose"
   },
   "diff_exp": {
-    "text": "Compute differentially expressed genes at day 14 that are predictive of IPS fate at day 17",
+    "text": "This command computes differentially expressed genes at day 14 that are predictive of IPS fate at day 17.",
     "code": "--matrix data/ExprMatrix.h5ad --cell_days data/cell_days.txt --fate IPS_d17_fates.txt --fold_change 0 --gene_filter data/TFs.txt --cell_day_filter 14 --verbose"
   },
   "optimal_transport_validation": {
-    "text": "Compute and plot validation summary",
+    "text": "This command computes and plots optimal transport validation results.",
     "code": "--matrix data/ExprMatrix.var.genes.h5ad --cell_days data/cell_days.txt --cell_filter data/serum_cell_ids.txt --covariate data/batches.txt --cell_growth_rates tmaps/serum_g.txt --cell_growth_rates_field g2 --verbose\n"
   }
 }

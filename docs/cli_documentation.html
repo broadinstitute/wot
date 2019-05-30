@@ -34,13 +34,16 @@ location: cli_documentation
 
                 <td>{% if param.required %} <b> {% endif %} {{param.name}} {% if param.required %} </b> {% endif %}
                 </td>
-                <td>{{param.help}}{% if param.choices %}, ({{param.choices | join: ", "}}) {% endif %}{% if param.default %}, (default {{param.default}}) {% endif %}
+                <td>{{param.help}}{% if param.choices %}<br/>Choices: {{param.choices | join: ", "}} {% endif %}{% if
+                    param.default %}<br/>Default: {{param.default}} {% endif %}
                 </td>
             </tr>
             {% endfor %}
         </table>
         {% if site.data.examples[tool.name] %}
-        {{ site.data.examples[tool.name].text }}: <br><span class="text-monospace">wot {{tool.name }} {{ site.data.examples[tool.name].code }}</span>
+        <b>Example Usage:</b><br/>
+        <span class="text-monospace">wot {{tool.name }} {{ site.data.examples[tool.name].code }}</span><br/>
+        {{ site.data.examples[tool.name].text }}
         {% endif %}
     </div>
 </div>

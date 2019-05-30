@@ -3,10 +3,6 @@
     "desc": "Convert matrix data formats",
     "name": "convert_matrix",
     "epilog": null,
-    "example": {
-      "text": "Convert my_matrix.h5ad to txt format",
-      "code": "my_matrix.h5ad --format txt"
-    },
     "params": [
       {
         "name": "matrix",
@@ -560,7 +556,7 @@
         "name": "tau",
         "default": 10000,
         "choices": null,
-        "help": null,
+        "help": "For OT solver",
         "required": false
       },
       {
@@ -783,7 +779,7 @@
         "name": "tau",
         "default": 10000,
         "choices": null,
-        "help": null,
+        "help": "For OT solver",
         "required": false
       },
       {
@@ -863,7 +859,7 @@
         "name": "interp_size",
         "default": 10000,
         "choices": null,
-        "help": null,
+        "help": "The number of cells in the interpolated population",
         "required": false
       },
       {
