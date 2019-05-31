@@ -5,8 +5,8 @@ permalink: tutorial/
 layout: documentation
 location: Documentation
 redirect_from:
-    - /examples/computing_transport_maps.html
-    - /examples/trajectory_trends.html
+- /examples/computing_transport_maps.html
+- /examples/trajectory_trends.html
 ---
 
 
@@ -22,11 +22,11 @@ redirect_from:
     is destructive.</p>
 
 <p>Waddington-OT is designed to infer the temporal couplings of a developmental stochastic process $\mathbb{P}_t$ from
-    samples collected independently at various time-points.
+    samples collected independently at various time points.
     We represent a developing population of cells with a time-varying distribution $\mathbb{P}_t$ on gene expression
     space.
     The temporal couplings describe the flow of mass as the population develops and grows.
-    For a pair of time-points $(t_i,t_j)$, the coupling $\gamma_{t_i,t_j}$ tells us: What descendants does cell $x$ from
+    For a pair of time points $(t_i,t_j)$, the coupling $\gamma_{t_i,t_j}$ tells us: What descendants does cell $x$ from
     time $t_i$ give rise to at time $t_j$?</p>
 
 <p>In this tutorial, we explore the Waddington-OT workflow, starting with inferring temporal couplings with optimal
@@ -40,7 +40,7 @@ redirect_from:
 <p>The reader can follow along by either</p>
 
 <ul>
-    <li>downloading the notebooks and running the notebooks locally.
+    <li>Downloading the notebooks and running the notebooks locally.
         <ul>
             <li><a target="_blank"
                    href="https://drive.google.com/uc?export=download&id=1B9y1czpQKJEf3TMBjdrTTtQwhWcHdDBO">Download
@@ -54,8 +54,20 @@ redirect_from:
             </li>
         </ul>
     </li>
-    <li>running the notebooks interactively online with Terra (coming soon).</li>
+    <!--    <li>Running the notebooks interactively online with <a target="_blank"-->
+    <!--                                                           href="https://app.terra.bio/#workspaces/kco-tech/wot">Terra</a>.-->
+    <!--    </li>-->
+    <li>Running the notebooks interactively online with <a target="_blank"
+                                                           href="https://app.terra.bio">Terra</a> (coming soon).
+    </li>
 </ul>
+
+<p>The tutorial input data contains an expression matrix and a file indicating the time of collection for each cell.
+    The zip folder also contains the output of most intermediate computations, so the reader is (mostly) free to skip
+    ahead to later notebooks without running all earlier notebooks.
+    For this reason we also provide precomputed transport matrices (in a separate zip folder to reduce file sizes).
+    Note that the expression matrix has been proprocessed by log-normalizing the raw count data (i.e. the units are
+    log-tpm). </p>
 
 <p>The tutorial is organized as follows.
     We begin by visualizing and exploring the data in Notebook 1.
@@ -65,10 +77,12 @@ redirect_from:
     In Notebook 7 we interpolate the distribution of cells at held-out time points, and in Notebook 8 we compute gene
     regulatory networks.</p>
 
+<p>In addition to these notebooks, we also provide a command-line interface. </p>
+
 <h2>Visualizing and Exploring the Data</h2>
 
 <p>In this section we explore the time-series of reprogramming from Schiebinger et al. 2019.
-    The dataset consists of 39 time-points collected over 18 days of reprogramming.
+    The dataset consists of 39 time points collected over 18 days of reprogramming.
     In the following notebook we visualize the dataset in two dimensions, and we examine patterns of gene expression
     programs.</p>
 
@@ -93,10 +107,42 @@ redirect_from:
             <li><a target="_blank"
                    href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-1-FLE-cell_sets-gene_sets.ipynb">View
                 notebook 1</a></li>
+
+            <!--            <li><a target="_blank"-->
+            <!--                   href="https://app.terra.bio/#workspaces/kco-tech/wot/notebooks/launch/Notebook-1-FLE-cell_sets-gene_sets.ipynb/?read-only=true">View-->
+            <!--                notebook 1 on Terra</a></li>-->
         </ul>
+        <p>
+
+            It's also possible to use the <a data-toggle="collapse" href="#n1_cmd" role="button"
+                                             aria-expanded="false" aria-controls="n1_cmd">command-line interface</a> to
+            compute a <a target="_blank" href="https://github.com/klarman-cell-observatory/forceatlas2">FLE
+            visualization</a> of the data
+            and to
+            compute gene signature scores.
+
+
+        </p>
+
+        <div id="n1_cmd" class="collapse text-monospace text-white bg-dark">
+            <div>
+                wot neighborhood_graph --matrix data/ExprMatrix.var.genes.h5ad --space dmap --neighbors 50 --pca_comps
+                100
+                --diff_comps 20 --out fle-input
+            </div>
+            <div>java -Djava.awt.headless=true -Xmx8g -cp forceatlas2.jar:gephi-toolkit-0.9.2-all.jar
+                kco.forceatlas2.Main
+                --input fle-input.gexf --output fle --nsteps 1000 --2d
+            </div>
+            <div>wot gene_set_scores --matrix data/ExprMatrix.h5ad --method mean_z_score --gene_sets
+                data/gene_sets.gmx
+            </div>
+
+        </div>
     </div>
     <div class="col-sm-3">
         <img src="{{site.baseurl}}/images/Nbk1_fig.png" class="img-fluid"/></div>
+
 </div>
 
 
@@ -104,7 +150,7 @@ redirect_from:
 
 <p>Waddington-OT infers temporal couplings by leveraging a classical mathematical tool called
     <strong>optimal transport</strong>.
-    For each pair of adjacent time-points $(t_k,t_{k+1})$, we compute a transport matrix $\pi_{t_i,t_{i+1}}$ connecting
+    For each pair of adjacent time points $(t_k,t_{k+1})$, we compute a transport matrix $\pi_{t_i,t_{i+1}}$ connecting
     cells $x_1,\ldots,x_n$ at time $t_k$ to cells $y_1,\ldots, y_m$ at time $t_{k+1}$.
     To compute $\pi_{t_i,t_{i+1}}$, each cell $x_i$ at time $t_1$ is allocated a budget of <i>descendant mass</i>, and
     we
@@ -123,7 +169,7 @@ redirect_from:
 <h3>Notebook 2: Computing transport matrices</h3>
 <div class="row tutorial-row">
     <div class="col-sm-12">
-        <p>In this notebook we compute transport matrices connecting each pair of time-points, and we examine the effect
+        <p>In this notebook we compute transport matrices connecting each pair of time points, and we examine the effect
             of each
             parameter on the solution.</p>
 
@@ -176,7 +222,7 @@ redirect_from:
             $y$. We
             define $c(x,y)$ to be the squared euclidean distance between cells in local PCA space. This PCA space is
             computed
-            separately for each pair of time-points. Finally, the function $g(x)$ encodes the growth rate of cell $x$,
+            separately for each pair of time points. Finally, the function $g(x)$ encodes the growth rate of cell $x$,
             and is
             used to specify the budget of descendant mass for each cell $x_i$ at time $t_1$.</p>
 
@@ -214,17 +260,49 @@ redirect_from:
             <li><a target="_blank"
                    href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-2-compute-transport-maps.ipynb">View
                 notebook 2</a></li>
+
+            <!--            <li><a target="_blank"-->
+            <!--                   href="https://app.terra.bio/#workspaces/kco-tech/wot/notebooks/launch/Notebook-2-compute-transport-maps.ipynb?read-only=true">View-->
+            <!--                notebook 2 on Terra</a></li>-->
         </ul>
+        <p>
+
+            It's also possible to use the <a data-toggle="collapse" href="#n2_cmd" role="button"
+                                             aria-expanded="false" aria-controls="n2_cmd">command-line interface</a> to
+            compute
+            transport maps.
+
+
+        </p>
+
+        <div id="n2_cmd" class="collapse text-monospace text-white bg-dark">
+
+            wot optimal_transport --matrix data/ExprMatrix.var.genes.h5ad --cell_days data/cell_days.txt
+            --cell_filter
+            data/serum_cell_ids.txt --growth_iters 3 --cell_growth_rates data/growth_gs_init.txt --out tmaps/serum
+            --verbose
+
+        </div>
     </div>
 
 </div>
+
+
+<!--<p> For datasets with a large number of time points, it can be worthwhile to compute transport maps in parallel. The-->
+<!--    following WDL allows you to do this on Terra:-->
+<!--</p>-->
+<!--<ul>-->
+<!--    <li><a target="_blank"-->
+<!--           href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-2-compute-transport-maps.ipynb">View-->
+<!--        WDL</a></li>-->
+<!--</ul>-->
 
 
 <h3>Notebook 3: Inferring long-range temporal couplings</h3>
 <div class="row tutorial-row">
     <div class="col-sm-12">
         <p>After having computed transport maps and used them to estimate the temporal couplings between adjacent
-            time-points,
+            time points,
             we next show how to infer transitions over a longer time interval $(t_i,t_j)$.
             To do this, we <strong>assume the developmental stochastic process is Markov</strong>. Therefore we can
             infer
@@ -245,6 +323,10 @@ redirect_from:
             <li><a target="_blank"
                    href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-3-long-range-couplings.ipynb">View
                 notebook 3</a></li>
+
+            <!--            <li><a target="_blank"-->
+            <!--                   href="https://app.terra.bio/#workspaces/kco-tech/wot/notebooks/launch/Notebook-3-long-range-couplings.ipynb/?read-only=true">View-->
+            <!--                notebook 3 on Terra</a></li>-->
         </ul>
     </div>
     <div class="col-sm-12">
@@ -308,11 +390,42 @@ redirect_from:
             <li><a target="_blank"
                    href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-4-ancestors-descendants-trajectories.ipynb">View
                 notebook 4</a></li>
+
+            <!--            <li><a target="_blank"-->
+            <!--                   href="https://app.terra.bio/#workspaces/kco-tech/wot/notebooks/launch/Notebook-4-ancestors-descendants-trajectories.ipynb/?read-only=true">View-->
+            <!--                notebook 4 on Terra</a></li>-->
         </ul>
+        <p>
+
+            It's also possible to use the <a data-toggle="collapse" href="#n3_cmd" role="button"
+                                             aria-expanded="false" aria-controls="n3_cmd">command-line interface</a> to
+            compute
+            trajectories, trajectory divergences, and
+            expression trends.
+
+
+        </p>
+
+        <div id="n3_cmd" class="collapse text-monospace text-white bg-dark">
+            <div> wot trajectory --tmap tmaps/serum --cell_set data/major_cell_sets.gmt --day 18 --embedding
+                data/fle_coords.txt
+                --verbose
+            </div>
+
+            <div> wot trajectory_divergence --trajectory wot_trajectory.txt --cell_days data/cell_days.txt --matrix
+                data/ExprMatrix.var.genes.h5ad --compare within --verbose --plot
+            </div>
+
+            <div> wot trajectory_trends --trajectory wot_trajectory.txt --cell_days data/cell_days.txt --matrix
+                data/ExprMatrix.h5ad --gene_filter Nanog,Obox6,Zfp42 --plot
+            </div>
+
+        </div>
     </div>
     <div class="col-sm-3">
         <img src="{{site.baseurl}}/images/Nbk4_fig.png" class="img-fluid"/>
     </div>
+
 </div>
 
 
@@ -343,12 +456,36 @@ redirect_from:
             <li><a target="_blank"
                    href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-5-fate-matrices.ipynb">View
                 notebook 5</a></li>
+
+            <!--            <li><a target="_blank"-->
+            <!--                   href="https://app.terra.bio/#workspaces/kco-tech/wot/notebooks/launch/Notebook-5-fate-matrices.ipynb/?read-only=true">View-->
+            <!--                notebook 5 on Terra</a></li>-->
         </ul>
+        <p>
+
+            It's also possible to use the <a data-toggle="collapse" href="#n5_cmd" role="button"
+                                             aria-expanded="false" aria-controls="n5_cmd">command-line interface</a> to
+            compute
+            fate matrices.
+
+
+        </p>
+
+        <div id="n5_cmd" class="collapse text-monospace text-white bg-dark">
+
+            wot fates --tmap tmaps/serum --cell_set data/major_cell_sets.gmt --day 17 --cell_set_filter IPS --out
+            IPS_d17
+            --verbose
+
+
+        </div>
     </div>
     <div class="col-sm-3">
         <img src="{{site.baseurl}}/images/Nbk5_fig.png" class="img-fluid"/>
     </div>
+
 </div>
+
 
 <h3>Notebook 6: Transition tables</h3>
 <div class="row tutorial-row">
@@ -373,11 +510,33 @@ redirect_from:
                 <a target="_blank"
                    href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-6-transition_table.ipynb">View
                     notebook 6</a></li>
+
+            <!--            <li>-->
+            <!--                <a target="_blank"-->
+            <!--                   href="https://app.terra.bio/#workspaces/kco-tech/wot/notebooks/launch/Notebook-6-transition_table.ipynb/?read-only=true">View-->
+            <!--                    notebook 6 on Terra</a></li>-->
         </ul>
+        <p>
+
+            It's also possible to use the <a data-toggle="collapse" href="#n6_cmd" role="button"
+                                             aria-expanded="false" aria-controls="n6_cmd">command-line interface</a> to
+            compute
+            transition tables.
+
+
+        </p>
+
+        <div id="n6_cmd" class="collapse text-monospace text-white bg-dark">
+
+            wot transition_table --tmap tmaps/serum --cell_set data/major_cell_sets.gmt --start_time 12 --end_time
+            18
+
+        </div>
     </div>
     <div class="col-sm-3">
         <img src="{{site.baseurl}}/images/Nbk6_fig.png" class="img-fluid"/>
     </div>
+
 </div>
 
 
@@ -397,7 +556,7 @@ redirect_from:
     shortest
     paths) in the space of distributions.
     With fine enough time resolution, this piecewise-linear approximation provides a good fit.
-    We can test the quality of fit by holding out time-points and comparing our interpolation estimate to the real
+    We can test the quality of fit by holding out time points and comparing our interpolation estimate to the real
     held-out data.
     The fit will be better when the time-resolution is shorter, but it won't ever be perfect because the
     measurements
@@ -414,7 +573,7 @@ redirect_from:
         <p>In this notebook we apply the Waddington-OT Validation script to the reprogramming dataset. This script
             checks
             the
-            quality of interpolation at each triplet of consecutive time-points $(t_i,t_{i+1},t_{i+2})$:
+            quality of interpolation at each triplet of consecutive time points $(t_i,t_{i+1},t_{i+2})$:
         <ol>
             <li> We hold out the data from time $t_{i+1}$,</li>
             <li> estimate the coupling $\gamma_{t_i,t_{i+2}}$ connecting time $t_{i}$ to $t_{i+2}$,</li>
@@ -441,12 +600,46 @@ redirect_from:
             <li><a target="_blank"
                    href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-7-ot-validation.ipynb">View
                 notebook 7</a></li>
+
+            <!--            <li><a target="_blank"-->
+            <!--                   href="https://app.terra.bio/#workspaces/kco-tech/wot/notebooks/launch/Notebook-7-ot-validation.ipynb/?read-only=true">View-->
+            <!--                notebook 7 on Terra</a></li>-->
         </ul>
+        <p>
+
+            It's also possible to use the <a data-toggle="collapse" href="#n7_cmd" role="button"
+                                             aria-expanded="false" aria-controls="n7_cmd">command-line interface</a> to
+            run
+            the
+            validation script.
+
+
+        </p>
+
+        <div id="n7_cmd" class="collapse text-monospace text-white bg-dark">
+
+            wot optimal_transport_validation --matrix data/ExprMatrix.var.genes.h5ad --cell_days data/cell_days.txt
+            --cell_filter data/serum_cell_ids.txt --covariate data/batches.txt --cell_growth_rates tmaps/serum_g.txt
+            --cell_growth_rates_field g2 --verbose
+
+        </div>
     </div>
     <div class="col-sm-3">
         <img src="{{site.baseurl}}/images/Nbk7_fig.png" class="img-fluid"/>
     </div>
+
 </div>
+
+
+<!--<p> For datasets with a large number of time points, it can be worthwhile to run the validation script in parallel. The-->
+<!--    following WDL allows you to do this on Terra:-->
+<!--</p>-->
+<!--<ul>-->
+<!--    <li><a target="_blank"-->
+<!--           href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-2-compute-transport-maps.ipynb">View-->
+<!--        WDL</a></li>-->
+<!--</ul>-->
+
 
 <h2>Inferring gene regulatory networks</h2>
 
@@ -470,6 +663,36 @@ redirect_from:
             <li><a target="_blank"
                    href="https://nbviewer.jupyter.org/github/broadinstitute/wot/blob/master/notebooks/Notebook-8-predictive-TFs.ipynb">View
                 notebook 8</a></li>
+
+            <!--            <li><a target="_blank"-->
+            <!--                   href="https://app.terra.bio/#workspaces/kco-tech/wot/notebooks/launch/Notebook-8-predictive-TFs.ipynb/?read-only=true">View-->
+            <!--                notebook 8 on Terra</a></li>-->
         </ul>
     </div>
+    <p>
+
+        It's also possible to use the <a data-toggle="collapse" href="#n8_cmd" role="button"
+                                         aria-expanded="false" aria-controls="n8_cmd">command-line interface</a> to
+        identify
+        differentially expressed transcription
+        factors.
+
+
+    </p>
+    <div id="n8_cmd" class="collapse text-monospace text-white bg-dark">
+
+        wot diff_exp
+        --matrix data/ExprMatrix.h5ad
+        --cell_days data/cell_days.txt
+        --fate IPS_d17_fates.txt
+        --fold_change 0
+        --gene_filter data/TFs.txt
+        --cell_day_filter 14
+        --verbose
+
+    </div>
 </div>
+
+
+
+
