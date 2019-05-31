@@ -6,15 +6,31 @@ wot gene_set_scores \
 --method mean_z_score \
 --gene_sets data/gene_sets.gmx
 
-# Compute transport maps
-wot optimal_transport \
+# neighborhood graph
+wot neighborhood_graph \
 --matrix data/ExprMatrix.var.genes.h5ad \
---cell_days data/cell_days.txt \
---cell_filter data/serum_cell_ids.txt \
---growth_iters 3 \
---cell_growth_rates data/growth_gs_init.txt \
---out tmaps/serum \
---verbose
+--space dmap \
+--neighbors 50 \
+--pca_comps 100 \
+--diff_comps 20 \
+--out fle-input.gexf
+
+# FLE https://github.com/klarman-cell-observatory/forceatlas2
+java -Djava.awt.headless=true -Xmx8g -cp forceatlas2.jar:gephi-toolkit-0.9.2-all.jar kco.forceatlas2.Main \
+--input fle-input.gexf \
+--output fle \
+--nsteps 1000 \
+--2d
+
+# Compute transport maps
+#wot optimal_transport \
+#--matrix data/ExprMatrix.var.genes.h5ad \
+#--cell_days data/cell_days.txt \
+#--cell_filter data/serum_cell_ids.txt \
+#--growth_iters 3 \
+#--cell_growth_rates data/growth_gs_init.txt \
+#--out tmaps/serum \
+#--verbose
 
 # Compute and plot trajectories
 wot trajectory \
@@ -49,6 +65,12 @@ wot fates \
 --out IPS_d17 \
 --verbose
 
+wot transition_table \
+--tmap tmaps/serum \
+--cell_set data/major_cell_sets.gmt \
+--start_time 12 \
+--end_time 18
+
 # Compute differentially expressed genes at day 14 that are predictive of IPS fate at day 17
 wot diff_exp \
 --matrix data/ExprMatrix.h5ad \
@@ -60,12 +82,12 @@ wot diff_exp \
 --verbose
 
 # Compute and plot validation summary
-wot optimal_transport_validation \
---matrix data/ExprMatrix.var.genes.h5ad \
---cell_days data/cell_days.txt \
---cell_filter data/serum_cell_ids.txt \
---covariate data/batches.txt \
---cell_growth_rates tmaps/serum_g.txt \
---cell_growth_rates_field g2 \
---verbose
+#wot optimal_transport_validation \
+#--matrix data/ExprMatrix.var.genes.h5ad \
+#--cell_days data/cell_days.txt \
+#--cell_filter data/serum_cell_ids.txt \
+#--covariate data/batches.txt \
+#--cell_growth_rates tmaps/serum_g.txt \
+#--cell_growth_rates_field g2 \
+#--verbose
 
