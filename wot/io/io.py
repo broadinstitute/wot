@@ -649,14 +649,13 @@ def write_dataset(ds, path, output_format='txt'):
         sep = '\t'
         if output_format is 'csv':
             sep = ','
-        txt_full = False
-        if txt_full or output_format == 'gct':
+        include_all_metadata = False
+        if include_all_metadata or output_format == 'gct':
             f = open(path, 'w')
-            # write columns ids
 
             if output_format == 'gct':
                 f.write('#1.3\n')
-                f.write(str(ds.X.shape[0]) + '\t' + str(ds.X.shape[1]) + '\t' + str(len(ds.obs.columns)) +
+                f.write(str(ds.shape[0]) + '\t' + str(ds.shape[1]) + '\t' + str(len(ds.obs.columns)) +
                         '\t' + str(len(ds.var.columns)) + '\n')
             f.write('id' + sep)
             f.write(sep.join(str(x) for x in ds.obs.columns))
@@ -675,17 +674,15 @@ def write_dataset(ds, path, output_format='txt'):
 
                 f.write('\n')
             # TODO write as sparse array
-            pd.DataFrame(index=ds.obs.index, data=np.hstack(
-                (ds.obs.values, ds.X.toarray() if scipy.sparse.isspmatrix(ds.X) else ds.X))).to_csv(f, sep=sep,
-                                                                                                    header=False
-                                                                                                    )
+            x = ds.X.toarray() if scipy.sparse.isspmatrix(ds.X) else ds.X
+            data = np.hstack((ds.obs.values, x)) if ds.obs.columns > 0 else x
+            pd.DataFrame(index=ds.obs.index, data=data).to_csv(f, sep=sep, header=False)
             f.close()
         else:
-            pd.DataFrame(ds.X.toarray() if scipy.sparse.isspmatrix(ds.X) else ds.X, index=ds.obs.index,
-                         columns=ds.var.index).to_csv(path,
-                                                      index_label='id',
-                                                      sep=sep,
-                                                      doublequote=False)
+            x = ds.X.toarray() if scipy.sparse.isspmatrix(ds.X) else ds.X
+            pd.DataFrame(x, index=ds.obs.index, columns=ds.var.index).to_csv(path,
+                                                                             index_label='id', sep=sep,
+                                                                             doublequote=False)
     elif output_format == 'npy':
         np.save(path, ds.X)
     elif output_format == 'h5ad':
