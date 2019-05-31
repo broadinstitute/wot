@@ -10,12 +10,12 @@ def create_parser():
     parser = argparse.ArgumentParser(
         description='Generate a transition table from one cell set to another cell set')
     parser.add_argument('--tmap', help=wot.commands.TMAP_HELP, required=True)
-    parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True, action='append')
+    parser.add_argument('--cell_set', help=wot.commands.CELL_SET_HELP, required=True)
     parser.add_argument('--start_time',
                         help='The start time for the cell sets to compute the transitions to cell sets at end_time',
                         required=True, type=float)
     parser.add_argument('--end_time', help='The end time', required=True, type=float)
-    parser.add_argument('--out', help='Prefix for ouput file.')
+    parser.add_argument('--out', help='Prefix for ouput file.,', default='wot')
     parser.add_argument('--format', help=wot.commands.FORMAT_HELP, default='h5ad', choices=wot.commands.FORMAT_CHOICES)
     return parser
 
