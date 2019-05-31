@@ -89,8 +89,6 @@ def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
     if hasattr(gs_indices, 'toarray'):
         gs_indices = gs_indices.toarray()
     gs_indices = gs_indices.flatten()
-    gs_1_0 = gs_1_0[gs_indices]
-    ngenes_in_set = gs_1_0.sum(axis=0)
 
     if len(x.shape) == 1:
         x = np.array([x])
@@ -119,6 +117,8 @@ def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
         x = x[:, gs_indices]
     else:
         x = x[:, gs_indices]
+        if scipy.sparse.issparse(x):
+            x = x.toarray()
     observed_scores = x.mean(axis=1)
     if hasattr(observed_scores, 'toarray'):
         observed_scores = observed_scores.toarray()
