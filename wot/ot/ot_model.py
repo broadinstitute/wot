@@ -239,7 +239,7 @@ class OTModel:
 
         cost_matrix = sklearn.metrics.pairwise.pairwise_distances(a.toarray() if scipy.sparse.isspmatrix(a) else a,
                                                                   b.toarray() if scipy.sparse.isspmatrix(b) else b,
-                                                                  metric='sqeuclidean')
+                                                                  metric='sqeuclidean', n_jobs=-1)
         cost_matrix = cost_matrix / np.median(cost_matrix)
         return cost_matrix
 
