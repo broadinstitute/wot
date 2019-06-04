@@ -1,12 +1,14 @@
 [
   {
-    "desc": "Convert matrix data formats",
+    "desc": "Convert matrix data format",
     "name": "convert_matrix",
     "epilog": null,
     "params": [
       {
         "name": "matrix",
-        "help": "File(s) to convert",
+        "default": null,
+        "choices": null,
+        "help": "File to convert",
         "required": true
       },
       {
@@ -19,6 +21,13 @@
           "txt"
         ],
         "help": "Output file format",
+        "required": true
+      },
+      {
+        "name": "out",
+        "default": null,
+        "choices": null,
+        "help": "Output file name",
         "required": true
       },
       {
@@ -55,6 +64,13 @@
         "choices": null,
         "help": "Gene sets scores generated from the gene_set_scores command",
         "required": true
+      },
+      {
+        "name": "filter",
+        "default": null,
+        "choices": null,
+        "help": "Comma separated list of column names to include",
+        "required": false
       },
       {
         "name": "quantile",
@@ -268,14 +284,14 @@
       },
       {
         "name": "method",
-        "default": null,
+        "default": "mean_z_score",
         "choices": [
           "mean_z_score",
           "mean",
           "mean_rank"
         ],
         "help": "Method to compute gene set scores",
-        "required": true
+        "required": false
       },
       {
         "name": "cell_filter",
@@ -289,6 +305,13 @@
         "default": null,
         "choices": null,
         "help": "Gene sets to include",
+        "required": false
+      },
+      {
+        "name": "max_z_score",
+        "default": 5,
+        "choices": null,
+        "help": "Threshold z-scores at specified value",
         "required": false
       },
       {
@@ -1138,9 +1161,9 @@
       },
       {
         "name": "out",
-        "default": null,
+        "default": "wot",
         "choices": null,
-        "help": "Prefix for ouput file.",
+        "help": "Prefix for ouput file.,",
         "required": false
       },
       {
