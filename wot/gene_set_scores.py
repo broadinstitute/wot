@@ -55,7 +55,7 @@ def get_p_value_ci(n, n_s, z):
     return ci
 
 
-def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
+def score_gene_sets(ds, gs, method='mean_z_score', max_z_score=5, permutations=None,
                     random_state=0, smooth_p_values=True):
     """Score gene sets.
 
@@ -103,8 +103,8 @@ def score_gene_sets(ds, gs, method='mean_z_score', permutations=None,
         # std[std == 0] = 1e-12 # avoid divide by zero
         x = (x - mean) / std
         x[np.isnan(x)] = 0
-        x[x < -5] = -5
-        x[x > 5] = 5
+        x[x < -max_z_score] = -max_z_score
+        x[x > max_z_score] = max_z_score
     elif method == 'mean_rank':  # need all genes for ranking
         ranks = np.zeros(x.shape)
         is_sparse = scipy.sparse.issparse(x)
