@@ -95,9 +95,9 @@ tab-separated list composed as follows :
 Example:
 
 <table class="table" style="display: table">
-<tr><td>Set1</td><td>The first set</td><td>gene_2</td><td>gene_1</td></tr>
-<tr><td>Set2</td><td>The second set</td><td>gene_3</td></tr>
-<tr><td>Set3</td><td>The third set</td><td>gene_4</td><td>gene_1</td></tr>
+<tr><td>Set1</td><td>set 1 description</td><td>gene_2</td><td>gene_1</td></tr>
+<tr><td>Set2</td><td>set 2 description</td><td>gene_3</td></tr>
+<tr><td>Set3</td><td>set 3 description</td><td>gene_4</td><td>gene_1</td></tr>
 </table>
 
 ##### GMX #####
@@ -109,7 +109,7 @@ Example:
 
 <table class="table" style="display: table">
 <tr><td>Set1</td><td>Set2</td><td>Set3</td></tr>
-<tr><td>The first set</td><td>The second set</td><td>The third set</td></tr>
+<tr><td>set 1 description</td><td>set 2 description</td><td>set 3 description</td></tr>
 <tr><td>gene_2</td><td>gene_3</td><td>gene_4</td></tr>
 <tr><td>gene_1</td><td></td><td>gene_1</td></tr>
 </table>
