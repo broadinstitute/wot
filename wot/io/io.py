@@ -556,24 +556,8 @@ def download_gs_url(gs_url):
 
 
 def check_file_extension(name, output_format):
-    expected = None
-    if output_format == 'csv':
-        expected = '.csv'
-    elif output_format == 'txt':
-        expected = '.txt'
-    elif output_format == 'txt.gz':
-        expected = '.txt.gz'
-    elif output_format == 'loom':
-        expected = '.loom'
-    elif output_format == 'gct':
-        expected = '.gct'
-    elif output_format == 'h5ad':
-        expected = '.h5ad'
-    elif output_format == 'parquet':
-        expected = '.parquet'
-    if expected is not None:
-        if not str(name).lower().endswith(expected):
-            name += expected
+    if not str(name).lower().endswith('.' + output_format):
+        name += '.' + output_format
     return name
 
 
