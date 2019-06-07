@@ -232,8 +232,8 @@ def earth_mover_distance(cloud1, cloud2, eigenvals=None, weights1=None, weights2
         weights2 = weights2.astype('float64')
         q = weights2 / weights2.sum()
 
-    pairwise_dist = sklearn.metrics.pairwise.pairwise_distances(
-        cloud1, Y=cloud2, metric='sqeuclidean', n_jobs=-1)
+    pairwise_dist = np.ascontiguousarray(sklearn.metrics.pairwise.pairwise_distances(
+        cloud1, Y=cloud2, metric='sqeuclidean', n_jobs=-1))
     return np.sqrt(pot.emd2(p, q, pairwise_dist, numItermax=1e7))
 
 
