@@ -101,7 +101,8 @@ def score_gene_sets(ds, gs, method='mean_z_score', max_z_score=5, permutations=N
         var = x.var(axis=0)
         std = np.sqrt(var)
         # std[std == 0] = 1e-12 # avoid divide by zero
-        x = (x - mean) / std
+        with np.errstate(divide="ignore", invalid="ignore"):
+            x = (x - mean) / std
         x[np.isnan(x)] = 0
         x[x < -max_z_score] = -max_z_score
         x[x > max_z_score] = max_z_score
