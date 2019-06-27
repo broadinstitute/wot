@@ -4,7 +4,6 @@ import anndata
 import h5py
 import numpy as np
 import pandas as pd
-
 import wot.io
 import wot.tmap
 from wot.population import Population
@@ -122,7 +121,9 @@ class TransportMapModel:
         """
         wot.tmap.unique_timepoint(*populations)  # check for unique timepoint
         trajectories = []
+
         populations = Population.copy(*populations, normalize=True, add_missing=False)
+        population_names = [p.name for p in populations]
         initial_populations = populations
 
         def update(head, populations_to_update):
@@ -139,7 +140,7 @@ class TransportMapModel:
             update(False, populations)
 
         return anndata.AnnData(X=np.concatenate(trajectories), obs=self.meta.copy(),
-                               var=pd.DataFrame(index=[p.name for p in populations]))
+                               var=pd.DataFrame(index=population_names))
 
     def get_coupling(self, t0, t1, covariate=None):
         """
