@@ -1,3 +1,7 @@
+## Version 1.0.5, June 27, 2019
+- Fixed trajectory error when starting from a middle (not start or end) time point
+- Fixed bug when reading transport maps with only two time points
+
 ## Version 1.0.4, June 11, 2019
 - Ensure distance matrix is C-contiguous for earth mover's distance
 
