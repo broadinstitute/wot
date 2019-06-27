@@ -708,6 +708,7 @@ class TransportMapModel:
                 path = tmaps[key]
                 f = h5py.File(path, 'r')
 
+                # only read column ids if the last timepoint
                 if path.endswith('.loom'):
                     rids = f['/row_attrs/id'][()].astype(str)
                     cids = f['/col_attrs/id'][()].astype(str) if i == len(tmap_keys) - 1 else None
@@ -717,7 +718,7 @@ class TransportMapModel:
                 rdf = pd.DataFrame(index=rids, data={'day': t0})
                 cdf = pd.DataFrame(index=cids, data={'day': t1}) if cids is not None else None
                 if meta is None:
-                    meta = rdf
+                    meta = rdf if cdf is None else pd.concat((rdf, cdf), copy=False)
                 else:
                     meta = pd.concat((meta, rdf), copy=False) if cdf is None else pd.concat((meta, rdf, cdf),
                                                                                             copy=False)
