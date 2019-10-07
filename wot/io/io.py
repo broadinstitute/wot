@@ -379,7 +379,7 @@ def convert_binary_dataset_to_dict(ds):
 
 def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None, **keywords):
     """
-    Read h5ad, loom, mtx, 10X h5, gct, and csv formatted files
+    Read h5ad, loom, mtx, 10X h5, and csv formatted files
 
     Parameters
     ----------
@@ -397,7 +397,7 @@ def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None, **k
     -------
     Annotated data matrix.
     """
-    if str(path).endswith('.txt'):
+    if str(path).lower().endswith('.txt'):
         df = pd.read_csv(path, engine='python', header=0, sep=None, index_col=0)
         adata = anndata.AnnData(X=df.values, obs=pd.DataFrame(index=df.index), var=pd.DataFrame(index=df.columns))
     else:
@@ -478,7 +478,7 @@ def get_filename_and_extension(name):
             dot_index2 = basename.rfind('.')
             if dot_index2 != -1:
                 ext2 = basename[dot_index2 + 1:].lower()
-                if ext2 in set(['gmt', 'grp', 'gct', 'gmx']):
+                if ext2 in set(['gmt', 'grp', 'gmx']):
                     basename = basename[0:dot_index2]
                     return basename, ext2
     return basename, ext

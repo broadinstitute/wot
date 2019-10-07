@@ -15,7 +15,7 @@ location: file_formats
 
 The *matrix* file specifies the gene expression matrix to use.
 
-The following formats are accepted by all tools: *mtx*, *txt*, *h5ad*, *loom*, and *gct*. Please note that wot expects
+The following formats are accepted by all tools: *mtx*, *txt*, *h5ad*, and *loom* Please note that wot expects
 cells on the rows and genes on the columns, except for the *mtx* format.
 
 ##### Text #####
@@ -43,11 +43,6 @@ The MTX format is a sparse matrix format with genes on the rows and cells on the
 You should also have TSV files with genes and barcode sequences corresponding to row and column indices, respectively.
 These files must be located in the same folder as the MTX file with the same base file name. For example if the MTX file is my_data.mtx, you should
 also have a my_data.genes.txt file and a my_data.barcodes.txt file.
-
-
-##### GCT #####
-
-A GCT file is a tab-delimited text file. Please see description [here](http://software.broadinstitute.org/cancer/software/genepattern/file-formats-guide#GCT)
 
 
 ##### H5AD #####
