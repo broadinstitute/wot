@@ -1,3 +1,6 @@
+## Version 1.0.7, October 7, 2019
+- Fixed invalid import statement
+
 ## Version 1.0.6, October 7, 2019
 - Use [pegasus](https://pegasus.readthedocs.io/) for reading and writing datasets.
 - Removed neighborhood_graph command (recommended to use pegasus instead)
