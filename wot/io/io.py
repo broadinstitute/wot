@@ -3,12 +3,10 @@ import glob
 import os
 
 import anndata
-import h5py
+import pegasus as pg
+import scipy.sparse
 import numpy as np
 import pandas as pd
-import scanpy as sc
-import scipy.io
-import scipy.sparse
 
 import wot
 
@@ -353,7 +351,7 @@ def read_gmx(path, feature_ids=None):
             x = np.array(array_of_arrays)
         obs = pd.DataFrame(index=feature_ids)
         var = pd.DataFrame(data={'description': descriptions},
-                           index=set_ids)
+            index=set_ids)
         return anndata.AnnData(x, obs=obs, var=var)
 
 
@@ -379,136 +377,31 @@ def convert_binary_dataset_to_dict(ds):
     return cell_sets
 
 
-def read_anndata(path, backed=None):
-    path = str(path)
-    tmp_path = None
-    if path.startswith('gs://'):
-        tmp_path = download_gs_url(path)
-        path = tmp_path
-    basename_and_extension = get_filename_and_extension(path)
-    ext = basename_and_extension[1]
-    if ext == 'mtx':
-        x = scipy.io.mmread(path)
-        x = scipy.sparse.csr_matrix(x.T)
-        # look for .barcodes.txt and .genes.txt
-        import itertools
-        sp = os.path.split(path)
-        obs = None
+def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None, **keywords):
+    """
+    Read h5ad, loom, mtx, 10X h5, gct, and csv formatted files
 
-        for sep_ext in itertools.product(['.', '_', '-'], ['tsv', 'txt']):
-            for prefix in ['', basename_and_extension[0] + sep_ext[0]]:
-                f = os.path.join(sp[0], prefix + 'barcodes.' + sep_ext[1])
-                if os.path.isfile(f) or os.path.isfile(f + '.gz'):
-                    obs = pd.read_csv(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t', header=None)
-                    break
-        var = None
-        for sep_ext in itertools.product(['.', '_', '-'], ['tsv', 'txt']):
-            for prefix in ['', basename_and_extension[0] + sep_ext[0]]:
-                f = os.path.join(sp[0], prefix + 'genes.' + sep_ext[1])
-                if os.path.isfile(f) or os.path.isfile(f + '.gz'):
-                    var = pd.read_csv(f if os.path.isfile(f) else f + '.gz', index_col=0, sep='\t',
-                                      header=None)
-                    break
-
-        if var is None:
-            print(basename_and_extension[0] + '.genes.txt not found')
-            var = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1))
-        if obs is None:
-            print(basename_and_extension[0] + '.barcodes.txt not found')
-            obs = pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1))
-
-        cell_count, gene_count = x.shape
-        if len(obs) != cell_count:
-            raise ValueError("Wrong number of cells : matrix has {} cells, barcodes file has {}" \
-                             .format(cell_count, len(obs)))
-        if len(var) != gene_count:
-            raise ValueError("Wrong number of genes : matrix has {} genes, genes file has {}" \
-                             .format(gene_count, len(var)))
-
-        return anndata.AnnData(X=x, obs=obs, var=var)
-    elif ext == 'h5':
-        return sc.read_10x_h5(path, genome=None, gex_only=True)
-    elif ext == 'npz':
-        obj = np.load(path)
-        if tmp_path is not None:
-            os.remove(tmp_path)
-        return anndata.AnnData(X=obj['x'], obs=pd.DataFrame(index=obj['rid']), var=pd.DataFrame(index=obj['cid']))
-    elif ext == 'npy':
-        x = np.load(path)
-        if tmp_path is not None:
-            os.remove(tmp_path)
-        return anndata.AnnData(X=x, obs=pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[0], step=1)),
-                               var=pd.DataFrame(index=pd.RangeIndex(start=0, stop=x.shape[1], step=1)))
-    elif ext == 'loom':
-        # in loom file, convention is rows are genes :(
-        # return anndata.read_loom(path, X_name='matrix', sparse=True)
-        f = h5py.File(path, 'r')
-        x = f['/matrix']
-        is_x_sparse = x.attrs.get('sparse')
-        if is_x_sparse:
-            # read in blocks of 1000
-            chunk_start = 0
-            nrows = x.shape[0]
-            chunk_step = min(nrows, 1000)
-            chunk_stop = chunk_step
-            nchunks = int(np.ceil(max(1, nrows / chunk_step)))
-            sparse_arrays = []
-            for chunk in range(nchunks):
-                chunk_stop = min(nrows, chunk_stop)
-                subset = scipy.sparse.csr_matrix(x[chunk_start:chunk_stop])
-                sparse_arrays.append(subset)
-                chunk_start += chunk_step
-                chunk_stop += chunk_step
-
-            x = scipy.sparse.vstack(sparse_arrays)
-        else:
-            x = x[()]
-        row_meta = {}
-        row_attrs = f['/row_attrs']
-        for key in row_attrs:
-            values = row_attrs[key][()]
-            if values.dtype.kind == 'S':
-                values = values.astype(str)
-            row_meta[key] = values
-        row_meta = pd.DataFrame(data=row_meta)
-        if row_meta.get('id') is not None:
-            row_meta.set_index('id', inplace=True)
-        elif row_meta.shape[1] == 1:
-            row_meta.set_index(row_meta.columns[0], inplace=True)
-        col_meta = {}
-        col_attrs = f['/col_attrs']
-        for key in col_attrs:
-            values = col_attrs[key][()]
-            if values.dtype.kind == 'S':
-                values = values.astype(str)
-            col_meta[key] = values
-        col_meta = pd.DataFrame(data=col_meta)
-        if col_meta.get('id') is not None:
-            col_meta.set_index('id', inplace=True)
-        elif col_meta.shape[1] == 1:
-            col_meta.set_index(col_meta.columns[0], inplace=True)
-        f.close()
-        return anndata.AnnData(X=x, obs=row_meta, var=col_meta)
-    elif ext == 'h5ad':
-        return anndata.read_h5ad(path, backed=backed)
-    elif ext == 'hdf5' or ext == 'h5':
-        return anndata.read_hdf(path)
-    elif ext == 'gct':
-        ds = wot.io.read_gct(path)
-        if tmp_path is not None:
-            os.remove(tmp_path)
-        return ds
-    else:  # txt
+    Parameters
+    ----------
+    path: str
+        File name of data file.
+    obs: {str, pd.DataFrame}
+        Path to obs data file or a data frame
+    var: {str, pd.DataFrame}
+        Path to var data file or a data frame
+    obs_filter {str, pd.DataFrame}
+        File with one id per line, name of a boolean field in obs, or a list of ids
+    var_filter: {str, pd.DataFrame}
+        File with one id per line, name of a boolean field in obs, or a list of ids
+    Returns
+    -------
+    Annotated data matrix.
+    """
+    if str(path).endswith('.txt'):
         df = pd.read_csv(path, engine='python', header=0, sep=None, index_col=0)
-        if tmp_path is not None:
-            os.remove(tmp_path)
-        return anndata.AnnData(X=df.values,
-                               obs=pd.DataFrame(index=df.index),
-                               var=pd.DataFrame(index=df.columns))
-
-
-def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None, backed=None):
-    adata = read_anndata(path, backed=backed)
+        adata = anndata.AnnData(X=df.values, obs=pd.DataFrame(index=df.index), var=pd.DataFrame(index=df.columns))
+    else:
+        adata = pg.read_input(path, **keywords)
 
     def get_df(meta):
         if not isinstance(meta, pd.DataFrame):
@@ -533,6 +426,18 @@ def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None, bac
             adata.var = adata.var.join(get_df(item))
 
     return filter_adata(adata, obs_filter=obs_filter, var_filter=var_filter)
+
+
+def write_dataset(ds, path, output_format='txt'):
+    path = str(path)
+    if not path.lower().endswith('.' + output_format):
+        path += '.' + output_format
+    if output_format == 'txt':
+        x = ds.X.toarray() if scipy.sparse.isspmatrix(ds.X) else ds.X
+        pd.DataFrame(x, index=ds.obs.index, columns=ds.var.index).to_csv(path,
+            index_label='id', sep='\t', doublequote=False)
+    else:
+        pg.write_output(ds, path)
 
 
 def download_gs_url(gs_url):
@@ -579,180 +484,6 @@ def get_filename_and_extension(name):
     return basename, ext
 
 
-def write_parquet(ds, path,
-                  view_whitelist=['X_pca', 'X_rpca', 'X_tsne', 'X_umap', 'X_fle', 'X_diffmap', 'X_diffmap_sym',
-                                  'X_diffmap_pca']):
-    import pyarrow
-    import json
-    import pyarrow.parquet as pq
-    df = ds.obs.reset_index()
-    views = []
-    dimensions = []
-    obs = []
-
-    for key in df.keys():
-        dtype = df[key].dtype
-        if str(dtype) == 'category' or str(dtype) == 'object':
-            dimensions.append(key)
-        elif key.endswith('_X'):  # heuristic for views within obs
-            key = key[0:len(key) - 2]  # remove _X
-            if key in view_whitelist:
-                dim = 2
-                if key + '_Z' in df.keys():
-                    dim = 3
-                views.append({'name': key, 'dimensions': dim})
-        else:
-            obs.append(key)
-
-    for key in ds.obsm.keys():
-        if key in view_whitelist:
-            val = ds.obsm[key]
-            df[key + '_X'] = val[:, 0]
-            df[key + '_Y'] = val[:, 1]
-            dim = 2
-            if val.shape[1] > 2:
-                dim = 3
-                df[key + '_Z'] = val[:, 2]
-            views.append({'name': key, 'dimensions': dim})
-    df = pd.concat((df, pd.DataFrame(data=ds.X.toarray(), columns=ds.var_names)), axis=1)
-    views.sort(key=lambda x: x['name'])
-    dimensions.sort()
-    names, arrays, metadata = pyarrow.pandas_compat.dataframe_to_arrays(df, None, False)
-    metadata[b'sccloud'] = json.dumps(
-        {'matrix': {'rows': ds.shape[0], 'columns': ds.shape[1]}, 'views': views,
-         'dimensions': dimensions, 'obs': obs}).encode('utf8')
-    table = pyarrow.Table.from_arrays(arrays, names=names, metadata=metadata)
-    pq.write_table(table, path)
-
-
-def write_dataset(ds, path, output_format='txt'):
-    path = check_file_extension(path, output_format)
-    if output_format == 'parquet':
-        write_parquet(ds, path)
-    elif output_format == 'txt' or output_format == 'gct' or output_format == 'csv':
-        sep = '\t'
-        if output_format is 'csv':
-            sep = ','
-        include_all_metadata = False
-        if include_all_metadata or output_format == 'gct':
-            f = open(path, 'w')
-
-            if output_format == 'gct':
-                f.write('#1.3\n')
-                f.write(str(ds.shape[0]) + '\t' + str(ds.shape[1]) + '\t' + str(len(ds.obs.columns)) +
-                        '\t' + str(len(ds.var.columns)) + '\n')
-            f.write('id' + sep)
-            f.write(sep.join(str(x) for x in ds.obs.columns))
-            if len(ds.obs.columns) > 0:
-                f.write(sep)
-            f.write(sep.join(str(x) for x in ds.var.index.values))
-            f.write('\n')
-            spacer = ''.join(np.full(len(ds.obs.columns), sep, dtype=object))
-            # column metadata fields + values
-            for field in ds.var.columns:
-                f.write(str(field))
-                f.write(spacer)
-                for val in ds.var[field].values:
-                    f.write(sep)
-                    f.write(str(val))
-
-                f.write('\n')
-            # TODO write as sparse array
-            x = ds.X.toarray() if scipy.sparse.isspmatrix(ds.X) else ds.X
-            data = np.hstack((ds.obs.values, x)) if ds.obs.columns > 0 else x
-            pd.DataFrame(index=ds.obs.index, data=data).to_csv(f, sep=sep, header=False)
-            f.close()
-        else:
-            x = ds.X.toarray() if scipy.sparse.isspmatrix(ds.X) else ds.X
-            pd.DataFrame(x, index=ds.obs.index, columns=ds.var.index).to_csv(path,
-                                                                             index_label='id', sep=sep,
-                                                                             doublequote=False)
-    elif output_format == 'npy':
-        np.save(path, ds.X)
-    elif output_format == 'h5ad':
-        ds.write(path, compression=None if scipy.sparse.isspmatrix(ds.X) else 'gzip')
-    elif output_format == 'loom':
-        f = h5py.File(path, 'w')
-        x = ds.X
-        is_sparse = scipy.sparse.isspmatrix(x)
-        is_dask = str(type(x)) == "<class 'dask.array.core.Array'>"
-        save_in_chunks = is_sparse or is_dask
-
-        dset = f.create_dataset('/matrix', shape=ds.shape, chunks=(1000, 1000) if
-        ds.shape[0] >= 1000 and ds.shape[1] >= 1000 else None,
-                                maxshape=(None, ds.shape[1]),
-                                compression='gzip', compression_opts=9,
-                                data=None if save_in_chunks else x)
-        if is_dask:
-            chunks = tuple((c if i == 0 else (sum(c),))
-                           for i, c in enumerate(x.chunks))
-
-            x = x.rechunk(chunks)
-            xstart = 0
-            xend = 0
-            for xchunk in x.chunks[0]:
-                xend += xchunk
-                dset[slice(xstart, xend)] = x[slice(xstart, xend)].compute()
-                xstart = xend
-        elif is_sparse:
-            dset.attrs['sparse'] = True
-            # write in chunks of 1000
-            start = 0
-            step = min(x.shape[0], 1000)
-            stop = step
-            nchunks = int(np.ceil(max(1, x.shape[0] / step)))
-            for i in range(nchunks):
-                stop = min(x.shape[0], stop)
-                dset[start:stop] = x[start:stop].toarray()
-                start += step
-                stop += step
-
-        f.create_group('/layers')
-        f.create_group('/row_graphs')
-        f.create_group('/col_graphs')
-        # for key in ds.layers:
-        #     x = ds.layers[key]
-        #     f.create_dataset('/layers/' + key, shape=x, chunks=(1000, 1000),
-        #                      maxshape=(None, x.shape[1]),
-        #                      compression='gzip', compression_opts=9,
-        #                      data=x)
-
-        wot.io.save_loom_attrs(f, False, ds.obs, ds.shape[0])
-        wot.io.save_loom_attrs(f, True, ds.var, ds.shape[1])
-
-        f.close()
-
-    else:
-        raise Exception('Unknown file output_format')
-
-
-def write_dataset_metadata(meta_data, path, metadata_name=None):
-    if metadata_name is not None and metadata_name not in meta_data:
-        raise ValueError("Metadata not present: \"{}\"".format(metadata_name))
-    if metadata_name is not None:
-        meta_data[[metadata_name]].to_csv(path, index_label='id', sep='\t', doublequote=False)
-    else:
-        meta_data.to_csv(path, index_label='id', sep='\t', doublequote=False)
-
-
-def save_loom_attrs(f, is_columns, metadata, length):
-    attrs_path = '/col_attrs' if is_columns else '/row_attrs'
-    f.create_group(attrs_path)
-
-    def save_metadata_array(path, array):
-        # convert object or unicode to string
-        if array.dtype.kind == 'U' or array.dtype.kind == 'O':
-            array = array.astype('S')
-        f[path] = array
-
-    if metadata is not None:
-        save_metadata_array(attrs_path + '/id', metadata.index.values)
-        for name in metadata.columns:
-            save_metadata_array(attrs_path + '/' + str(name), metadata[name].values)
-    else:
-        save_metadata_array(attrs_path + '/id', np.array(range(1, length + 1)).astype('S'))
-
-
 def filter_adata(adata, obs_filter=None, var_filter=None):
     if obs_filter is not None:
         if os.path.exists(obs_filter):
@@ -777,7 +508,7 @@ def filter_adata(adata, obs_filter=None, var_filter=None):
 
 def read_days_data_frame(path):
     return pd.read_csv(path, index_col='id',
-                       engine='python', sep=None, dtype={'day': np.float64})
+        engine='python', sep=None, dtype={'day': np.float64})
 
 
 def add_row_metadata_to_dataset(dataset, days=None, growth_rates=None, covariate=None):

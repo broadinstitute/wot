@@ -5,7 +5,6 @@ from .convert_matrix import *
 from .diff_exp import *
 from .fates import *
 from .gene_set_scores import *
-from .neighborhood_graph import *
 from .optimal_transport import *
 from .optimal_transport_validation import *
 from .trajectory import *

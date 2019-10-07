@@ -3,6 +3,5 @@ setuptools
 h5py
 pyyaml
 scipy
-scanpy
 pandas
 flask

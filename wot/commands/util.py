@@ -75,7 +75,7 @@ def run_trajectory_or_fates(args, fates):
         full_embedding_df['y'] = np.floor(
             np.interp(full_embedding_df['y'], [yrange[0], yrange[1]], [0, nbins - 1])).astype(int)
         for j in range(result_ds.shape[1]):
-            color_df = pd.DataFrame(index=result_ds.obs.index, data={'color': result_ds[:, j].X})
+            color_df = pd.DataFrame(index=result_ds.obs.index, data={'color': result_ds.obs_vector(j)})
             embedding_df = color_df.join(full_embedding_df)
             figure = plt.figure(figsize=(10, 10))
             plt.axis('off')
@@ -87,7 +87,7 @@ def run_trajectory_or_fates(args, fates):
 
             plt.scatter(summed_df['x'], summed_df['y'], c=summed_df['color'],
                         s=6, marker=',', edgecolors='none', cmap='viridis_r', alpha=1,
-                        vmax=np.quantile(result_ds[:, j].X, 0.975))
+                        vmax=np.quantile(result_ds.obs_vector(j), 0.975))
             plt.colorbar()
             ncells = (populations[j].p > 0).sum()
             plt.title('{}, day {}, {}/{} cells'.format(result_ds.var.index[j], args.day, ncells,

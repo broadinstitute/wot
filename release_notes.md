@@ -1,3 +1,7 @@
+## Version 1.0.6, October 7, 2019
+- Use [pegasus](https://pegasus.readthedocs.io/) for reading and writing datasets.
+- Removed neighborhood_graph command (recommended to use pegasus instead)
+
 ## Version 1.0.5, June 27, 2019
 - Fixed trajectory error when starting from a middle (not start or end) time point
 - Fixed bug when reading transport maps with only two time points

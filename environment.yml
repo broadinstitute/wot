@@ -12,5 +12,4 @@ dependencies:
   - pip
   - pip:
       - wot
-      - scanpy>=1.4.2
 

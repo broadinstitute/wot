@@ -6,7 +6,7 @@ from wot.commands import *
 
 def main():
     command_list = [convert_matrix, cells_by_gene_set, census, diff_exp, fates,
-                    gene_set_scores, neighborhood_graph, optimal_transport,
+                    gene_set_scores, optimal_transport,
                     optimal_transport_validation, trajectory, trajectory_divergence,
                     trajectory_trends, transition_table]
     tool_parser = argparse.ArgumentParser(description='Run a wot command')
