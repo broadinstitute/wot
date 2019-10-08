@@ -3,10 +3,10 @@ import glob
 import os
 
 import anndata
-import pegasus as pg
-import scipy.sparse
 import numpy as np
 import pandas as pd
+import pegasus as pg
+import scipy.sparse
 
 import wot
 
@@ -372,7 +372,7 @@ def write_sets(sets, path):
 def convert_binary_dataset_to_dict(ds):
     cell_sets = {}
     for i in range(ds.shape[1]):
-        selected = np.where(ds[:, i].X == 1)
+        selected = np.where(ds[:, i].X == 1)[0]
         cell_sets[ds.var.index[i]] = list(ds.obs.index[selected])
     return cell_sets
 
