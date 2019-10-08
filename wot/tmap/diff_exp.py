@@ -105,17 +105,21 @@ def __do_comparison(expression_values1, weights1, day1, expression_values2, weig
     variance1 = np.average((expression_values1 - mean1) ** 2, weights=weights1, axis=0)
     variance2 = np.average((expression_values2 - mean2) ** 2, weights=weights2, axis=0)
     with np.errstate(invalid="ignore"):
-        scores, pvals = stats.ttest_ind_from_stats(
+        scores, ttest_pvals = stats.ttest_ind_from_stats(
             mean1=mean1, std1=np.sqrt(variance1), nobs1=len(weights1),
             mean2=mean2, std2=np.sqrt(variance2), nobs2=len(weights2), equal_var=False)  # Welch's
     scores[np.isnan(scores)] = 0
-    pvals[np.isnan(pvals)] = 1
-    fdr = statsmodels.stats.multitest.multipletests(pvals)[1]
+    ttest_pvals[np.isnan(ttest_pvals)] = 1
+
     results = pd.DataFrame(index=features,
         data={'fold_change': np.exp(fold_change),
+              'mean1': mean1,
+              'mean2': mean2,
+              'fraction_expressed1': fraction_expressed1,
+              'fraction_expressed2': fraction_expressed2,
               't_score': scores,
-              'p_val': pvals,
-              'fdr': fdr,
+              't_pval': ttest_pvals,
+              't_fdr': statsmodels.stats.multitest.multipletests(ttest_pvals)[1],
               'fraction_expressed_ratio': fraction_expressed_diff,
               'day1': day1,
               'day2': day2})
