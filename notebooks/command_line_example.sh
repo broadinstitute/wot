@@ -63,7 +63,6 @@ wot diff_exp \
   --matrix data/ExprMatrix.h5ad \
   --cell_days data/cell_days.txt \
   --fate IPS_d17_fates.txt \
-  --fold_change 0 \
   --gene_filter data/TFs.txt \
   --cell_day_filter 14 \
   --verbose
