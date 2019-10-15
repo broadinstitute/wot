@@ -6,7 +6,7 @@ import pandas as pd
 import scipy.sparse
 
 
-def generate_comparisons(comparison_names, compare, days, delta_days=0, reference_day='start'):
+def generate_comparisons(comparison_names, compare, days, delta_days=None, reference_day='start'):
     if compare != 'within':  # within, match, all, or trajectory name
         if compare == 'all':
             comparisons = itertools.combinations(comparison_names, 2)
@@ -36,7 +36,7 @@ def generate_comparisons(comparison_names, compare, days, delta_days=0, referenc
             if day_index == reference_index:
                 continue
             day2 = days[day_index]
-            if delta_days > 0:
+            if delta_days is not None:
                 requested_day = day2 - delta_days
                 day1 = days[np.abs(days - requested_day).argmin()]
                 if day1 == day2 or np.abs(
@@ -44,8 +44,7 @@ def generate_comparisons(comparison_names, compare, days, delta_days=0, referenc
                     continue
             else:
                 day1 = days[reference_index]
-            filtered_day_pairs.append((day1, day2))
-
+            filtered_day_pairs.append((day2, day1))
     return itertools.product([(name, name) for name in comparison_names], filtered_day_pairs)
 
 

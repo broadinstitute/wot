@@ -5,9 +5,8 @@ import numpy as np
 import pandas as pd
 import scipy.sparse
 import statsmodels.stats.multitest
-from scipy import stats
-
 import wot.io
+from scipy import stats
 
 logger = logging.getLogger('wot')
 
@@ -50,7 +49,7 @@ def diff_exp(adata: anndata.AnnData, fate_datasets: [anndata.AnnData], cell_days
             pd.DataFrame(index=fate_ds.obs.index, data=fate_ds.X, columns=fate_ds.var.index))
 
     unique_days = np.array(sorted(adata.obs[cell_days_field].unique().astype(float)))
-    unique_days = unique_days[np.isnan(unique_days) == False]
+    unique_days = unique_days[~np.isnan(unique_days)]
     logger.info('{} days'.format(len(unique_days)))
 
     comparisons = wot.tmap.generate_comparisons(comparison_names=fate_names, compare=compare,
@@ -66,9 +65,11 @@ def diff_exp(adata: anndata.AnnData, fate_datasets: [anndata.AnnData], cell_days
         day1 = days[0]
         day2 = days[1]
 
-        logger.info('{} vs {}, day {}, day {}'.format(name1, name2, day1, day2))
         values1, weights1 = __get_expression_and_weights(adata, cell_days_field, day1, name1)
         values2, weights2 = __get_expression_and_weights(adata, cell_days_field, day2, name2)
+        if weights1 is None or weights2 is None:
+            continue
+        logger.info('{} vs {}, day {}, day {}'.format(name1, name2, day1, day2))
         result_df = __do_comparison(expression_values1=values1, weights1=weights1, day1=day1,
             expression_values2=values2,
             weights2=weights2,
@@ -82,13 +83,15 @@ def diff_exp(adata: anndata.AnnData, fate_datasets: [anndata.AnnData], cell_days
 
 def __get_expression_and_weights(adata, cell_days_field, day, fate_name):
     ds = adata[
-        (adata.obs[cell_days_field] == day) & (
-                False == adata.obs[fate_name].isna())]
+        (adata.obs[cell_days_field] == day) & ~(adata.obs[fate_name].isna())]
     weights = ds.obs[fate_name].values
+    if len(weights) == 0:
+        return None, None
+    weights = weights / weights.sum()
     expression_values = ds.X
     if scipy.sparse.isspmatrix(expression_values):
         expression_values = expression_values.toarray()
-    weights = weights / weights.sum()
+
     return expression_values, weights
 
 
