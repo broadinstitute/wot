@@ -1,3 +1,6 @@
+## Version 1.0.8, October 16, 2019
+- Compute t-test for diff_exp. Store results in long format.
+
 ## Version 1.0.7, October 7, 2019
 - Fixed invalid import statement
 
