@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import pegasus as pg
 import scipy.sparse
-
 import wot
 
 
@@ -500,7 +499,7 @@ def filter_adata(adata, obs_filter=None, var_filter=None):
         else:
             var_filter = var_filter.split(',')
             if len(var_filter) == 1 and var_filter[0] in adata.var:  # boolean field in var
-                adata = adata[:, adata.var[var_filter] == True].copy()
+                adata = adata[:, adata.var[var_filter[0]]].copy()
             else:  # list of ids
                 adata = adata[:, adata.var.index.isin(var_filter)].copy()
     return adata
