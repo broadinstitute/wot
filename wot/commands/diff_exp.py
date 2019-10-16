@@ -6,7 +6,6 @@ import logging
 import sys
 
 import anndata
-
 import wot.io
 
 logger = logging.getLogger('wot')
@@ -17,7 +16,7 @@ def create_parser():
         description='Compute differentially expressed genes from the output of the fate tool')
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--fate', help='Fate dataset produced by the fate tool', required=True)
-    parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP, required=True)
+    parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP)
     parser.add_argument('--out', help='Output file name', default='wot_diff_exp.csv')
     # parser.add_argument('--compare',
     #                     help='If "match", compare fates with the same name. ' + 'If "all", compare all pairs. '
@@ -52,7 +51,8 @@ def main(args):
     if delta_days is None:
         delta_days = 0
     delta_days = abs(delta_days)
-    wot.io.add_row_metadata_to_dataset(dataset=adata, days=cell_days_file)
+    if cell_days_file is not None:
+        wot.io.add_row_metadata_to_dataset(dataset=adata, days=cell_days_file)
     if day_filter is not None:
         days = [float(day) for day in day_filter.split(',')] if type(day_filter) == str else day_filter
         adata = adata[adata.obs[cell_days_field].isin(days)]
