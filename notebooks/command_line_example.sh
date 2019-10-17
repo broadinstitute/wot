@@ -6,8 +6,8 @@ wot gene_set_scores \
   --method mean_z_score \
   --gene_sets data/gene_sets.gmx
 
-# cluster and generate embeddings
-# pegasus cluster --fle data/ExprMatrix.var.genes.h5ad
+# select variable genes, cluster, generate embeddings
+# pegasus cluster --fle data/ExprMatrix.h5ad
 
 # Compute transport maps
 wot optimal_transport \
