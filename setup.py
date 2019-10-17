@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-"""The setup script."""
-
 import setuptools
 
 with open("README.md", "r") as fh:
@@ -12,20 +9,10 @@ requirements = [
         'numpy', 'pandas', 'h5py', 'anndata', 'scikit-learn', 'scipy', 'matplotlib', 'pegasuspy', 'POT'
 ]
 
-extras_require = {
-}
-
-setup_requirements = [
-        'Cython'
-]
-
-test_requirements = [
-        'unittest'
-]
-
 setuptools.setup(
     name='wot',
-    version='1.0.8',
+    use_scm_version=True,
+    setup_requires=['setuptools_scm', 'cython'],
     description="Optimal transport for time-course single cell data",
     author="WOT Team",
     author_email='wot@broadinstitute.org',
@@ -53,8 +40,7 @@ setuptools.setup(
             'Topic :: Scientific/Engineering :: Visualization',
     ],
     test_suite='tests',
-    tests_require=test_requirements,
-    setup_requires=setup_requirements,
+    tests_require=['unittest'],
     python_requires='>= 3',
     entry_points={
             'console_scripts': [
