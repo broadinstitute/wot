@@ -18,7 +18,8 @@
           "gct",
           "h5ad",
           "loom",
-          "txt"
+          "txt",
+          "parquet"
         ],
         "help": "Output file format",
         "required": true
@@ -147,27 +148,13 @@
         "default": null,
         "choices": null,
         "help": "File with headers \"id\" and \"day\" corresponding to cell id and days",
-        "required": true
-      },
-      {
-        "name": "nperm",
-        "default": null,
-        "choices": null,
-        "help": "Number of permutations",
         "required": false
       },
       {
-        "name": "smooth_p_values",
-        "default": false,
+        "name": "out",
+        "default": "wot_diff_exp.csv",
         "choices": null,
-        "help": "Smooth p-values",
-        "required": false
-      },
-      {
-        "name": "fold_change",
-        "default": 0.25,
-        "choices": null,
-        "help": "Limit permutations to genes which show at least X-fold difference (log-scale) between the two groups of cells",
+        "help": "Output file name",
         "required": false
       },
       {
@@ -342,7 +329,8 @@
           "gct",
           "h5ad",
           "loom",
-          "txt"
+          "txt",
+          "parquet"
         ],
         "help": "Output file format",
         "required": false
@@ -352,80 +340,6 @@
         "default": false,
         "choices": null,
         "help": "Print verbose information",
-        "required": false
-      }
-    ]
-  },
-  {
-    "desc": "Compute neighborhood graph",
-    "name": "neighborhood_graph",
-    "epilog": null,
-    "params": [
-      {
-        "name": "matrix",
-        "default": null,
-        "choices": null,
-        "help": "A matrix with cells on rows and features, such as genes or pathways on columns",
-        "required": true
-      },
-      {
-        "name": "gene_filter",
-        "default": null,
-        "choices": null,
-        "help": "File with one gene id per line to include from the matrix",
-        "required": false
-      },
-      {
-        "name": "cell_filter",
-        "default": null,
-        "choices": null,
-        "help": "File with one cell id per line to include from the matrix",
-        "required": false
-      },
-      {
-        "name": "transpose",
-        "default": false,
-        "choices": null,
-        "help": "Transpose the matrix",
-        "required": false
-      },
-      {
-        "name": "pca_comps",
-        "default": 50,
-        "choices": null,
-        "help": "Number of PCA components.",
-        "required": false
-      },
-      {
-        "name": "diff_comps",
-        "default": 15,
-        "choices": null,
-        "help": "Number of diffusion components.",
-        "required": false
-      },
-      {
-        "name": "neighbors",
-        "default": 15,
-        "choices": null,
-        "help": "Number of nearest neighbors",
-        "required": false
-      },
-      {
-        "name": "space",
-        "default": null,
-        "choices": [
-          "dmap",
-          "pca",
-          "input"
-        ],
-        "help": "Space to compute the neighborhood graph in",
-        "required": false
-      },
-      {
-        "name": "out",
-        "default": null,
-        "choices": null,
-        "help": "Output file name. The file is saved in gexf format (https://gephi.org/gexf/format/)",
         "required": false
       }
     ]
@@ -974,7 +888,7 @@
         "default": null,
         "choices": null,
         "help": "File with headers \"id\" and \"day\" corresponding to cell id and days",
-        "required": true
+        "required": false
       },
       {
         "name": "distance_metric",
@@ -1105,7 +1019,8 @@
           "gct",
           "h5ad",
           "loom",
-          "txt"
+          "txt",
+          "parquet"
         ],
         "help": "Output file format",
         "required": false
@@ -1173,7 +1088,8 @@
           "gct",
           "h5ad",
           "loom",
-          "txt"
+          "txt",
+          "parquet"
         ],
         "help": "Output file format",
         "required": false
