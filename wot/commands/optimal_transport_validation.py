@@ -13,22 +13,32 @@ import wot
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Compute a validation summary')
+    parser = argparse.ArgumentParser(
+        description='Compute a validation summary. The output file contains the distances: '
+                    '"P" : between real batches, '
+                    '"I" : between interpolated and real, '
+                    '"F" : between first and real, '
+                    '"L" : between last and real, '
+                    '"R" : between random (no growth) and real, '
+                    '"Rg" :between random (with growth) and real, '
+                    '"A" : between first and last, '
+                    '"I1" : between first and interpolated, '
+                    '"I2" : between last and interpolated.')
     wot.commands.add_ot_parameters_arguments(parser)
     parser.add_argument('--covariate', help='Covariate values for each cell')
     # parser.add_argument('--save_interpolated', type=bool, default=False,
     #                     help='Save interpolated and random point clouds')
     parser.add_argument('--full_distances', action='store_true',
-                        help='Compute full distances')
+        help='Compute full distances')
     parser.add_argument('--day_triplets',
-                        help='Three column file without a header containing start time, interpolation time, and end time')
+        help='Three column file without a header containing start time, interpolation time, and end time')
     parser.add_argument('--out', default='tmaps_val',
-                        help='Prefix for output file names')
+        help='Prefix for output file names')
     parser.add_argument('--interp_size', default=10000, type=int,
-                        help='The number of cells in the interpolated population')
+        help='The number of cells in the interpolated population')
     parser.add_argument('--covariate_field',
-                        help='Field name in covariate file that contains covariate',
-                        default='covariate')
+        help='Field name in covariate file that contains covariate',
+        default='covariate')
     return parser
 
 
@@ -67,22 +77,22 @@ def main(args):
     # tmap_dir=tmap_dir, tmap_prefix=tmap_prefix,
     # no_overwrite=args.no_overwrite, output_file_format=args.format,
     summary = wot.ot.compute_validation_summary(ot_model,
-                                                day_triplets=day_triplets,
-                                                interp_size=args.interp_size,
-                                                compute_full_distances=args.full_distances)
+        day_triplets=day_triplets,
+        interp_size=args.interp_size,
+        compute_full_distances=args.full_distances)
 
     summary.to_csv(os.path.join(tmap_dir, tmap_prefix + '_validation_summary.txt'), sep='\t',
-                   index=False)
+        index=False)
 
     summary_stats = summary[summary['full'] == False]
     summary_stats = summary_stats.groupby(['interval_mid', 'name'])['distance'].agg([np.mean, np.std])
     summary_stats.to_csv(os.path.join(tmap_dir, tmap_prefix + '_cv_validation_summary_stats.txt'),
-                         sep="\t", )
+        sep="\t", )
     wot.graphics.plot_ot_validation_summary_stats(summary_stats)
     plt.savefig(os.path.join(tmap_dir, tmap_prefix + '_cv_validation_summary.png'))
 
     wot.graphics.plot.plot_ot_validation_ratio(summary_stats, os.path.join(tmap_dir,
-                                                                           tmap_prefix + '_cv_validation_summary_ratio.png'))
+        tmap_prefix + '_cv_validation_summary_ratio.png'))
     if args.full_distances:
         summary_stats = summary[summary['full']]
         summary_stats = summary_stats.groupby(['interval_mid', 'name'])['distance'].agg([np.mean, np.std])
