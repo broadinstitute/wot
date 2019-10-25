@@ -91,7 +91,8 @@ def __get_expression_and_weights(adata, cell_days_field, day, fate_name):
     expression_values = ds.X
     if scipy.sparse.isspmatrix(expression_values):
         expression_values = expression_values.toarray()
-
+    # expression_values is an instance of anndata.core.views.ArrayView which screws things up
+    expression_values = expression_values.copy()
     return expression_values, weights
 
 
