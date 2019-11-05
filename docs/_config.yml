@@ -1,13 +1,8 @@
 theme: jekyll-theme-cayman
-plugins:
-  - jekyll-redirect-from
 title: wot
 description: A software package for analyzing snapshots of developmental processes
-
 repository: broadinstitute/wot
-
 show_downloads: false
-
 navbar_items:
   - title: Home
     url: /
