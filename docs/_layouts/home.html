@@ -64,8 +64,21 @@ title: Home
             <div class="row">
                 <div class="col-sm-12 col-md-5 offset-md-2">
                     <h2>Installation</h2>
-                    <p class="lead">Type <code>pip install wot</code> in your terminal to install wot and all required
-                        dependencies. Please note that Python 3 is required.</p>
+                    <h4>Pip installation</h4>
+                    <p class="lead">Note that due to a limitation of pip, cython and numpy need to be installed prior to
+                        installing wot. This can be done easily with:<br/>
+                        <code>pip install numpy cython</code><br/>
+                        You can then install wot with:<br/>
+                        <code>pip install wot</code>
+                    </p>
+                    <h3>Anaconda installation</h3>
+                    <p class="lead">
+                        Install pot dependency:<br/>
+                        <code>conda install -c conda-forge pot</code>
+                        <br>
+                        Install wot (and additional dependencies):<br>
+                        <code>pip install wot</code>
+                    </p>
                 </div>
             </div>
         </a>
