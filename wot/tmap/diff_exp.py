@@ -5,14 +5,15 @@ import numpy as np
 import pandas as pd
 import scipy.sparse
 import statsmodels.stats.multitest
-import wot.io
 from scipy import stats
+
+import wot.io
 
 logger = logging.getLogger('wot')
 
 
 def diff_exp(adata: anndata.AnnData, fate_datasets: [anndata.AnnData], cell_days_field: str = 'day',
-             compare: str = 'all', delta_days: float = None) -> {str: pd.DataFrame}:
+             compare: str = 'within') -> {str: pd.DataFrame}:
     """
     Compute statistics for differential expression
 
@@ -53,7 +54,7 @@ def diff_exp(adata: anndata.AnnData, fate_datasets: [anndata.AnnData], cell_days
     logger.info('{} days'.format(len(unique_days)))
 
     comparisons = wot.tmap.generate_comparisons(comparison_names=fate_names, compare=compare,
-        days=unique_days, delta_days=delta_days, reference_day='start')
+        days=unique_days, reference_day='start')
 
     df = None
     features = adata.var.index

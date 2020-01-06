@@ -6,6 +6,7 @@ import logging
 import sys
 
 import anndata
+
 import wot.io
 
 logger = logging.getLogger('wot')
@@ -17,11 +18,10 @@ def create_parser():
     parser.add_argument('--matrix', help=wot.commands.MATRIX_HELP, required=True)
     parser.add_argument('--fate', help='Fate dataset produced by the fate tool', required=True)
     parser.add_argument('--cell_days', help=wot.commands.CELL_DAYS_HELP)
-    parser.add_argument('--out', help='Output file name', default='wot_diff_exp.csv')
-    # parser.add_argument('--compare',
-    #                     help='If "match", compare fates with the same name. ' + 'If "all", compare all pairs. '
-    #                          + 'If "within" compare within a fate. If a fate name, compare to the specified fate',
-    #                     default='all')
+    parser.add_argument('--out', help='Output file name')
+    parser.add_argument('--compare',
+        help='all - compare all pairs, within - compare within a fate to first day.',
+        default='within', choices=['all', 'within'])
     # parser.add_argument('--delta',
     #                     help='Delta days to compare sampled expression matrix against within a fate. If not specified all comparison are done against the first day.',
     #                     type=float)
@@ -39,18 +39,14 @@ def main(args):
     if args.verbose:
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())
-    compare = 'all'  # all pairs args.compare
+    compare = args.compare
     fate_files = [args.fate]
-    delta_days = 0  # args.delta
+
     expression_file = args.matrix
     cell_days_file = args.cell_days
     cell_days_field = args.cell_days_field
     adata = wot.io.read_dataset(expression_file, var_filter=args.gene_filter)
     day_filter = args.cell_day_filter
-
-    if delta_days is None:
-        delta_days = 0
-    delta_days = abs(delta_days)
     if cell_days_file is not None:
         wot.io.add_row_metadata_to_dataset(dataset=adata, days=cell_days_file)
     if day_filter is not None:
@@ -68,5 +64,9 @@ def main(args):
         #     pd.DataFrame(index=fate_ds.obs.index, data=fate_ds.X, columns=fate_ds.var.index))
         fate_datasets.append(fate_ds)
     diff_exp_results = wot.tmap.diff_exp(adata=adata, fate_datasets=fate_datasets, cell_days_field=cell_days_field,
-        compare=compare, delta_days=delta_days)
-    diff_exp_results.to_csv(args.out, header=True, index_label='id')
+        compare=compare)
+    out = args.out
+    if out is None:
+        import os
+        out = os.path.splitext(os.path.basename(args.fate))[0] + '.csv'
+    diff_exp_results.to_csv(out, header=True, index_label='id')
