@@ -18,11 +18,11 @@ def create_parser():
         description='Score each cell according to its expression of input gene signatures')
     parser.add_argument('--matrix', help='A matrix with cells on rows and genes on columns', required=True)
     parser.add_argument('--gene_sets',
-                        help='Gene sets in gmx, gmt, or grp format', required=True)
+        help='Gene sets in gmx, gmt, or grp format', required=True)
     parser.add_argument('--method', help='Method to compute gene set scores',
-                        choices=['mean_z_score', 'mean', 'mean_rank'], default='mean_z_score')
+        choices=['mean_z_score', 'mean', 'mean_rank'], default='mean_z_score')
     parser.add_argument('--cell_filter',
-                        help='File with one cell id per line to include')
+        help='File with one cell id per line to include')
     parser.add_argument('--gene_set_filter', help='Gene sets to include')
     parser.add_argument('--max_z_score', help='Threshold z-scores at specified value', type=float, default=5)
     parser.add_argument('--nperm', help='Number of permutations to perform', type=int)
@@ -63,7 +63,7 @@ def main(args):
     if args.gene_set_filter is not None:
         if os.path.exists(args.gene_set_filter):
             set_names = pd.read_csv(args.gene_set_filter, header=None, index_col=0, engine='python',
-                                    sep='\n').index.values
+                sep='\n').index.values
         else:
             set_names = args.gene_set_filter.split(',')
         gs_filter = gs.var.index.isin(set_names)
@@ -73,13 +73,13 @@ def main(args):
 
     # scores contains cells on rows, gene sets on columns
     permutations = args.nperm
-    result_df = pd.DataFrame(index=ds.obs)
+    result_df = pd.DataFrame(index=ds.obs.index)
     for j in range(gs.shape[1]):
         if gs.shape[1] > 1:
             logger.info(gs.var.index.values[j])
         result = wot.score_gene_sets(ds=ds,
-                                     gs=gs[:, [j]],
-                                     permutations=permutations, method=args.method, max_z_score=max_z_score)
+            gs=gs[:, [j]],
+            permutations=permutations, method=args.method, max_z_score=max_z_score)
         gene_set_name = str(gs.var.index.values[j])
         result_df[gene_set_name + '_score'] = result['score']
         if permutations is not None and permutations > 0:
@@ -94,4 +94,4 @@ def main(args):
         # wot.io.write_dataset(ds=anndata.AnnData(X=x, obs=ds.obs, var=pd.DataFrame(index=column_names)),
         #                      path=name, output_format=args.format)
     wot.io.write_dataset(ds=anndata.AnnData(X=result_df.values, obs=ds.obs, var=pd.DataFrame(index=result_df.columns)),
-                         path=args.out, output_format=args.format)
+        path=args.out, output_format=args.format)
