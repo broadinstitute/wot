@@ -58,6 +58,7 @@ def diff_exp(adata: anndata.AnnData, fate_datasets: [anndata.AnnData], cell_days
 
     df = None
     features = adata.var.index
+    ncomparisons = 0
     for comparison in comparisons:
         names = comparison[0]
         days = comparison[1]
@@ -70,6 +71,7 @@ def diff_exp(adata: anndata.AnnData, fate_datasets: [anndata.AnnData], cell_days
         values2, weights2 = __get_expression_and_weights(adata, cell_days_field, day2, name2)
         if weights1 is None or weights2 is None:
             continue
+        ncomparisons += 1
         logger.info('{} vs {}, day {}, day {}'.format(name1, name2, day1, day2))
         result_df = __do_comparison(expression_values1=values1, weights1=weights1, day1=day1,
             expression_values2=values2,
@@ -79,6 +81,8 @@ def diff_exp(adata: anndata.AnnData, fate_datasets: [anndata.AnnData], cell_days
         result_df['name1'] = name1
         result_df['name2'] = name2
         df = pd.concat((df, result_df)) if df is not None else result_df
+    if ncomparisons == 0:
+        raise ValueError('No comparisons found')
     return df
 
 

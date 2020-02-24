@@ -58,13 +58,14 @@ wot transition_table \
   --start_time 12 \
   --end_time 18
 
-# Compute differentially expressed genes at day 14 that are predictive of IPS fate at day 17
+# Compute differentially expressed genes at day 15 that are predictive of IPS fate at day 17
 wot diff_exp \
   --matrix data/ExprMatrix.h5ad \
   --cell_days data/cell_days.txt \
   --fate IPS_d17_fates.txt \
   --gene_filter data/TFs.txt \
-  --cell_day_filter 14 \
+  --cell_day_filter 15 \
+  --compare all \
   --verbose
 
 # Compute and plot validation summary

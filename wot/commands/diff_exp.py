@@ -21,7 +21,7 @@ def create_parser():
     parser.add_argument('--out', help='Output file name')
     parser.add_argument('--compare',
         help='all - compare all pairs, within - compare within a fate to first day.',
-        default='within', choices=['all', 'within'])
+        default='all', choices=['all', 'within'])
     # parser.add_argument('--delta',
     #                     help='Delta days to compare sampled expression matrix against within a fate. If not specified all comparison are done against the first day.',
     #                     type=float)
