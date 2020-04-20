@@ -24,8 +24,7 @@ wot trajectory \
   --tmap tmaps/serum \
   --cell_set data/major_cell_sets.gmt \
   --day 18 \
-  --embedding data/fle_coords.txt \
-  --verbose
+  --embedding data/fle_coords.txt
 
 # Compute trajectory divergence
 wot trajectory_divergence \
@@ -49,8 +48,7 @@ wot fates \
   --cell_set data/major_cell_sets.gmt \
   --day 17 \
   --cell_set_filter IPS \
-  --out IPS_d17 \
-  --verbose
+  --out IPS_d17
 
 wot transition_table \
   --tmap tmaps/serum \
