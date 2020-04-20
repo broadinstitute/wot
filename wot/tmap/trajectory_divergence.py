@@ -66,7 +66,7 @@ def trajectory_divergence(adata: anndata.AnnData, trajectory_datasets: [anndata.
     logger.info('{} days'.format(len(unique_days)))
     comparisons = wot.tmap.generate_comparisons(comparison_names=trajectory_names, compare=compare,
                                                 days=unique_days,
-                                                delta_days=0, reference_day='end')
+                                                reference_day='end')
     output = []  # name1, name2, day1, day2, distance
 
     for comparison in comparisons:
