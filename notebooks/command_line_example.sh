@@ -63,7 +63,6 @@ wot diff_exp \
   --fate IPS_d17_fates.txt \
   --gene_filter data/TFs.txt \
   --cell_day_filter 15 \
-  --compare all \
   --verbose
 
 # Compute and plot validation summary
