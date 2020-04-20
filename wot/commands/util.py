@@ -100,7 +100,7 @@ def run_trajectory_or_fates(args, fates):
         wot.io.write_dataset(result_ds, prefix + suffix, args.format)
         if args.embedding:
             for j in range(result_ds.shape[1]):  # each trajectory or fate
-                color = result_ds[:, j].X
+                color = result_ds.X[:, j]
                 if scipy.sparse.issparse(color):
                     color = color.toarray().flatten()
 
