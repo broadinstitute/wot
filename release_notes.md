@@ -1,3 +1,6 @@
+## Version 1.0.8.post1, April 21, 2020
+- Support anndata 0.7
+
 ## Version 1.0.8, October 16, 2019
 - Compute t-test for diff_exp. Store results in long format.
 
