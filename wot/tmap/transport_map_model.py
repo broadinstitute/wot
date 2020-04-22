@@ -713,8 +713,12 @@ class TransportMapModel:
                     rids = f['/row_attrs/id'][()].astype(str)
                     cids = f['/col_attrs/id'][()].astype(str) if i == len(tmap_keys) - 1 else None
                 else:
-                    rids = f['/obs']['index'][()].astype(str)
-                    cids = f['/var']['index'][()].astype(str) if i == len(tmap_keys) - 1 else None
+                    obs = f['/obs']
+                    var = f['/var']
+                    obs_key = obs.attrs.get('_index', 'index')
+                    var_key = var.attrs.get('_index', 'index')
+                    rids = obs[obs_key][()].astype(str)
+                    cids = var[var_key][()].astype(str) if i == len(tmap_keys) - 1 else None
                 rdf = pd.DataFrame(index=rids, data={'day': t0})
                 cdf = pd.DataFrame(index=cids, data={'day': t1}) if cids is not None else None
                 if meta is None:
