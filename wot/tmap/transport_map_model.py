@@ -496,7 +496,7 @@ class TransportMapModel:
             cell_indices = df.index.get_indexer_for(ids_el)
             cell_indices = cell_indices[cell_indices > -1]
 
-            if len(cell_indices) is 0:
+            if len(cell_indices) == 0:
                 return None
             p = np.zeros(len(df), dtype=np.float64)
             p[cell_indices] = 1.0
@@ -690,7 +690,7 @@ class TransportMapModel:
                         print('Unable to find day pair for ' + f)
                         pass
 
-        if len(tmaps) is 0:
+        if len(tmaps) == 0:
             raise ValueError('No transport maps found in ' + tmap_dir + ' with prefix ' + tmap_prefix)
         day_pairs = set()
         timepoints = set()

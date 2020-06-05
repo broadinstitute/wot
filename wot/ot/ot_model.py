@@ -79,7 +79,7 @@ class OTModel:
                     p /= total
                     self.matrix.X[i] = np.random.multinomial(ncounts, p, size=1)[0]
 
-        if self.matrix.X.shape[0] is 0:
+        if self.matrix.X.shape[0] == 0:
             raise ValueError('No cells in matrix')
 
         self.ot_config = {'local_pca': 30, 'growth_iters': 1, 'epsilon': 0.05, 'lambda1': 1, 'lambda2': 50,

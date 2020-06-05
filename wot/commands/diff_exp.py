@@ -53,7 +53,7 @@ def main(args):
         days = [float(day) for day in day_filter.split(',')] if type(day_filter) == str else day_filter
         adata = adata[adata.obs[cell_days_field].isin(days)]
         adata = anndata.AnnData(adata.X, adata.obs.copy(), adata.var)
-    if adata.shape[1] is 0:
+    if adata.shape[1] == 0:
         sys.exit('Expression matrix has 0 genes')
     fate_datasets = []
     for f in fate_files:

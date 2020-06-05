@@ -79,7 +79,7 @@ def score_gene_sets(ds, gs, method='mean_z_score', max_z_score=5, permutations=N
         permutations = 0
     x = ds.X
     gs_1_0 = gs.X
-    if not scipy.sparse.issparse(gs.X) and len(gs.X.shape) is 1:
+    if not scipy.sparse.issparse(gs.X) and len(gs.X.shape) == 1:
         gs_1_0 = np.array([gs_1_0]).T
 
     if not scipy.sparse.issparse(gs_1_0):
