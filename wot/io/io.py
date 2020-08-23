@@ -435,8 +435,12 @@ def write_dataset(ds, path, output_format='txt'):
         x = ds.X.toarray() if scipy.sparse.isspmatrix(ds.X) else ds.X
         pd.DataFrame(x, index=ds.obs.index, columns=ds.var.index).to_csv(path,
             index_label='id', sep='\t', doublequote=False)
+    elif output_format == 'h5ad':
+        ds.write(path)
+    elif output_format == 'loom':
+        ds.write_loom(ds, path)
     else:
-        pg.write_output(ds, path)
+        raise ValueError('Unknown file format')
 
 
 def download_gs_url(gs_url):

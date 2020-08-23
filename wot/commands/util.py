@@ -11,7 +11,7 @@ TMAP_HELP = 'Directory of transport maps as produced by optimal transport'
 MATRIX_HELP = 'A matrix with cells on rows and features, such as genes or pathways on columns'
 
 FORMAT_HELP = 'Output file format'
-FORMAT_CHOICES = ['gct', 'h5ad', 'loom', 'txt']
+FORMAT_CHOICES = ['h5ad', 'loom', 'txt']
 try:
     import pyarrow
 
