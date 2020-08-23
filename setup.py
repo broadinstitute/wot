@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 requirements = [
-        'numpy', 'pandas', 'h5py', 'anndata', 'scikit-learn', 'scipy', 'matplotlib', 'pegasuspy', 'POT'
+        'numpy', 'pandas', 'h5py', 'anndata', 'scikit-learn', 'scipy', 'matplotlib', 'POT'
 ]
 
 setuptools.setup(

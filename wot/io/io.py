@@ -5,7 +5,6 @@ import os
 import anndata
 import numpy as np
 import pandas as pd
-import pegasus as pg
 import scipy.sparse
 import wot
 
@@ -396,11 +395,21 @@ def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None, **k
     -------
     Annotated data matrix.
     """
-    if str(path).lower().endswith('.txt'):
+
+    _, ext = os.path.split(str(path).lower())
+    if ext == '.txt':
         df = pd.read_csv(path, engine='python', header=0, sep=None, index_col=0)
         adata = anndata.AnnData(X=df.values, obs=pd.DataFrame(index=df.index), var=pd.DataFrame(index=df.columns))
+    elif ext == '.h5ad':
+        adata = anndata.read(path)
+    elif ext == '.loom':
+        adata = anndata.read_loom(path)
+    elif ext == '.mtx':
+        adata = anndata.read_mtx(path)
+    elif ext == '.zarr':
+        adata = anndata.read_zarr(path)
     else:
-        adata = pg.read_input(path, **keywords)
+        raise ValueError('Unknown file format')
 
     def get_df(meta):
         if not isinstance(meta, pd.DataFrame):
