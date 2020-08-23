@@ -396,7 +396,7 @@ def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None, **k
     Annotated data matrix.
     """
 
-    _, ext = os.path.split(str(path).lower())
+    _, ext = os.path.splitext(str(path).lower())
     if ext == '.txt':
         df = pd.read_csv(path, engine='python', header=0, sep=None, index_col=0)
         adata = anndata.AnnData(X=df.values, obs=pd.DataFrame(index=df.index), var=pd.DataFrame(index=df.columns))
@@ -409,7 +409,7 @@ def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None, **k
     elif ext == '.zarr':
         adata = anndata.read_zarr(path)
     else:
-        raise ValueError('Unknown file format')
+        raise ValueError('Unknown file format: {}'.format(ext))
 
     def get_df(meta):
         if not isinstance(meta, pd.DataFrame):
