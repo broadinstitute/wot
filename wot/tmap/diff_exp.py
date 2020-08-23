@@ -92,7 +92,7 @@ def __get_expression_and_weights(adata, cell_days_field, day, fate_name):
     weights = ds.obs[fate_name].values
     if len(weights) == 0:
         return None, None
-    weights = weights / weights.sum()
+    weights = weights / weights.sum()  # normalize
     expression_values = ds.X
     if scipy.sparse.isspmatrix(expression_values):
         expression_values = expression_values.toarray()
@@ -110,7 +110,6 @@ def __do_comparison(expression_values1, weights1, day1, expression_values2, weig
     fraction_expressed_diff = (fraction_expressed1 + fraction_expressed_ratio_add) / (
             fraction_expressed2 + fraction_expressed_ratio_add)
 
-    fold_change = (mean1 - mean2)
     variance1 = np.average((expression_values1 - mean1) ** 2, weights=weights1, axis=0)
     variance2 = np.average((expression_values2 - mean2) ** 2, weights=weights2, axis=0)
     with np.errstate(invalid="ignore"):
@@ -119,9 +118,10 @@ def __do_comparison(expression_values1, weights1, day1, expression_values2, weig
             mean2=mean2, std2=np.sqrt(variance2), nobs2=len(weights2), equal_var=False)  # Welch's
     scores[np.isnan(scores)] = 0
     ttest_pvals[np.isnan(ttest_pvals)] = 1
+    fold_change = np.exp(mean1 - mean2)
 
     results = pd.DataFrame(index=features,
-        data={'fold_change': np.exp(fold_change),
+        data={'fold_change': fold_change,
               'mean1': mean1,
               'mean2': mean2,
               'fraction_expressed1': fraction_expressed1,
