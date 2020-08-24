@@ -65,8 +65,8 @@ def trajectory_divergence(adata: anndata.AnnData, trajectory_datasets: [anndata.
     unique_days = unique_days[np.isnan(unique_days) == False]
     logger.info('{} days'.format(len(unique_days)))
     comparisons = wot.tmap.generate_comparisons(comparison_names=trajectory_names, compare=compare,
-                                                days=unique_days,
-                                                reference_day='end')
+        days=unique_days,
+        reference_day='end')
     output = []  # name1, name2, day1, day2, distance
 
     for comparison in comparisons:
@@ -115,12 +115,12 @@ def trajectory_divergence(adata: anndata.AnnData, trajectory_datasets: [anndata.
                 np.abs(trajectory1[q] - trajectory2[q]))
         else:
             distance = wot.ot.earth_mover_distance(x[trajectory1_filter], x[trajectory2_filter],
-                                                   eigenvals=eigenvals,
-                                                   weights1=trajectory1,
-                                                   weights2=trajectory2)
+                eigenvals=eigenvals,
+                weights1=trajectory1,
+                weights2=trajectory2)
         logger.info(
             '{} vs {}, day {}, day {}, {} cells, distance {}'.format(name1, name2, day1, day2, adata_both_days.shape[0],
-                                                                     distance))
+                distance))
         output.append([name1, name2, day1, day2, distance])
     return pd.DataFrame(data=output, columns=['name1', 'name2', 'day1', 'day2', 'distance'])
 
@@ -133,8 +133,11 @@ def plot_trajectory_divergence(df):
     plt.figure(figsize=(10, 10))
     plt.xlabel("Day")
     plt.ylabel("Distance")
+    day_field = 'day2'
+    if len(df[day_field].unique()) == 1 and len(df['day1'].unique()) > 1:
+        day_field = 'day1'
     for p, d in df.groupby('name'):
-        plt.plot(d['day2'], d['distance'], '-o', label=p)
+        plt.plot(d[day_field], d['distance'], '-o', label=p)
 
     # if covariate_field is not None:
     #     df = pd.read_csv(args.out + '_batch.txt', sep='\t')
