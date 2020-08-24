@@ -1,3 +1,6 @@
+## Version 1.0.8.post2, August 24, 2020
+- Use anndata for reading and writing datasets
+
 ## Version 1.0.8.post1, April 21, 2020
 - Support anndata 0.7
 
