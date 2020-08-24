@@ -5,6 +5,7 @@ import argparse
 import logging
 
 import pandas as pd
+
 import wot
 import wot.ot
 
@@ -40,7 +41,7 @@ def create_parser():
     #                     help='Covariate (batch) values for each cell. Used to compute batch to batch distance within a timepoint.')
     parser.add_argument('--cell_days_field', help='Field name in cell_days file that contains cell days',
         default='day')
-    parser.add_argument('--out', help='Prefix for output file names', default='wot-trajectory')
+    parser.add_argument('--out', help='Prefix for output file names', default='wot-trajectory-divergence')
     # parser.add_argument('--covariate_field',
     #                     help='Field name in covariate file that contains covariate',
     #                     default='covariate')
