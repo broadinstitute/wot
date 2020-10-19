@@ -194,7 +194,7 @@ class OTModel:
         if full_learned_growth_df is not None:
             full_learned_growth_df.to_csv(os.path.join(tmap_dir, tmap_prefix + '_g.txt'), sep='\t', index_label='id')
 
-    def compute_transport_map(self, t0, t1, covariate=None):
+    def compute_transport_map(self, t0, t1, covariate=None, cost_matrix=None):
         """
         Computes the transport map from time t0 to time t1
 
@@ -206,6 +206,8 @@ class OTModel:
             Destination timepoint for the transport map
         covariate : None or (str, str)
             The covariate restriction on cells from t0 and t1. None to skip
+        cost_matrix : None or ndarray
+            The cost matrix to be used for transport. None to use the default matrix.
 
         Returns
         -------
@@ -227,7 +229,8 @@ class OTModel:
             logger.info('Computing transport map from {} to {}'.format(t0, t1))
         else:
             logger.info('Computing transport map from {} {} to {} {}'.format(t0, covariate[0], t1, covariate[1]))
-        config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate}
+        config = {**self.ot_config, **local_config, 't0': t0, 't1': t1, 'covariate': covariate,
+                  'C': cost_matrix}
         return self.compute_single_transport_map(config)
 
     @staticmethod
@@ -292,9 +295,12 @@ class OTModel:
         else:
             p0_x = p0.X
             p1_x = p1.X
-
-        C = OTModel.compute_default_cost_matrix(p0_x, p1_x, eigenvals)
-        config['C'] = C
+        
+        #Check if we need to calculate a cost matrix
+        if config['C'] is None:
+            C = OTModel.compute_default_cost_matrix(p0_x, p1_x, eigenvals)
+            config['C'] = C
+        
         delta_days = t1 - t0
 
         if self.cell_growth_rate_field in p0.obs.columns:
