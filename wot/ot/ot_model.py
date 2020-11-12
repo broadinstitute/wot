@@ -122,7 +122,7 @@ class OTModel:
         return product(covariate, covariate)
 
     def compute_all_transport_maps(self, tmap_out='tmaps', overwrite=True, output_file_format='h5ad',
-                                   with_covariates=False):
+                                   with_covariates=False, cost_matrices=None):
         """
         Computes all required transport maps.
 
@@ -136,6 +136,8 @@ class OTModel:
             Transport map file format
         with_covariates : bool, optional, default : False
             Compute all covariate-restricted transport maps as well
+        cost_matrices: list of ndarray, optional, default : None
+            Custom cost matrices to use in transport. None to skip.
 
         Returns
         -------
@@ -170,10 +172,14 @@ class OTModel:
         if not day_pairs:
             logger.info('No day pairs')
             return
-
+        
+        #Check if we aren't custom cost matrices
+        if cost_matrices is None:
+            cost_matrices = [None for day_pair in day_pairs]
+            
         full_learned_growth_df = None
         save_learned_growth = self.ot_config.get('growth_iters', 1) > 1
-        for day_pair in day_pairs:
+        for day_pair, cost_matrix in zip(day_pairs, cost_matrices):
             path = tmap_prefix
             if not with_covariates:
                 path += "_{}_{}".format(*day_pair)
@@ -185,7 +191,7 @@ class OTModel:
                 logger.info('Found existing tmap at ' + output_file + '. ')
                 continue
 
-            tmap = self.compute_transport_map(*day_pair)
+            tmap = self.compute_transport_map(*day_pair, cost_matrix=cost_matrix)
             wot.io.write_dataset(tmap, output_file, output_format=output_file_format)
             if save_learned_growth:
                 learned_growth_df = tmap.obs
