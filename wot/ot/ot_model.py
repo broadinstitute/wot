@@ -262,6 +262,7 @@ class OTModel:
             Configuration to use for all parameters for the couplings :
             - t0, t1
             - lambda1, lambda2, epsilon, g
+            - C
         """
 
         import gc
@@ -307,6 +308,7 @@ class OTModel:
             C = OTModel.compute_default_cost_matrix(p0_x, p1_x, eigenvals)
             config['C'] = C
         
+        C = config['C']
         delta_days = t1 - t0
 
         if self.cell_growth_rate_field in p0.obs.columns:
