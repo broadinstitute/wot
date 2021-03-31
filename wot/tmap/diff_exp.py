@@ -5,8 +5,9 @@ import numpy as np
 import pandas as pd
 import scipy.sparse
 import statsmodels.stats.multitest
-import wot.io
 from scipy import stats
+
+import wot.io
 
 logger = logging.getLogger('wot')
 
@@ -57,6 +58,8 @@ def diff_exp(adata: anndata.AnnData, fate_datasets: [anndata.AnnData], cell_days
 
     df = None
     features = adata.var.index
+    if adata.shape[0] == 0 or adata.shape[1] == 0:
+        raise ValueError('Empty dataset')
     ncomparisons = 0
     for comparison in comparisons:
         names = comparison[0]
@@ -111,8 +114,6 @@ def __do_comparison(expression_values1, weights1, day1, expression_values2, weig
 
     variance1 = np.average((expression_values1 - mean1) ** 2, weights=weights1, axis=0)
     variance2 = np.average((expression_values2 - mean2) ** 2, weights=weights2, axis=0)
-    variance1[variance1 == 0] = 0.0001  # avoid divide by zero error
-    variance2[variance2 == 0] = 0.0001
     with np.errstate(invalid="ignore"):
         scores, ttest_pvals = stats.ttest_ind_from_stats(
             mean1=mean1, std1=np.sqrt(variance1), nobs1=len(weights1),
