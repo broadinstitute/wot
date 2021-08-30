@@ -94,13 +94,11 @@ class OTModel:
             raise ValueError('Unknown solver')
 
         parameters_from_file = kwargs.pop('parameters', None)
-        for k in kwargs.keys():
-            self.ot_config[k] = kwargs[k]
+        self.ot_config.update(kwargs)
 
         if parameters_from_file is not None:
             config_dict = wot.ot.parse_parameter_file(parameters_from_file)
-            for k in config_dict.keys():
-                self.ot_config[k] = config_dict[k]
+            self.ot_config.update(config_dict)
 
         local_pca = self.ot_config['local_pca']
         if local_pca > self.matrix.X.shape[1]:
