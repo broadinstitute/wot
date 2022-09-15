@@ -7,6 +7,8 @@ import scipy.sparse
 
 
 def generate_comparisons(comparison_names, compare, days, reference_day='start'):
+    if compare == "all_times":
+        return itertools.product([(name, name) for name in comparison_names], itertools.combinations(days, 2))
     if compare != 'within':  # within, match, all, or trajectory name
         if compare == 'all':
             comparisons = itertools.combinations(comparison_names, 2)
