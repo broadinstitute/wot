@@ -401,7 +401,7 @@ def read_dataset(path, obs=None, var=None, obs_filter=None, var_filter=None, **k
         df = pd.read_csv(path, engine='python', header=0, sep=None, index_col=0)
         adata = anndata.AnnData(X=df.values, obs=pd.DataFrame(index=df.index), var=pd.DataFrame(index=df.columns))
     elif ext == '.h5ad':
-        adata = anndata.read(path)
+        adata = anndata.read_h5ad(path)
     elif ext == '.loom':
         adata = anndata.read_loom(path)
     elif ext == '.mtx':

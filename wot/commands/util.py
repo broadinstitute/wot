@@ -45,7 +45,7 @@ def run_trajectory_or_fates(args, fates):
     else:
         import anndata  # h5ad#obs
         tokens = args.cell_set.split('#')
-        adata = anndata.read(tokens[0], backed='r')
+        adata = anndata.read_h5ad(tokens[0], backed='r')
         cell_sets = adata.obs.groupby(tokens[1]).groups
     if args.cell_set_filter is not None:
         valid_cell_sets = args.cell_set_filter.split(',')
@@ -79,7 +79,7 @@ def run_trajectory_or_fates(args, fates):
         else:
             import anndata  # h5ad#obsm
             tokens = embedding_file.split('#')
-            adata = anndata.read(tokens[0], backed='r')
+            adata = anndata.read_h5ad(tokens[0], backed='r')
             m = adata.obsm[tokens[1]]
             full_embedding_df = pd.DataFrame(index=adata.obs.index, data=(dict(x=m[:, 0], y=m[:, 1])))
         xrange = full_embedding_df['x'].min(), full_embedding_df['x'].max()
